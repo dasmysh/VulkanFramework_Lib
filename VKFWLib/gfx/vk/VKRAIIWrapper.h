@@ -14,43 +14,49 @@
 
 namespace vku {
 
-    template<typename T> class VKRAIIWrapper
+    template<typename ObjectTraits, typename AllocationTraits> class VKRAIIWrapper
     {
     public:
         template<typename... Args>
-        explicit VKRAIIWrapper(Args&&... args) : obj(T::Create(std::forward<Args>(args)...)) {}
-        explicit VKRAIIWrapper(typename T::value_type newObj) : obj(newObj) {}
+        explicit VKRAIIWrapper(Args&&... args) : obj(ObjectTraits::template Create<AllocationTraits>(std::forward<Args>(args)...)) {}
+        explicit VKRAIIWrapper(typename ObjectTraits::value_type newObj) : obj(newObj) {}
         VKRAIIWrapper(const VKRAIIWrapper&) = delete;
         VKRAIIWrapper& operator=(const VKRAIIWrapper&) = delete;
-        VKRAIIWrapper(VKRAIIWrapper&& rhs) : obj(rhs.obj) { rhs.obj = T::null_obj; }
-        VKRAIIWrapper& operator=(VKRAIIWrapper&& rhs) { obj = rhs.obj; rhs.obj = T::null_obj; return *this; }
-        ~VKRAIIWrapper() { obj = T::Destroy(obj); }
+        VKRAIIWrapper(VKRAIIWrapper&& rhs) : obj(rhs.obj) { rhs.obj = ObjectTraits::null_obj; }
+        VKRAIIWrapper& operator=(VKRAIIWrapper&& rhs) { obj = rhs.obj; rhs.obj = ObjectTraits::null_obj; return *this; }
+        ~VKRAIIWrapper() { obj = ObjectTraits::template Destroy<AllocationTraits>(obj); }
 
-        operator typename T::value_type() const { return obj; }
-        explicit operator bool() const { return T::null_obj != obj; }
+        operator typename ObjectTraits::value_type() const { return obj; }
+        explicit operator bool() const { return ObjectTraits::null_obj != obj; }
         bool operator==(const VKRAIIWrapper& rhs) { return rhs.obj == obj; }
 
-        friend bool operator==(typename T::value_type lhs, const VKRAIIWrapper<T>& rhs) { return lhs == rhs.obj; }
-        friend bool operator==(const VKRAIIWrapper<T>& lhs, typename T::value_type rhs) { return lhs.obj == rhs; }
+        friend bool operator==(typename ObjectTraits::value_type lhs, const VKRAIIWrapper<ObjectTraits, AllocationTraits>& rhs) { return lhs == rhs.obj; }
+        friend bool operator==(const VKRAIIWrapper<ObjectTraits, AllocationTraits>& lhs, typename ObjectTraits::value_type rhs) { return lhs.obj == rhs; }
 
-        typename T::value_type release() { typename T::value_type tmp = obj; obj = T::null_obj; return tmp; }
-        void reset(typename T::value_type newObj = T::null_obj) { obj = T::Destroy(obj); obj = newObj; }
-        void swap(VKRAIIWrapper<T>& other) { typename T::value_type tmp = obj; obj = other.obj; other.obj = tmp; }
+        typename ObjectTraits::value_type release() { typename ObjectTraits::value_type tmp = obj; obj = ObjectTraits::null_obj; return tmp; }
+        void reset(typename ObjectTraits::value_type newObj = ObjectTraits::null_obj) { obj = ObjectTraits::template Destroy<AllocationTraits>(obj); obj = newObj; }
+        void swap(VKRAIIWrapper<ObjectTraits, AllocationTraits>& other) { typename ObjectTraits::value_type tmp = obj; obj = other.obj; other.obj = tmp; }
 
     private:
-        typename T::value_type obj;
+        typename ObjectTraits::value_type obj;
     };
 
     struct InstanceObjectTraits
     {
         using value_type = vk::Instance;
         static const value_type null_obj;
-        template<typename... Args>
-        static value_type Create(Args&&... args) { return vk::createInstance(std::forward<Args>(args)...); }
-        static value_type Destroy(value_type prog) { OGL_CALL(glDeleteProgram, prog); return null_obj; }
+        template<typename AllocationTraits, typename... Args>
+        static constexpr value_type Create(Args&&... args) { return vk::createInstance(std::forward<Args>(args)..., AllocationTraits::GetAllocCB()); }
+        template<typename AllocationTraits>
+        static constexpr value_type Destroy(value_type inst) { inst.destroy(AllocationTraits::GetAllocCB()); return null_obj; }
     };
 
-    using InstanceRAII = VKRAIIWrapper<InstanceObjectTraits>;
+    struct StdAllocationTraits
+    {
+        static vk::Optional<vk::AllocationCallbacks> GetAllocCB() { return nullptr; }
+    };
+
+    using InstanceRAII = VKRAIIWrapper<InstanceObjectTraits, StdAllocationTraits>;
 
     /*struct ProgramObjectTraits
     {

@@ -22,7 +22,7 @@ namespace vku {
     class ApplicationBase
     {
     public:
-        ApplicationBase(const std::string& applicationName, uint32_t applicationVersion, cfg::Configuration& config, const glm::vec3& camPos);
+        ApplicationBase(const std::string& applicationName, uint32_t applicationVersion, const std::string& configFileName);
         ApplicationBase(const ApplicationBase&) = delete;
         ApplicationBase(ApplicationBase&&) = delete;
         ApplicationBase& operator=(const ApplicationBase&) = delete;
@@ -40,6 +40,7 @@ namespace vku {
 
         bool IsPaused() const { return pause_; }
         bool IsGUIMode() const { return guiMode_; }
+        VKWindow* GetFocusedWindow();
 
         void SetPause(bool pause);
 
@@ -49,7 +50,7 @@ namespace vku {
         void OnResize(unsigned int width, unsigned int height);
         virtual void Resize(const glm::uvec2& screenSize);
 
-        const cfg::Configuration& GetConfig() const { return config; };
+        const cfg::Configuration& GetConfig() const { return config_; };
 
     private:
         class GLFWInitObject
@@ -59,10 +60,12 @@ namespace vku {
             ~GLFWInitObject();
         };
 
-        GLFWInitObject forceGLFWInit;
+        GLFWInitObject forceGLFWInit_;
 
         /** Holds the configuration for this application. */
-        cfg::Configuration config;
+        cfg::Configuration config_;
+        /** Holds the windows. */
+        std::vector<VKWindow> windows_;
         // application status
         /** <c>true</c> if application is paused. */
         bool pause_;
@@ -91,6 +94,6 @@ namespace vku {
         void InitVulkan(const std::string& applicationName, uint32_t applicationVersion);
 
         /** Holds the vulkan instance. */
-        vk::Instance vkInstance;
+        InstanceRAII vkInstance_;
     };
 }

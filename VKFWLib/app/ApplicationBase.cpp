@@ -13,8 +13,39 @@
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
+#include <fstream>
+#include <boost/archive/xml_oarchive.hpp>
+#include <boost/archive/xml_iarchive.hpp>
 
 namespace vku {
+
+    /**
+    * Logs the debug output of Vulkan.
+    * @param flags the logs severity flags
+    * @param objType the actual type of obj
+    * @param obj the object that threw the message
+    * @param location
+    * @param code
+    * @param layerPrefix
+    * @param msg the debug message
+    * @param userData the user supplied data
+    */
+    static VKAPI_ATTR VkBool32 VKAPI_CALL DebugOutputCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,
+        uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData) {
+
+        auto vkLogLevel = VK_GEN;
+        if (flags | VK_DEBUG_REPORT_DEBUG_BIT_EXT) vkLogLevel = VK_DEBUG;
+        else if (flags | VK_DEBUG_REPORT_INFORMATION_BIT_EXT) vkLogLevel = VK_INFO;
+        else if (flags | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) vkLogLevel = VK_PERF_WARNING;
+        else if (flags | VK_DEBUG_REPORT_WARNING_BIT_EXT) vkLogLevel = VK_WARNING;
+        else if (flags | VK_DEBUG_REPORT_ERROR_BIT_EXT) {
+            vkLogLevel = VK_ERROR;
+        }
+
+        LOG(vkLogLevel) << " [" << layerPrefix << "] Code " << code << " : " << msg;
+
+        return VK_FALSE;
+    }
 
 
     ApplicationBase::GLFWInitObject::GLFWInitObject()
@@ -31,18 +62,44 @@ namespace vku {
      * Construct a new application.
      * @param window the applications main window
      */
-    ApplicationBase::ApplicationBase(const std::string& mainWindowTitle, cfg::Configuration& config, const glm::vec3& camPos) :
+    ApplicationBase::ApplicationBase(const std::string& applicationName, uint32_t applicationVersion, const std::string& configFileName) :
         pause_(true),
         stopped_(false),
         currentTime_(0.0),
         elapsedTime_(0.0)
     {
-        mainWin.RegisterApplication(*this);
-        mainWin.ShowWindow();
-        glm::vec2 screenSize(mainWin.GetClientSize());
+        LOG(DEBUG) << L"Trying to load configuration.";
+        std::ifstream configFile(configFileName, std::ios::in);
+        if (configFile.is_open()) {
+            boost::archive::xml_iarchive ia(configFile);
+            ia >> boost::serialization::make_nvp("configuration", config_);
+
+            // always directly write configuration to update version.
+            std::ofstream ofs(configFileName, std::ios::out);
+            boost::archive::xml_oarchive oa(ofs);
+            oa << boost::serialization::make_nvp("configuration", config_);
+        }
+        else {
+            LOG(DEBUG) << L"Configuration file not found. Using standard config.";
+        }
+
+        InitVulkan(applicationName, applicationVersion);
+
+        for (auto& wc : config_.windows_) {
+            windows_.emplace_back(wc.windowTitle_, wc);
+            windows_.back().RegisterApplication(*this);
+            windows_.back().ShowWindow();
+        }
     }
 
     ApplicationBase::~ApplicationBase() = default;
+
+    VKWindow* ApplicationBase::GetFocusedWindow()
+    {
+        VKWindow* focusWindow = nullptr;
+        for (auto& w : windows_) if (w.IsFocused()) focusWindow = &w;
+        return focusWindow;
+    }
 
     void ApplicationBase::SetPause(bool pause)
     {
@@ -120,7 +177,7 @@ namespace vku {
 
     bool ApplicationBase::IsRunning() const
     {
-        return !stopped_ && !mainWin.IsClosing();
+        return !stopped_ && !windows_[0].IsClosing();
     }
 
     void ApplicationBase::EndRun()
@@ -140,7 +197,7 @@ namespace vku {
         currentTime_ = currentTime;
         glfwPollEvents();
 
-        if (!this->pause_) {
+        if (!this->pause_ && (!config_.pauseOnKillFocus_ || GetFocusedWindow())) {
             this->FrameMove(static_cast<float>(currentTime_), static_cast<float>(elapsedTime_));
             this->RenderScene();
         }
@@ -157,22 +214,67 @@ namespace vku {
 
     void ApplicationBase::InitVulkan(const std::string& applicationName, uint32_t applicationVersion)
     {
+        LOG(INFO) << "Initializing Vulkan...";
         std::vector<const char*> enabledExtensions;
         std::vector<const char*> validationLayers;
-        unsigned int glfwExtensionCount = 0;
+        auto glfwExtensionCount = 0U;
         auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-        for (auto i = 0; i < glfwExtensionCount; ++i) enabledExtensions.push_back(glfwExtensions[i]);
+        for (auto i = 0U; i < glfwExtensionCount; ++i) enabledExtensions.push_back(glfwExtensions[i]);
 
+        auto useValidationLayers = config_.useValidationLayers_;
 #ifndef NDEBUG
-        enabledExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-        validationLayers.push_back("VK_LAYER_LUNARG_standard_validation");
+        useValidationLayers = true;
 #endif
+        if (useValidationLayers) {
+            enabledExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+            // TODO: add debug markers extension? [10/19/2016 Sebastian Maisch]
+            validationLayers.push_back("VK_LAYER_LUNARG_standard_validation");
+        }
+
+        LOG(INFO) << "VKExtensions:";
+        auto extensions = vk::enumerateInstanceExtensionProperties();
+        for (const auto& extension : extensions) LOG(INFO) << "- " << extension.extensionName << "[SpecVersion:" << extension.specVersion << "]";
+
+        for (const auto& enabledExt : enabledExtensions) {
+            auto found = std::find_if(extensions.begin(), extensions.end(),
+                [&enabledExt](const vk::ExtensionProperties& extProps) { return std::strcmp(enabledExt, extProps.extensionName) == 0; });
+            if (found == extensions.end()) {
+                LOG(FATAL) << "Extension needed (" << enabledExt << ") is not available. Quitting.";
+                throw std::runtime_error("Vulkan extension missing.");
+            }
+        }
+
+        LOG(INFO) << "VKLayers:";
+        auto layers = vk::enumerateInstanceLayerProperties();
+        for (const auto& layer : layers) LOG(INFO) << "- " << layer.layerName << "[SpecVersion:" << layer.specVersion << ",ImplVersion:" << layer.implementationVersion << "]";
+
+        for (const auto& enabledLayer : validationLayers) {
+            auto found = std::find_if(layers.begin(), layers.end(),
+                [&enabledLayer](const vk::LayerProperties& layerProps) { return std::strcmp(enabledLayer, layerProps.layerName) == 0; });
+            if (found == layers.end()) {
+                LOG(FATAL) << "Layer needed (" << enabledLayer << ") is not available. Quitting.";
+                throw std::runtime_error("Vulkan layer missing.");
+            }
+        }
 
         vk::ApplicationInfo appInfo{ applicationName.c_str(), applicationVersion, engineName, engineVersion, VK_API_VERSION_1_0 };
         vk::InstanceCreateInfo createInfo{vk::InstanceCreateFlags(), &appInfo, static_cast<uint32_t>(validationLayers.size()), validationLayers.data(),
             static_cast<uint32_t>(enabledExtensions.size()), enabledExtensions.data() };
 
-        // TODO: RAII object... [10/18/2016 Sebastian Maisch]
-        vkInstance = vk::createInstance(createInfo);
+        vkInstance_ = InstanceRAII(createInfo);
+
+        vk::DebugReportFlagsEXT drFlags(vk::DebugReportFlagBitsEXT::eError);
+        drFlags |= vk::DebugReportFlagBitsEXT::eWarning;
+#ifndef NDEBUG
+        drFlags |= vk::DebugReportFlagBitsEXT::ePerformanceWarning;
+        drFlags |= vk::DebugReportFlagBitsEXT::eInformation;
+        drFlags |= vk::DebugReportFlagBitsEXT::eDebug;
+#endif
+        vk::DebugReportCallbackCreateInfoEXT drCreateInfo{ drFlags, DebugOutputCallback, this };
+
+        // TODO: set callback [10/19/2016 Sebastian Maisch]
+
+
+        LOG(INFO) << "Initializing Vulkan... done.";
     }
 }

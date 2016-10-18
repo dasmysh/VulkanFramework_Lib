@@ -17,34 +17,6 @@
 namespace vku {
 
     /**
-     * Logs the debug output of Vulkan.
-     * @param flags the logs severity flags
-     * @param objType the actual type of obj
-     * @param obj the object that threw the message
-     * @param location
-     * @param code
-     * @param layerPrefix
-     * @param msg the debug message
-     * @param userData the user supplied data
-     */
-    static VKAPI_ATTR vk::Bool32 VKAPI_CALL DebugOutputCallback(vk::DebugReportFlagsEXT flags, vk::DebugReportObjectTypeEXT objType,
-        uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData) {
-
-        auto vkLogLevel = VK_GEN;
-        if (flags | vk::DebugReportFlagBitsEXT::eDebug) vkLogLevel = VK_DEBUG;
-        else if (flags | vk::DebugReportFlagBitsEXT::eInformation) vkLogLevel = VK_INFO;
-        else if (flags | vk::DebugReportFlagBitsEXT::ePerformanceWarning) vkLogLevel = VK_PERF_WARNING;
-        else if (flags | vk::DebugReportFlagBitsEXT::eWarning) vkLogLevel = VK_WARNING;
-        else if (flags | vk::DebugReportFlagBitsEXT::eError) {
-            vkLogLevel = VK_ERROR;
-        }
-
-        LOG(vkLogLevel) << " [" << layerPrefix << "] Code " << code << " : " << msg;
-
-        return VK_FALSE;
-    }
-
-    /**
      * Creates a new windows VKWindow.
      * @param title the windows title.
      * @param conf the window configuration used

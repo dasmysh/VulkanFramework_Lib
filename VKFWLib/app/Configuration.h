@@ -56,14 +56,14 @@ namespace vku {
             template<class Archive>
             void save(Archive & ar, const unsigned int) const
             {
-                ar & BOOST_SERIALIZATION_NVP(windowTitle_);
-                ar & BOOST_SERIALIZATION_NVP(fullscreen_);
-                ar & BOOST_SERIALIZATION_NVP(backbufferBits_);
-                ar & BOOST_SERIALIZATION_NVP(windowLeft_);
-                ar & BOOST_SERIALIZATION_NVP(windowTop_);
-                ar & BOOST_SERIALIZATION_NVP(windowWidth_);
-                ar & BOOST_SERIALIZATION_NVP(windowHeight_);
-                ar & BOOST_SERIALIZATION_NVP(useSRGB_);
+                ar & boost::serialization::make_nvp("title", windowTitle_);
+                ar & boost::serialization::make_nvp("fullScreen", fullscreen_);
+                ar & boost::serialization::make_nvp("backBufferBits", backbufferBits_);
+                ar & boost::serialization::make_nvp("positionLeft", windowLeft_);
+                ar & boost::serialization::make_nvp("positionTop", windowTop_);
+                ar & boost::serialization::make_nvp("width", windowWidth_);
+                ar & boost::serialization::make_nvp("height", windowHeight_);
+                ar & boost::serialization::make_nvp("useSRGB", useSRGB_);
             }
 
             /**
@@ -74,14 +74,14 @@ namespace vku {
             template<class Archive>
             void load(Archive & ar, const unsigned int)
             {
-                ar & BOOST_SERIALIZATION_NVP(windowTitle_);
-                ar & BOOST_SERIALIZATION_NVP(fullscreen_);
-                ar & BOOST_SERIALIZATION_NVP(backbufferBits_);
-                ar & BOOST_SERIALIZATION_NVP(windowLeft_);
-                ar & BOOST_SERIALIZATION_NVP(windowTop_);
-                ar & BOOST_SERIALIZATION_NVP(windowWidth_);
-                ar & BOOST_SERIALIZATION_NVP(windowHeight_);
-                ar & BOOST_SERIALIZATION_NVP(useSRGB_);
+                ar & boost::serialization::make_nvp("title", windowTitle_);
+                ar & boost::serialization::make_nvp("fullScreen", fullscreen_);
+                ar & boost::serialization::make_nvp("backBufferBits", backbufferBits_);
+                ar & boost::serialization::make_nvp("positionLeft", windowLeft_);
+                ar & boost::serialization::make_nvp("positionTop", windowTop_);
+                ar & boost::serialization::make_nvp("width", windowWidth_);
+                ar & boost::serialization::make_nvp("height", windowHeight_);
+                ar & boost::serialization::make_nvp("useSRGB", useSRGB_);
             }
 
             BOOST_SERIALIZATION_SPLIT_MEMBER()
@@ -100,6 +100,8 @@ namespace vku {
 
             /** Holds configurations for each window. */
             std::vector<WindowCfg> windows_;
+            /** Holds whether validation layers should be used (in release). */
+            bool useValidationLayers_;
             /** Holds whether the application should pause on focus loss of main (first) window. */
             bool pauseOnKillFocus_;
             /** Holds the resource base directory. */
@@ -121,10 +123,12 @@ namespace vku {
             template<class Archive>
             void save(Archive & ar, const unsigned int) const
             {
-                ar & BOOST_SERIALIZATION_NVP(pauseOnKillFocus_);
-                ar & BOOST_SERIALIZATION_NVP(resourceBase_);
-                ar & BOOST_SERIALIZATION_NVP(resourceDirs_);
-                ar & BOOST_SERIALIZATION_NVP(evalDirectory_);
+                ar & boost::serialization::make_nvp("windows", windows_);
+                ar & boost::serialization::make_nvp("useValidationLayers", useValidationLayers_);
+                ar & boost::serialization::make_nvp("pauseOnKillFocus", pauseOnKillFocus_);
+                ar & boost::serialization::make_nvp("resourceBase", resourceBase_);
+                ar & boost::serialization::make_nvp("resourceDirectories", resourceDirs_);
+                ar & boost::serialization::make_nvp("evalDirectory", evalDirectory_);
             }
 
             /**
@@ -135,10 +139,12 @@ namespace vku {
             template<class Archive>
             void load(Archive & ar, const unsigned int)
             {
-                ar & BOOST_SERIALIZATION_NVP(pauseOnKillFocus_);
-                ar & BOOST_SERIALIZATION_NVP(resourceBase_);
-                ar & BOOST_SERIALIZATION_NVP(resourceDirs_);
-                ar & BOOST_SERIALIZATION_NVP(evalDirectory_);
+                ar & boost::serialization::make_nvp("windows", windows_);
+                ar & boost::serialization::make_nvp("useValidationLayers", useValidationLayers_);
+                ar & boost::serialization::make_nvp("pauseOnKillFocus", pauseOnKillFocus_);
+                ar & boost::serialization::make_nvp("resourceBase", resourceBase_);
+                ar & boost::serialization::make_nvp("resourceDirectories", resourceDirs_);
+                ar & boost::serialization::make_nvp("evalDirectory", evalDirectory_);
             }
 
             BOOST_SERIALIZATION_SPLIT_MEMBER()

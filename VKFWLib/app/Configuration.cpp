@@ -70,6 +70,7 @@ namespace vku {
 
 
         Configuration::Configuration() :
+            useValidationLayers_(true),
             pauseOnKillFocus_(false),
             resourceBase_("resources"),
             evalDirectory_("evaluation")
@@ -79,6 +80,7 @@ namespace vku {
 
         Configuration::Configuration(const Configuration& rhs) :
             windows_(rhs.windows_),
+            useValidationLayers_(rhs.useValidationLayers_),
             pauseOnKillFocus_(rhs.pauseOnKillFocus_),
             resourceBase_(rhs.resourceBase_),
             resourceDirs_(rhs.resourceDirs_),
@@ -87,6 +89,7 @@ namespace vku {
 
         Configuration::Configuration(Configuration&& rhs) :
             windows_(std::move(rhs.windows_)),
+            useValidationLayers_(std::move(rhs.useValidationLayers_)),
             pauseOnKillFocus_(std::move(rhs.pauseOnKillFocus_)),
             resourceBase_(std::move(rhs.resourceBase_)),
             resourceDirs_(std::move(rhs.resourceDirs_)),
@@ -107,6 +110,7 @@ namespace vku {
             if (this != &rhs) {
                 this->~Configuration();
                 windows_ = std::move(rhs.windows_);
+                useValidationLayers_ = std::move(rhs.useValidationLayers_);
                 pauseOnKillFocus_ = std::move(rhs.pauseOnKillFocus_);
                 resourceBase_ = std::move(rhs.resourceBase_);
                 resourceDirs_ = std::move(rhs.resourceDirs_);
