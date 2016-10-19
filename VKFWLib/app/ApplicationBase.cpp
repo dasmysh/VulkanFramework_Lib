@@ -17,6 +17,11 @@
 #include <boost/archive/xml_oarchive.hpp>
 #include <boost/archive/xml_iarchive.hpp>
 
+namespace vk {
+    PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallbackEXT = nullptr;
+    PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallbackEXT = nullptr;
+}
+
 namespace vku {
 
     /**
@@ -92,7 +97,11 @@ namespace vku {
         }
     }
 
-    ApplicationBase::~ApplicationBase() = default;
+    ApplicationBase::~ApplicationBase()
+    {
+        if (vkDebugReportCB_) vk::DestroyDebugReportCallbackEXT(vkInstance_, vkDebugReportCB_, nullptr);
+        if (vkInstance_) vkInstance_.destroy();
+    }
 
     VKWindow* ApplicationBase::GetFocusedWindow()
     {
@@ -261,7 +270,7 @@ namespace vku {
         vk::InstanceCreateInfo createInfo{vk::InstanceCreateFlags(), &appInfo, static_cast<uint32_t>(validationLayers.size()), validationLayers.data(),
             static_cast<uint32_t>(enabledExtensions.size()), enabledExtensions.data() };
 
-        vkInstance_ = InstanceRAII(createInfo);
+        vkInstance_ = vk::createInstance(createInfo);
 
         vk::DebugReportFlagsEXT drFlags(vk::DebugReportFlagBitsEXT::eError);
         drFlags |= vk::DebugReportFlagBitsEXT::eWarning;
@@ -273,7 +282,19 @@ namespace vku {
         vk::DebugReportCallbackCreateInfoEXT drCreateInfo{ drFlags, DebugOutputCallback, this };
 
         // TODO: set callback [10/19/2016 Sebastian Maisch]
-
+        static_cast<vk::Instance>(vkInstance_).createDebugReportCallbackEXT(drCreateInfo);
+        vk::CreateDebugReportCallbackEXT = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(static_cast<vk::Instance>(vkInstance_), "vkCreateDebugReportCallbackEXT"));
+        if (vk::CreateDebugReportCallbackEXT != nullptr) {
+            // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
+            VkDebugReportCallbackEXT dbgReportCB = VK_NULL_HANDLE;
+            if (vk::CreateDebugReportCallbackEXT(vkInstance_, &static_cast<const VkDebugReportCallbackCreateInfoEXT&>(drCreateInfo), nullptr, &dbgReportCB) != VK_) {
+                
+            }
+            vkDebugReportCB_ = vk::DebugReportCallbackEXT(dbgReportCB);
+        }
+        else {
+            return VK_ERROR_EXTENSION_NOT_PRESENT;
+        }
 
         LOG(INFO) << "Initializing Vulkan... done.";
     }

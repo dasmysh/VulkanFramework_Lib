@@ -94,6 +94,8 @@ namespace vku {
         void InitVulkan(const std::string& applicationName, uint32_t applicationVersion);
 
         /** Holds the vulkan instance. */
-        InstanceRAII vkInstance_;
+        vk::Instance vkInstance_;
+        /** Holds the debug report callback. */
+        vk::DebugReportCallbackEXT vkDebugReportCB_;
     };
 }

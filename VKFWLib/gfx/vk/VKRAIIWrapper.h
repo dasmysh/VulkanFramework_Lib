@@ -17,6 +17,7 @@ namespace vku {
     template<typename ObjectTraits, typename AllocationTraits> class VKRAIIWrapper
     {
     public:
+        VKRAIIWrapper() : obj(ObjectTraits::null_obj) {}
         template<typename... Args>
         explicit VKRAIIWrapper(Args&&... args) : obj(ObjectTraits::template Create<AllocationTraits>(std::forward<Args>(args)...)) {}
         explicit VKRAIIWrapper(typename ObjectTraits::value_type newObj) : obj(newObj) {}
@@ -26,7 +27,8 @@ namespace vku {
         VKRAIIWrapper& operator=(VKRAIIWrapper&& rhs) { obj = rhs.obj; rhs.obj = ObjectTraits::null_obj; return *this; }
         ~VKRAIIWrapper() { obj = ObjectTraits::template Destroy<AllocationTraits>(obj); }
 
-        operator typename ObjectTraits::value_type() const { return obj; }
+        operator const typename ObjectTraits::value_type&() const { return obj; }
+        operator typename ObjectTraits::value_type&() { return obj; }
         explicit operator bool() const { return ObjectTraits::null_obj != obj; }
         bool operator==(const VKRAIIWrapper& rhs) { return rhs.obj == obj; }
 
@@ -51,12 +53,23 @@ namespace vku {
         static constexpr value_type Destroy(value_type inst) { inst.destroy(AllocationTraits::GetAllocCB()); return null_obj; }
     };
 
+    struct DebugReportCBObjectTraits
+    {
+        using value_type = vk::DebugReportCallbackEXT;
+        static const value_type null_obj;
+        // template<typename AllocationTraits, typename... Args>
+        // static constexpr value_type Create(Args&&... args) { return vk::createInstance(std::forward<Args>(args)..., AllocationTraits::GetAllocCB()); }
+        template<typename AllocationTraits>
+        static constexpr value_type Destroy(value_type dbgRprtCB) { vkDestroyDebugReportCallbackEXT( dbgRprtCB. .destroy(AllocationTraits::GetAllocCB()); return null_obj; }
+    };
+
     struct StdAllocationTraits
     {
         static vk::Optional<vk::AllocationCallbacks> GetAllocCB() { return nullptr; }
     };
 
     using InstanceRAII = VKRAIIWrapper<InstanceObjectTraits, StdAllocationTraits>;
+    using DebugReportCBRAII = VKRAIIWrapper<DebugReportCBObjectTraits, StdAllocationTraits>;
 
     /*struct ProgramObjectTraits
     {

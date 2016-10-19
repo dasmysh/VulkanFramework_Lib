@@ -10,4 +10,5 @@
 
 namespace vku {
     const vk::Instance InstanceObjectTraits::null_obj = vk::Instance();
+    const vk::DebugReportCallbackEXT DebugReportCBObjectTraits::null_obj = vk::DebugReportCallbackEXT();
 }
