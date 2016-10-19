@@ -9,6 +9,7 @@
 #pragma once
 
 #include "main.h"
+#include <vulkan/vulkan.hpp>
 
 struct GLFWwindow;
 
@@ -19,7 +20,7 @@ namespace vku {
     class VKWindow
     {
     public:
-        VKWindow(const std::string& title, cfg::WindowCfg& conf);
+        explicit VKWindow(cfg::WindowCfg& conf);
         VKWindow(const VKWindow&);
         VKWindow(VKWindow&&);
         VKWindow& operator=(const VKWindow&);
@@ -65,9 +66,14 @@ namespace vku {
 
         /** Holds the GLFW window. */
         GLFWwindow* window_;
-        std::string windowTitle_;
+        /** Holds the window's title. */
+        // std::string windowTitle_;
+        /** Holds the configuration for this window. */
         cfg::WindowCfg& config_;
+        /** Holds the application. */
         ApplicationBase* app_;
+        /** Holds the Vulkan surface. */
+        vk::SurfaceKHR vkSurface_;
 
         /** Holds the current mouse position. */
         glm::vec2 currMousePosition_;

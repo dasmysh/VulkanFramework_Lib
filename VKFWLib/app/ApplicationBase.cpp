@@ -61,6 +61,7 @@ namespace vku {
     }
 
 
+
     ApplicationBase::GLFWInitObject::GLFWInitObject()
     {
         glfwInit();
@@ -83,7 +84,7 @@ namespace vku {
             }
         };
 
-        QueueFamilyIndices findQueueFamilyIndices(const vk::PhysicalDevice& device)
+        QueueFamilyIndices findQueueFamilyIndices(const vk::PhysicalDevice& device, const vk::SurfaceKHR& surface = vk::SurfaceKHR())
         {
             QueueFamilyIndices indices;
 
@@ -91,7 +92,9 @@ namespace vku {
             auto i = 0;
             for (const auto& queueFamily : qFamilyProps) {
                 if (queueFamily.queueCount > 0) {
-                    if (indices.graphicsFamily == -1 && queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) indices.graphicsFamily = i;
+                    if (indices.graphicsFamily == -1
+                        && queueFamily.queueFlags & vk::QueueFlagBits::eGraphics
+                        && (!surface || device.getSurfaceSupportKHR(i, surface))) indices.graphicsFamily = i;
                     if (indices.computeFamily == -1 && queueFamily.queueFlags & vk::QueueFlagBits::eCompute) indices.computeFamily = i;
                     if (indices.transferFamily == -1 
                         && (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics 
@@ -107,9 +110,25 @@ namespace vku {
             }
             return indices;
         }
+
+        int findQueue(const vk::PhysicalDevice& device, const vk::QueueFlags& flags, const vk::SurfaceKHR& surface = vk::SurfaceKHR())
+        {
+            auto queueProps = device.getQueueFamilyProperties();
+            auto queueCount = static_cast<uint32_t>(queueProps.size());
+            for (uint32_t i = 0; i < queueCount; i++) {
+                if (queueProps[i].queueFlags & flags) {
+                    if (surface && !device.getSurfaceSupportKHR(i, surface)) {
+                        continue;
+                    }
+                    return i;
+                }
+            }
+            return -1;
+        }
     }
 
 
+    ApplicationBase* ApplicationBase::instance_ = nullptr;
 
     /**
      * Construct a new application.
@@ -139,6 +158,7 @@ namespace vku {
         }
 
         InitVulkan(applicationName, applicationVersion);
+        instance_ = this;
 
         for (auto& wc : config_.windows_) {
             windows_.emplace_back(wc.windowTitle_, wc);
@@ -413,7 +433,26 @@ namespace vku {
         LOG(INFO) << "Initializing Vulkan... done.";
     }
 
-    unsigned int ApplicationBase::ScorePhysicalDevice(const vk::PhysicalDevice& device)
+    const vk::Device& ApplicationBase::GetDeviceForSurace(const vk::SurfaceKHR& surface)
+    {
+        {
+            auto phDevices = vkInstance_.enumeratePhysicalDevices();
+            std::map<unsigned int, vk::PhysicalDevice> scoredDevices;
+            for (const auto& device : phDevices) {
+                auto score = ScorePhysicalDevice(device, surface);
+                scoredDevices[score] = device;
+            }
+
+            if (!scoredDevices.empty() && scoredDevices.begin()->first > 0) {
+                // TODO... [10/20/2016 Sebastian Maisch] vkPhysicalDevice_ = scoredDevices.begin()->second;
+            } else {
+                LOG(FATAL) << "Could not find suitable Vulkan GPU.";
+                throw std::runtime_error("Could not find suitable Vulkan GPU.");
+            }
+        }
+    }
+
+    unsigned int ApplicationBase::ScorePhysicalDevice(const vk::PhysicalDevice& device, const vk::SurfaceKHR& surface)
     {
         auto deviceProperties = device.getProperties();
         auto deviceFeatures = device.getFeatures();
@@ -428,16 +467,7 @@ namespace vku {
             && deviceFeatures.geometryShader && deviceFeatures.tessellationShader && deviceFeatures.largePoints
             && deviceFeatures.shaderUniformBufferArrayDynamicIndexing && deviceFeatures.shaderStorageBufferArrayDynamicIndexing)) score = 0U;
 
-        /*auto hasGraphicsQueue = false, hasTransferQueue = false, hasComputeQueue = false;
-        for (const auto& queueFamily : deviceQueueFamilyProperties) {
-            if (queueFamily.queueCount > 0) {
-                if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) { hasGraphicsQueue = true; hasTransferQueue = true; }
-                if (queueFamily.queueFlags & vk::QueueFlagBits::eCompute) { hasComputeQueue = true; hasTransferQueue = true; }
-                if (queueFamily.queueFlags & vk::QueueFlagBits::eTransfer) { hasTransferQueue = true; }
-            }
-        }*/
-
-        auto queueFamilies = qf::findQueueFamilyIndices(device);
+        auto queueFamilies = qf::findQueueFamilyIndices(device, surface);
         if (!queueFamilies.isComplete()) score = 0U;
 
         LOG(INFO) << "Scored: " << score;

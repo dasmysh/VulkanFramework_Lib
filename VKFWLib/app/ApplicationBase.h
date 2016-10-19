@@ -29,6 +29,8 @@ namespace vku {
         ApplicationBase& operator=(ApplicationBase&&) = delete;
         virtual ~ApplicationBase();
 
+        static ApplicationBase& instance() { return *instance_; };
+
         /** Starts the application. */
         void StartRun();
         /** Checks if the application is still running. */
@@ -51,6 +53,8 @@ namespace vku {
         virtual void Resize(const glm::uvec2& screenSize);
 
         const cfg::Configuration& GetConfig() const { return config_; };
+        const vk::Instance& GetVKInstance() const { return vkInstance_; }
+        const vk::Device& GetDeviceForSurace(const vk::SurfaceKHR& surface);
 
     private:
         class GLFWInitObject
@@ -61,6 +65,9 @@ namespace vku {
         };
 
         GLFWInitObject forceGLFWInit_;
+
+        /** Holds the applications instance. */
+        static ApplicationBase* instance_;
 
         /** Holds the configuration for this application. */
         cfg::Configuration config_;
@@ -92,7 +99,7 @@ namespace vku {
 
     private:
         void InitVulkan(const std::string& applicationName, uint32_t applicationVersion);
-        static unsigned int ScorePhysicalDevice(const vk::PhysicalDevice& device);
+        static unsigned int ScorePhysicalDevice(const vk::PhysicalDevice& device, const vk::SurfaceKHR& surface);
         PFN_vkVoidFunction LoadVKInstanceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false) const;
         PFN_vkVoidFunction LoadVKDeviceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false) const;
 

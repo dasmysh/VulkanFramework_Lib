@@ -21,9 +21,9 @@ namespace vku {
      * @param title the windows title.
      * @param conf the window configuration used
      */
-    VKWindow::VKWindow(const std::string& title, cfg::WindowCfg& conf) :
+    VKWindow::VKWindow(cfg::WindowCfg& conf) :
         window_{ nullptr },
-        windowTitle_(title),
+//        windowTitle_(title),
         config_(conf),
         app_(nullptr),
         currMousePosition_(0.0f),
@@ -57,14 +57,15 @@ namespace vku {
      */
     void VKWindow::InitWindow()
     {
+        LOG(INFO) << "Creating window '" << config_.windowTitle_ << "'.";
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwSetErrorCallback(VKWindow::glfwErrorCallback);
 
         if (config_.fullscreen_) {
             glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-            window_ = glfwCreateWindow(config_.windowWidth_, config_.windowHeight_, windowTitle_.c_str(), glfwGetPrimaryMonitor(), nullptr);
+            window_ = glfwCreateWindow(config_.windowWidth_, config_.windowHeight_, config_.windowTitle_.c_str(), glfwGetPrimaryMonitor(), nullptr);
             if (window_ == nullptr) {
-                LOG(FATAL) << L"Could not create window!";
+                LOG(FATAL) << "Could not create window!";
                 glfwTerminate();
                 throw std::runtime_error("Could not create window!");
             }
@@ -72,9 +73,9 @@ namespace vku {
         } else {
             glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
             glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
-            window_ = glfwCreateWindow(config_.windowWidth_, config_.windowHeight_, windowTitle_.c_str(), nullptr, nullptr);
+            window_ = glfwCreateWindow(config_.windowWidth_, config_.windowHeight_, config_.windowTitle_.c_str(), nullptr, nullptr);
             if (window_ == nullptr) {
-                LOG(FATAL) << L"Could not create window!";
+                LOG(FATAL) << "Could not create window!";
                 glfwTerminate();
                 throw std::runtime_error("Could not create window!");
             }
@@ -104,12 +105,12 @@ namespace vku {
 
         // Check for Valid Context
         if (window_ == nullptr) {
-            LOG(FATAL) << L"Could not create window!";
+            LOG(FATAL) << "Could not create window!";
             glfwTerminate();
             throw std::runtime_error("Could not create window!");
         }
 
-        LOG(INFO) << L"Window successfully initialized.";
+        LOG(INFO) << "Window successfully initialized.";
     }
 
     /**
@@ -117,53 +118,38 @@ namespace vku {
      */
     void VKWindow::InitVulkan()
     {
-        LOG(INFO) << L"Initializing OpenGL context...";
-        glfwMakeContextCurrent(window_);
+        LOG(INFO) << "Initializing Vulkan surface...";
 
-        LOG(INFO) << L"Initializing glad...";
-        if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glfwGetProcAddress))) {
-            this->ReleaseVulkan();
-            LOG(FATAL) << L"Could not initialize glad!";
-            throw std::runtime_error("Could not initialize glad!");
+        // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
+        VkSurfaceKHR surfaceKHR = VK_NULL_HANDLE;
+        auto result = glfwCreateWindowSurface(ApplicationBase::instance().GetVKInstance(), window_, nullptr, &surfaceKHR);
+        if (result != VK_SUCCESS) {
+            LOG(FATAL) << "Could not create window surface (" << result << ").";
+            throw std::runtime_error("Could not create window surface.");
         }
 
-        // TODO: higher OpenGL version?
-        LOG(INFO) << L"Checking OpenGL version 4.5 ...";
-        if (!GLAD_GL_VERSION_4_5) {
-            this->ReleaseVulkan();
-            LOG(ERROR) << L"OpenGL version not supported.";
-            throw std::runtime_error("OpenGL version not supported.");
-        }
+        // create device for window...
 
+        LOG(INFO) << L"Initializing Vulkan surface... done.";
 
-#ifdef _DEBUG
-        if (GLAD_GL_ARB_debug_output) {
-            LOG(DEBUG) << L"The OpenGL implementation provides debug output.";
-            glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-            glDebugMessageCallback(&DebugOutputCallback, nullptr);
-            GLuint unusedIds = 0;
-            glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, &unusedIds, true);
-            glDebugMessageInsert(GL_DEBUG_SOURCE_APPLICATION_ARB, GL_DEBUG_TYPE_OTHER_ARB,
-                1, GL_DEBUG_SEVERITY_HIGH, -1, "OpenGL Debug Log here ...");
-        } else {
-            LOG(DEBUG) << L"The OpenGL implementation does not provide debug output.";
-        }
-#endif
+        fbo.Resize(config_.windowWidth_, config_.windowHeight_);
 
-        fbo.Resize(config_.windowWidth, config_.windowHeight);
-
-        if (!GLAD_GL_ARB_vertex_array_object) {
-            LOG(WARNING) << L"VAOs not supported ...";
-        }
-
-        if (config_.useSRGB) {
+        if (config_.useSRGB_) {
             glEnable(GL_FRAMEBUFFER_SRGB);
         }
         glEnable(GL_SCISSOR_TEST);
 
-        LOG(INFO) << L"OpenGL context initialized.";
+        LOG(INFO) << L"Initializing Vulkan surface... done.";
 
         ImGui_ImplGlfwGL3_Init(window_, false);
+    }
+
+    // ReSharper disable once CppMemberFunctionMayBeStatic
+    // ReSharper disable once CppMemberFunctionMayBeConst
+    void VKWindow::ReleaseVulkan()
+    {
+        ApplicationBase::instance().GetVKInstance().destroySurfaceKHR(vkSurface_);
+        ImGui_ImplGlfwGL3_Shutdown();
     }
 
     /**
@@ -189,13 +175,6 @@ namespace vku {
     void VKWindow::CloseWindow() const
     {
         glfwSetWindowShouldClose(window_, GLFW_TRUE);
-    }
-
-    // ReSharper disable once CppMemberFunctionMayBeStatic
-    // ReSharper disable once CppMemberFunctionMayBeConst
-    void VKWindow::ReleaseVulkan()
-    {
-        ImGui_ImplGlfwGL3_Shutdown();
     }
 
     void VKWindow::ReleaseWindow()
