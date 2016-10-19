@@ -39,11 +39,11 @@ namespace vku {
         bool IsKeyPressed(int key) const;
 
         /** Returns the windows width. */
-        unsigned int GetWidth() const { return width; }
+//        unsigned int GetWidth() const { return width; }
         /** Returns the windows height. */
-        unsigned int GetHeight() const { return height; }
+//        unsigned int GetHeight() const { return height; }
         /** Returns the windows client size. */
-        glm::vec2 GetClientSize() const { return glm::vec2(static_cast<float>(width), static_cast<float>(height)); }
+//        glm::vec2 GetClientSize() const { return glm::vec2(static_cast<float>(width), static_cast<float>(height)); }
         glm::vec2 GetMousePosition() const { return currMousePosition_; }
 
     private:

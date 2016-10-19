@@ -14,7 +14,7 @@
 
 namespace vku {
 
-    template<typename ObjectTraits, typename AllocationTraits> class VKRAIIWrapper
+    /*template<typename ObjectTraits, typename AllocationTraits> class VKRAIIWrapper
     {
     public:
         VKRAIIWrapper() : obj(ObjectTraits::null_obj) {}
@@ -69,7 +69,7 @@ namespace vku {
     };
 
     using InstanceRAII = VKRAIIWrapper<InstanceObjectTraits, StdAllocationTraits>;
-    using DebugReportCBRAII = VKRAIIWrapper<DebugReportCBObjectTraits, StdAllocationTraits>;
+    using DebugReportCBRAII = VKRAIIWrapper<DebugReportCBObjectTraits, StdAllocationTraits>;*/
 
     /*struct ProgramObjectTraits
     {

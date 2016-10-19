@@ -293,41 +293,50 @@ namespace vku {
 #endif
         if (useValidationLayers) {
             enabledExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-            enabledExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
             validationLayers.push_back("VK_LAYER_LUNARG_standard_validation");
         }
 
-        LOG(INFO) << "VKExtensions:";
-        auto extensions = vk::enumerateInstanceExtensionProperties();
-        for (const auto& extension : extensions) LOG(INFO) << "- " << extension.extensionName << "[SpecVersion:" << extension.specVersion << "]";
+        {
+            LOG(INFO) << "VK Instance Extensions:";
+            auto extensions = vk::enumerateInstanceExtensionProperties();
+            for (const auto& extension : extensions) LOG(INFO) << "- " << extension.extensionName << "[SpecVersion:" << extension.specVersion << "]";
 
-        for (const auto& enabledExt : enabledExtensions) {
-            auto found = std::find_if(extensions.begin(), extensions.end(),
-                [&enabledExt](const vk::ExtensionProperties& extProps) { return std::strcmp(enabledExt, extProps.extensionName) == 0; });
-            if (found == extensions.end()) {
-                LOG(FATAL) << "Extension needed (" << enabledExt << ") is not available. Quitting.";
-                throw std::runtime_error("Vulkan extension missing.");
+            for (const auto& enabledExt : enabledExtensions) {
+                auto found = std::find_if(extensions.begin(), extensions.end(),
+                    [&enabledExt](const vk::ExtensionProperties& extProps) { return std::strcmp(enabledExt, extProps.extensionName) == 0; });
+                if (found == extensions.end()) {
+                    LOG(FATAL) << "Extension needed (" << enabledExt << ") is not available. Quitting.";
+                    throw std::runtime_error("Vulkan extension missing.");
+                }
             }
         }
 
-        LOG(INFO) << "VKLayers:";
-        auto layers = vk::enumerateInstanceLayerProperties();
-        for (const auto& layer : layers) LOG(INFO) << "- " << layer.layerName << "[SpecVersion:" << layer.specVersion << ",ImplVersion:" << layer.implementationVersion << "]";
+        {
+            LOG(INFO) << "VK Instance Layers:";
+            auto layers = vk::enumerateInstanceLayerProperties();
+            for (const auto& layer : layers) LOG(INFO) << "- " << layer.layerName << "[SpecVersion:" << layer.specVersion << ",ImplVersion:" << layer.implementationVersion << "]";
 
-        for (const auto& enabledLayer : validationLayers) {
-            auto found = std::find_if(layers.begin(), layers.end(),
-                [&enabledLayer](const vk::LayerProperties& layerProps) { return std::strcmp(enabledLayer, layerProps.layerName) == 0; });
-            if (found == layers.end()) {
-                LOG(FATAL) << "Layer needed (" << enabledLayer << ") is not available. Quitting.";
-                throw std::runtime_error("Vulkan layer missing.");
+            for (const auto& enabledLayer : validationLayers) {
+                auto found = std::find_if(layers.begin(), layers.end(),
+                    [&enabledLayer](const vk::LayerProperties& layerProps) { return std::strcmp(enabledLayer, layerProps.layerName) == 0; });
+                if (found == layers.end()) {
+                    LOG(FATAL) << "Layer needed (" << enabledLayer << ") is not available. Quitting.";
+                    throw std::runtime_error("Vulkan layer missing.");
+                }
             }
         }
 
-        vk::ApplicationInfo appInfo{ applicationName.c_str(), applicationVersion, engineName, engineVersion, VK_API_VERSION_1_0 };
-        vk::InstanceCreateInfo createInfo{vk::InstanceCreateFlags(), &appInfo, static_cast<uint32_t>(validationLayers.size()), validationLayers.data(),
-            static_cast<uint32_t>(enabledExtensions.size()), enabledExtensions.data() };
+        {
+            vk::ApplicationInfo appInfo{ applicationName.c_str(), applicationVersion, engineName, engineVersion, VK_API_VERSION_1_0 };
+            vk::InstanceCreateInfo createInfo{ vk::InstanceCreateFlags(), &appInfo, static_cast<uint32_t>(validationLayers.size()), validationLayers.data(),
+                static_cast<uint32_t>(enabledExtensions.size()), enabledExtensions.data() };
 
-        vkInstance_ = vk::createInstance(createInfo);
+            vkInstance_ = vk::createInstance(createInfo);
+
+            vk::CreateDebugReportCallbackEXT = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(LoadVKInstanceFunction("vkCreateDebugReportCallbackEXT", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, true));
+            vk::DestroyDebugReportCallbackEXT = reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(LoadVKInstanceFunction("vkDestroyDebugReportCallbackEXT", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, true));
+            vk::DebugReportMessageEXT = reinterpret_cast<PFN_vkDebugReportMessageEXT>(LoadVKInstanceFunction("vkDebugReportMessageEXT", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, true));
+        }
 
         vk::DebugReportFlagsEXT drFlags(vk::DebugReportFlagBitsEXT::eError);
         drFlags |= vk::DebugReportFlagBitsEXT::eWarning;
@@ -337,10 +346,6 @@ namespace vku {
         drFlags |= vk::DebugReportFlagBitsEXT::eDebug;
 #endif
         vk::DebugReportCallbackCreateInfoEXT drCreateInfo{ drFlags, DebugOutputCallback, this };
-
-        vk::CreateDebugReportCallbackEXT = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(LoadVKFunction("vkCreateDebugReportCallbackEXT", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, true));
-        vk::DestroyDebugReportCallbackEXT = reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(LoadVKFunction("vkDestroyDebugReportCallbackEXT", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, true));
-        vk::DebugReportMessageEXT = reinterpret_cast<PFN_vkDebugReportMessageEXT>(LoadVKFunction("vkDebugReportMessageEXT", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, true));
 
         // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
         VkDebugReportCallbackEXT dbgReportCB = VK_NULL_HANDLE;
@@ -352,29 +357,58 @@ namespace vku {
         vkDebugReportCB_ = vk::DebugReportCallbackEXT(dbgReportCB);
         LOG(INFO) << "Vulkan instance created.";
 
-        auto phDevices = vkInstance_.enumeratePhysicalDevices();
-        std::map<unsigned int, vk::PhysicalDevice> scoredDevices;
-        for (const auto& device : phDevices) {
-            auto score = ScorePhysicalDevice(device);
-            scoredDevices[score] = device;
+        {
+            auto phDevices = vkInstance_.enumeratePhysicalDevices();
+            std::map<unsigned int, vk::PhysicalDevice> scoredDevices;
+            for (const auto& device : phDevices) {
+                auto score = ScorePhysicalDevice(device);
+                scoredDevices[score] = device;
+            }
+
+            if (!scoredDevices.empty() && scoredDevices.begin()->first > 0) {
+                vkPhysicalDevice_ = scoredDevices.begin()->second;
+            }
+            else {
+                LOG(FATAL) << "Could not find suitable Vulkan GPU.";
+                throw std::runtime_error("Could not find suitable Vulkan GPU.");
+            }
         }
 
-        if (!scoredDevices.empty() && scoredDevices.begin()->first > 0) {
-            vkPhysicalDevice_ = scoredDevices.begin()->second;
-        } else {
-            LOG(FATAL) << "Could not find suitable Vulkan GPU.";
-            throw std::runtime_error("Could not find suitable Vulkan GPU.");
+        {
+            auto qfIndices = qf::findQueueFamilyIndices(vkPhysicalDevice_);
+            std::array<float, NUM_GRAPHICS_QUEUES> queuePriorities{ 1.0f };
+            vk::DeviceQueueCreateInfo queueCreateInfo{ vk::DeviceQueueCreateFlags(), static_cast<uint32_t>(qfIndices.graphicsFamily), NUM_GRAPHICS_QUEUES, queuePriorities.data() };
+            auto deviceFeatures = vkPhysicalDevice_.getFeatures();
+            std::vector<const char*> enabledDeviceExtensions;
+
+            {
+                LOG(INFO) << "VK Device Extensions:";
+                auto extensions = vkPhysicalDevice_.enumerateDeviceExtensionProperties();
+                for (const auto& extension : extensions) LOG(INFO) << "- " << extension.extensionName << "[SpecVersion:" << extension.specVersion << "]";
+
+                auto dbgMkFound = std::find_if(extensions.begin(), extensions.end(),
+                    [](const vk::ExtensionProperties& extProps) { return std::strcmp(VK_EXT_DEBUG_MARKER_EXTENSION_NAME, extProps.extensionName) == 0; });
+                if (dbgMkFound != extensions.end()) {
+                    enableDebugMarkers_ = true;
+                    enabledDeviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
+                }
+            }
+            vk::DeviceCreateInfo deviceCreateInfo{ vk::DeviceCreateFlags(), 1, &queueCreateInfo,
+                static_cast<uint32_t>(validationLayers.size()), validationLayers.data(),
+                static_cast<uint32_t>(enabledDeviceExtensions.size()), enabledDeviceExtensions.data(),
+                &deviceFeatures };
+
+            vkDevice_ = vkPhysicalDevice_.createDevice(deviceCreateInfo);
+            vkGraphicsQueue_ = vkDevice_.getQueue(qfIndices.graphicsFamily, 0);
         }
 
-        auto qfIndices = qf::findQueueFamilyIndices(vkPhysicalDevice_);
-        std::array<float, NUM_GRAPHICS_QUEUES> queuePriorities{ 1.0f };
-        vk::DeviceQueueCreateInfo queueCreateInfo{ vk::DeviceQueueCreateFlags(), static_cast<uint32_t>(qfIndices.graphicsFamily), NUM_GRAPHICS_QUEUES, queuePriorities.data() };
-
-        /*vk::DebugMarkerSetObjectTagEXT = reinterpret_cast<PFN_vkDebugMarkerSetObjectTagEXT>(LoadVKFunction("vkDebugMarkerSetObjectTagEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false));
-        vk::DebugMarkerSetObjectNameEXT = reinterpret_cast<PFN_vkDebugMarkerSetObjectNameEXT>(LoadVKFunction("vkDebugMarkerSetObjectNameEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false));
-        vk::CmdDebugMarkerBeginEXT = reinterpret_cast<PFN_vkCmdDebugMarkerBeginEXT>(LoadVKFunction("vkCmdDebugMarkerBeginEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false));
-        vk::CmdDebugMarkerEndEXT = reinterpret_cast<PFN_vkCmdDebugMarkerEndEXT>(LoadVKFunction("vkCmdDebugMarkerEndEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false));
-        vk::CmdDebugMarkerInsertEXT = reinterpret_cast<PFN_vkCmdDebugMarkerInsertEXT>(LoadVKFunction("vkCmdDebugMarkerInsertEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false));*/
+        if (enableDebugMarkers_) {
+            vk::DebugMarkerSetObjectTagEXT = reinterpret_cast<PFN_vkDebugMarkerSetObjectTagEXT>(LoadVKDeviceFunction("vkDebugMarkerSetObjectTagEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
+            vk::DebugMarkerSetObjectNameEXT = reinterpret_cast<PFN_vkDebugMarkerSetObjectNameEXT>(LoadVKDeviceFunction("vkDebugMarkerSetObjectNameEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
+            vk::CmdDebugMarkerBeginEXT = reinterpret_cast<PFN_vkCmdDebugMarkerBeginEXT>(LoadVKDeviceFunction("vkCmdDebugMarkerBeginEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
+            vk::CmdDebugMarkerEndEXT = reinterpret_cast<PFN_vkCmdDebugMarkerEndEXT>(LoadVKDeviceFunction("vkCmdDebugMarkerEndEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
+            vk::CmdDebugMarkerInsertEXT = reinterpret_cast<PFN_vkCmdDebugMarkerInsertEXT>(LoadVKDeviceFunction("vkCmdDebugMarkerInsertEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
+        }
 
         LOG(INFO) << "Initializing Vulkan... done.";
     }
@@ -411,18 +445,31 @@ namespace vku {
         return score;
     }
 
-    PFN_vkVoidFunction ApplicationBase::LoadVKFunction(const std::string& functionName, const std::string& extensionName, bool mandatory) const
+    PFN_vkVoidFunction ApplicationBase::LoadVKInstanceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory) const
     {
-        auto func = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(static_cast<vk::Instance>(vkInstance_), functionName.c_str()));
-        if (vk::CreateDebugReportCallbackEXT == nullptr) {
+        auto func = vkGetInstanceProcAddr(static_cast<vk::Instance>(vkInstance_), functionName.c_str());
+        if (func == nullptr) {
             if (mandatory) {
-                LOG(FATAL) << "Could not load function '" << functionName << "' [" << extensionName << "].";
-                throw std::runtime_error("Could not load mandatory function.");
-            } else {
-                LOG(WARNING) << "Could not load function '" << functionName << "' [" << extensionName << "].";
+                LOG(FATAL) << "Could not load instance function '" << functionName << "' [" << extensionName << "].";
+                throw std::runtime_error("Could not load mandatory instance function.");
             }
+            LOG(WARNING) << "Could not load instance function '" << functionName << "' [" << extensionName << "].";
         }
 
-        return reinterpret_cast<PFN_vkVoidFunction>(func);
+        return func;
+    }
+
+    PFN_vkVoidFunction ApplicationBase::LoadVKDeviceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory) const
+    {
+        auto func = vkGetDeviceProcAddr(static_cast<vk::Device>(vkDevice_), functionName.c_str());
+        if (func == nullptr) {
+            if (mandatory) {
+                LOG(FATAL) << "Could not load device function '" << functionName << "' [" << extensionName << "].";
+                throw std::runtime_error("Could not load mandatory device function.");
+            }
+            LOG(WARNING) << "Could not load device function '" << functionName << "' [" << extensionName << "].";
+        }
+
+        return func;
     }
 }
