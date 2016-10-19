@@ -92,11 +92,18 @@ namespace vku {
 
     private:
         void InitVulkan(const std::string& applicationName, uint32_t applicationVersion);
-        PFN_vkVoidFunction LoadVKFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false);
+        static unsigned int ScorePhysicalDevice(const vk::PhysicalDevice& device);
+        PFN_vkVoidFunction LoadVKFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false) const;
 
-        /** Holds the vulkan instance. */
+        static constexpr uint32_t NUM_GRAPHICS_QUEUES = 1;
+
+        /** Holds the Vulkan instance. */
         vk::Instance vkInstance_;
         /** Holds the debug report callback. */
         vk::DebugReportCallbackEXT vkDebugReportCB_;
+        /** Holds the physical device. */
+        vk::PhysicalDevice vkPhysicalDevice_;
+        /** Holds the logical device. */
+        vk::Device vkDevice_;
     };
 }

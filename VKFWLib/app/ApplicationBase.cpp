@@ -18,9 +18,16 @@
 #include <boost/archive/xml_iarchive.hpp>
 
 namespace vk {
+    // VK_EXT_debug_report
     PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallbackEXT = nullptr;
     PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallbackEXT = nullptr;
     PFN_vkDebugReportMessageEXT DebugReportMessageEXT = nullptr;
+    // VK_EXT_debug_marker
+    PFN_vkDebugMarkerSetObjectTagEXT DebugMarkerSetObjectTagEXT = nullptr;
+    PFN_vkDebugMarkerSetObjectNameEXT DebugMarkerSetObjectNameEXT = nullptr;
+    PFN_vkCmdDebugMarkerBeginEXT CmdDebugMarkerBeginEXT = nullptr;
+    PFN_vkCmdDebugMarkerEndEXT CmdDebugMarkerEndEXT = nullptr;
+    PFN_vkCmdDebugMarkerInsertEXT CmdDebugMarkerInsertEXT = nullptr;
 }
 
 namespace vku {
@@ -64,9 +71,51 @@ namespace vku {
         glfwTerminate();
     }
 
+    namespace qf {
+        struct QueueFamilyIndices
+        {
+            int graphicsFamily = -1;
+            int computeFamily = -1;
+            int transferFamily = -1;
+
+            bool isComplete() const {
+                return graphicsFamily >= 0 && computeFamily >= 0 && transferFamily >= 0;
+            }
+        };
+
+        QueueFamilyIndices findQueueFamilyIndices(const vk::PhysicalDevice& device)
+        {
+            QueueFamilyIndices indices;
+
+            auto qFamilyProps = device.getQueueFamilyProperties();
+            auto i = 0;
+            for (const auto& queueFamily : qFamilyProps) {
+                if (queueFamily.queueCount > 0) {
+                    if (indices.graphicsFamily == -1 && queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) indices.graphicsFamily = i;
+                    if (indices.computeFamily == -1 && queueFamily.queueFlags & vk::QueueFlagBits::eCompute) indices.computeFamily = i;
+                    if (indices.transferFamily == -1 
+                        && (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics 
+                            || queueFamily.queueFlags & vk::QueueFlagBits::eCompute 
+                            || queueFamily.queueFlags & vk::QueueFlagBits::eTransfer)) indices.transferFamily = i;
+                }
+
+                if (indices.isComplete()) {
+                    break;
+                }
+
+                ++i;
+            }
+            return indices;
+        }
+    }
+
+
+
     /**
      * Construct a new application.
-     * @param window the applications main window
+     * @param applicationName the applications name.
+     * @param applicationVersion the applications version.
+     * @param configFileName the configuration file to use.
      */
     ApplicationBase::ApplicationBase(const std::string& applicationName, uint32_t applicationVersion, const std::string& configFileName) :
         pause_(true),
@@ -100,6 +149,7 @@ namespace vku {
 
     ApplicationBase::~ApplicationBase()
     {
+        if (vkDevice_) vkDevice_.destroy();
         if (vkDebugReportCB_) vk::DestroyDebugReportCallbackEXT(vkInstance_, vkDebugReportCB_, nullptr);
         if (vkInstance_) vkInstance_.destroy();
     }
@@ -120,8 +170,10 @@ namespace vku {
 
     /**
      * Handles all keyboard input.
-     * @param vkCode the key pressed
-     * @param bKeyDown <code>true</code> if the key is pressed, else it is released
+     * @param key the key pressed
+     * @param scancode the pressed keys scancode
+     * @param action the action of the key event
+     * @param mods the key modificators
      * @param sender the window that send the keyboard messages
      */
     bool ApplicationBase::HandleKeyboard(int key, int scancode, int action, int mods, VKWindow* sender)
@@ -142,6 +194,7 @@ namespace vku {
                 // programManager_->RecompileAll();
                 handled = true;
                 break;
+            default: break;
             }
         }
 
@@ -152,7 +205,9 @@ namespace vku {
 
     /**
      * Handles mouse input.
-     * @param buttonAction mouse action flags, see RAWMOUSE.usButtonFlags
+     * @param button the mouse button to be handled
+     * @param action the button action
+     * @param mods the modificator keys pressed when button action was triggered
      * @param mouseWheelDelta the scroll wheel delta
      * @param sender the window that send the keyboard messages
      * @return whether the message was handled
@@ -231,13 +286,14 @@ namespace vku {
         auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
         for (auto i = 0U; i < glfwExtensionCount; ++i) enabledExtensions.push_back(glfwExtensions[i]);
 
+        // ReSharper disable once CppInitializedValueIsAlwaysRewritten
         auto useValidationLayers = config_.useValidationLayers_;
 #ifndef NDEBUG
         useValidationLayers = true;
 #endif
         if (useValidationLayers) {
             enabledExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-            // TODO: add debug markers extension? [10/19/2016 Sebastian Maisch]
+            enabledExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
             validationLayers.push_back("VK_LAYER_LUNARG_standard_validation");
         }
 
@@ -285,7 +341,7 @@ namespace vku {
         vk::CreateDebugReportCallbackEXT = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(LoadVKFunction("vkCreateDebugReportCallbackEXT", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, true));
         vk::DestroyDebugReportCallbackEXT = reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(LoadVKFunction("vkDestroyDebugReportCallbackEXT", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, true));
         vk::DebugReportMessageEXT = reinterpret_cast<PFN_vkDebugReportMessageEXT>(LoadVKFunction("vkDebugReportMessageEXT", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, true));
-        
+
         // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
         VkDebugReportCallbackEXT dbgReportCB = VK_NULL_HANDLE;
         auto result = vk::CreateDebugReportCallbackEXT(vkInstance_, &static_cast<const VkDebugReportCallbackCreateInfoEXT&>(drCreateInfo), nullptr, &dbgReportCB);
@@ -294,13 +350,68 @@ namespace vku {
             throw std::runtime_error("Could not create DebugReportCallback.");
         }
         vkDebugReportCB_ = vk::DebugReportCallbackEXT(dbgReportCB);
+        LOG(INFO) << "Vulkan instance created.";
 
-        // TODO: debug markers? [10/19/2016 Sebastian Maisch]
+        auto phDevices = vkInstance_.enumeratePhysicalDevices();
+        std::map<unsigned int, vk::PhysicalDevice> scoredDevices;
+        for (const auto& device : phDevices) {
+            auto score = ScorePhysicalDevice(device);
+            scoredDevices[score] = device;
+        }
+
+        if (!scoredDevices.empty() && scoredDevices.begin()->first > 0) {
+            vkPhysicalDevice_ = scoredDevices.begin()->second;
+        } else {
+            LOG(FATAL) << "Could not find suitable Vulkan GPU.";
+            throw std::runtime_error("Could not find suitable Vulkan GPU.");
+        }
+
+        auto qfIndices = qf::findQueueFamilyIndices(vkPhysicalDevice_);
+        std::array<float, NUM_GRAPHICS_QUEUES> queuePriorities{ 1.0f };
+        vk::DeviceQueueCreateInfo queueCreateInfo{ vk::DeviceQueueCreateFlags(), static_cast<uint32_t>(qfIndices.graphicsFamily), NUM_GRAPHICS_QUEUES, queuePriorities.data() };
+
+        /*vk::DebugMarkerSetObjectTagEXT = reinterpret_cast<PFN_vkDebugMarkerSetObjectTagEXT>(LoadVKFunction("vkDebugMarkerSetObjectTagEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false));
+        vk::DebugMarkerSetObjectNameEXT = reinterpret_cast<PFN_vkDebugMarkerSetObjectNameEXT>(LoadVKFunction("vkDebugMarkerSetObjectNameEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false));
+        vk::CmdDebugMarkerBeginEXT = reinterpret_cast<PFN_vkCmdDebugMarkerBeginEXT>(LoadVKFunction("vkCmdDebugMarkerBeginEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false));
+        vk::CmdDebugMarkerEndEXT = reinterpret_cast<PFN_vkCmdDebugMarkerEndEXT>(LoadVKFunction("vkCmdDebugMarkerEndEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false));
+        vk::CmdDebugMarkerInsertEXT = reinterpret_cast<PFN_vkCmdDebugMarkerInsertEXT>(LoadVKFunction("vkCmdDebugMarkerInsertEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, false));*/
 
         LOG(INFO) << "Initializing Vulkan... done.";
     }
 
-    PFN_vkVoidFunction ApplicationBase::LoadVKFunction(const std::string& functionName, const std::string& extensionName, bool mandatory)
+    unsigned int ApplicationBase::ScorePhysicalDevice(const vk::PhysicalDevice& device)
+    {
+        auto deviceProperties = device.getProperties();
+        auto deviceFeatures = device.getFeatures();
+        auto deviceQueueFamilyProperties = device.getQueueFamilyProperties();
+
+        LOG(INFO) << "Found physical device '" << deviceProperties.deviceName << "' [DriverVersion:" << deviceProperties.driverVersion << "].";
+        auto score = 0U;
+
+        if (deviceProperties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu) score += 1000;
+
+        if (!(deviceFeatures.vertexPipelineStoresAndAtomics && deviceFeatures.fragmentStoresAndAtomics
+            && deviceFeatures.geometryShader && deviceFeatures.tessellationShader && deviceFeatures.largePoints
+            && deviceFeatures.shaderUniformBufferArrayDynamicIndexing && deviceFeatures.shaderStorageBufferArrayDynamicIndexing)) score = 0U;
+
+        /*auto hasGraphicsQueue = false, hasTransferQueue = false, hasComputeQueue = false;
+        for (const auto& queueFamily : deviceQueueFamilyProperties) {
+            if (queueFamily.queueCount > 0) {
+                if (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics) { hasGraphicsQueue = true; hasTransferQueue = true; }
+                if (queueFamily.queueFlags & vk::QueueFlagBits::eCompute) { hasComputeQueue = true; hasTransferQueue = true; }
+                if (queueFamily.queueFlags & vk::QueueFlagBits::eTransfer) { hasTransferQueue = true; }
+            }
+        }*/
+
+        auto queueFamilies = qf::findQueueFamilyIndices(device);
+        if (!queueFamilies.isComplete()) score = 0U;
+
+        LOG(INFO) << "Scored: " << score;
+
+        return score;
+    }
+
+    PFN_vkVoidFunction ApplicationBase::LoadVKFunction(const std::string& functionName, const std::string& extensionName, bool mandatory) const
     {
         auto func = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(static_cast<vk::Instance>(vkInstance_), functionName.c_str()));
         if (vk::CreateDebugReportCallbackEXT == nullptr) {
