@@ -20,6 +20,7 @@
 namespace vk {
     PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallbackEXT = nullptr;
     PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallbackEXT = nullptr;
+    PFN_vkDebugReportMessageEXT DebugReportMessageEXT = nullptr;
 }
 
 namespace vku {
@@ -281,21 +282,36 @@ namespace vku {
 #endif
         vk::DebugReportCallbackCreateInfoEXT drCreateInfo{ drFlags, DebugOutputCallback, this };
 
-        // TODO: set callback [10/19/2016 Sebastian Maisch]
-        static_cast<vk::Instance>(vkInstance_).createDebugReportCallbackEXT(drCreateInfo);
-        vk::CreateDebugReportCallbackEXT = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(static_cast<vk::Instance>(vkInstance_), "vkCreateDebugReportCallbackEXT"));
-        if (vk::CreateDebugReportCallbackEXT != nullptr) {
-            // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-            VkDebugReportCallbackEXT dbgReportCB = VK_NULL_HANDLE;
-            if (vk::CreateDebugReportCallbackEXT(vkInstance_, &static_cast<const VkDebugReportCallbackCreateInfoEXT&>(drCreateInfo), nullptr, &dbgReportCB) != VK_) {
-                
-            }
-            vkDebugReportCB_ = vk::DebugReportCallbackEXT(dbgReportCB);
+        vk::CreateDebugReportCallbackEXT = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(LoadVKFunction("vkCreateDebugReportCallbackEXT", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, true));
+        vk::DestroyDebugReportCallbackEXT = reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(LoadVKFunction("vkDestroyDebugReportCallbackEXT", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, true));
+        vk::DebugReportMessageEXT = reinterpret_cast<PFN_vkDebugReportMessageEXT>(LoadVKFunction("vkDebugReportMessageEXT", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, true));
+        
+        // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
+        VkDebugReportCallbackEXT dbgReportCB = VK_NULL_HANDLE;
+        auto result = vk::CreateDebugReportCallbackEXT(vkInstance_, &static_cast<const VkDebugReportCallbackCreateInfoEXT&>(drCreateInfo), nullptr, &dbgReportCB);
+        if (result != VK_SUCCESS) {
+            LOG(FATAL) << "Could not create DebugReportCallback (" << result << ").";
+            throw std::runtime_error("Could not create DebugReportCallback.");
         }
-        else {
-            return VK_ERROR_EXTENSION_NOT_PRESENT;
-        }
+        vkDebugReportCB_ = vk::DebugReportCallbackEXT(dbgReportCB);
+
+        // TODO: debug markers? [10/19/2016 Sebastian Maisch]
 
         LOG(INFO) << "Initializing Vulkan... done.";
+    }
+
+    PFN_vkVoidFunction ApplicationBase::LoadVKFunction(const std::string& functionName, const std::string& extensionName, bool mandatory)
+    {
+        auto func = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(vkGetInstanceProcAddr(static_cast<vk::Instance>(vkInstance_), functionName.c_str()));
+        if (vk::CreateDebugReportCallbackEXT == nullptr) {
+            if (mandatory) {
+                LOG(FATAL) << "Could not load function '" << functionName << "' [" << extensionName << "].";
+                throw std::runtime_error("Could not load mandatory function.");
+            } else {
+                LOG(WARNING) << "Could not load function '" << functionName << "' [" << extensionName << "].";
+            }
+        }
+
+        return reinterpret_cast<PFN_vkVoidFunction>(func);
     }
 }

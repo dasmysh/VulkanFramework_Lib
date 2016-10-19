@@ -92,6 +92,7 @@ namespace vku {
 
     private:
         void InitVulkan(const std::string& applicationName, uint32_t applicationVersion);
+        PFN_vkVoidFunction LoadVKFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false);
 
         /** Holds the vulkan instance. */
         vk::Instance vkInstance_;
