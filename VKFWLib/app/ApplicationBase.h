@@ -54,7 +54,7 @@ namespace vku {
 
         const cfg::Configuration& GetConfig() const { return config_; };
         const vk::Instance& GetVKInstance() const { return vkInstance_; }
-        const vk::Device& GetDeviceForSurace(const vk::SurfaceKHR& surface);
+        const vk::PhysicalDevice& GetPhyicalDeviceForSurace(const vk::SurfaceKHR& surface) const;
 
     private:
         class GLFWInitObject
@@ -109,12 +109,14 @@ namespace vku {
         vk::Instance vkInstance_;
         /** Holds the debug report callback. */
         vk::DebugReportCallbackEXT vkDebugReportCB_;
+        /** Holds the physical devices. */
+        std::vector<vk::PhysicalDevice> vkPhysicalDevices_;
         /** Holds the physical device. */
-        vk::PhysicalDevice vkPhysicalDevice_;
+        //vk::PhysicalDevice vkPhysicalDevice_;
         /** Holds the logical device. */
-        vk::Device vkDevice_;
+        //vk::Device vkDevice_;
         /** Holds the graphics queue. */
-        vk::Queue vkGraphicsQueue_;
+        //vk::Queue vkGraphicsQueue_;
 
 
         /** Holds whether debug markers are enabled. */

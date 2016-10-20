@@ -169,7 +169,6 @@ namespace vku {
 
     ApplicationBase::~ApplicationBase()
     {
-        if (vkDevice_) vkDevice_.destroy();
         if (vkDebugReportCB_) vk::DestroyDebugReportCallbackEXT(vkInstance_, vkDebugReportCB_, nullptr);
         if (vkInstance_) vkInstance_.destroy();
     }
@@ -377,22 +376,8 @@ namespace vku {
         vkDebugReportCB_ = vk::DebugReportCallbackEXT(dbgReportCB);
         LOG(INFO) << "Vulkan instance created.";
 
-        {
-            auto phDevices = vkInstance_.enumeratePhysicalDevices();
-            std::map<unsigned int, vk::PhysicalDevice> scoredDevices;
-            for (const auto& device : phDevices) {
-                auto score = ScorePhysicalDevice(device);
-                scoredDevices[score] = device;
-            }
+        vkPhysicalDevices_ = vkInstance_.enumeratePhysicalDevices();
 
-            if (!scoredDevices.empty() && scoredDevices.begin()->first > 0) {
-                vkPhysicalDevice_ = scoredDevices.begin()->second;
-            }
-            else {
-                LOG(FATAL) << "Could not find suitable Vulkan GPU.";
-                throw std::runtime_error("Could not find suitable Vulkan GPU.");
-            }
-        }
 
         {
             auto qfIndices = qf::findQueueFamilyIndices(vkPhysicalDevice_);
@@ -433,12 +418,11 @@ namespace vku {
         LOG(INFO) << "Initializing Vulkan... done.";
     }
 
-    const vk::Device& ApplicationBase::GetDeviceForSurace(const vk::SurfaceKHR& surface)
+    const vk::PhysicalDevice& ApplicationBase::GetPhyicalDeviceForSurace(const vk::SurfaceKHR& surface) const
     {
         {
-            auto phDevices = vkInstance_.enumeratePhysicalDevices();
             std::map<unsigned int, vk::PhysicalDevice> scoredDevices;
-            for (const auto& device : phDevices) {
+            for (const auto& device : vkPhysicalDevices_) {
                 auto score = ScorePhysicalDevice(device, surface);
                 scoredDevices[score] = device;
             }

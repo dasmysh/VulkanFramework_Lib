@@ -127,8 +127,10 @@ namespace vku {
             LOG(FATAL) << "Could not create window surface (" << result << ").";
             throw std::runtime_error("Could not create window surface.");
         }
+        vkSurface_ = vk::SurfaceKHR(surfaceKHR);
 
-        // create device for window...
+        vkPhysicalDevice_ = ApplicationBase::instance().GetPhyicalDeviceForSurace(vkSurface_);
+        // create device for surface...
 
         LOG(INFO) << L"Initializing Vulkan surface... done.";
 
@@ -148,7 +150,8 @@ namespace vku {
     // ReSharper disable once CppMemberFunctionMayBeConst
     void VKWindow::ReleaseVulkan()
     {
-        ApplicationBase::instance().GetVKInstance().destroySurfaceKHR(vkSurface_);
+        if (vkDevice_) vkDevice_.destroy();
+        if (vkSurface_) ApplicationBase::instance().GetVKInstance().destroySurfaceKHR(vkSurface_);
         ImGui_ImplGlfwGL3_Shutdown();
     }
 

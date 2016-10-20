@@ -72,8 +72,15 @@ namespace vku {
         cfg::WindowCfg& config_;
         /** Holds the application. */
         ApplicationBase* app_;
+
         /** Holds the Vulkan surface. */
         vk::SurfaceKHR vkSurface_;
+        /** Holds the physical device. */
+        vk::PhysicalDevice vkPhysicalDevice_;
+        /** Holds the logical device. */
+        vk::Device vkDevice_;
+        /** Holds the graphics queue. */
+        vk::Queue vkGraphicsQueue_;
 
         /** Holds the current mouse position. */
         glm::vec2 currMousePosition_;
