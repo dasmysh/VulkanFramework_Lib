@@ -38,10 +38,12 @@
 #define WIN32_LEAN_AND_MEAN
 #define WIN32_EXTRA_LEAN
 #pragma warning(push, 3)
-#include <Windows.h>
+// #include <Windows.h>
 #pragma warning(pop)
 #undef min
 #undef max
+
+#include <vulkan/vulkan.hpp>
 
 #include <g3log/g3log.hpp>
 #include <g3log/loglevels.hpp>

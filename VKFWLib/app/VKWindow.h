@@ -9,7 +9,6 @@
 #pragma once
 
 #include "main.h"
-#include <vulkan/vulkan.hpp>
 
 struct GLFWwindow;
 

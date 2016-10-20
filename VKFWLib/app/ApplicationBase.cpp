@@ -9,13 +9,19 @@
 #include "ApplicationBase.h"
 #include "app/VKWindow.h"
 
-#include <vulkan/vulkan.hpp>
-
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <fstream>
 #include <boost/archive/xml_oarchive.hpp>
 #include <boost/archive/xml_iarchive.hpp>
+
+#define WIN32_LEAN_AND_MEAN
+#define WIN32_EXTRA_LEAN
+#pragma warning(push, 3)
+ #include <Windows.h>
+#pragma warning(pop)
+#undef min
+#undef max
 
 namespace vk {
     // VK_EXT_debug_report
