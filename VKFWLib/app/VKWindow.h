@@ -13,6 +13,9 @@
 struct GLFWwindow;
 
 namespace vku {
+    namespace gfx{
+        class LogicalDevice;
+    }
 
     class ApplicationBase;
 
@@ -74,12 +77,11 @@ namespace vku {
 
         /** Holds the Vulkan surface. */
         vk::SurfaceKHR vkSurface_;
-        /** Holds the physical device. */
-        vk::PhysicalDevice vkPhysicalDevice_;
         /** Holds the logical device. */
-        vk::Device vkDevice_;
+        std::unique_ptr<gfx::LogicalDevice> logicalDevice_;
+        // vk::Device vkDevice_;
         /** Holds the graphics queue. */
-        vk::Queue vkGraphicsQueue_;
+        // vk::Queue vkGraphicsQueue_;
 
         /** Holds the current mouse position. */
         glm::vec2 currMousePosition_;

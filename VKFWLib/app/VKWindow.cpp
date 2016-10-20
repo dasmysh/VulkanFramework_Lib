@@ -129,8 +129,11 @@ namespace vku {
         }
         vkSurface_ = vk::SurfaceKHR(surfaceKHR);
 
-        vkPhysicalDevice_ = ApplicationBase::instance().GetPhyicalDeviceForSurace(vkSurface_);
-        // create device for surface...
+        std::vector<QueueDesc> queueDescs;
+        queueDescs.push_back(QueueDesc());
+        queueDescs.back().flags_ = vk::QueueFlagBits::eGraphics;
+        queueDescs.back().priorities_.push_back(1.0f);
+        logicalDevice_ = ApplicationBase::instance().CreateLogicalDevice(queueDescs, vkSurface_);
 
         LOG(INFO) << L"Initializing Vulkan surface... done.";
 
@@ -150,7 +153,6 @@ namespace vku {
     // ReSharper disable once CppMemberFunctionMayBeConst
     void VKWindow::ReleaseVulkan()
     {
-        if (vkDevice_) vkDevice_.destroy();
         if (vkSurface_) ApplicationBase::instance().GetVKInstance().destroySurfaceKHR(vkSurface_);
         ImGui_ImplGlfwGL3_Shutdown();
     }

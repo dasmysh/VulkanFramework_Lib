@@ -23,17 +23,13 @@
 #undef min
 #undef max
 
+#include "gfx/vk/LogicalDevice.h"
+
 namespace vk {
     // VK_EXT_debug_report
     PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallbackEXT = nullptr;
     PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallbackEXT = nullptr;
     PFN_vkDebugReportMessageEXT DebugReportMessageEXT = nullptr;
-    // VK_EXT_debug_marker
-    PFN_vkDebugMarkerSetObjectTagEXT DebugMarkerSetObjectTagEXT = nullptr;
-    PFN_vkDebugMarkerSetObjectNameEXT DebugMarkerSetObjectNameEXT = nullptr;
-    PFN_vkCmdDebugMarkerBeginEXT CmdDebugMarkerBeginEXT = nullptr;
-    PFN_vkCmdDebugMarkerEndEXT CmdDebugMarkerEndEXT = nullptr;
-    PFN_vkCmdDebugMarkerInsertEXT CmdDebugMarkerInsertEXT = nullptr;
 }
 
 namespace vku {
@@ -79,50 +75,14 @@ namespace vku {
     }
 
     namespace qf {
-        struct QueueFamilyIndices
-        {
-            int graphicsFamily = -1;
-            int computeFamily = -1;
-            int transferFamily = -1;
 
-            bool isComplete() const {
-                return graphicsFamily >= 0 && computeFamily >= 0 && transferFamily >= 0;
-            }
-        };
-
-        QueueFamilyIndices findQueueFamilyIndices(const vk::PhysicalDevice& device, const vk::SurfaceKHR& surface = vk::SurfaceKHR())
-        {
-            QueueFamilyIndices indices;
-
-            auto qFamilyProps = device.getQueueFamilyProperties();
-            auto i = 0;
-            for (const auto& queueFamily : qFamilyProps) {
-                if (queueFamily.queueCount > 0) {
-                    if (indices.graphicsFamily == -1
-                        && queueFamily.queueFlags & vk::QueueFlagBits::eGraphics
-                        && (!surface || device.getSurfaceSupportKHR(i, surface))) indices.graphicsFamily = i;
-                    if (indices.computeFamily == -1 && queueFamily.queueFlags & vk::QueueFlagBits::eCompute) indices.computeFamily = i;
-                    if (indices.transferFamily == -1 
-                        && (queueFamily.queueFlags & vk::QueueFlagBits::eGraphics 
-                            || queueFamily.queueFlags & vk::QueueFlagBits::eCompute 
-                            || queueFamily.queueFlags & vk::QueueFlagBits::eTransfer)) indices.transferFamily = i;
-                }
-
-                if (indices.isComplete()) {
-                    break;
-                }
-
-                ++i;
-            }
-            return indices;
-        }
-
-        int findQueue(const vk::PhysicalDevice& device, const vk::QueueFlags& flags, const vk::SurfaceKHR& surface = vk::SurfaceKHR())
+        int findQueueFamily(const vk::PhysicalDevice& device, const QueueDesc& desc, const vk::SurfaceKHR& surface = vk::SurfaceKHR())
         {
             auto queueProps = device.getQueueFamilyProperties();
             auto queueCount = static_cast<uint32_t>(queueProps.size());
             for (uint32_t i = 0; i < queueCount; i++) {
-                if (queueProps[i].queueFlags & flags) {
+                if (queueProps[i].queueCount < desc.priorities_.size()) continue;
+                if (queueProps[i].queueFlags & desc.flags_) {
                     if (surface && !device.getSurfaceSupportKHR(i, surface)) {
                         continue;
                     }
@@ -306,7 +266,6 @@ namespace vku {
     {
         LOG(INFO) << "Initializing Vulkan...";
         std::vector<const char*> enabledExtensions;
-        std::vector<const char*> validationLayers;
         auto glfwExtensionCount = 0U;
         auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
         for (auto i = 0U; i < glfwExtensionCount; ++i) enabledExtensions.push_back(glfwExtensions[i]);
@@ -318,7 +277,7 @@ namespace vku {
 #endif
         if (useValidationLayers) {
             enabledExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-            validationLayers.push_back("VK_LAYER_LUNARG_standard_validation");
+            vkValidationLayers_.push_back("VK_LAYER_LUNARG_standard_validation");
         }
 
         {
@@ -341,7 +300,7 @@ namespace vku {
             auto layers = vk::enumerateInstanceLayerProperties();
             for (const auto& layer : layers) LOG(INFO) << "- " << layer.layerName << "[SpecVersion:" << layer.specVersion << ",ImplVersion:" << layer.implementationVersion << "]";
 
-            for (const auto& enabledLayer : validationLayers) {
+            for (const auto& enabledLayer : vkValidationLayers_) {
                 auto found = std::find_if(layers.begin(), layers.end(),
                     [&enabledLayer](const vk::LayerProperties& layerProps) { return std::strcmp(enabledLayer, layerProps.layerName) == 0; });
                 if (found == layers.end()) {
@@ -353,7 +312,7 @@ namespace vku {
 
         {
             vk::ApplicationInfo appInfo{ applicationName.c_str(), applicationVersion, engineName, engineVersion, VK_API_VERSION_1_0 };
-            vk::InstanceCreateInfo createInfo{ vk::InstanceCreateFlags(), &appInfo, static_cast<uint32_t>(validationLayers.size()), validationLayers.data(),
+            vk::InstanceCreateInfo createInfo{ vk::InstanceCreateFlags(), &appInfo, static_cast<uint32_t>(vkValidationLayers_.size()), vkValidationLayers_.data(),
                 static_cast<uint32_t>(enabledExtensions.size()), enabledExtensions.data() };
 
             vkInstance_ = vk::createInstance(createInfo);
@@ -382,67 +341,46 @@ namespace vku {
         vkDebugReportCB_ = vk::DebugReportCallbackEXT(dbgReportCB);
         LOG(INFO) << "Vulkan instance created.";
 
-        vkPhysicalDevices_ = vkInstance_.enumeratePhysicalDevices();
-
-
         {
-            auto qfIndices = qf::findQueueFamilyIndices(vkPhysicalDevice_);
-            std::array<float, NUM_GRAPHICS_QUEUES> queuePriorities{ 1.0f };
-            vk::DeviceQueueCreateInfo queueCreateInfo{ vk::DeviceQueueCreateFlags(), static_cast<uint32_t>(qfIndices.graphicsFamily), NUM_GRAPHICS_QUEUES, queuePriorities.data() };
-            auto deviceFeatures = vkPhysicalDevice_.getFeatures();
-            std::vector<const char*> enabledDeviceExtensions;
-
-            {
-                LOG(INFO) << "VK Device Extensions:";
-                auto extensions = vkPhysicalDevice_.enumerateDeviceExtensionProperties();
-                for (const auto& extension : extensions) LOG(INFO) << "- " << extension.extensionName << "[SpecVersion:" << extension.specVersion << "]";
-
-                auto dbgMkFound = std::find_if(extensions.begin(), extensions.end(),
-                    [](const vk::ExtensionProperties& extProps) { return std::strcmp(VK_EXT_DEBUG_MARKER_EXTENSION_NAME, extProps.extensionName) == 0; });
-                if (dbgMkFound != extensions.end()) {
-                    enableDebugMarkers_ = true;
-                    enabledDeviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-                }
+            auto physicalDeviceList = vkInstance_.enumeratePhysicalDevices();
+            for (const auto& device : physicalDeviceList) {
+                auto score = ScorePhysicalDevice(device);
+                vkPhysicalDevices_[score] = device;
             }
-            vk::DeviceCreateInfo deviceCreateInfo{ vk::DeviceCreateFlags(), 1, &queueCreateInfo,
-                static_cast<uint32_t>(validationLayers.size()), validationLayers.data(),
-                static_cast<uint32_t>(enabledDeviceExtensions.size()), enabledDeviceExtensions.data(),
-                &deviceFeatures };
-
-            vkDevice_ = vkPhysicalDevice_.createDevice(deviceCreateInfo);
-            vkGraphicsQueue_ = vkDevice_.getQueue(qfIndices.graphicsFamily, 0);
-        }
-
-        if (enableDebugMarkers_) {
-            vk::DebugMarkerSetObjectTagEXT = reinterpret_cast<PFN_vkDebugMarkerSetObjectTagEXT>(LoadVKDeviceFunction("vkDebugMarkerSetObjectTagEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
-            vk::DebugMarkerSetObjectNameEXT = reinterpret_cast<PFN_vkDebugMarkerSetObjectNameEXT>(LoadVKDeviceFunction("vkDebugMarkerSetObjectNameEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
-            vk::CmdDebugMarkerBeginEXT = reinterpret_cast<PFN_vkCmdDebugMarkerBeginEXT>(LoadVKDeviceFunction("vkCmdDebugMarkerBeginEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
-            vk::CmdDebugMarkerEndEXT = reinterpret_cast<PFN_vkCmdDebugMarkerEndEXT>(LoadVKDeviceFunction("vkCmdDebugMarkerEndEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
-            vk::CmdDebugMarkerInsertEXT = reinterpret_cast<PFN_vkCmdDebugMarkerInsertEXT>(LoadVKDeviceFunction("vkCmdDebugMarkerInsertEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
         }
 
         LOG(INFO) << "Initializing Vulkan... done.";
     }
 
-    const vk::PhysicalDevice& ApplicationBase::GetPhyicalDeviceForSurace(const vk::SurfaceKHR& surface) const
+    std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(const std::vector<QueueDesc>& queueDescs, const vk::SurfaceKHR& surface) const
     {
-        {
-            std::map<unsigned int, vk::PhysicalDevice> scoredDevices;
-            for (const auto& device : vkPhysicalDevices_) {
-                auto score = ScorePhysicalDevice(device, surface);
-                scoredDevices[score] = device;
+        vk::PhysicalDevice physicalDevice;
+        std::vector<gfx::DeviceQueueDesc> deviceQueueDesc;
+        auto foundDevice = false;
+        for (const auto& device : vkPhysicalDevices_) {
+            deviceQueueDesc.clear();
+            for (const auto& queueDesc : queueDescs) {
+                auto queueFamilyIndex = qf::findQueueFamily(device.second, queueDesc, surface);
+                if (queueFamilyIndex != -1) deviceQueueDesc.emplace_back(queueFamilyIndex, queueDesc.priorities_);
+                else break;
             }
 
-            if (!scoredDevices.empty() && scoredDevices.begin()->first > 0) {
-                // TODO... [10/20/2016 Sebastian Maisch] vkPhysicalDevice_ = scoredDevices.begin()->second;
-            } else {
-                LOG(FATAL) << "Could not find suitable Vulkan GPU.";
-                throw std::runtime_error("Could not find suitable Vulkan GPU.");
+            if (deviceQueueDesc.size() == queueDescs.size()) {
+                physicalDevice = device.second;
+                foundDevice = true;
+                break;
             }
         }
+
+        if (!foundDevice) {
+            LOG(FATAL) << "Could not find suitable Vulkan GPU.";
+            throw std::runtime_error("Could not find suitable Vulkan GPU.");
+        }
+
+        return std::make_unique<gfx::LogicalDevice>(physicalDevice, deviceQueueDesc, surface);
     }
 
-    unsigned int ApplicationBase::ScorePhysicalDevice(const vk::PhysicalDevice& device, const vk::SurfaceKHR& surface)
+    unsigned int ApplicationBase::ScorePhysicalDevice(const vk::PhysicalDevice& device)
     {
         auto deviceProperties = device.getProperties();
         auto deviceFeatures = device.getFeatures();
@@ -457,11 +395,7 @@ namespace vku {
             && deviceFeatures.geometryShader && deviceFeatures.tessellationShader && deviceFeatures.largePoints
             && deviceFeatures.shaderUniformBufferArrayDynamicIndexing && deviceFeatures.shaderStorageBufferArrayDynamicIndexing)) score = 0U;
 
-        auto queueFamilies = qf::findQueueFamilyIndices(device, surface);
-        if (!queueFamilies.isComplete()) score = 0U;
-
         LOG(INFO) << "Scored: " << score;
-
         return score;
     }
 
@@ -474,20 +408,6 @@ namespace vku {
                 throw std::runtime_error("Could not load mandatory instance function.");
             }
             LOG(WARNING) << "Could not load instance function '" << functionName << "' [" << extensionName << "].";
-        }
-
-        return func;
-    }
-
-    PFN_vkVoidFunction ApplicationBase::LoadVKDeviceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory) const
-    {
-        auto func = vkGetDeviceProcAddr(static_cast<vk::Device>(vkDevice_), functionName.c_str());
-        if (func == nullptr) {
-            if (mandatory) {
-                LOG(FATAL) << "Could not load device function '" << functionName << "' [" << extensionName << "].";
-                throw std::runtime_error("Could not load mandatory device function.");
-            }
-            LOG(WARNING) << "Could not load device function '" << functionName << "' [" << extensionName << "].";
         }
 
         return func;

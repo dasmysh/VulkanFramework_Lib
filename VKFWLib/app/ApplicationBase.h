@@ -15,8 +15,19 @@ namespace vku {
     namespace cfg {
         class Configuration;
     }
+    namespace gfx {
+        class LogicalDevice;
+    }
 
     class VKWindow;
+
+    struct QueueDesc
+    {
+        /** Holds flags describing the queues use. */
+        vk::QueueFlags flags_;
+        /** Holds the queues priorities. */
+        std::vector<float> priorities_;
+    };
 
     class ApplicationBase
     {
@@ -52,8 +63,9 @@ namespace vku {
         virtual void Resize(const glm::uvec2& screenSize);
 
         const cfg::Configuration& GetConfig() const { return config_; };
+        const std::vector<const char*>& GetVKValidationLayers() const { return vkValidationLayers_; }
         const vk::Instance& GetVKInstance() const { return vkInstance_; }
-        const vk::PhysicalDevice& GetPhyicalDeviceForSurace(const vk::SurfaceKHR& surface) const;
+        std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const std::vector<QueueDesc>& queueDescs, const vk::SurfaceKHR& surface = vk::SurfaceKHR()) const;
 
     private:
         class GLFWInitObject
@@ -98,18 +110,19 @@ namespace vku {
 
     private:
         void InitVulkan(const std::string& applicationName, uint32_t applicationVersion);
-        static unsigned int ScorePhysicalDevice(const vk::PhysicalDevice& device, const vk::SurfaceKHR& surface);
+        static unsigned int ScorePhysicalDevice(const vk::PhysicalDevice& device);
         PFN_vkVoidFunction LoadVKInstanceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false) const;
-        PFN_vkVoidFunction LoadVKDeviceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false) const;
 
         static constexpr uint32_t NUM_GRAPHICS_QUEUES = 1;
 
+        /** Holds the Vulkan validation layers. */
+        std::vector<const char*> vkValidationLayers_;
         /** Holds the Vulkan instance. */
         vk::Instance vkInstance_;
         /** Holds the debug report callback. */
         vk::DebugReportCallbackEXT vkDebugReportCB_;
         /** Holds the physical devices. */
-        std::vector<vk::PhysicalDevice> vkPhysicalDevices_;
+        std::map<unsigned int, vk::PhysicalDevice> vkPhysicalDevices_;
         /** Holds the physical device. */
         //vk::PhysicalDevice vkPhysicalDevice_;
         /** Holds the logical device. */
@@ -118,7 +131,5 @@ namespace vku {
         //vk::Queue vkGraphicsQueue_;
 
 
-        /** Holds whether debug markers are enabled. */
-        bool enableDebugMarkers_ = false;
     };
 }
