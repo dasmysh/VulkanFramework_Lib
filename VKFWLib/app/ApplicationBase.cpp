@@ -9,20 +9,20 @@
 #include "ApplicationBase.h"
 #include "app/VKWindow.h"
 
+#define WIN32_LEAN_AND_MEAN
+#define WIN32_EXTRA_LEAN
+#pragma warning(push, 3)
+#include <Windows.h>
+#pragma warning(pop)
+#undef min
+#undef max
+
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <fstream>
 #include <set>
 #include <boost/archive/xml_oarchive.hpp>
 #include <boost/archive/xml_iarchive.hpp>
-
-#define WIN32_LEAN_AND_MEAN
-#define WIN32_EXTRA_LEAN
-#pragma warning(push, 3)
- #include <Windows.h>
-#pragma warning(pop)
-#undef min
-#undef max
 
 #include "gfx/vk/LogicalDevice.h"
 
@@ -64,7 +64,6 @@ namespace vku {
     }
 
 
-
     ApplicationBase::GLFWInitObject::GLFWInitObject()
     {
         glfwInit();
@@ -77,13 +76,19 @@ namespace vku {
 
     namespace qf {
 
-        int findQueueFamily(const vk::PhysicalDevice& device, const QueueDesc& desc, const vk::SurfaceKHR& surface = vk::SurfaceKHR())
+        int findQueueFamily(const vk::PhysicalDevice& device, const cfg::QueueCfg& desc, const vk::SurfaceKHR& surface = vk::SurfaceKHR())
         {
+            vk::QueueFlags reqFlags;
+            if (!(desc.graphics_ || desc.compute_) && desc.transfer_) reqFlags |= vk::QueueFlagBits::eTransfer;
+            if (desc.graphics_) reqFlags |= vk::QueueFlagBits::eGraphics;
+            if (desc.compute_) reqFlags |= vk::QueueFlagBits::eCompute;
+            if (desc.sparseBinding_) reqFlags |= vk::QueueFlagBits::eSparseBinding;
+
             auto queueProps = device.getQueueFamilyProperties();
             auto queueCount = static_cast<uint32_t>(queueProps.size());
             for (uint32_t i = 0; i < queueCount; i++) {
                 if (queueProps[i].queueCount < desc.priorities_.size()) continue;
-                if (queueProps[i].queueFlags & desc.flags_) {
+                if (queueProps[i].queueFlags & reqFlags) {
                     if (surface && !device.getSurfaceSupportKHR(i, surface)) {
                         continue;
                     }
@@ -128,7 +133,7 @@ namespace vku {
         instance_ = this;
 
         for (auto& wc : config_.windows_) {
-            windows_.emplace_back(wc.windowTitle_, wc);
+            windows_.emplace_back(wc);
             windows_.back().RegisterApplication(*this);
             windows_.back().ShowWindow();
         }
@@ -353,7 +358,7 @@ namespace vku {
         LOG(INFO) << "Initializing Vulkan... done.";
     }
 
-    std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(const std::vector<QueueDesc>& queueDescs, const vk::SurfaceKHR& surface) const
+    std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(const std::vector<cfg::QueueCfg>& queueDescs, const vk::SurfaceKHR& surface, std::function<bool(const vk::PhysicalDevice&)> additionalDeviceChecks) const
     {
         vk::PhysicalDevice physicalDevice;
         std::vector<gfx::DeviceQueueDesc> deviceQueueDesc;
@@ -364,6 +369,7 @@ namespace vku {
             deviceQueueDesc.clear();
 
             if (!CheckDeviceExtensions(device.second, requiredExtensions)) continue;
+            if (!additionalDeviceChecks(device.second)) continue;
 
             for (const auto& queueDesc : queueDescs) {
                 auto queueFamilyIndex = qf::findQueueFamily(device.second, queueDesc, surface);
@@ -384,6 +390,54 @@ namespace vku {
         }
 
         return std::make_unique<gfx::LogicalDevice>(physicalDevice, deviceQueueDesc, surface);
+    }
+
+    std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(const std::vector<cfg::QueueCfg>& queueDescs, const vk::SurfaceKHR& surface) const
+    {
+        return CreateLogicalDevice(queueDescs, surface, [](const vk::PhysicalDevice&) { return true; });
+    }
+
+    std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const vk::SurfaceKHR& surface) const
+    {
+        auto requestedFormat = vk::Format::eR8G8B8A8Unorm;
+        if (windowCfg.backbufferBits_ == 32) requestedFormat = vk::Format::eR8G8B8A8Unorm;
+        if (windowCfg.backbufferBits_ == 24) requestedFormat = vk::Format::eR8G8B8Unorm;
+        if (windowCfg.backbufferBits_ == 16) requestedFormat = vk::Format::eR5G6B5UnormPack16;
+        vk::ColorSpaceKHR requestedColorSpace;
+        if (windowCfg.useSRGB_) requestedColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
+        vk::PresentModeKHR requestedPresentMode;
+        if (windowCfg.swapOptions_ == cfg::SwapOptions::DOUBLE_BUFFERING) requestedPresentMode = vk::PresentModeKHR::eImmediate;
+        if (windowCfg.swapOptions_ == cfg::SwapOptions::DOUBLE_BUFFERING_VSYNC) requestedPresentMode = vk::PresentModeKHR::eFifo;
+        if (windowCfg.swapOptions_ == cfg::SwapOptions::TRIPLE_BUFFERING) requestedPresentMode = vk::PresentModeKHR::eMailbox;
+        glm::uvec2 requestedExtend(windowCfg.windowWidth_, windowCfg.windowHeight_);
+
+        return CreateLogicalDevice(windowCfg.queues_, surface, [&surface, &requestedFormat, &requestedColorSpace, &requestedPresentMode, &requestedExtend](const vk::PhysicalDevice& device)
+        {
+            auto deviceSurfaceCaps = device.getSurfaceCapabilitiesKHR(surface);
+            auto deviceSurfaceFormats = device.getSurfaceFormatsKHR(surface);
+            auto presentModes = device.getSurfacePresentModesKHR(surface);
+            auto formatSupported = false, presentModeSupported = false, sizeSupported = false;
+
+            if (deviceSurfaceFormats.size() == 1 && deviceSurfaceFormats[0].format == vk::Format::eUndefined) formatSupported = true;
+            else for (const auto& availableFormat : deviceSurfaceFormats) {
+                if (availableFormat.format == requestedFormat && availableFormat.colorSpace == requestedColorSpace) formatSupported = true;
+            }
+
+            for (const auto& availablePresentMode : presentModes) {
+                if (availablePresentMode == requestedPresentMode) presentModeSupported = true;
+            }
+
+            glm::uvec2 currentExtend(deviceSurfaceCaps.currentExtent.width, deviceSurfaceCaps.currentExtent.height);
+            if (currentExtend == requestedExtend) sizeSupported = true;
+            else {
+                glm::uvec2 minExtend(deviceSurfaceCaps.minImageExtent.width, deviceSurfaceCaps.minImageExtent.height);
+                glm::uvec2 maxExtend(deviceSurfaceCaps.maxImageExtent.width, deviceSurfaceCaps.maxImageExtent.height);
+                auto actualExtent = glm::clamp(requestedExtend, minExtend, maxExtend);
+                if (actualExtent == requestedExtend) sizeSupported = true;
+            }
+
+            return formatSupported && presentModeSupported && sizeSupported;
+        });
     }
 
     unsigned int ApplicationBase::ScorePhysicalDevice(const vk::PhysicalDevice& device)

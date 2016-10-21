@@ -11,35 +11,93 @@
 namespace vku {
     namespace cfg {
 
+        QueueCfg::QueueCfg() :
+            graphics_(true),
+            compute_(false),
+            transfer_(true),
+            sparseBinding_(false),
+            priorities_({1.0f})
+        {}
+
+        QueueCfg::QueueCfg(const QueueCfg& rhs) :
+            graphics_(rhs.graphics_),
+            compute_(rhs.compute_),
+            transfer_(rhs.transfer_),
+            sparseBinding_(rhs.sparseBinding_),
+            priorities_(rhs.priorities_)
+        {}
+
+        QueueCfg::QueueCfg(QueueCfg&& rhs) :
+            graphics_(std::move(rhs.graphics_)),
+            compute_(std::move(rhs.compute_)),
+            transfer_(std::move(rhs.transfer_)),
+            sparseBinding_(std::move(rhs.sparseBinding_)),
+            priorities_(std::move(rhs.priorities_))
+        {}
+
+        QueueCfg& QueueCfg::operator=(const QueueCfg& rhs)
+        {
+            if (this != &rhs) {
+                auto tmp{ rhs };
+                std::swap(*this, tmp);
+            }
+            return *this;
+        }
+
+        QueueCfg& QueueCfg::operator=(QueueCfg&& rhs)
+        {
+            if (this != &rhs) {
+                this->~QueueCfg();
+                graphics_ = std::move(rhs.graphics_);
+                compute_ = std::move(rhs.compute_);
+                transfer_ = std::move(rhs.transfer_);
+                sparseBinding_ = std::move(rhs.sparseBinding_);
+                priorities_ = std::move(rhs.priorities_);
+            }
+            return *this;
+        }
+
+        QueueCfg::~QueueCfg() = default;
+
+
         WindowCfg::WindowCfg() :
             windowTitle_{"VKFW_Application"},
             fullscreen_(false),
-            backbufferBits_(32),
             windowLeft_(0),
             windowTop_(0),
             windowWidth_(800),
             windowHeight_(600),
-            useSRGB_(false)
-        {}
+            backbufferBits_(32),
+            useSRGB_(false),
+            swapOptions_(SwapOptions::DOUBLE_BUFFERING_VSYNC)
+        {
+            queues_.push_back(QueueCfg());
+        }
 
         WindowCfg::WindowCfg(const WindowCfg& rhs) :
+            windowTitle_(rhs.windowTitle_),
             fullscreen_(rhs.fullscreen_),
-            backbufferBits_(rhs.backbufferBits_),
             windowLeft_(rhs.windowLeft_),
             windowTop_(rhs.windowTop_),
             windowWidth_(rhs.windowWidth_),
             windowHeight_(rhs.windowHeight_),
-            useSRGB_(rhs.useSRGB_)
+            backbufferBits_(rhs.backbufferBits_),
+            useSRGB_(rhs.useSRGB_),
+            swapOptions_(rhs.swapOptions_),
+            queues_(rhs.queues_)
         {}
 
         WindowCfg::WindowCfg(WindowCfg&& rhs) :
+            windowTitle_(std::move(rhs.windowTitle_)),
             fullscreen_(std::move(rhs.fullscreen_)),
-            backbufferBits_(std::move(rhs.backbufferBits_)),
             windowLeft_(std::move(rhs.windowLeft_)),
             windowTop_(std::move(rhs.windowTop_)),
             windowWidth_(std::move(rhs.windowWidth_)),
             windowHeight_(std::move(rhs.windowHeight_)),
-            useSRGB_(std::move(rhs.useSRGB_))
+            backbufferBits_(std::move(rhs.backbufferBits_)),
+            useSRGB_(std::move(rhs.useSRGB_)),
+            swapOptions_(std::move(rhs.swapOptions_)),
+            queues_(std::move(rhs.queues_))
         {}
 
         WindowCfg& WindowCfg::operator=(const WindowCfg& rhs)
@@ -55,13 +113,16 @@ namespace vku {
         {
             if (this != &rhs) {
                 this->~WindowCfg();
+                windowTitle_ = std::move(rhs.windowTitle_);
                 fullscreen_ = std::move(rhs.fullscreen_);
-                backbufferBits_ = std::move(rhs.backbufferBits_);
                 windowLeft_ = std::move(rhs.windowLeft_);
                 windowTop_ = std::move(rhs.windowTop_);
                 windowWidth_ = std::move(rhs.windowWidth_);
                 windowHeight_ = std::move(rhs.windowHeight_);
+                backbufferBits_ = std::move(rhs.backbufferBits_);
                 useSRGB_ = std::move(rhs.useSRGB_);
+                swapOptions_ = std::move(rhs.swapOptions_);
+                queues_ = std::move(rhs.queues_);
             }
             return *this;
         }

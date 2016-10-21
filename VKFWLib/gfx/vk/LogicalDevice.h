@@ -15,6 +15,9 @@ namespace vku {
 
         struct DeviceQueueDesc
         {
+            DeviceQueueDesc() = default;
+            DeviceQueueDesc(uint32_t familyIndex, const std::vector<float>& priorities) : familyIndex_(familyIndex), priorities_(priorities) {}
+
             /** Holds the family index. */
             uint32_t familyIndex_;
             /** Holds the queues priorities. */
