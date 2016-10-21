@@ -31,6 +31,7 @@ namespace vku { namespace gfx {
                 enableDebugMarkers_ = true;
                 enabledDeviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
             }
+            if (surface) enabledDeviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME); // checked this extension earlier
         }
 
         vk::DeviceCreateInfo deviceCreateInfo{ vk::DeviceCreateFlags(), static_cast<uint32_t>(queueCreateInfo.size()), queueCreateInfo.data(),

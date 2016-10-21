@@ -12,6 +12,7 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 #include <fstream>
+#include <set>
 #include <boost/archive/xml_oarchive.hpp>
 #include <boost/archive/xml_iarchive.hpp>
 
@@ -356,9 +357,14 @@ namespace vku {
     {
         vk::PhysicalDevice physicalDevice;
         std::vector<gfx::DeviceQueueDesc> deviceQueueDesc;
+        std::vector<std::string> requiredExtensions;
+        if (surface) requiredExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
         auto foundDevice = false;
         for (const auto& device : vkPhysicalDevices_) {
             deviceQueueDesc.clear();
+
+            if (!CheckDeviceExtensions(device.second, requiredExtensions)) continue;
+
             for (const auto& queueDesc : queueDescs) {
                 auto queueFamilyIndex = qf::findQueueFamily(device.second, queueDesc, surface);
                 if (queueFamilyIndex != -1) deviceQueueDesc.emplace_back(queueFamilyIndex, queueDesc.priorities_);
@@ -397,6 +403,18 @@ namespace vku {
 
         LOG(INFO) << "Scored: " << score;
         return score;
+    }
+
+    bool ApplicationBase::CheckDeviceExtensions(const vk::PhysicalDevice& device, const std::vector<std::string>& requiredExtensions)
+    {
+        auto availableExtensions = device.enumerateDeviceExtensionProperties();
+        std::set<std::string> requiredDeviceExtensions(requiredExtensions.begin(), requiredExtensions.end());
+
+        for (const auto& extension : availableExtensions) {
+            requiredDeviceExtensions.erase(extension.extensionName);
+        }
+
+        return requiredDeviceExtensions.empty();
     }
 
     PFN_vkVoidFunction ApplicationBase::LoadVKInstanceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory) const

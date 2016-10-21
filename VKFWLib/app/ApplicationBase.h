@@ -111,6 +111,7 @@ namespace vku {
     private:
         void InitVulkan(const std::string& applicationName, uint32_t applicationVersion);
         static unsigned int ScorePhysicalDevice(const vk::PhysicalDevice& device);
+        static bool CheckDeviceExtensions(const vk::PhysicalDevice& device, const std::vector<std::string>& requiredExtensions);
         PFN_vkVoidFunction LoadVKInstanceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false) const;
 
         static constexpr uint32_t NUM_GRAPHICS_QUEUES = 1;
