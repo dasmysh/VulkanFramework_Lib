@@ -146,6 +146,8 @@ namespace vku {
     {
         logicalDevice_->GetDevice().waitIdle();
 
+        DestroySwapchainImages();
+
         auto surfaceCapabilities = logicalDevice_->GetPhysicalDevice().getSurfaceCapabilitiesKHR(vkSurface_);
         auto surfaceFormat = cfg::GetVulkanSurfaceFormatFromConfig(config_);
         auto presentMode = cfg::GetVulkanPresentModeFromConfig(config_);
@@ -162,26 +164,63 @@ namespace vku {
             vkSwapchain_ = newSwapChain;
         }
 
-        vkSwapChainImages_ = logicalDevice_->GetDevice().getSwapchainImagesKHR(vkSwapchain_);
-        vkSwapChainImageViews_.resize(vkSwapChainImages_.size());
-        for (auto i = 0U; i < vkSwapChainImages_.size(); ++i) {
+        vkSwapchainImages_ = logicalDevice_->GetDevice().getSwapchainImagesKHR(vkSwapchain_);
+
+        vkSwapchainImageViews_.resize(vkSwapchainImages_.size());
+        for (auto i = 0U; i < vkSwapchainImages_.size(); ++i) {
             vk::ImageSubresourceRange subresourceRange{vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
             vk::ComponentMapping componentMapping{};
-            vk::ImageViewCreateInfo imgViewCreateInfo(vk::ImageViewCreateFlags(), vkSwapChainImages_[i], vk::ImageViewType::e2D, surfaceFormat.format, componentMapping, subresourceRange);
-            vkSwapChainImageViews_[i] = logicalDevice_->GetDevice().createImageView(imgViewCreateInfo);
+            vk::ImageViewCreateInfo imgViewCreateInfo(vk::ImageViewCreateFlags(), vkSwapchainImages_[i], vk::ImageViewType::e2D, surfaceFormat.format, componentMapping, subresourceRange);
+            vkSwapchainImageViews_[i] = logicalDevice_->GetDevice().createImageView(imgViewCreateInfo);
         }
 
-        // TODO: render pass, graphics pipeline, frame buffers, cmd buffers [10/22/2016 Sebastian Maisch]
+        {
+            vk::AttachmentDescription colorAttachment{ vk::AttachmentDescriptionFlags(), surfaceFormat.format, vk::SampleCountFlagBits::e1,
+                vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore,
+                vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
+                vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR };
+
+            vk::AttachmentReference colorAttachmentRef{ 0, vk::ImageLayout::eColorAttachmentOptimal };
+            vk::SubpassDescription subPass{ vk::SubpassDescriptionFlags(), vk::PipelineBindPoint::eGraphics, 0, nullptr, 1, &colorAttachmentRef, nullptr, nullptr, 0, nullptr };
+            vk::RenderPassCreateInfo renderPassInfo{ vk::RenderPassCreateFlags(), 1, &colorAttachment, 1, &subPass, 0, nullptr };
+
+            vkSwapchainRenderPass_ = logicalDevice_->GetDevice().createRenderPass(renderPassInfo);
+        }
+
+        vkSwapchainFrameBuffers_.resize(vkSwapchainImages_.size());
+        for (auto i = 0U; i < vkSwapchainFrameBuffers_.size(); ++i) {
+            vk::ImageView attachments[] = {
+                vkSwapchainImageViews_[i]
+            };
+
+            vk::FramebufferCreateInfo fbCreateInfo{ vk::FramebufferCreateFlags(), vkSwapchainRenderPass_, 1, attachments, surfaceExtend.width, surfaceExtend.height, 1 };
+            vkSwapchainFrameBuffers_[i] = logicalDevice_->GetDevice().createFramebuffer(fbCreateInfo);
+        }
+
+        // TODO: cmd buffers [10/22/2016 Sebastian Maisch]
+    }
+
+    void VKWindow::DestroySwapchainImages()
+    {
+        for (auto& frameBuffer : vkSwapchainFrameBuffers_) {
+            if (frameBuffer) logicalDevice_->GetDevice().destroyFramebuffer(frameBuffer);
+            frameBuffer = vk::Framebuffer();
+        }
+
+        if (vkSwapchainRenderPass_) logicalDevice_->GetDevice().destroyRenderPass(vkSwapchainRenderPass_);
+        vkSwapchainRenderPass_ = vk::RenderPass();
+
+        for (auto& imgView : vkSwapchainImageViews_) {
+            if (imgView) logicalDevice_->GetDevice().destroyImageView(imgView);
+            imgView = vk::ImageView();
+        }
     }
 
     // ReSharper disable once CppMemberFunctionMayBeStatic
     // ReSharper disable once CppMemberFunctionMayBeConst
     void VKWindow::ReleaseVulkan()
     {
-        for (auto& imgView : vkSwapChainImageViews_) {
-            if (imgView) logicalDevice_->GetDevice().destroyImageView(imgView);
-            imgView = vk::ImageView();
-        }
+        DestroySwapchainImages();
         if (vkSwapchain_) logicalDevice_->GetDevice().destroySwapchainKHR(vkSwapchain_);
         vkSwapchain_ = vk::SwapchainKHR();
         logicalDevice_.release();

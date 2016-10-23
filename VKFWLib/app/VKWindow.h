@@ -77,9 +77,14 @@ namespace vku {
         /** Holds the swap chain. */
         vk::SwapchainKHR vkSwapchain_;
         /** Holds the swap chain images. */
-        std::vector<vk::Image> vkSwapChainImages_;
+        std::vector<vk::Image> vkSwapchainImages_;
         /** Holds the swap chain image views. */
-        std::vector<vk::ImageView> vkSwapChainImageViews_;
+        std::vector<vk::ImageView> vkSwapchainImageViews_;
+        /** Holds the swap chain render pass. */
+        vk::RenderPass vkSwapchainRenderPass_;
+        /** Holds the swap chain frame buffers. */
+        std::vector<vk::Framebuffer> vkSwapchainFrameBuffers_;
+
 
         /** Holds the current mouse position. */
         glm::vec2 currMousePosition_;
@@ -103,6 +108,7 @@ namespace vku {
         void InitWindow();
         void InitVulkan();
         void RecreateSwapChain();
+        void DestroySwapchainImages();
         void ReleaseWindow();
         void ReleaseVulkan();
 
