@@ -14,6 +14,10 @@ namespace vku {
 
     namespace cfg {
         class Configuration;
+
+        vk::SurfaceFormatKHR GetVulkanSurfaceFormatFromConfig(const WindowCfg& cfg);
+        vk::PresentModeKHR GetVulkanPresentModeFromConfig(const WindowCfg& cfg);
+        uint32_t GetVulkanAdditionalImageCountFromConfig(const WindowCfg& cfg);
     }
     namespace gfx {
         class LogicalDevice;

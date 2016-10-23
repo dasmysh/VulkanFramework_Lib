@@ -11,18 +11,19 @@
 
 namespace vku { namespace gfx {
 
-    LogicalDevice::LogicalDevice(const vk::PhysicalDevice& phDevice, const std::vector<DeviceQueueDesc>& queueDescs, const vk::SurfaceKHR& surface)
+    LogicalDevice::LogicalDevice(const vk::PhysicalDevice& phDevice, const std::vector<DeviceQueueDesc>& queueDescs, const vk::SurfaceKHR& surface) :
+        vkPhysicalDevice_(phDevice)
     {
         std::vector<vk::DeviceQueueCreateInfo> queueCreateInfo;
         for (const auto& queueDesc : queueDescs) {
             queueCreateInfo.emplace_back(vk::DeviceQueueCreateFlags(), queueDesc.familyIndex_, static_cast<uint32_t>(queueDesc.priorities_.size()), queueDesc.priorities_.data());
         }
-        auto deviceFeatures = phDevice.getFeatures();
+        auto deviceFeatures = vkPhysicalDevice_.getFeatures();
         std::vector<const char*> enabledDeviceExtensions;
 
         {
             LOG(INFO) << "VK Device Extensions:";
-            auto extensions = phDevice.enumerateDeviceExtensionProperties();
+            auto extensions = vkPhysicalDevice_.enumerateDeviceExtensionProperties();
             for (const auto& extension : extensions) LOG(INFO) << "- " << extension.extensionName << "[SpecVersion:" << extension.specVersion << "]";
 
             auto dbgMkFound = std::find_if(extensions.begin(), extensions.end(),
@@ -39,7 +40,7 @@ namespace vku { namespace gfx {
             static_cast<uint32_t>(enabledDeviceExtensions.size()), enabledDeviceExtensions.data(),
             &deviceFeatures };
 
-        vkDevice_ = phDevice.createDevice(deviceCreateInfo);
+        vkDevice_ = vkPhysicalDevice_.createDevice(deviceCreateInfo);
         vkQueues_.resize(queueDescs.size());
         for (auto i = 0U; i < queueDescs.size(); ++i) {
             vkQueues_[i].resize(queueDescs[i].priorities_.size());

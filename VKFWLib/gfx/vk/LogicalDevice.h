@@ -34,6 +34,10 @@ namespace vku {
             LogicalDevice& operator=(LogicalDevice&&);
             ~LogicalDevice();
 
+
+            const vk::PhysicalDevice& GetPhysicalDevice() const { return vkPhysicalDevice_; }
+            const vk::Device& GetDevice() const { return vkDevice_; }
+
             VkResult DebugMarkerSetObjectTagEXT(VkDevice device, VkDebugMarkerObjectTagInfoEXT* tagInfo) const;
             VkResult DebugMarkerSetObjectNameEXT(VkDevice device, VkDebugMarkerObjectNameInfoEXT* nameInfo) const;
             void CmdDebugMarkerBeginEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const;
@@ -43,6 +47,8 @@ namespace vku {
         private:
             PFN_vkVoidFunction LoadVKDeviceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false) const;
 
+            /** Holds the physical device. */
+            vk::PhysicalDevice vkPhysicalDevice_;
             /** Holds the actual device. */
             vk::Device vkDevice_;
             /** Holds the queues. */

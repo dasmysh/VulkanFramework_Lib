@@ -13,6 +13,7 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
 #include <vulkan/vulkan.hpp>
+#include <gfx/vk/LogicalDevice.h>
 
 namespace vku {
 
@@ -23,9 +24,7 @@ namespace vku {
      */
     VKWindow::VKWindow(cfg::WindowCfg& conf) :
         window_{ nullptr },
-//        windowTitle_(title),
         config_(conf),
-        app_(nullptr),
         currMousePosition_(0.0f),
         prevMousePosition_(0.0f),
         relativeMousePosition_(0.0f),
@@ -128,20 +127,14 @@ namespace vku {
             throw std::runtime_error("Could not create window surface.");
         }
         vkSurface_ = vk::SurfaceKHR(surfaceKHR);
+        logicalDevice_ = ApplicationBase::instance().CreateLogicalDevice(config_, vkSurface_);
 
-        std::vector<QueueDesc> queueDescs;
-        queueDescs.push_back(QueueDesc());
-        queueDescs.back().flags_ = vk::QueueFlagBits::eGraphics;
-        queueDescs.back().priorities_.push_back(1.0f);
-        logicalDevice_ = ApplicationBase::instance().CreateLogicalDevice(queueDescs, vkSurface_);
+        RecreateSwapChain();
 
         LOG(INFO) << L"Initializing Vulkan surface... done.";
 
         fbo.Resize(config_.windowWidth_, config_.windowHeight_);
 
-        if (config_.useSRGB_) {
-            glEnable(GL_FRAMEBUFFER_SRGB);
-        }
         glEnable(GL_SCISSOR_TEST);
 
         LOG(INFO) << L"Initializing Vulkan surface... done.";
@@ -149,21 +142,52 @@ namespace vku {
         ImGui_ImplGlfwGL3_Init(window_, false);
     }
 
+    void VKWindow::RecreateSwapChain()
+    {
+        logicalDevice_->GetDevice().waitIdle();
+
+        auto surfaceCapabilities = logicalDevice_->GetPhysicalDevice().getSurfaceCapabilitiesKHR(vkSurface_);
+        auto surfaceFormat = cfg::GetVulkanSurfaceFormatFromConfig(config_);
+        auto presentMode = cfg::GetVulkanPresentModeFromConfig(config_);
+        vk::Extent2D surfaceExtend(config_.windowWidth_, config_.windowHeight_);
+        auto imageCount = surfaceCapabilities.minImageCount + cfg::GetVulkanAdditionalImageCountFromConfig(config_);
+
+        {
+            auto oldSwapChain = vkSwapchain_;
+            vk::SwapchainCreateInfoKHR swapChainCreateInfo{ vk::SwapchainCreateFlagsKHR(), vkSurface_, imageCount, surfaceFormat.format, surfaceFormat.colorSpace,
+                surfaceExtend, 1, vk::ImageUsageFlagBits::eColorAttachment, vk::SharingMode::eExclusive, 0, nullptr, surfaceCapabilities.currentTransform,
+                vk::CompositeAlphaFlagBitsKHR::eOpaque, presentMode, true, oldSwapChain };
+            auto newSwapChain = logicalDevice_->GetDevice().createSwapchainKHR(swapChainCreateInfo);
+            logicalDevice_->GetDevice().destroySwapchainKHR(oldSwapChain);
+            vkSwapchain_ = newSwapChain;
+        }
+
+        vkSwapChainImages_ = logicalDevice_->GetDevice().getSwapchainImagesKHR(vkSwapchain_);
+        vkSwapChainImageViews_.resize(vkSwapChainImages_.size());
+        for (auto i = 0U; i < vkSwapChainImages_.size(); ++i) {
+            vk::ImageSubresourceRange subresourceRange{vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
+            vk::ComponentMapping componentMapping{};
+            vk::ImageViewCreateInfo imgViewCreateInfo(vk::ImageViewCreateFlags(), vkSwapChainImages_[i], vk::ImageViewType::e2D, surfaceFormat.format, componentMapping, subresourceRange);
+            vkSwapChainImageViews_[i] = logicalDevice_->GetDevice().createImageView(imgViewCreateInfo);
+        }
+
+        // TODO: render pass, graphics pipeline, frame buffers, cmd buffers [10/22/2016 Sebastian Maisch]
+    }
+
     // ReSharper disable once CppMemberFunctionMayBeStatic
     // ReSharper disable once CppMemberFunctionMayBeConst
     void VKWindow::ReleaseVulkan()
     {
+        for (auto& imgView : vkSwapChainImageViews_) {
+            if (imgView) logicalDevice_->GetDevice().destroyImageView(imgView);
+            imgView = vk::ImageView();
+        }
+        if (vkSwapchain_) logicalDevice_->GetDevice().destroySwapchainKHR(vkSwapchain_);
+        vkSwapchain_ = vk::SwapchainKHR();
+        logicalDevice_.release();
         if (vkSurface_) ApplicationBase::instance().GetVKInstance().destroySurfaceKHR(vkSurface_);
+        vkSurface_ = vk::SurfaceKHR();
         ImGui_ImplGlfwGL3_Shutdown();
-    }
-
-    /**
-     * Registers the application object using the window for event management.
-     * @param application the application object
-     */
-    void VKWindow::RegisterApplication(ApplicationBase & application)
-    {
-        this->app_ = &application;
     }
 
     /**
@@ -226,7 +250,6 @@ namespace vku {
     void VKWindow::WindowSizeCallback(int width, int height)
     {
         LOG(INFO) << L"Got window resize event (" << width << ", " << height << ") ...";
-        assert(this->app_ != nullptr);
         LOG(DEBUG) << L"Begin HandleResize()";
 
         if (width == 0 || height == 0) {
@@ -235,7 +258,7 @@ namespace vku {
         this->Resize(width, height);
 
         try {
-            this->app_->OnResize(width, height);
+            ApplicationBase::instance().OnResize(width, height);
         }
         catch (std::runtime_error e) {
             LOG(FATAL) << L"Could not reacquire resources after resize: " << e.what();
@@ -267,11 +290,11 @@ namespace vku {
     void VKWindow::WindowIconifyCallback(int iconified)
     {
         if (iconified == GLFW_TRUE) {
-            if (app_ != nullptr) app_->SetPause(true);
+            ApplicationBase::instance().SetPause(true);
             minimized_ = true;
             maximized_ = false;
         } else {
-            if (minimized_ && app_ != nullptr) app_->SetPause(false);
+            if (minimized_) ApplicationBase::instance().SetPause(false);
             minimized_ = false;
             maximized_ = false;
         }
@@ -279,8 +302,8 @@ namespace vku {
 
     void VKWindow::MouseButtonCallback(int button, int action, int mods)
     {
-        if (mouseInWindow_ && app_ != nullptr) {
-            app_->HandleMouse(button, action, mods, 0.0f, this);
+        if (mouseInWindow_) {
+            ApplicationBase::instance().HandleMouse(button, action, mods, 0.0f, this);
         }
     }
 
@@ -291,9 +314,7 @@ namespace vku {
             currMousePosition_ = glm::vec2(static_cast<float>(xpos), static_cast<float>(ypos));
             relativeMousePosition_ = currMousePosition_ - prevMousePosition_;
 
-            if (app_ != nullptr) {
-                app_->HandleMouse(-1, 0, 0, 0.0f, this);
-            }
+            ApplicationBase::instance().HandleMouse(-1, 0, 0, 0.0f, this);
         }
     }
 
@@ -311,16 +332,14 @@ namespace vku {
 
     void VKWindow::ScrollCallback(double, double yoffset)
     {
-        if (mouseInWindow_ && app_ != nullptr) {
-            app_->HandleMouse(-1, 0, 0, 50.0f * static_cast<float>(yoffset), this);
+        if (mouseInWindow_) {
+            ApplicationBase::instance().HandleMouse(-1, 0, 0, 50.0f * static_cast<float>(yoffset), this);
         }
     }
 
     void VKWindow::KeyCallback(int key, int scancode, int action, int mods)
     {
-        if (app_ != nullptr) {
-            this->app_->HandleKeyboard(key, scancode, action, mods, this);
-        }
+        ApplicationBase::instance().HandleKeyboard(key, scancode, action, mods, this);
     }
 
     // ReSharper disable once CppMemberFunctionMayBeStatic

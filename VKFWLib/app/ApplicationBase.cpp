@@ -89,7 +89,7 @@ namespace vku {
             for (uint32_t i = 0; i < queueCount; i++) {
                 if (queueProps[i].queueCount < desc.priorities_.size()) continue;
                 if (queueProps[i].queueFlags & reqFlags) {
-                    if (surface && !device.getSurfaceSupportKHR(i, surface)) {
+                    if (surface && desc.graphics_ && !device.getSurfaceSupportKHR(i, surface)) {
                         continue;
                     }
                     return i;
@@ -100,7 +100,38 @@ namespace vku {
     }
 
 
+    namespace cfg {
+
+        vk::SurfaceFormatKHR GetVulkanSurfaceFormatFromConfig(const WindowCfg& cfg)
+        {
+            auto format = vk::Format::eR8G8B8A8Unorm;
+            if (cfg.backbufferBits_ == 32) format = vk::Format::eR8G8B8A8Unorm;
+            if (cfg.backbufferBits_ == 24) format = vk::Format::eR8G8B8Unorm;
+            if (cfg.backbufferBits_ == 16) format = vk::Format::eR5G6B5UnormPack16;
+            vk::ColorSpaceKHR colorSpace = {};
+            if (cfg.useSRGB_) colorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
+            return vk::SurfaceFormatKHR{ format, colorSpace };
+        }
+
+        vk::PresentModeKHR GetVulkanPresentModeFromConfig(const WindowCfg& cfg)
+        {
+            vk::PresentModeKHR presentMode = {};
+            if (cfg.swapOptions_ == cfg::SwapOptions::DOUBLE_BUFFERING) presentMode = vk::PresentModeKHR::eImmediate;
+            if (cfg.swapOptions_ == cfg::SwapOptions::DOUBLE_BUFFERING_VSYNC) presentMode = vk::PresentModeKHR::eFifo;
+            if (cfg.swapOptions_ == cfg::SwapOptions::TRIPLE_BUFFERING) presentMode = vk::PresentModeKHR::eMailbox;
+            return presentMode;
+        }
+
+        uint32_t GetVulkanAdditionalImageCountFromConfig(const WindowCfg& cfg)
+        {
+            if (cfg.swapOptions_ == SwapOptions::TRIPLE_BUFFERING) return 1;
+            return 0;
+        }
+    }
+
+
     ApplicationBase* ApplicationBase::instance_ = nullptr;
+
 
     /**
      * Construct a new application.
@@ -134,7 +165,6 @@ namespace vku {
 
         for (auto& wc : config_.windows_) {
             windows_.emplace_back(wc);
-            windows_.back().RegisterApplication(*this);
             windows_.back().ShowWindow();
         }
     }
@@ -399,28 +429,21 @@ namespace vku {
 
     std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const vk::SurfaceKHR& surface) const
     {
-        auto requestedFormat = vk::Format::eR8G8B8A8Unorm;
-        if (windowCfg.backbufferBits_ == 32) requestedFormat = vk::Format::eR8G8B8A8Unorm;
-        if (windowCfg.backbufferBits_ == 24) requestedFormat = vk::Format::eR8G8B8Unorm;
-        if (windowCfg.backbufferBits_ == 16) requestedFormat = vk::Format::eR5G6B5UnormPack16;
-        vk::ColorSpaceKHR requestedColorSpace;
-        if (windowCfg.useSRGB_) requestedColorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
-        vk::PresentModeKHR requestedPresentMode;
-        if (windowCfg.swapOptions_ == cfg::SwapOptions::DOUBLE_BUFFERING) requestedPresentMode = vk::PresentModeKHR::eImmediate;
-        if (windowCfg.swapOptions_ == cfg::SwapOptions::DOUBLE_BUFFERING_VSYNC) requestedPresentMode = vk::PresentModeKHR::eFifo;
-        if (windowCfg.swapOptions_ == cfg::SwapOptions::TRIPLE_BUFFERING) requestedPresentMode = vk::PresentModeKHR::eMailbox;
+        auto requestedFormat = cfg::GetVulkanSurfaceFormatFromConfig(windowCfg);
+        auto requestedPresentMode = cfg::GetVulkanPresentModeFromConfig(windowCfg);
+        auto requestedAdditionalImgCnt = cfg::GetVulkanAdditionalImageCountFromConfig(windowCfg);
         glm::uvec2 requestedExtend(windowCfg.windowWidth_, windowCfg.windowHeight_);
 
-        return CreateLogicalDevice(windowCfg.queues_, surface, [&surface, &requestedFormat, &requestedColorSpace, &requestedPresentMode, &requestedExtend](const vk::PhysicalDevice& device)
+        return CreateLogicalDevice(windowCfg.queues_, surface, [&surface, &requestedFormat, &requestedPresentMode, &requestedAdditionalImgCnt, &requestedExtend](const vk::PhysicalDevice& device)
         {
             auto deviceSurfaceCaps = device.getSurfaceCapabilitiesKHR(surface);
             auto deviceSurfaceFormats = device.getSurfaceFormatsKHR(surface);
             auto presentModes = device.getSurfacePresentModesKHR(surface);
-            auto formatSupported = false, presentModeSupported = false, sizeSupported = false;
+            auto formatSupported = false, presentModeSupported = false, sizeSupported = false, imageCountSupported = false;
 
             if (deviceSurfaceFormats.size() == 1 && deviceSurfaceFormats[0].format == vk::Format::eUndefined) formatSupported = true;
             else for (const auto& availableFormat : deviceSurfaceFormats) {
-                if (availableFormat.format == requestedFormat && availableFormat.colorSpace == requestedColorSpace) formatSupported = true;
+                if (availableFormat.format == requestedFormat.format && availableFormat.colorSpace == requestedFormat.colorSpace) formatSupported = true;
             }
 
             for (const auto& availablePresentMode : presentModes) {
@@ -436,7 +459,10 @@ namespace vku {
                 if (actualExtent == requestedExtend) sizeSupported = true;
             }
 
-            return formatSupported && presentModeSupported && sizeSupported;
+            auto imageCount = deviceSurfaceCaps.minImageCount + requestedAdditionalImgCnt;
+            if (deviceSurfaceCaps.maxImageCount == 0 || imageCount <= deviceSurfaceCaps.maxImageCount) imageCountSupported = true;
+
+            return formatSupported && presentModeSupported && sizeSupported && imageCountSupported;
         });
     }
 

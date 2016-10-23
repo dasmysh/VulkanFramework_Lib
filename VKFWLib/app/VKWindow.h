@@ -33,7 +33,6 @@ namespace vku {
         bool IsClosing() const;
         void ShowWindow() const;
         void CloseWindow() const;
-        void RegisterApplication(ApplicationBase& application);
         void Present() const;
         bool MessageBoxQuestion(const std::string& title, const std::string& content) const;
 
@@ -68,20 +67,19 @@ namespace vku {
 
         /** Holds the GLFW window. */
         GLFWwindow* window_;
-        /** Holds the window's title. */
-        // std::string windowTitle_;
         /** Holds the configuration for this window. */
         cfg::WindowCfg& config_;
-        /** Holds the application. */
-        ApplicationBase* app_;
 
         /** Holds the Vulkan surface. */
         vk::SurfaceKHR vkSurface_;
         /** Holds the logical device. */
         std::unique_ptr<gfx::LogicalDevice> logicalDevice_;
-        // vk::Device vkDevice_;
-        /** Holds the graphics queue. */
-        // vk::Queue vkGraphicsQueue_;
+        /** Holds the swap chain. */
+        vk::SwapchainKHR vkSwapchain_;
+        /** Holds the swap chain images. */
+        std::vector<vk::Image> vkSwapChainImages_;
+        /** Holds the swap chain image views. */
+        std::vector<vk::ImageView> vkSwapChainImageViews_;
 
         /** Holds the current mouse position. */
         glm::vec2 currMousePosition_;
@@ -104,6 +102,7 @@ namespace vku {
 
         void InitWindow();
         void InitVulkan();
+        void RecreateSwapChain();
         void ReleaseWindow();
         void ReleaseVulkan();
 
