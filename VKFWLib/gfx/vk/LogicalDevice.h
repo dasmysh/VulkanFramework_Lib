@@ -53,6 +53,8 @@ namespace vku {
             vk::Device vkDevice_;
             /** Holds the queues. */
             std::vector<std::vector<vk::Queue>> vkQueues_;
+            /** Holds a command pool for each queue family. */
+            std::vector<vk::CommandPool> vkCmdPools_;
 
             /** Holds whether debug markers are enabled. */
             bool enableDebugMarkers_ = false;

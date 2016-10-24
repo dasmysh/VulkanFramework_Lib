@@ -56,11 +56,22 @@ namespace vku { namespace gfx {
             fpCmdDebugMarkerEndEXT = reinterpret_cast<PFN_vkCmdDebugMarkerEndEXT>(LoadVKDeviceFunction("vkCmdDebugMarkerEndEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
             fpCmdDebugMarkerInsertEXT = reinterpret_cast<PFN_vkCmdDebugMarkerInsertEXT>(LoadVKDeviceFunction("vkCmdDebugMarkerInsertEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
         }
+
+        vkCmdPools_.resize(queueDescs.size());
+        for (auto i = 0U; i < vkCmdPools_.size(); ++i) {
+            vk::CommandPoolCreateInfo poolInfo{ vk::CommandPoolCreateFlags(), queueDescs[i].familyIndex_ };
+            vkCmdPools_[i] = vkDevice_.createCommandPool(poolInfo);
+        }
     }
 
 
     LogicalDevice::~LogicalDevice()
     {
+        for (auto& cmdPool : vkCmdPools_) {
+            if (cmdPool) vkDevice_.destroyCommandPool(cmdPool);
+            cmdPool = vk::CommandPool();
+        }
+
         if (vkDevice_) vkDevice_.destroy();
     }
 

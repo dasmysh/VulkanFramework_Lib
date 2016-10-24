@@ -294,8 +294,9 @@ namespace vku {
                 this->RenderGUI();
                 ImGui::Render();
             });
-        }
-        mainWin.Present();*/
+        }*/
+
+        for (auto& window : windows_) window.Present();
     }
 
     void ApplicationBase::InitVulkan(const std::string& applicationName, uint32_t applicationVersion)

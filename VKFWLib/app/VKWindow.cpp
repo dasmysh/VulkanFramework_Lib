@@ -139,7 +139,7 @@ namespace vku {
 
         LOG(INFO) << L"Initializing Vulkan surface... done.";
 
-        ImGui_ImplGlfwGL3_Init(window_, false);
+        //ImGui_ImplGlfwGL3_Init(window_, false);
     }
 
     void VKWindow::RecreateSwapChain()
@@ -226,7 +226,7 @@ namespace vku {
         logicalDevice_.release();
         if (vkSurface_) ApplicationBase::instance().GetVKInstance().destroySurfaceKHR(vkSurface_);
         vkSurface_ = vk::SurfaceKHR();
-        ImGui_ImplGlfwGL3_Shutdown();
+        //ImGui_ImplGlfwGL3_Shutdown();
     }
 
     /**
@@ -256,6 +256,7 @@ namespace vku {
      */
     void VKWindow::Present() const
     {
+        // TODO: correct swap. [10/23/2016 Sebastian Maisch]
         glfwSwapBuffers(window_);
     }
 
@@ -442,22 +443,22 @@ namespace vku {
 
     void VKWindow::glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     {
-        ImGui_ImplGlfwGL3_MouseButtonCallback(window, button, action, mods);
+        //ImGui_ImplGlfwGL3_MouseButtonCallback(window, button, action, mods);
 
-        auto& io = ImGui::GetIO();
-        if (!io.WantCaptureMouse) {
+        //auto& io = ImGui::GetIO();
+        //if (!io.WantCaptureMouse) {
             auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->MouseButtonCallback(button, action, mods);
-        }
+        //}
     }
 
     void VKWindow::glfwCursorPosCallback(GLFWwindow* window, double xpos, double ypos)
     {
-        auto& io = ImGui::GetIO();
-        if (!io.WantCaptureMouse) {
+        //auto& io = ImGui::GetIO();
+        //if (!io.WantCaptureMouse) {
             auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->CursorPosCallback(xpos, ypos);
-        }
+        //}
     }
 
     void VKWindow::glfwCursorEnterCallback(GLFWwindow* window, int entered)
@@ -468,44 +469,44 @@ namespace vku {
 
     void VKWindow::glfwScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
     {
-        ImGui_ImplGlfwGL3_ScrollCallback(window, xoffset, yoffset);
+        //ImGui_ImplGlfwGL3_ScrollCallback(window, xoffset, yoffset);
 
-        auto& io = ImGui::GetIO();
-        if (!io.WantCaptureMouse) {
+        //auto& io = ImGui::GetIO();
+        //if (!io.WantCaptureMouse) {
             auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->ScrollCallback(xoffset, yoffset);
-        }
+        //}
     }
 
     void VKWindow::glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
     {
-        ImGui_ImplGlfwGL3_KeyCallback(window, key, scancode, action, mods);
+        //ImGui_ImplGlfwGL3_KeyCallback(window, key, scancode, action, mods);
 
-        auto& io = ImGui::GetIO();
-        if (!io.WantCaptureKeyboard) {
+        //auto& io = ImGui::GetIO();
+        //if (!io.WantCaptureKeyboard) {
             auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->KeyCallback(key, scancode, action, mods);
-        }
+        //}
     }
 
     void VKWindow::glfwCharCallback(GLFWwindow* window, unsigned codepoint)
     {
-        ImGui_ImplGlfwGL3_CharCallback(window, codepoint);
+        //ImGui_ImplGlfwGL3_CharCallback(window, codepoint);
 
-        auto& io = ImGui::GetIO();
-        if (!io.WantCaptureKeyboard) {
+        //auto& io = ImGui::GetIO();
+        //if (!io.WantCaptureKeyboard) {
             auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->CharCallback(codepoint);
-        }
+        //}
     }
 
     void VKWindow::glfwCharModsCallback(GLFWwindow* window, unsigned codepoint, int mods)
     {
-        auto& io = ImGui::GetIO();
-        if (!io.WantCaptureKeyboard) {
+        //auto& io = ImGui::GetIO();
+        //if (!io.WantCaptureKeyboard) {
             auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->CharModsCallback(codepoint, mods);
-        }
+        //}
     }
 
     void VKWindow::glfwDropCallback(GLFWwindow* window, int count, const char** paths)
