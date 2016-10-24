@@ -37,6 +37,8 @@ namespace vku {
 
             const vk::PhysicalDevice& GetPhysicalDevice() const { return vkPhysicalDevice_; }
             const vk::Device& GetDevice() const { return vkDevice_; }
+            const vk::Queue& GetQueue(unsigned int familyIndex, unsigned int queueIndex) const { return vkQueues_[familyIndex][queueIndex]; }
+            const vk::CommandPool& GetCommandPool(unsigned int familyIndex) const { return vkCmdPools_[familyIndex]; }
 
             VkResult DebugMarkerSetObjectTagEXT(VkDevice device, VkDebugMarkerObjectTagInfoEXT* tagInfo) const;
             VkResult DebugMarkerSetObjectNameEXT(VkDevice device, VkDebugMarkerObjectNameInfoEXT* nameInfo) const;

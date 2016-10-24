@@ -19,7 +19,6 @@ namespace vku {
 
     /**
      * Creates a new windows VKWindow.
-     * @param title the windows title.
      * @param conf the window configuration used
      */
     VKWindow::VKWindow(cfg::WindowCfg& conf) :
@@ -128,8 +127,16 @@ namespace vku {
         }
         vkSurface_ = vk::SurfaceKHR(surfaceKHR);
         logicalDevice_ = ApplicationBase::instance().CreateLogicalDevice(config_, vkSurface_);
+        for (auto i = 0U; i < config_.queues_.size(); ++i) if (config_.queues_[i].graphics_) {
+            graphicsQueue_ = i;
+            break;
+        }
 
         RecreateSwapChain();
+
+        vk::SemaphoreCreateInfo semaphoreInfo{ };
+        vkImageAvailableSemaphore_ = logicalDevice_->GetDevice().createSemaphore(semaphoreInfo);
+        vkRenderingFinishedSemaphore_ = logicalDevice_->GetDevice().createSemaphore(semaphoreInfo);
 
         LOG(INFO) << L"Initializing Vulkan surface... done.";
 
@@ -197,7 +204,15 @@ namespace vku {
             vkSwapchainFrameBuffers_[i] = logicalDevice_->GetDevice().createFramebuffer(fbCreateInfo);
         }
 
-        // TODO: cmd buffers [10/22/2016 Sebastian Maisch]
+        if (vkCommandBuffers_.size() > 0) logicalDevice_->GetDevice().freeCommandBuffers(logicalDevice_->GetCommandPool(graphicsQueue_), vkCommandBuffers_.size(), vkCommandBuffers_.data());
+        vkCommandBuffers_.resize(vkSwapchainImages_.size());
+        vk::CommandBufferAllocateInfo allocInfo{ logicalDevice_->GetCommandPool(graphicsQueue_), vk::CommandBufferLevel::ePrimary, static_cast<uint32_t>(vkCommandBuffers_.size()) };
+
+        logicalDevice_->GetDevice().allocateCommandBuffers(&allocInfo, vkCommandBuffers_.data());
+        if (logicalDevice_->GetDevice().allocateCommandBuffers(&allocInfo, vkCommandBuffers_.data()) != vk::Result::eSuccess) {
+            LOG(FATAL) << "Could not allocate command buffers.";
+            throw std::runtime_error("Could not allocate command buffers.");
+        }
     }
 
     void VKWindow::DestroySwapchainImages()

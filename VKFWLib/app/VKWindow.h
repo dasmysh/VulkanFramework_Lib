@@ -74,6 +74,8 @@ namespace vku {
         vk::SurfaceKHR vkSurface_;
         /** Holds the logical device. */
         std::unique_ptr<gfx::LogicalDevice> logicalDevice_;
+        /** Holds the queue number used for graphics output. */
+        unsigned int graphicsQueue_ = 0;
         /** Holds the swap chain. */
         vk::SwapchainKHR vkSwapchain_;
         /** Holds the swap chain images. */
@@ -84,6 +86,12 @@ namespace vku {
         vk::RenderPass vkSwapchainRenderPass_;
         /** Holds the swap chain frame buffers. */
         std::vector<vk::Framebuffer> vkSwapchainFrameBuffers_;
+        /** Holds the swap chain command buffers. */
+        std::vector<vk::CommandBuffer> vkCommandBuffers_;
+        /** Holds the semaphore to notify when a new swap image is available. */
+        vk::Semaphore vkImageAvailableSemaphore_;
+        /** Holds the semaphore to notify when rendering is finished. */
+        vk::Semaphore vkRenderingFinishedSemaphore_;
 
 
         /** Holds the current mouse position. */
