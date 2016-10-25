@@ -33,12 +33,13 @@ namespace vku {
         bool IsClosing() const;
         void ShowWindow() const;
         void CloseWindow() const;
-        void Present() const;
         bool MessageBoxQuestion(const std::string& title, const std::string& content) const;
 
         cfg::WindowCfg& GetConfig() const { return config_; };
+
         bool IsMouseButtonPressed(int button) const;
         bool IsKeyPressed(int key) const;
+        glm::vec2 GetMousePosition() const { return currMousePosition_; }
 
         /** Returns the windows width. */
 //        unsigned int GetWidth() const { return width; }
@@ -46,7 +47,14 @@ namespace vku {
 //        unsigned int GetHeight() const { return height; }
         /** Returns the windows client size. */
 //        glm::vec2 GetClientSize() const { return glm::vec2(static_cast<float>(width), static_cast<float>(height)); }
-        glm::vec2 GetMousePosition() const { return currMousePosition_; }
+        
+        void Present() const;
+        void StartCommandBuffer(unsigned int cmdBufferIdx) const;
+        void StartRenderPass(unsigned int cmdBufferIdx) const;
+        void EndRenderPass() const;
+        void EndCommandBuffer() const;
+
+        void RenderPass(std::function<void()> pass);
 
     private:
         void WindowPosCallback(int xpos, int ypos) const;

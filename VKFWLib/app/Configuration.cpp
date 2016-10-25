@@ -68,6 +68,8 @@ namespace vku {
             windowWidth_(800),
             windowHeight_(600),
             backbufferBits_(32),
+            depthBufferBits_(32),
+            stencilBufferBits_(0),
             useSRGB_(false),
             swapOptions_(SwapOptions::DOUBLE_BUFFERING_VSYNC)
         {
@@ -82,6 +84,8 @@ namespace vku {
             windowWidth_(rhs.windowWidth_),
             windowHeight_(rhs.windowHeight_),
             backbufferBits_(rhs.backbufferBits_),
+            depthBufferBits_(rhs.depthBufferBits_),
+            stencilBufferBits_(rhs.stencilBufferBits_),
             useSRGB_(rhs.useSRGB_),
             swapOptions_(rhs.swapOptions_),
             queues_(rhs.queues_)
@@ -95,6 +99,8 @@ namespace vku {
             windowWidth_(std::move(rhs.windowWidth_)),
             windowHeight_(std::move(rhs.windowHeight_)),
             backbufferBits_(std::move(rhs.backbufferBits_)),
+            depthBufferBits_(std::move(rhs.depthBufferBits_)),
+            stencilBufferBits_(std::move(rhs.stencilBufferBits_)),
             useSRGB_(std::move(rhs.useSRGB_)),
             swapOptions_(std::move(rhs.swapOptions_)),
             queues_(std::move(rhs.queues_))
@@ -120,6 +126,8 @@ namespace vku {
                 windowWidth_ = std::move(rhs.windowWidth_);
                 windowHeight_ = std::move(rhs.windowHeight_);
                 backbufferBits_ = std::move(rhs.backbufferBits_);
+                depthBufferBits_ = std::move(rhs.depthBufferBits_);
+                stencilBufferBits_ = std::move(rhs.stencilBufferBits_);
                 useSRGB_ = std::move(rhs.useSRGB_);
                 swapOptions_ = std::move(rhs.swapOptions_);
                 queues_ = std::move(rhs.queues_);

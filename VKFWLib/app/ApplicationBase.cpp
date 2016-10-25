@@ -212,6 +212,7 @@ namespace vku {
                 handled = true;
                 break;
             case GLFW_KEY_F9:
+                // TODO: recompile shaders [10/24/2016 Sebastian Maisch]
                 // programManager_->RecompileAll();
                 handled = true;
                 break;
@@ -219,7 +220,7 @@ namespace vku {
             }
         }
 
-        // if (!handled && IsRunning() && !IsPaused()) handled = cameraView_->HandleKeyboard(key, scancode, action, mods, sender);
+        // TODO if (!handled && IsRunning() && !IsPaused()) handled = cameraView_->HandleKeyboard(key, scancode, action, mods, sender);
 
         return handled;
     }
@@ -237,7 +238,7 @@ namespace vku {
     {
         auto handled = false;
         if (IsRunning() && !IsPaused()) handled = HandleMouseApp(button, action, mods, mouseWheelDelta, sender);
-        // if (!handled && IsRunning() && !IsPaused()) handled = cameraView_->HandleMouse(button, action, mods, mouseWheelDelta, sender);
+        // TODO if (!handled && IsRunning() && !IsPaused()) handled = cameraView_->HandleMouse(button, action, mods, mouseWheelDelta, sender);
         return handled;
     }
 
@@ -288,7 +289,7 @@ namespace vku {
             this->RenderScene();
         }
 
-        /*ImGui_ImplGlfwGL3_NewFrame();
+        /*TODO ImGui_ImplGlfwGL3_NewFrame();
         if (guiMode_) {
             mainWin.BatchDraw([&](GLBatchRenderTarget & rt) {
                 this->RenderGUI();
@@ -297,6 +298,38 @@ namespace vku {
         }*/
 
         for (auto& window : windows_) window.Present();
+    }
+
+    void ApplicationBase::CheckVKInstanceExtensions(const std::vector<const char*>& enabledExtensions)
+    {
+        LOG(INFO) << "VK Instance Extensions:";
+        auto extensions = vk::enumerateInstanceExtensionProperties();
+        for (const auto& extension : extensions) LOG(INFO) << "- " << extension.extensionName << "[SpecVersion:" << extension.specVersion << "]";
+
+        for (const auto& enabledExt : enabledExtensions) {
+            auto found = std::find_if(extensions.begin(), extensions.end(),
+                                      [&enabledExt](const vk::ExtensionProperties& extProps) { return std::strcmp(enabledExt, extProps.extensionName) == 0; });
+            if (found == extensions.end()) {
+                LOG(FATAL) << "Extension needed (" << enabledExt << ") is not available. Quitting.";
+                throw std::runtime_error("Vulkan extension missing.");
+            }
+        }
+    }
+
+    void ApplicationBase::CheckVKInstanceLayers()
+    {
+        LOG(INFO) << "VK Instance Layers:";
+        auto layers = vk::enumerateInstanceLayerProperties();
+        for (const auto& layer : layers) LOG(INFO) << "- " << layer.layerName << "[SpecVersion:" << layer.specVersion << ",ImplVersion:" << layer.implementationVersion << "]";
+
+        for (const auto& enabledLayer : vkValidationLayers_) {
+            auto found = std::find_if(layers.begin(), layers.end(),
+                                      [&enabledLayer](const vk::LayerProperties& layerProps) { return std::strcmp(enabledLayer, layerProps.layerName) == 0; });
+            if (found == layers.end()) {
+                LOG(FATAL) << "Layer needed (" << enabledLayer << ") is not available. Quitting.";
+                throw std::runtime_error("Vulkan layer missing.");
+            }
+        }
     }
 
     void ApplicationBase::InitVulkan(const std::string& applicationName, uint32_t applicationVersion)
@@ -316,36 +349,9 @@ namespace vku {
             enabledExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
             vkValidationLayers_.push_back("VK_LAYER_LUNARG_standard_validation");
         }
-
-        {
-            LOG(INFO) << "VK Instance Extensions:";
-            auto extensions = vk::enumerateInstanceExtensionProperties();
-            for (const auto& extension : extensions) LOG(INFO) << "- " << extension.extensionName << "[SpecVersion:" << extension.specVersion << "]";
-
-            for (const auto& enabledExt : enabledExtensions) {
-                auto found = std::find_if(extensions.begin(), extensions.end(),
-                    [&enabledExt](const vk::ExtensionProperties& extProps) { return std::strcmp(enabledExt, extProps.extensionName) == 0; });
-                if (found == extensions.end()) {
-                    LOG(FATAL) << "Extension needed (" << enabledExt << ") is not available. Quitting.";
-                    throw std::runtime_error("Vulkan extension missing.");
-                }
-            }
-        }
-
-        {
-            LOG(INFO) << "VK Instance Layers:";
-            auto layers = vk::enumerateInstanceLayerProperties();
-            for (const auto& layer : layers) LOG(INFO) << "- " << layer.layerName << "[SpecVersion:" << layer.specVersion << ",ImplVersion:" << layer.implementationVersion << "]";
-
-            for (const auto& enabledLayer : vkValidationLayers_) {
-                auto found = std::find_if(layers.begin(), layers.end(),
-                    [&enabledLayer](const vk::LayerProperties& layerProps) { return std::strcmp(enabledLayer, layerProps.layerName) == 0; });
-                if (found == layers.end()) {
-                    LOG(FATAL) << "Layer needed (" << enabledLayer << ") is not available. Quitting.";
-                    throw std::runtime_error("Vulkan layer missing.");
-                }
-            }
-        }
+        
+        CheckVKInstanceExtensions(enabledExtensions);
+        CheckVKInstanceLayers();
 
         {
             vk::ApplicationInfo appInfo{ applicationName.c_str(), applicationVersion, engineName, engineVersion, VK_API_VERSION_1_0 };

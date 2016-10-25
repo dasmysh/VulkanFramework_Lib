@@ -146,7 +146,7 @@ namespace vku {
 
         LOG(INFO) << L"Initializing Vulkan surface... done.";
 
-        //ImGui_ImplGlfwGL3_Init(window_, false);
+        // TODO ImGui_ImplGlfwGL3_Init(window_, false);
     }
 
     void VKWindow::RecreateSwapChain()
@@ -213,6 +213,8 @@ namespace vku {
             LOG(FATAL) << "Could not allocate command buffers.";
             throw std::runtime_error("Could not allocate command buffers.");
         }
+
+        // TODO: fill command buffers... [10/24/2016 Sebastian Maisch]
     }
 
     void VKWindow::DestroySwapchainImages()
@@ -235,13 +237,16 @@ namespace vku {
     // ReSharper disable once CppMemberFunctionMayBeConst
     void VKWindow::ReleaseVulkan()
     {
+        logicalDevice_->GetDevice().waitIdle();
+
+        //TODO ImGui_ImplGlfwGL3_Shutdown();
+
         DestroySwapchainImages();
         if (vkSwapchain_) logicalDevice_->GetDevice().destroySwapchainKHR(vkSwapchain_);
         vkSwapchain_ = vk::SwapchainKHR();
         logicalDevice_.release();
         if (vkSurface_) ApplicationBase::instance().GetVKInstance().destroySurfaceKHR(vkSurface_);
         vkSurface_ = vk::SurfaceKHR();
-        //ImGui_ImplGlfwGL3_Shutdown();
     }
 
     /**
@@ -275,6 +280,53 @@ namespace vku {
         glfwSwapBuffers(window_);
     }
 
+    void VKWindow::StartCommandBuffer(unsigned cmdBufferIdx) const
+    {
+        // TODO: get currently free command buffer. [10/25/2016 Sebastian Maisch]
+        // TODO: pre-initialize structs. [10/25/2016 Sebastian Maisch]
+        vk::CommandBufferBeginInfo beginInfo{ vk::CommandBufferUsageFlagBits::eSimultaneousUse };
+        vkCommandBuffers_[cmdBufferIdx].begin(beginInfo);
+    }
+
+    void VKWindow::StartRenderPass(unsigned int cmdBufferIdx) const
+    {
+        // TODO: get currently free command buffer. [10/25/2016 Sebastian Maisch]
+        // TODO: pre-initialize structs. [10/25/2016 Sebastian Maisch]
+        vk::RenderPassBeginInfo renderPassBeginInfo{ , vkSwapchainFrameBuffers_[cmdBufferIdx], vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(TODO)), 1, TODO };
+        vkCommandBuffers_[cmdBufferIdx].beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+
+        
+
+            VkRenderPassBeginInfo renderPassInfo = {};
+            renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+            renderPassInfo.renderPass = renderPass;
+            renderPassInfo.framebuffer = swapChainFramebuffers[i];
+            renderPassInfo.renderArea.offset = { 0, 0 };
+            renderPassInfo.renderArea.extent = swapChainExtent;
+
+            VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
+            renderPassInfo.clearValueCount = 1;
+            renderPassInfo.pClearValues = &clearColor;
+
+            vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
+
+            vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+
+            vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
+    }
+
+    void VKWindow::EndRenderPass() const
+    {
+        vkCmdEndRenderPass(commandBuffers[i]);
+    }
+
+    void VKWindow::EndCommandBuffer() const
+    {
+        if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) {
+            throw std::runtime_error("failed to record command buffer!");
+        }
+    }
+
     /**
      * Shows a question message box.
      * @param title the message boxes title
@@ -305,14 +357,15 @@ namespace vku {
     void VKWindow::WindowSizeCallback(int width, int height)
     {
         LOG(INFO) << L"Got window resize event (" << width << ", " << height << ") ...";
-        LOG(DEBUG) << L"Begin HandleResize()";
+        if (width == 0 || height == 0) return;
 
-        if (width == 0 || height == 0) {
-            return;
-        }
-        this->Resize(width, height);
+        LOG(DEBUG) << L"Begin HandleResize()";
+        RecreateSwapChain();
+        // TODO: resize external frame buffer object?
+        // this->Resize(width, height);
 
         try {
+            // TODO: notify all resources depending on this...
             ApplicationBase::instance().OnResize(width, height);
         }
         catch (std::runtime_error e) {
@@ -458,7 +511,7 @@ namespace vku {
 
     void VKWindow::glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     {
-        //ImGui_ImplGlfwGL3_MouseButtonCallback(window, button, action, mods);
+        //TODO ImGui_ImplGlfwGL3_MouseButtonCallback(window, button, action, mods);
 
         //auto& io = ImGui::GetIO();
         //if (!io.WantCaptureMouse) {
@@ -469,7 +522,7 @@ namespace vku {
 
     void VKWindow::glfwCursorPosCallback(GLFWwindow* window, double xpos, double ypos)
     {
-        //auto& io = ImGui::GetIO();
+        //TODO auto& io = ImGui::GetIO();
         //if (!io.WantCaptureMouse) {
             auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->CursorPosCallback(xpos, ypos);
@@ -484,7 +537,7 @@ namespace vku {
 
     void VKWindow::glfwScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
     {
-        //ImGui_ImplGlfwGL3_ScrollCallback(window, xoffset, yoffset);
+        //TODO ImGui_ImplGlfwGL3_ScrollCallback(window, xoffset, yoffset);
 
         //auto& io = ImGui::GetIO();
         //if (!io.WantCaptureMouse) {
@@ -495,7 +548,7 @@ namespace vku {
 
     void VKWindow::glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
     {
-        //ImGui_ImplGlfwGL3_KeyCallback(window, key, scancode, action, mods);
+        //TODO ImGui_ImplGlfwGL3_KeyCallback(window, key, scancode, action, mods);
 
         //auto& io = ImGui::GetIO();
         //if (!io.WantCaptureKeyboard) {
@@ -506,9 +559,9 @@ namespace vku {
 
     void VKWindow::glfwCharCallback(GLFWwindow* window, unsigned codepoint)
     {
-        //ImGui_ImplGlfwGL3_CharCallback(window, codepoint);
+        //TODO ImGui_ImplGlfwGL3_CharCallback(window, codepoint);
 
-        //auto& io = ImGui::GetIO();
+        //TODO auto& io = ImGui::GetIO();
         //if (!io.WantCaptureKeyboard) {
             auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->CharCallback(codepoint);
@@ -517,7 +570,7 @@ namespace vku {
 
     void VKWindow::glfwCharModsCallback(GLFWwindow* window, unsigned codepoint, int mods)
     {
-        //auto& io = ImGui::GetIO();
+        //TODO auto& io = ImGui::GetIO();
         //if (!io.WantCaptureKeyboard) {
             auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->CharModsCallback(codepoint, mods);

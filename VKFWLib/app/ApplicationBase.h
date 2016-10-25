@@ -112,6 +112,8 @@ namespace vku {
         std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const std::vector<cfg::QueueCfg>& queueDescs, const vk::SurfaceKHR& surface, std::function<bool(const vk::PhysicalDevice&)> additionalDeviceChecks) const;
         PFN_vkVoidFunction LoadVKInstanceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false) const;
 
+        void CheckVKInstanceExtensions(const std::vector<const char*>& enabledExtensions);
+        void CheckVKInstanceLayers();
         static constexpr uint32_t NUM_GRAPHICS_QUEUES = 1;
 
         /** Holds the Vulkan validation layers. */

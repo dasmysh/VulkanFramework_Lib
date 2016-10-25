@@ -139,6 +139,10 @@ namespace vku {
             int windowHeight_;
             /** Holds the bit depth of the back-buffer. */
             int backbufferBits_;
+            /** Holds the bit depth of the depth buffer. */
+            int depthBufferBits_;
+            /** Holds the bit depth of the stencil buffer. */
+            int stencilBufferBits_;
             /** Holds whether the back buffer should use sRGB. */
             bool useSRGB_;
             /** Holds the swap options. */
@@ -165,6 +169,8 @@ namespace vku {
                 ar & boost::serialization::make_nvp("width", windowWidth_);
                 ar & boost::serialization::make_nvp("height", windowHeight_);
                 ar & boost::serialization::make_nvp("backBufferBits", backbufferBits_);
+                ar & boost::serialization::make_nvp("depthBufferBits", depthBufferBits_);
+                ar & boost::serialization::make_nvp("stencilBufferBits", stencilBufferBits_);
                 ar & boost::serialization::make_nvp("useSRGB", useSRGB_);
                 ar & boost::serialization::make_nvp("swapOptions", swapOptions_);
                 ar & boost::serialization::make_nvp("queues", queues_);
@@ -185,6 +191,8 @@ namespace vku {
                 ar & boost::serialization::make_nvp("width", windowWidth_);
                 ar & boost::serialization::make_nvp("height", windowHeight_);
                 ar & boost::serialization::make_nvp("backBufferBits", backbufferBits_);
+                ar & boost::serialization::make_nvp("depthBufferBits", depthBufferBits_);
+                ar & boost::serialization::make_nvp("stencilBufferBits", stencilBufferBits_);
                 ar & boost::serialization::make_nvp("useSRGB", useSRGB_);
                 ar & boost::serialization::make_nvp("swapOptions", swapOptions_);
                 ar & boost::serialization::make_nvp("queues", queues_);
