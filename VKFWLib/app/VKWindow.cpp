@@ -12,6 +12,9 @@
 
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
+#undef min
+#undef max
+
 #include <vulkan/vulkan.hpp>
 #include <gfx/vk/LogicalDevice.h>
 
@@ -158,13 +161,13 @@ namespace vku {
         auto surfaceCapabilities = logicalDevice_->GetPhysicalDevice().getSurfaceCapabilitiesKHR(vkSurface_);
         auto surfaceFormat = cfg::GetVulkanSurfaceFormatFromConfig(config_);
         auto presentMode = cfg::GetVulkanPresentModeFromConfig(config_);
-        vk::Extent2D surfaceExtend(config_.windowWidth_, config_.windowHeight_);
+        vkSurfaceExtend_ = vk::Extent2D{ config_.windowWidth_, config_.windowHeight_ };
         auto imageCount = surfaceCapabilities.minImageCount + cfg::GetVulkanAdditionalImageCountFromConfig(config_);
 
         {
             auto oldSwapChain = vkSwapchain_;
             vk::SwapchainCreateInfoKHR swapChainCreateInfo{ vk::SwapchainCreateFlagsKHR(), vkSurface_, imageCount, surfaceFormat.format, surfaceFormat.colorSpace,
-                surfaceExtend, 1, vk::ImageUsageFlagBits::eColorAttachment, vk::SharingMode::eExclusive, 0, nullptr, surfaceCapabilities.currentTransform,
+                vkSurfaceExtend_, 1, vk::ImageUsageFlagBits::eColorAttachment, vk::SharingMode::eExclusive, 0, nullptr, surfaceCapabilities.currentTransform,
                 vk::CompositeAlphaFlagBitsKHR::eOpaque, presentMode, true, oldSwapChain };
             auto newSwapChain = logicalDevice_->GetDevice().createSwapchainKHR(swapChainCreateInfo);
             logicalDevice_->GetDevice().destroySwapchainKHR(oldSwapChain);
@@ -200,7 +203,7 @@ namespace vku {
                 vkSwapchainImageViews_[i]
             };
 
-            vk::FramebufferCreateInfo fbCreateInfo{ vk::FramebufferCreateFlags(), vkSwapchainRenderPass_, 1, attachments, surfaceExtend.width, surfaceExtend.height, 1 };
+            vk::FramebufferCreateInfo fbCreateInfo{ vk::FramebufferCreateFlags(), vkSwapchainRenderPass_, 1, attachments, vkSurfaceExtend_.width, vkSurfaceExtend_.height, 1 };
             vkSwapchainFrameBuffers_[i] = logicalDevice_->GetDevice().createFramebuffer(fbCreateInfo);
         }
 
@@ -213,8 +216,6 @@ namespace vku {
             LOG(FATAL) << "Could not allocate command buffers.";
             throw std::runtime_error("Could not allocate command buffers.");
         }
-
-        // TODO: fill command buffers... [10/24/2016 Sebastian Maisch]
     }
 
     void VKWindow::DestroySwapchainImages()
@@ -276,55 +277,49 @@ namespace vku {
      */
     void VKWindow::Present() const
     {
-        // TODO: correct swap. [10/23/2016 Sebastian Maisch]
-        glfwSwapBuffers(window_);
+        auto imageIndex = logicalDevice_->GetDevice().acquireNextImageKHR(vkSwapchain_, std::numeric_limits<uint64_t>::max(), vkImageAvailableSemaphore_, vk::Fence()).value;
+
+        vk::Semaphore waitSemaphores[] = { vkImageAvailableSemaphore_ };
+        vk::Semaphore signalSemaphores[] = { vkRenderingFinishedSemaphore_ };
+        vk::PipelineStageFlags waitStages[]{ vk::PipelineStageFlagBits::eColorAttachmentOutput };
+        vk::SubmitInfo submitInfo{ 1, waitSemaphores, waitStages, 1, &vkCommandBuffers_[imageIndex], 1, signalSemaphores };
+
+        vk::ArrayProxy<const vk::SubmitInfo> submitInfos{ 1, &submitInfo };
+        logicalDevice_->GetQueue(graphicsQueue_, 0).submit(submitInfos, vk::Fence());
+
+        vk::SwapchainKHR swapchains[] = { vkSwapchain_ };
+        vk::PresentInfoKHR presentInfo{ 1, signalSemaphores, 1, swapchains, &imageIndex };
+        logicalDevice_->GetQueue(graphicsQueue_, 0).presentKHR(presentInfo);
     }
 
     void VKWindow::StartCommandBuffer(unsigned cmdBufferIdx) const
     {
         // TODO: get currently free command buffer. [10/25/2016 Sebastian Maisch]
-        // TODO: pre-initialize structs. [10/25/2016 Sebastian Maisch]
-        vk::CommandBufferBeginInfo beginInfo{ vk::CommandBufferUsageFlagBits::eSimultaneousUse };
-        vkCommandBuffers_[cmdBufferIdx].begin(beginInfo);
+
+        vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eSimultaneousUse };
+        vkCommandBuffers_[cmdBufferIdx].begin(cmdBufferBeginInfo);
     }
 
     void VKWindow::StartRenderPass(unsigned int cmdBufferIdx) const
     {
         // TODO: get currently free command buffer. [10/25/2016 Sebastian Maisch]
-        // TODO: pre-initialize structs. [10/25/2016 Sebastian Maisch]
-        vk::RenderPassBeginInfo renderPassBeginInfo{ , vkSwapchainFrameBuffers_[cmdBufferIdx], vk::Rect2D(vk::Offset2D(0, 0), vk::Extent2D(TODO)), 1, TODO };
+        // TODO: clear color? [10/25/2016 Sebastian Maisch]
+
+        std::array<vk::ClearValue, 2> clearColor;
+        clearColor[0].setColor(vk::ClearColorValue{ std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f } });
+        clearColor[1].setDepthStencil(vk::ClearDepthStencilValue{ 0.0f, 0 });
+        vk::RenderPassBeginInfo renderPassBeginInfo{ vkSwapchainRenderPass_, vkSwapchainFrameBuffers_[cmdBufferIdx], vk::Rect2D(vk::Offset2D(0, 0), vkSurfaceExtend_), 1, clearColor.data() };
         vkCommandBuffers_[cmdBufferIdx].beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-
-        
-
-            VkRenderPassBeginInfo renderPassInfo = {};
-            renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-            renderPassInfo.renderPass = renderPass;
-            renderPassInfo.framebuffer = swapChainFramebuffers[i];
-            renderPassInfo.renderArea.offset = { 0, 0 };
-            renderPassInfo.renderArea.extent = swapChainExtent;
-
-            VkClearValue clearColor = { 0.0f, 0.0f, 0.0f, 1.0f };
-            renderPassInfo.clearValueCount = 1;
-            renderPassInfo.pClearValues = &clearColor;
-
-            vkCmdBeginRenderPass(commandBuffers[i], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
-
-            vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
-
-            vkCmdDraw(commandBuffers[i], 3, 1, 0, 0);
     }
 
-    void VKWindow::EndRenderPass() const
+    void VKWindow::EndRenderPass(unsigned int cmdBufferIdx) const
     {
-        vkCmdEndRenderPass(commandBuffers[i]);
+        vkCommandBuffers_[cmdBufferIdx].endRenderPass();
     }
 
-    void VKWindow::EndCommandBuffer() const
+    void VKWindow::EndCommandBuffer(unsigned int cmdBufferIdx) const
     {
-        if (vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS) {
-            throw std::runtime_error("failed to record command buffer!");
-        }
+        vkCommandBuffers_[cmdBufferIdx].end();
     }
 
     /**
@@ -360,7 +355,12 @@ namespace vku {
         if (width == 0 || height == 0) return;
 
         LOG(DEBUG) << L"Begin HandleResize()";
+
+        this->config_.windowWidth_ = width;
+        this->config_.windowHeight_ = height;
+
         RecreateSwapChain();
+
         // TODO: resize external frame buffer object?
         // this->Resize(width, height);
 
@@ -372,9 +372,6 @@ namespace vku {
             LOG(FATAL) << L"Could not reacquire resources after resize: " << e.what();
             throw std::runtime_error("Could not reacquire resources after resize.");
         }
-
-        this->config_.windowWidth_ = width;
-        this->config_.windowHeight_ = height;
     }
 
     void VKWindow::WindowFocusCallback(int focused)

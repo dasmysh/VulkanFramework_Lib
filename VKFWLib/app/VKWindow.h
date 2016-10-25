@@ -51,10 +51,10 @@ namespace vku {
         void Present() const;
         void StartCommandBuffer(unsigned int cmdBufferIdx) const;
         void StartRenderPass(unsigned int cmdBufferIdx) const;
-        void EndRenderPass() const;
-        void EndCommandBuffer() const;
+        void EndRenderPass(unsigned int cmdBufferIdx) const;
+        void EndCommandBuffer(unsigned int cmdBufferIdx) const;
 
-        void RenderPass(std::function<void()> pass);
+        void RenderPass(unsigned int cmdBufferIdx, std::function<void()> pass);
 
     private:
         void WindowPosCallback(int xpos, int ypos) const;
@@ -80,6 +80,8 @@ namespace vku {
 
         /** Holds the Vulkan surface. */
         vk::SurfaceKHR vkSurface_;
+        /** Holds the size of the surface. */
+        vk::Extent2D vkSurfaceExtend_;
         /** Holds the logical device. */
         std::unique_ptr<gfx::LogicalDevice> logicalDevice_;
         /** Holds the queue number used for graphics output. */
