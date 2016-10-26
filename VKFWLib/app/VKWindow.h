@@ -48,11 +48,25 @@ namespace vku {
         /** Returns the windows client size. */
 //        glm::vec2 GetClientSize() const { return glm::vec2(static_cast<float>(width), static_cast<float>(height)); }
         
-        void Present() const;
+        void Present();
         void StartCommandBuffer(unsigned int cmdBufferIdx) const;
         void StartRenderPass(unsigned int cmdBufferIdx) const;
         void EndRenderPass(unsigned int cmdBufferIdx) const;
         void EndCommandBuffer(unsigned int cmdBufferIdx) const;
+
+        // TODO: render loop idea: [10/25/2016 Sebastian Maisch]
+        void PrepareFrame();
+        void DrawCurrentCommandBuffer() const;
+        void SubmitFrame();
+        // prepareFrame ( start of present )
+        // drawCurrentCmdBuffer -> queue submit
+        // submitFrame ( end of present )
+        // 
+        // for primary cmd buffer: dirty bit, update if needed. (start cmd buffer, begin render pass, execute other buffers, end pass, end buffer)
+        void UpdatePrimaryCommandBuffers() const;
+        // other buffers, create new content, set dirty bit
+        void UpdateDrawCommandBuffers() const;
+
 
         void RenderPass(unsigned int cmdBufferIdx, std::function<void()> pass);
 
@@ -102,6 +116,8 @@ namespace vku {
         vk::Semaphore vkImageAvailableSemaphore_;
         /** Holds the semaphore to notify when rendering is finished. */
         vk::Semaphore vkRenderingFinishedSemaphore_;
+        /** Holds the currently rendered image. */
+        uint32_t currentlyRenderedImage_ = 0;
 
 
         /** Holds the current mouse position. */

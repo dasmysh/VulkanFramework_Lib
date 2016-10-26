@@ -125,7 +125,7 @@ namespace vku {
         VkSurfaceKHR surfaceKHR = VK_NULL_HANDLE;
         auto result = glfwCreateWindowSurface(ApplicationBase::instance().GetVKInstance(), window_, nullptr, &surfaceKHR);
         if (result != VK_SUCCESS) {
-            LOG(FATAL) << "Could not create window surface (" << result << ").";
+            LOG(FATAL) << "Could not create window surface (" << vk::to_string(vk::Result(result)) << ").";
             throw std::runtime_error("Could not create window surface.");
         }
         vkSurface_ = vk::SurfaceKHR(surfaceKHR);
@@ -211,9 +211,9 @@ namespace vku {
         vkCommandBuffers_.resize(vkSwapchainImages_.size());
         vk::CommandBufferAllocateInfo allocInfo{ logicalDevice_->GetCommandPool(graphicsQueue_), vk::CommandBufferLevel::ePrimary, static_cast<uint32_t>(vkCommandBuffers_.size()) };
 
-        logicalDevice_->GetDevice().allocateCommandBuffers(&allocInfo, vkCommandBuffers_.data());
-        if (logicalDevice_->GetDevice().allocateCommandBuffers(&allocInfo, vkCommandBuffers_.data()) != vk::Result::eSuccess) {
-            LOG(FATAL) << "Could not allocate command buffers.";
+        auto result = logicalDevice_->GetDevice().allocateCommandBuffers(&allocInfo, vkCommandBuffers_.data());
+        if (result != vk::Result::eSuccess) {
+            LOG(FATAL) << "Could not allocate command buffers(" << vk::to_string(result) << ").";
             throw std::runtime_error("Could not allocate command buffers.");
         }
     }
@@ -275,9 +275,24 @@ namespace vku {
     /**
      * Swaps buffers and shows the content rendered since last call of Present().
      */
-    void VKWindow::Present() const
+    void VKWindow::Present()
     {
-        auto imageIndex = logicalDevice_->GetDevice().acquireNextImageKHR(vkSwapchain_, std::numeric_limits<uint64_t>::max(), vkImageAvailableSemaphore_, vk::Fence()).value;
+        // TODO: split function in start and end. [10/25/2016 Sebastian Maisch]
+        // TODO: save image index in class and use as cmdBufferIdx later. [10/25/2016 Sebastian Maisch]
+        uint32_t imageIndex = 0;
+        {
+            auto result = logicalDevice_->GetDevice().acquireNextImageKHR(vkSwapchain_, std::numeric_limits<uint64_t>::max(), vkImageAvailableSemaphore_, vk::Fence());
+            imageIndex = result.value;
+
+            if (result.result == vk::Result::eErrorOutOfDateKHR) {
+                RecreateSwapChain();
+                return;
+            }
+            if (result.result != vk::Result::eSuccess && result.result != vk::Result::eSuboptimalKHR) {
+                LOG(FATAL) << "Could not acquire swap chain image (" << vk::to_string(result.result) << ").";
+                throw std::runtime_error("Could not acquire swap chain image.");
+            }
+        }
 
         vk::Semaphore waitSemaphores[] = { vkImageAvailableSemaphore_ };
         vk::Semaphore signalSemaphores[] = { vkRenderingFinishedSemaphore_ };
@@ -287,9 +302,19 @@ namespace vku {
         vk::ArrayProxy<const vk::SubmitInfo> submitInfos{ 1, &submitInfo };
         logicalDevice_->GetQueue(graphicsQueue_, 0).submit(submitInfos, vk::Fence());
 
-        vk::SwapchainKHR swapchains[] = { vkSwapchain_ };
-        vk::PresentInfoKHR presentInfo{ 1, signalSemaphores, 1, swapchains, &imageIndex };
-        logicalDevice_->GetQueue(graphicsQueue_, 0).presentKHR(presentInfo);
+        {
+            vk::SwapchainKHR swapchains[] = { vkSwapchain_ };
+            vk::PresentInfoKHR presentInfo{ 1, signalSemaphores, 1, swapchains, &imageIndex };
+            auto result = logicalDevice_->GetQueue(graphicsQueue_, 0).presentKHR(presentInfo);
+
+            if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
+                RecreateSwapChain();
+            }
+            else if (result != vk::Result::eSuccess) {
+                LOG(FATAL) << "Could not present swap chain image (" << vk::to_string(result) << ").";
+                throw std::runtime_error("Could not present swap chain image.");
+            }
+        }
     }
 
     void VKWindow::StartCommandBuffer(unsigned cmdBufferIdx) const
@@ -320,6 +345,50 @@ namespace vku {
     void VKWindow::EndCommandBuffer(unsigned int cmdBufferIdx) const
     {
         vkCommandBuffers_[cmdBufferIdx].end();
+    }
+
+    void VKWindow::PrepareFrame()
+    {
+        // TODO: this semaphore (and fence) is signaled when acquiring is complete. [10/26/2016 Sebastian Maisch]
+        // semaphore: needs to be unsignaled
+        // fence: needs to be unsignaled and not associated with another queue command.
+        auto result = logicalDevice_->GetDevice().acquireNextImageKHR(vkSwapchain_, std::numeric_limits<uint64_t>::max(), vkImageAvailableSemaphore_, vk::Fence());
+        currentlyRenderedImage_ = result.value;
+
+        if (result.result == vk::Result::eErrorOutOfDateKHR) {
+            RecreateSwapChain();
+            return;
+        }
+        if (result.result != vk::Result::eSuccess && result.result != vk::Result::eSuboptimalKHR) {
+            LOG(FATAL) << "Could not acquire swap chain image (" << vk::to_string(result.result) << ").";
+            throw std::runtime_error("Could not acquire swap chain image.");
+        }
+    }
+
+    void VKWindow::DrawCurrentCommandBuffer() const
+    {
+        vk::Semaphore waitSemaphores[] = { vkImageAvailableSemaphore_ }; //<- wait on these semaphores
+        vk::Semaphore signalSemaphores[] = { vkRenderingFinishedSemaphore_ }; //<- signal these semaphores
+        vk::PipelineStageFlags waitStages[]{ vk::PipelineStageFlagBits::eColorAttachmentOutput };
+        vk::SubmitInfo submitInfo{ 1, waitSemaphores, waitStages, 1, &vkCommandBuffers_[currentlyRenderedImage_], 1, signalSemaphores };
+
+        vk::ArrayProxy<const vk::SubmitInfo> submitInfos{ 1, &submitInfo };
+        logicalDevice_->GetQueue(graphicsQueue_, 0).submit(submitInfos, vk::Fence()); //<- fence to be signaled
+    }
+
+    void VKWindow::SubmitFrame()
+    {
+        vk::SwapchainKHR swapchains[] = { vkSwapchain_ };
+        vk::PresentInfoKHR presentInfo{ 1, signalSemaphores, 1, swapchains, &currentlyRenderedImage_ }; //<- wait on these semaphores
+        auto result = logicalDevice_->GetQueue(graphicsQueue_, 0).presentKHR(presentInfo);
+
+        if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
+            RecreateSwapChain();
+        }
+        else if (result != vk::Result::eSuccess) {
+            LOG(FATAL) << "Could not present swap chain image (" << vk::to_string(result) << ").";
+            throw std::runtime_error("Could not present swap chain image.");
+        }
     }
 
     /**

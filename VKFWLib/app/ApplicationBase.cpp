@@ -378,7 +378,7 @@ namespace vku {
         VkDebugReportCallbackEXT dbgReportCB = VK_NULL_HANDLE;
         auto result = vk::CreateDebugReportCallbackEXT(vkInstance_, &static_cast<const VkDebugReportCallbackCreateInfoEXT&>(drCreateInfo), nullptr, &dbgReportCB);
         if (result != VK_SUCCESS) {
-            LOG(FATAL) << "Could not create DebugReportCallback (" << result << ").";
+            LOG(FATAL) << "Could not create DebugReportCallback (" << vk::to_string(vk::Result(result)) << ").";
             throw std::runtime_error("Could not create DebugReportCallback.");
         }
         vkDebugReportCB_ = vk::DebugReportCallbackEXT(dbgReportCB);
