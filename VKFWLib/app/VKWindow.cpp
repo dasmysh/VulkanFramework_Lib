@@ -272,86 +272,8 @@ namespace vku {
         window_ = nullptr;
     }
 
-    /**
-     * Swaps buffers and shows the content rendered since last call of Present().
-     */
-    void VKWindow::Present()
-    {
-        // TODO: split function in start and end. [10/25/2016 Sebastian Maisch]
-        // TODO: save image index in class and use as cmdBufferIdx later. [10/25/2016 Sebastian Maisch]
-        uint32_t imageIndex = 0;
-        {
-            auto result = logicalDevice_->GetDevice().acquireNextImageKHR(vkSwapchain_, std::numeric_limits<uint64_t>::max(), vkImageAvailableSemaphore_, vk::Fence());
-            imageIndex = result.value;
-
-            if (result.result == vk::Result::eErrorOutOfDateKHR) {
-                RecreateSwapChain();
-                return;
-            }
-            if (result.result != vk::Result::eSuccess && result.result != vk::Result::eSuboptimalKHR) {
-                LOG(FATAL) << "Could not acquire swap chain image (" << vk::to_string(result.result) << ").";
-                throw std::runtime_error("Could not acquire swap chain image.");
-            }
-        }
-
-        vk::Semaphore waitSemaphores[] = { vkImageAvailableSemaphore_ };
-        vk::Semaphore signalSemaphores[] = { vkRenderingFinishedSemaphore_ };
-        vk::PipelineStageFlags waitStages[]{ vk::PipelineStageFlagBits::eColorAttachmentOutput };
-        vk::SubmitInfo submitInfo{ 1, waitSemaphores, waitStages, 1, &vkCommandBuffers_[imageIndex], 1, signalSemaphores };
-
-        vk::ArrayProxy<const vk::SubmitInfo> submitInfos{ 1, &submitInfo };
-        logicalDevice_->GetQueue(graphicsQueue_, 0).submit(submitInfos, vk::Fence());
-
-        {
-            vk::SwapchainKHR swapchains[] = { vkSwapchain_ };
-            vk::PresentInfoKHR presentInfo{ 1, signalSemaphores, 1, swapchains, &imageIndex };
-            auto result = logicalDevice_->GetQueue(graphicsQueue_, 0).presentKHR(presentInfo);
-
-            if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
-                RecreateSwapChain();
-            }
-            else if (result != vk::Result::eSuccess) {
-                LOG(FATAL) << "Could not present swap chain image (" << vk::to_string(result) << ").";
-                throw std::runtime_error("Could not present swap chain image.");
-            }
-        }
-    }
-
-    void VKWindow::StartCommandBuffer(unsigned cmdBufferIdx) const
-    {
-        // TODO: get currently free command buffer. [10/25/2016 Sebastian Maisch]
-
-        vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eSimultaneousUse };
-        vkCommandBuffers_[cmdBufferIdx].begin(cmdBufferBeginInfo);
-    }
-
-    void VKWindow::StartRenderPass(unsigned int cmdBufferIdx) const
-    {
-        // TODO: get currently free command buffer. [10/25/2016 Sebastian Maisch]
-        // TODO: clear color? [10/25/2016 Sebastian Maisch]
-
-        std::array<vk::ClearValue, 2> clearColor;
-        clearColor[0].setColor(vk::ClearColorValue{ std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f } });
-        clearColor[1].setDepthStencil(vk::ClearDepthStencilValue{ 0.0f, 0 });
-        vk::RenderPassBeginInfo renderPassBeginInfo{ vkSwapchainRenderPass_, vkSwapchainFrameBuffers_[cmdBufferIdx], vk::Rect2D(vk::Offset2D(0, 0), vkSurfaceExtend_), 1, clearColor.data() };
-        vkCommandBuffers_[cmdBufferIdx].beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-    }
-
-    void VKWindow::EndRenderPass(unsigned int cmdBufferIdx) const
-    {
-        vkCommandBuffers_[cmdBufferIdx].endRenderPass();
-    }
-
-    void VKWindow::EndCommandBuffer(unsigned int cmdBufferIdx) const
-    {
-        vkCommandBuffers_[cmdBufferIdx].end();
-    }
-
     void VKWindow::PrepareFrame()
     {
-        // TODO: this semaphore (and fence) is signaled when acquiring is complete. [10/26/2016 Sebastian Maisch]
-        // semaphore: needs to be unsignaled
-        // fence: needs to be unsignaled and not associated with another queue command.
         auto result = logicalDevice_->GetDevice().acquireNextImageKHR(vkSwapchain_, std::numeric_limits<uint64_t>::max(), vkImageAvailableSemaphore_, vk::Fence());
         currentlyRenderedImage_ = result.value;
 
@@ -367,10 +289,8 @@ namespace vku {
 
     void VKWindow::DrawCurrentCommandBuffer() const
     {
-        vk::Semaphore waitSemaphores[] = { vkImageAvailableSemaphore_ }; //<- wait on these semaphores
-        vk::Semaphore signalSemaphores[] = { vkRenderingFinishedSemaphore_ }; //<- signal these semaphores
         vk::PipelineStageFlags waitStages[]{ vk::PipelineStageFlagBits::eColorAttachmentOutput };
-        vk::SubmitInfo submitInfo{ 1, waitSemaphores, waitStages, 1, &vkCommandBuffers_[currentlyRenderedImage_], 1, signalSemaphores };
+        vk::SubmitInfo submitInfo{ 1, &vkImageAvailableSemaphore_, waitStages, 1, &vkCommandBuffers_[currentlyRenderedImage_], 1, &vkRenderingFinishedSemaphore_ };
 
         vk::ArrayProxy<const vk::SubmitInfo> submitInfos{ 1, &submitInfo };
         logicalDevice_->GetQueue(graphicsQueue_, 0).submit(submitInfos, vk::Fence()); //<- fence to be signaled
@@ -379,7 +299,7 @@ namespace vku {
     void VKWindow::SubmitFrame()
     {
         vk::SwapchainKHR swapchains[] = { vkSwapchain_ };
-        vk::PresentInfoKHR presentInfo{ 1, signalSemaphores, 1, swapchains, &currentlyRenderedImage_ }; //<- wait on these semaphores
+        vk::PresentInfoKHR presentInfo{ 1, &vkRenderingFinishedSemaphore_, 1, swapchains, &currentlyRenderedImage_ }; //<- wait on these semaphores
         auto result = logicalDevice_->GetQueue(graphicsQueue_, 0).presentKHR(presentInfo);
 
         if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
@@ -389,6 +309,23 @@ namespace vku {
             LOG(FATAL) << "Could not present swap chain image (" << vk::to_string(result) << ").";
             throw std::runtime_error("Could not present swap chain image.");
         }
+    }
+
+    void VKWindow::UpdatePrimaryCommandBuffers() const
+    {
+        vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eSimultaneousUse };
+        vkCommandBuffers_[currentlyRenderedImage_].begin(cmdBufferBeginInfo);
+
+        std::array<vk::ClearValue, 2> clearColor;
+        clearColor[0].setColor(vk::ClearColorValue{ std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f } });
+        clearColor[1].setDepthStencil(vk::ClearDepthStencilValue{ 0.0f, 0 });
+        vk::RenderPassBeginInfo renderPassBeginInfo{ vkSwapchainRenderPass_, vkSwapchainFrameBuffers_[currentlyRenderedImage_], vk::Rect2D(vk::Offset2D(0, 0), vkSurfaceExtend_), 1, clearColor.data() };
+        vkCommandBuffers_[currentlyRenderedImage_].beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+
+        // TODO: execute secondary. [10/26/2016 Sebastian Maisch]
+
+        vkCommandBuffers_[currentlyRenderedImage_].endRenderPass();
+        vkCommandBuffers_[currentlyRenderedImage_].end();
     }
 
     /**

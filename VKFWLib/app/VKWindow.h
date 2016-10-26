@@ -47,12 +47,7 @@ namespace vku {
 //        unsigned int GetHeight() const { return height; }
         /** Returns the windows client size. */
 //        glm::vec2 GetClientSize() const { return glm::vec2(static_cast<float>(width), static_cast<float>(height)); }
-        
-        void Present();
-        void StartCommandBuffer(unsigned int cmdBufferIdx) const;
-        void StartRenderPass(unsigned int cmdBufferIdx) const;
-        void EndRenderPass(unsigned int cmdBufferIdx) const;
-        void EndCommandBuffer(unsigned int cmdBufferIdx) const;
+
 
         // TODO: render loop idea: [10/25/2016 Sebastian Maisch]
         void PrepareFrame();
