@@ -19,6 +19,8 @@ namespace vku {
             unsigned int bytesPP_;
             /** Holds the textures format. */
             vk::Format format_;
+            /** Holds the number of samples. */
+            vk::SampleCountFlags samples_ = vk::SampleCountFlagBits::e1;
         };
 
         class Texture

@@ -36,6 +36,8 @@ namespace vku {
             Framebuffer& operator=(Framebuffer&&) noexcept;
 
         private:
+            void CreateRenderPass(const FramebufferDescriptor& desc);
+
             /** Holds the logical device. */
             LogicalDevice* logicalDevice_;
             /** Holds the image view for the attachments. */
