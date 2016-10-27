@@ -140,6 +140,7 @@ namespace vku {
      * @param configFileName the configuration file to use.
      */
     ApplicationBase::ApplicationBase(const std::string& applicationName, uint32_t applicationVersion, const std::string& configFileName) :
+        configFileName_{ configFileName_ },
         pause_(true),
         stopped_(false),
         currentTime_(0.0),
@@ -173,6 +174,11 @@ namespace vku {
     {
         if (vkDebugReportCB_) vk::DestroyDebugReportCallbackEXT(vkInstance_, vkDebugReportCB_, nullptr);
         if (vkInstance_) vkInstance_.destroy();
+
+        LOG(DEBUG) << L"Exiting application. Saving configuration to file.";
+        std::ofstream ofs(configFileName_, std::ios::out);
+        boost::archive::xml_oarchive oa(ofs);
+        oa << boost::serialization::make_nvp("configuration", config_);
     }
 
     VKWindow* ApplicationBase::GetFocusedWindow()

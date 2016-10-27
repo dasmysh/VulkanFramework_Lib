@@ -77,6 +77,8 @@ namespace vku {
         /** Holds the applications instance. */
         static ApplicationBase* instance_;
 
+        /** Holds the configuration file name. */
+        std::string configFileName_;
         /** Holds the configuration for this application. */
         cfg::Configuration config_;
         /** Holds the windows. */

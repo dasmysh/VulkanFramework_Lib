@@ -16,10 +16,4 @@ namespace vku {
     static const uint32_t engineVersionMinor = 1;
     static const uint32_t engineVersionPatch = 0;
     static const uint32_t engineVersion = (((engineVersionMajor) << 22) | ((engineVersionMinor) << 12) | (engineVersionPatch));
-
-    // TODO: application constants... [10/18/2016 Sebastian Maisch]
-    /** The configuration file name. */
-    static const char* configFileName = "vkFWConfig.xml";
-    /** Use a timestamp for the log files. */
-    static bool LOG_USE_TIMESTAMPS = false;
 }
