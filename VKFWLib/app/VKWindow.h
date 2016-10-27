@@ -23,10 +23,10 @@ namespace vku {
     {
     public:
         explicit VKWindow(cfg::WindowCfg& conf);
-        VKWindow(const VKWindow&);
-        VKWindow(VKWindow&&);
-        VKWindow& operator=(const VKWindow&);
-        VKWindow& operator=(VKWindow&&);
+        VKWindow(const VKWindow&) = delete;
+        VKWindow(VKWindow&&) noexcept;
+        VKWindow& operator=(const VKWindow&) = delete;
+        VKWindow& operator=(VKWindow&&) noexcept;
         virtual ~VKWindow();
 
         bool IsFocused() const { return focused_; }
@@ -35,35 +35,27 @@ namespace vku {
         void CloseWindow() const;
         bool MessageBoxQuestion(const std::string& title, const std::string& content) const;
 
-        cfg::WindowCfg& GetConfig() const { return config_; };
+        cfg::WindowCfg& GetConfig() const { return *config_; };
 
         bool IsMouseButtonPressed(int button) const;
         bool IsKeyPressed(int key) const;
         glm::vec2 GetMousePosition() const { return currMousePosition_; }
 
         /** Returns the windows width. */
-//        unsigned int GetWidth() const { return width; }
+        unsigned int GetWidth() const { return vkSurfaceExtend_.width; }
         /** Returns the windows height. */
-//        unsigned int GetHeight() const { return height; }
+        unsigned int GetHeight() const { return vkSurfaceExtend_.height; }
         /** Returns the windows client size. */
-//        glm::vec2 GetClientSize() const { return glm::vec2(static_cast<float>(width), static_cast<float>(height)); }
+        glm::vec2 GetClientSize() const { return glm::vec2(static_cast<float>(vkSurfaceExtend_.width), static_cast<float>(vkSurfaceExtend_.height)); }
 
 
-        // TODO: render loop idea: [10/25/2016 Sebastian Maisch]
         void PrepareFrame();
+        // TODO: submit other command buffers to queue. [10/26/2016 Sebastian Maisch]
         void DrawCurrentCommandBuffer() const;
         void SubmitFrame();
-        // prepareFrame ( start of present )
-        // drawCurrentCmdBuffer -> queue submit
-        // submitFrame ( end of present )
-        // 
+
         // for primary cmd buffer: dirty bit, update if needed. (start cmd buffer, begin render pass, execute other buffers, end pass, end buffer)
-        void UpdatePrimaryCommandBuffers() const;
-        // other buffers, create new content, set dirty bit
-        void UpdateDrawCommandBuffers() const;
-
-
-        void RenderPass(unsigned int cmdBufferIdx, std::function<void()> pass);
+        void UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer)>& fillFunc) const;
 
     private:
         void WindowPosCallback(int xpos, int ypos) const;
@@ -85,7 +77,7 @@ namespace vku {
         /** Holds the GLFW window. */
         GLFWwindow* window_;
         /** Holds the configuration for this window. */
-        cfg::WindowCfg& config_;
+        cfg::WindowCfg* config_;
 
         /** Holds the Vulkan surface. */
         vk::SurfaceKHR vkSurface_;
@@ -132,7 +124,7 @@ namespace vku {
         /** Holds whether the window is in focus. */
         bool focused_;
         /** The number (id) of the current frame. */
-        unsigned int frameCount_;
+        uint64_t frameCount_;
 
         void InitWindow();
         void InitVulkan();

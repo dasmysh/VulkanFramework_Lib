@@ -204,7 +204,8 @@ namespace vku {
             switch (key)
             {
             case GLFW_KEY_ESCAPE:
-                // TODO: close window or sth. [10/16/2016 Sebastian Maisch]
+                if (mods & GLFW_MOD_CONTROL) stopped_ = true;
+                else sender->CloseWindow();
                 handled = true;
                 break;
             case GLFW_KEY_F2:
@@ -285,8 +286,7 @@ namespace vku {
         glfwPollEvents();
 
         if (!this->pause_ && (!config_.pauseOnKillFocus_ || GetFocusedWindow())) {
-            this->FrameMove(static_cast<float>(currentTime_), static_cast<float>(elapsedTime_));
-            this->RenderScene();
+            FrameMove(static_cast<float>(currentTime_), static_cast<float>(elapsedTime_));
         }
 
         /*TODO ImGui_ImplGlfwGL3_NewFrame();
@@ -297,7 +297,13 @@ namespace vku {
             });
         }*/
 
-        for (auto& window : windows_) window.Present();
+        for (auto& window : windows_) {
+            RenderScene(&window);
+
+            window.PrepareFrame();
+            window.DrawCurrentCommandBuffer();
+            window.SubmitFrame();
+        }
     }
 
     void ApplicationBase::CheckVKInstanceExtensions(const std::vector<const char*>& enabledExtensions)

@@ -27,7 +27,7 @@ namespace vku {
             priorities_(rhs.priorities_)
         {}
 
-        QueueCfg::QueueCfg(QueueCfg&& rhs) :
+        QueueCfg::QueueCfg(QueueCfg&& rhs) noexcept :
             graphics_(std::move(rhs.graphics_)),
             compute_(std::move(rhs.compute_)),
             transfer_(std::move(rhs.transfer_)),
@@ -44,7 +44,7 @@ namespace vku {
             return *this;
         }
 
-        QueueCfg& QueueCfg::operator=(QueueCfg&& rhs)
+        QueueCfg& QueueCfg::operator=(QueueCfg&& rhs) noexcept
         {
             if (this != &rhs) {
                 this->~QueueCfg();
@@ -91,7 +91,7 @@ namespace vku {
             queues_(rhs.queues_)
         {}
 
-        WindowCfg::WindowCfg(WindowCfg&& rhs) :
+        WindowCfg::WindowCfg(WindowCfg&& rhs) noexcept :
             windowTitle_(std::move(rhs.windowTitle_)),
             fullscreen_(std::move(rhs.fullscreen_)),
             windowLeft_(std::move(rhs.windowLeft_)),
@@ -115,7 +115,7 @@ namespace vku {
             return *this;
         }
 
-        WindowCfg& WindowCfg::operator=(WindowCfg&& rhs)
+        WindowCfg& WindowCfg::operator=(WindowCfg&& rhs) noexcept
         {
             if (this != &rhs) {
                 this->~WindowCfg();
@@ -156,7 +156,7 @@ namespace vku {
             evalDirectory_(rhs.evalDirectory_)
         {}
 
-        Configuration::Configuration(Configuration&& rhs) :
+        Configuration::Configuration(Configuration&& rhs) noexcept :
             windows_(std::move(rhs.windows_)),
             useValidationLayers_(std::move(rhs.useValidationLayers_)),
             pauseOnKillFocus_(std::move(rhs.pauseOnKillFocus_)),
@@ -174,7 +174,7 @@ namespace vku {
             return *this;
         }
 
-        Configuration& Configuration::operator=(Configuration&& rhs)
+        Configuration& Configuration::operator=(Configuration&& rhs) noexcept
         {
             if (this != &rhs) {
                 this->~Configuration();

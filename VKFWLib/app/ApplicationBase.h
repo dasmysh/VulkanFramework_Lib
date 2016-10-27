@@ -101,7 +101,7 @@ namespace vku {
          */
         virtual void FrameMove(float time, float elapsed) = 0;
         /** Render the scene. */
-        virtual void RenderScene() = 0;
+        virtual void RenderScene(const VKWindow* window) = 0;
         /** Render the scenes GUI. */
         virtual void RenderGUI() = 0;
 

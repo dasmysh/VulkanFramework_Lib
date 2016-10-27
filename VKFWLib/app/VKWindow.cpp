@@ -26,7 +26,7 @@ namespace vku {
      */
     VKWindow::VKWindow(cfg::WindowCfg& conf) :
         window_{ nullptr },
-        config_(conf),
+        config_(&conf),
         currMousePosition_(0.0f),
         prevMousePosition_(0.0f),
         relativeMousePosition_(0.0f),
@@ -39,13 +39,93 @@ namespace vku {
         this->InitVulkan();
     }
 
+    VKWindow::VKWindow(VKWindow&& rhs) noexcept :
+        window_{ std::move(rhs.window_) },
+        config_{ std::move(rhs.config_) },
+        vkSurface_{ std::move(rhs.vkSurface_) },
+        vkSurfaceExtend_{ std::move(rhs.vkSurfaceExtend_) },
+        logicalDevice_{ std::move(rhs.logicalDevice_) },
+        graphicsQueue_{ std::move(rhs.graphicsQueue_) },
+        vkSwapchain_{ std::move(rhs.vkSwapchain_) },
+        vkSwapchainImages_{ std::move(rhs.vkSwapchainImages_) },
+        vkSwapchainImageViews_{ std::move(rhs.vkSwapchainImageViews_) },
+        vkSwapchainRenderPass_{ std::move(rhs.vkSwapchainRenderPass_) },
+        vkSwapchainFrameBuffers_{ std::move(rhs.vkSwapchainFrameBuffers_) },
+        vkCommandBuffers_{ std::move(rhs.vkCommandBuffers_) },
+        vkImageAvailableSemaphore_{ std::move(rhs.vkImageAvailableSemaphore_) },
+        vkRenderingFinishedSemaphore_{ std::move(rhs.vkRenderingFinishedSemaphore_) },
+        currentlyRenderedImage_{ std::move(rhs.currentlyRenderedImage_) },
+        currMousePosition_{ std::move(rhs.currMousePosition_) },
+        prevMousePosition_{ std::move(rhs.prevMousePosition_) },
+        relativeMousePosition_{ std::move(rhs.relativeMousePosition_) },
+        mouseInWindow_{ std::move(rhs.mouseInWindow_) },
+        minimized_{ std::move(rhs.minimized_) },
+        maximized_{ std::move(rhs.maximized_) },
+        focused_{ std::move(rhs.focused_) },
+        frameCount_{ std::move(rhs.frameCount_) }
+    {
+        rhs.window_ = nullptr;
+        rhs.vkSurface_ = vk::SurfaceKHR();
+        rhs.vkSwapchain_ = vk::SwapchainKHR();
+        rhs.vkSwapchainImages_.clear();
+        rhs.vkSwapchainImageViews_.clear();
+        rhs.vkSwapchainRenderPass_ = vk::RenderPass();
+        rhs.vkSwapchainFrameBuffers_.clear();
+        rhs.vkCommandBuffers_.clear();
+        rhs.vkImageAvailableSemaphore_ = vk::Semaphore();
+        rhs.vkRenderingFinishedSemaphore_ = vk::Semaphore();
+    }
+
+    VKWindow& VKWindow::operator=(VKWindow&& rhs) noexcept
+    {
+        if (this != &rhs) {
+            this->~VKWindow();
+            window_ = std::move(rhs.window_);
+            config_ = std::move(rhs.config_);
+            vkSurface_ = std::move(rhs.vkSurface_);
+            vkSurfaceExtend_ = std::move(rhs.vkSurfaceExtend_);
+            logicalDevice_ = std::move(rhs.logicalDevice_);
+            graphicsQueue_ = std::move(rhs.graphicsQueue_);
+            vkSwapchain_ = std::move(rhs.vkSwapchain_);
+            vkSwapchainImages_ = std::move(rhs.vkSwapchainImages_);
+            vkSwapchainImageViews_ = std::move(rhs.vkSwapchainImageViews_);
+            vkSwapchainRenderPass_ = std::move(rhs.vkSwapchainRenderPass_);
+            vkSwapchainFrameBuffers_ = std::move(rhs.vkSwapchainFrameBuffers_);
+            vkCommandBuffers_ = std::move(rhs.vkCommandBuffers_);
+            vkImageAvailableSemaphore_ = std::move(rhs.vkImageAvailableSemaphore_);
+            vkRenderingFinishedSemaphore_ = std::move(rhs.vkRenderingFinishedSemaphore_);
+            currentlyRenderedImage_ = std::move(rhs.currentlyRenderedImage_);
+            currMousePosition_ = std::move(rhs.currMousePosition_);
+            prevMousePosition_ = std::move(rhs.prevMousePosition_);
+            relativeMousePosition_ = std::move(rhs.relativeMousePosition_);
+            mouseInWindow_ = std::move(rhs.mouseInWindow_);
+            minimized_ = std::move(rhs.minimized_);
+            maximized_ = std::move(rhs.maximized_);
+            focused_ = std::move(rhs.focused_);
+            frameCount_ = std::move(rhs.frameCount_);
+
+            rhs.window_ = nullptr;
+            rhs.vkSurface_ = vk::SurfaceKHR();
+            rhs.vkSwapchain_ = vk::SwapchainKHR();
+            rhs.vkSwapchainImages_.clear();
+            rhs.vkSwapchainImageViews_.clear();
+            rhs.vkSwapchainRenderPass_ = vk::RenderPass();
+            rhs.vkSwapchainFrameBuffers_.clear();
+            rhs.vkCommandBuffers_.clear();
+            rhs.vkImageAvailableSemaphore_ = vk::Semaphore();
+            rhs.vkRenderingFinishedSemaphore_ = vk::Semaphore();
+        }
+        return *this;
+    }
+
     VKWindow::~VKWindow()
     {
         this->ReleaseVulkan();
         this->ReleaseWindow();
-        config_.fullscreen_ = maximized_;
-        config_.windowWidth_ = fbo.GetWidth();
-        config_.windowHeight_ = fbo.GetHeight();
+        config_->fullscreen_ = maximized_;
+        // TODO: use frame buffer object [10/26/2016 Sebastian Maisch]
+        config_->windowWidth_ = vkSurfaceExtend_.width;
+        config_->windowHeight_ = vkSurfaceExtend_.height;
     }
 
     bool VKWindow::IsClosing() const
@@ -58,13 +138,13 @@ namespace vku {
      */
     void VKWindow::InitWindow()
     {
-        LOG(INFO) << "Creating window '" << config_.windowTitle_ << "'.";
+        LOG(INFO) << "Creating window '" << config_->windowTitle_ << "'.";
         glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
         glfwSetErrorCallback(VKWindow::glfwErrorCallback);
 
-        if (config_.fullscreen_) {
+        if (config_->fullscreen_) {
             glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-            window_ = glfwCreateWindow(config_.windowWidth_, config_.windowHeight_, config_.windowTitle_.c_str(), glfwGetPrimaryMonitor(), nullptr);
+            window_ = glfwCreateWindow(config_->windowWidth_, config_->windowHeight_, config_->windowTitle_.c_str(), glfwGetPrimaryMonitor(), nullptr);
             if (window_ == nullptr) {
                 LOG(FATAL) << "Could not create window!";
                 glfwTerminate();
@@ -74,13 +154,13 @@ namespace vku {
         } else {
             glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
             glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
-            window_ = glfwCreateWindow(config_.windowWidth_, config_.windowHeight_, config_.windowTitle_.c_str(), nullptr, nullptr);
+            window_ = glfwCreateWindow(config_->windowWidth_, config_->windowHeight_, config_->windowTitle_.c_str(), nullptr, nullptr);
             if (window_ == nullptr) {
                 LOG(FATAL) << "Could not create window!";
                 glfwTerminate();
                 throw std::runtime_error("Could not create window!");
             }
-            glfwSetWindowPos(window_, config_.windowLeft_, config_.windowTop_);
+            glfwSetWindowPos(window_, config_->windowLeft_, config_->windowTop_);
             
         }
         glfwSetWindowUserPointer(window_, this);
@@ -129,8 +209,8 @@ namespace vku {
             throw std::runtime_error("Could not create window surface.");
         }
         vkSurface_ = vk::SurfaceKHR(surfaceKHR);
-        logicalDevice_ = ApplicationBase::instance().CreateLogicalDevice(config_, vkSurface_);
-        for (auto i = 0U; i < config_.queues_.size(); ++i) if (config_.queues_[i].graphics_) {
+        logicalDevice_ = ApplicationBase::instance().CreateLogicalDevice(*config_, vkSurface_);
+        for (auto i = 0U; i < config_->queues_.size(); ++i) if (config_->queues_[i].graphics_) {
             graphicsQueue_ = i;
             break;
         }
@@ -143,11 +223,7 @@ namespace vku {
 
         LOG(INFO) << L"Initializing Vulkan surface... done.";
 
-        fbo.Resize(config_.windowWidth_, config_.windowHeight_);
-
-        glEnable(GL_SCISSOR_TEST);
-
-        LOG(INFO) << L"Initializing Vulkan surface... done.";
+        // fbo.Resize(config_->windowWidth_, config_->windowHeight_);
 
         // TODO ImGui_ImplGlfwGL3_Init(window_, false);
     }
@@ -156,13 +232,16 @@ namespace vku {
     {
         logicalDevice_->GetDevice().waitIdle();
 
+        if (vkCommandBuffers_.size() > 0) logicalDevice_->GetDevice().freeCommandBuffers(logicalDevice_->GetCommandPool(graphicsQueue_),
+            static_cast<uint32_t>(vkCommandBuffers_.size()), vkCommandBuffers_.data());
+
         DestroySwapchainImages();
 
         auto surfaceCapabilities = logicalDevice_->GetPhysicalDevice().getSurfaceCapabilitiesKHR(vkSurface_);
-        auto surfaceFormat = cfg::GetVulkanSurfaceFormatFromConfig(config_);
-        auto presentMode = cfg::GetVulkanPresentModeFromConfig(config_);
-        vkSurfaceExtend_ = vk::Extent2D{ config_.windowWidth_, config_.windowHeight_ };
-        auto imageCount = surfaceCapabilities.minImageCount + cfg::GetVulkanAdditionalImageCountFromConfig(config_);
+        auto surfaceFormat = cfg::GetVulkanSurfaceFormatFromConfig(*config_);
+        auto presentMode = cfg::GetVulkanPresentModeFromConfig(*config_);
+        vkSurfaceExtend_ = vk::Extent2D{ static_cast<uint32_t>(config_->windowWidth_), static_cast<uint32_t>(config_->windowHeight_) };
+        auto imageCount = surfaceCapabilities.minImageCount + cfg::GetVulkanAdditionalImageCountFromConfig(*config_);
 
         {
             auto oldSwapChain = vkSwapchain_;
@@ -207,7 +286,6 @@ namespace vku {
             vkSwapchainFrameBuffers_[i] = logicalDevice_->GetDevice().createFramebuffer(fbCreateInfo);
         }
 
-        if (vkCommandBuffers_.size() > 0) logicalDevice_->GetDevice().freeCommandBuffers(logicalDevice_->GetCommandPool(graphicsQueue_), vkCommandBuffers_.size(), vkCommandBuffers_.data());
         vkCommandBuffers_.resize(vkSwapchainImages_.size());
         vk::CommandBufferAllocateInfo allocInfo{ logicalDevice_->GetCommandPool(graphicsQueue_), vk::CommandBufferLevel::ePrimary, static_cast<uint32_t>(vkCommandBuffers_.size()) };
 
@@ -309,23 +387,27 @@ namespace vku {
             LOG(FATAL) << "Could not present swap chain image (" << vk::to_string(result) << ").";
             throw std::runtime_error("Could not present swap chain image.");
         }
+
+        ++frameCount_;
     }
 
-    void VKWindow::UpdatePrimaryCommandBuffers() const
+    void VKWindow::UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer)>& fillFunc) const
     {
-        vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eSimultaneousUse };
-        vkCommandBuffers_[currentlyRenderedImage_].begin(cmdBufferBeginInfo);
+        for (auto i = 0U; i < vkCommandBuffers_.size(); ++i) {
+            vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eSimultaneousUse };
+            vkCommandBuffers_[i].begin(cmdBufferBeginInfo);
 
-        std::array<vk::ClearValue, 2> clearColor;
-        clearColor[0].setColor(vk::ClearColorValue{ std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f } });
-        clearColor[1].setDepthStencil(vk::ClearDepthStencilValue{ 0.0f, 0 });
-        vk::RenderPassBeginInfo renderPassBeginInfo{ vkSwapchainRenderPass_, vkSwapchainFrameBuffers_[currentlyRenderedImage_], vk::Rect2D(vk::Offset2D(0, 0), vkSurfaceExtend_), 1, clearColor.data() };
-        vkCommandBuffers_[currentlyRenderedImage_].beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+            std::array<vk::ClearValue, 2> clearColor;
+            clearColor[0].setColor(vk::ClearColorValue{ std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f } });
+            clearColor[1].setDepthStencil(vk::ClearDepthStencilValue{ 0.0f, 0 });
+            vk::RenderPassBeginInfo renderPassBeginInfo{ vkSwapchainRenderPass_, vkSwapchainFrameBuffers_[i], vk::Rect2D(vk::Offset2D(0, 0), vkSurfaceExtend_), 1, clearColor.data() };
+            vkCommandBuffers_[i].beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
-        // TODO: execute secondary. [10/26/2016 Sebastian Maisch]
+            fillFunc(vkCommandBuffers_[i]);
 
-        vkCommandBuffers_[currentlyRenderedImage_].endRenderPass();
-        vkCommandBuffers_[currentlyRenderedImage_].end();
+            vkCommandBuffers_[i].endRenderPass();
+            vkCommandBuffers_[i].end();
+        }
     }
 
     /**
@@ -351,8 +433,8 @@ namespace vku {
 
     void VKWindow::WindowPosCallback(int xpos, int ypos) const
     {
-        config_.windowLeft_ = xpos;
-        config_.windowTop_ = ypos;
+        config_->windowLeft_ = xpos;
+        config_->windowTop_ = ypos;
     }
 
     void VKWindow::WindowSizeCallback(int width, int height)
@@ -362,8 +444,8 @@ namespace vku {
 
         LOG(DEBUG) << L"Begin HandleResize()";
 
-        this->config_.windowWidth_ = width;
-        this->config_.windowHeight_ = height;
+        config_->windowWidth_ = width;
+        config_->windowHeight_ = height;
 
         RecreateSwapChain();
 
