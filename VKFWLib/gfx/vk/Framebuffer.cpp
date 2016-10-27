@@ -11,119 +11,119 @@
 
 namespace vku { namespace gfx {
 
-    Framebuffer::Framebuffer(LogicalDevice* logicalDevice, const glm::uvec2& size, const std::vector<vk::Image>& images, const FramebufferDescriptor& desc) :
+    Framebuffer::Framebuffer(LogicalDevice* logicalDevice, const glm::uvec2& size, const std::vector<vk::Image>& images, const vk::RenderPass& renderPass, const FramebufferDescriptor& desc) :
         logicalDevice_{ logicalDevice },
+        size_{ size },
+        renderPass_{ renderPass },
+        desc_( desc ),
+        images_{ images },
+        imageOwnership_{ false },
         vkAttachmentsImageView_{ desc.tex_.size() }
     {
-        assert(desc.type_ == vk::ImageViewType::e2D || desc.type_ == vk::ImageViewType::eCube);
-        assert(images.size() == desc.tex_.size());
-        uint32_t layerCount = 1;
-        if (desc.type_ == vk::ImageViewType::eCube) layerCount = 6;
-
-        // TODO: handle depth buffers... [10/27/2016 Sebastian Maisch]
-        for (auto i = 0U; i < desc.tex_.size(); ++i) {
-            // TODO: samples! [10/27/2016 Sebastian Maisch]
-            vk::ImageSubresourceRange subresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, layerCount };
-            vk::ComponentMapping componentMapping{};
-            vk::ImageViewCreateInfo imgViewCreateInfo{ vk::ImageViewCreateFlags(), images[i], desc.type_, desc.tex_[i].format_, componentMapping, subresourceRange };
-            vkAttachmentsImageView_[i] = logicalDevice_->GetDevice().createImageView(imgViewCreateInfo);
-        }
-
-        vk::FramebufferCreateInfo fbCreateInfo{ vk::FramebufferCreateFlags(), vkSwapchainRenderPass_,
-            static_cast<uint32_t>(desc.tex_.size()), vkAttachmentsImageView_, size.x, size.y, layerCount };
-        vkFramebuffer_ = logicalDevice_->GetDevice().createFramebuffer(fbCreateInfo);
+        CreateFB();
     }
 
-    Framebuffer::Framebuffer(LogicalDevice* logicalDevice, const glm::uvec2& size, const FramebufferDescriptor& desc) :
+    Framebuffer::Framebuffer(LogicalDevice* logicalDevice, const glm::uvec2& size, const vk::RenderPass& renderPass, const FramebufferDescriptor& desc) :
         logicalDevice_{ logicalDevice },
+        size_{ size },
+        renderPass_{ renderPass },
+        desc_( desc ),
         vkAttachmentsImageView_{ desc.tex_.size() }
+    {
+        CreateImages();
+        CreateFB();
+    }
+
+    Framebuffer::Framebuffer(const Framebuffer& rhs) :
+        logicalDevice_{ rhs.logicalDevice_ },
+        size_ { rhs.size_ },
+        renderPass_{ rhs.renderPass_ },
+        desc_( rhs.desc_ ),
+        imageOwnership_{ rhs.imageOwnership_ },
+        vkAttachmentsImageView_{ desc_.tex_.size() }
+    {
+        if (imageOwnership_) CreateImages();
+        else images_ = rhs.images_;
+        CreateFB();
+    }
+
+    Framebuffer& Framebuffer::operator=(const Framebuffer& rhs)
+    {
+        if (this != &rhs) {
+            auto tmp{ rhs };
+            std::swap(*this, tmp);
+        }
+        return *this;
+    }
+
+    Framebuffer::Framebuffer(Framebuffer&& rhs) noexcept :
+        logicalDevice_{ rhs.logicalDevice_ },
+        size_{ rhs.size_ },
+        renderPass_{ rhs.renderPass_ },
+        desc_( std::move(rhs.desc_) ),
+        images_{ std::move(rhs.images_) },
+        imageOwnership_{ rhs.imageOwnership_ },
+        vkAttachmentsImageView_{ std::move(rhs.vkAttachmentsImageView_) },
+        vkFramebuffer_{ std::move(rhs.vkFramebuffer_) }
+    {
+        rhs.vkFramebuffer_ = vk::Framebuffer();
+    }
+
+    Framebuffer& Framebuffer::operator=(Framebuffer&& rhs) noexcept
+    {
+        if (this != &rhs) {
+            this->~Framebuffer();
+            logicalDevice_ = std::move(rhs.logicalDevice_);
+            size_ = std::move(rhs.size_);
+            renderPass_ = std::move(rhs.renderPass_);
+            desc_ = std::move(rhs.desc_);
+            images_ = std::move(rhs.images_);
+            imageOwnership_ = std::move(rhs.imageOwnership_);
+            vkAttachmentsImageView_ = std::move(rhs.vkAttachmentsImageView_);
+            vkFramebuffer_ = std::move(rhs.vkFramebuffer_);
+            rhs.vkFramebuffer_ = vk::Framebuffer();
+        }
+        return *this;
+    }
+
+    Framebuffer::~Framebuffer()
+    {
+        if (vkFramebuffer_) logicalDevice_->GetDevice().destroyFramebuffer(vkFramebuffer_);
+        vkFramebuffer_ = vk::Framebuffer();
+
+        for (auto& imgView : vkAttachmentsImageView_) {
+            if (imgView) logicalDevice_->GetDevice().destroyImageView(imgView);
+            imgView = vk::ImageView();
+        }
+
+        if (imageOwnership_) {
+            // TODO: destroy images. [10/27/2016 Sebastian Maisch]
+        }
+    }
+
+    void Framebuffer::CreateImages()
     {
         // TODO: Create images... [10/27/2016 Sebastian Maisch]
     }
 
-    void Framebuffer::CreateRenderPass(const FramebufferDescriptor& desc)
+    void Framebuffer::CreateFB()
     {
-        vk::SubpassDescription subpass;
-        subpass.pipelineBindPoint = vk::PipelineBindPoint::eGraphics;
+        assert(desc_.type_ == vk::ImageViewType::e2D || desc_.type_ == vk::ImageViewType::eCube);
+        assert(images_.size() == desc_.tex_.size());
+        uint32_t layerCount = 1;
+        if (desc_.type_ == vk::ImageViewType::eCube) layerCount = 6;
 
-        std::vector<vk::AttachmentDescription> attachments;
-        std::vector<vk::AttachmentReference> colorAttachmentReferences;
-        attachments.reserve(desc.tex_.size());
-        colorAttachmentReferences.resize(attachments.size());
-        // Color attachment
-        for (size_t i = 0; i < attachments.size(); ++i) {
-            attachments.emplace_back(vk::AttachmentDescriptionFlags(), desc.tex_[i].format_, desc.tex_[i].samples_, vk::AttachmentLoadOp::eClear,
-                vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, ImageLayout initialLayout_ = ImageLayout::eUndefined, ImageLayout finalLayout_ = ImageLayout::eUndefined)
-            attachments[i].format = desc.tex_[i].format_;
-            attachments[i].loadOp = vk::AttachmentLoadOp::eClear;
-            attachments[i].storeOp = colorFinalLayout == vk::ImageLayout::eUndefined ? vk::AttachmentStoreOp::eDontCare : vk::AttachmentStoreOp::eStore;
-            attachments[i].initialLayout = vk::ImageLayout::eUndefined;
-            attachments[i].finalLayout = colorFinalLayout;
-
-            vk::AttachmentReference& attachmentReference = colorAttachmentReferences[i];
-            attachmentReference.attachment = i;
-            attachmentReference.layout = vk::ImageLayout::eColorAttachmentOptimal;
-
-            subpass.colorAttachmentCount = colorAttachmentReferences.size();
-            subpass.pColorAttachments = colorAttachmentReferences.data();
+        // TODO: handle depth/stencil buffers... [10/27/2016 Sebastian Maisch]
+        // TODO: also use external texture objects? [10/27/2016 Sebastian Maisch]
+        for (auto i = 0U; i < desc_.tex_.size(); ++i) {
+            vk::ImageSubresourceRange subresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, layerCount };
+            vk::ComponentMapping componentMapping{};
+            vk::ImageViewCreateInfo imgViewCreateInfo{ vk::ImageViewCreateFlags(), images_[i], desc_.type_, desc_.tex_[i].format_, componentMapping, subresourceRange };
+            vkAttachmentsImageView_[i] = logicalDevice_->GetDevice().createImageView(imgViewCreateInfo);
         }
 
-        // Do we have a depth format?
-        vk::AttachmentReference depthAttachmentReference;
-        if (depthFormat != vk::Format::eUndefined) {
-            vk::AttachmentDescription depthAttachment;
-            depthAttachment.format = depthFormat;
-            depthAttachment.loadOp = vk::AttachmentLoadOp::eClear;
-            // We might be using the depth attacment for something, so preserve it if it's final layout is not undefined
-            depthAttachment.storeOp = depthFinalLayout == vk::ImageLayout::eUndefined ? vk::AttachmentStoreOp::eDontCare : vk::AttachmentStoreOp::eStore;
-            depthAttachment.initialLayout = vk::ImageLayout::eUndefined;
-            depthAttachment.finalLayout = depthFinalLayout;
-            attachments.push_back(depthAttachment);
-            depthAttachmentReference.attachment = attachments.size() - 1;
-            depthAttachmentReference.layout = vk::ImageLayout::eDepthStencilAttachmentOptimal;
-            subpass.pDepthStencilAttachment = &depthAttachmentReference;
-        }
-
-        std::vector<vk::SubpassDependency> subpassDependencies;
-        {
-            if ((colorFinalLayout != vk::ImageLayout::eColorAttachmentOptimal) && (colorFinalLayout != vk::ImageLayout::eUndefined)) {
-                // Implicit transition 
-                vk::SubpassDependency dependency;
-                dependency.srcSubpass = 0;
-                dependency.srcAccessMask = vk::AccessFlagBits::eColorAttachmentWrite;
-                dependency.srcStageMask = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-
-                dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
-                dependency.dstAccessMask = vkx::accessFlagsForLayout(colorFinalLayout);
-                dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-                subpassDependencies.push_back(dependency);
-            }
-
-            if ((depthFinalLayout != vk::ImageLayout::eColorAttachmentOptimal) && (depthFinalLayout != vk::ImageLayout::eUndefined)) {
-                // Implicit transition 
-                vk::SubpassDependency dependency;
-                dependency.srcSubpass = 0;
-                dependency.srcAccessMask = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-                dependency.srcStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-
-                dependency.dstSubpass = VK_SUBPASS_EXTERNAL;
-                dependency.dstAccessMask = vkx::accessFlagsForLayout(depthFinalLayout);
-                dependency.dstStageMask = vk::PipelineStageFlagBits::eBottomOfPipe;
-                subpassDependencies.push_back(dependency);
-            }
-        }
-
-        if (renderPass) {
-            context.device.destroyRenderPass(renderPass);
-        }
-
-        vk::RenderPassCreateInfo renderPassInfo;
-        renderPassInfo.attachmentCount = attachments.size();
-        renderPassInfo.pAttachments = attachments.data();
-        renderPassInfo.subpassCount = 1;
-        renderPassInfo.pSubpasses = &subpass;
-        renderPassInfo.dependencyCount = subpassDependencies.size();
-        renderPassInfo.pDependencies = subpassDependencies.data();
-        renderPass = context.device.createRenderPass(renderPassInfo);
+        vk::FramebufferCreateInfo fbCreateInfo{ vk::FramebufferCreateFlags(), renderPass_,
+            static_cast<uint32_t>(desc_.tex_.size()), vkAttachmentsImageView_.data(), size_.x, size_.y, layerCount };
+        vkFramebuffer_ = logicalDevice_->GetDevice().createFramebuffer(fbCreateInfo);
     }
 }}

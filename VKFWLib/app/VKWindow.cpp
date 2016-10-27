@@ -17,6 +17,7 @@
 
 #include <vulkan/vulkan.hpp>
 #include <gfx/vk/LogicalDevice.h>
+#include "gfx/vk/Framebuffer.h"
 
 namespace vku {
 
@@ -47,10 +48,11 @@ namespace vku {
         logicalDevice_{ std::move(rhs.logicalDevice_) },
         graphicsQueue_{ std::move(rhs.graphicsQueue_) },
         vkSwapchain_{ std::move(rhs.vkSwapchain_) },
-        vkSwapchainImages_{ std::move(rhs.vkSwapchainImages_) },
-        vkSwapchainImageViews_{ std::move(rhs.vkSwapchainImageViews_) },
+        //vkSwapchainImages_{ std::move(rhs.vkSwapchainImages_) },
+        //vkSwapchainImageViews_{ std::move(rhs.vkSwapchainImageViews_) },
         vkSwapchainRenderPass_{ std::move(rhs.vkSwapchainRenderPass_) },
-        vkSwapchainFrameBuffers_{ std::move(rhs.vkSwapchainFrameBuffers_) },
+        swapchainFramebuffers_{ std::move(rhs.swapchainFramebuffers_) },
+        //vkSwapchainFrameBuffers_{ std::move(rhs.vkSwapchainFrameBuffers_) },
         vkCommandBuffers_{ std::move(rhs.vkCommandBuffers_) },
         vkImageAvailableSemaphore_{ std::move(rhs.vkImageAvailableSemaphore_) },
         vkRenderingFinishedSemaphore_{ std::move(rhs.vkRenderingFinishedSemaphore_) },
@@ -67,11 +69,7 @@ namespace vku {
         rhs.window_ = nullptr;
         rhs.vkSurface_ = vk::SurfaceKHR();
         rhs.vkSwapchain_ = vk::SwapchainKHR();
-        rhs.vkSwapchainImages_.clear();
-        rhs.vkSwapchainImageViews_.clear();
         rhs.vkSwapchainRenderPass_ = vk::RenderPass();
-        rhs.vkSwapchainFrameBuffers_.clear();
-        rhs.vkCommandBuffers_.clear();
         rhs.vkImageAvailableSemaphore_ = vk::Semaphore();
         rhs.vkRenderingFinishedSemaphore_ = vk::Semaphore();
     }
@@ -87,10 +85,11 @@ namespace vku {
             logicalDevice_ = std::move(rhs.logicalDevice_);
             graphicsQueue_ = std::move(rhs.graphicsQueue_);
             vkSwapchain_ = std::move(rhs.vkSwapchain_);
-            vkSwapchainImages_ = std::move(rhs.vkSwapchainImages_);
-            vkSwapchainImageViews_ = std::move(rhs.vkSwapchainImageViews_);
+            //vkSwapchainImages_ = std::move(rhs.vkSwapchainImages_);
+            //vkSwapchainImageViews_ = std::move(rhs.vkSwapchainImageViews_);
             vkSwapchainRenderPass_ = std::move(rhs.vkSwapchainRenderPass_);
-            vkSwapchainFrameBuffers_ = std::move(rhs.vkSwapchainFrameBuffers_);
+            swapchainFramebuffers_ = std::move(rhs.swapchainFramebuffers_);
+            //vkSwapchainFrameBuffers_ = std::move(rhs.vkSwapchainFrameBuffers_);
             vkCommandBuffers_ = std::move(rhs.vkCommandBuffers_);
             vkImageAvailableSemaphore_ = std::move(rhs.vkImageAvailableSemaphore_);
             vkRenderingFinishedSemaphore_ = std::move(rhs.vkRenderingFinishedSemaphore_);
@@ -107,11 +106,7 @@ namespace vku {
             rhs.window_ = nullptr;
             rhs.vkSurface_ = vk::SurfaceKHR();
             rhs.vkSwapchain_ = vk::SwapchainKHR();
-            rhs.vkSwapchainImages_.clear();
-            rhs.vkSwapchainImageViews_.clear();
             rhs.vkSwapchainRenderPass_ = vk::RenderPass();
-            rhs.vkSwapchainFrameBuffers_.clear();
-            rhs.vkCommandBuffers_.clear();
             rhs.vkImageAvailableSemaphore_ = vk::Semaphore();
             rhs.vkRenderingFinishedSemaphore_ = vk::Semaphore();
         }
@@ -253,15 +248,7 @@ namespace vku {
             vkSwapchain_ = newSwapChain;
         }
 
-        vkSwapchainImages_ = logicalDevice_->GetDevice().getSwapchainImagesKHR(vkSwapchain_);
-
-        vkSwapchainImageViews_.resize(vkSwapchainImages_.size());
-        for (auto i = 0U; i < vkSwapchainImages_.size(); ++i) {
-            vk::ImageSubresourceRange subresourceRange{vk::ImageAspectFlagBits::eColor, 0, 1, 0, 1 };
-            vk::ComponentMapping componentMapping{};
-            vk::ImageViewCreateInfo imgViewCreateInfo(vk::ImageViewCreateFlags(), vkSwapchainImages_[i], vk::ImageViewType::e2D, surfaceFormat.format, componentMapping, subresourceRange);
-            vkSwapchainImageViews_[i] = logicalDevice_->GetDevice().createImageView(imgViewCreateInfo);
-        }
+        auto swapchainImages = logicalDevice_->GetDevice().getSwapchainImagesKHR(vkSwapchain_);
 
         {
             vk::AttachmentDescription colorAttachment{ vk::AttachmentDescriptionFlags(), surfaceFormat.format, vk::SampleCountFlagBits::e1,
@@ -276,17 +263,15 @@ namespace vku {
             vkSwapchainRenderPass_ = logicalDevice_->GetDevice().createRenderPass(renderPassInfo);
         }
 
-        vkSwapchainFrameBuffers_.resize(vkSwapchainImages_.size());
-        for (auto i = 0U; i < vkSwapchainFrameBuffers_.size(); ++i) {
-            vk::ImageView attachments[] = {
-                vkSwapchainImageViews_[i]
-            };
-
-            vk::FramebufferCreateInfo fbCreateInfo{ vk::FramebufferCreateFlags(), vkSwapchainRenderPass_, 1, attachments, vkSurfaceExtend_.width, vkSurfaceExtend_.height, 1 };
-            vkSwapchainFrameBuffers_[i] = logicalDevice_->GetDevice().createFramebuffer(fbCreateInfo);
+        gfx::FramebufferDescriptor fbDesc;
+        fbDesc.tex_.emplace_back(config_->backbufferBits_ / 8, surfaceFormat.format, vk::SampleCountFlagBits::e1);
+        swapchainFramebuffers_.reserve(swapchainImages.size());
+        for (auto i = 0U; i < swapchainImages.size(); ++i) {
+            std::vector<vk::Image> attachments{ swapchainImages[i] };
+            swapchainFramebuffers_.emplace_back(logicalDevice_.get(), glm::uvec2(vkSurfaceExtend_.width, vkSurfaceExtend_.height), attachments, vkSwapchainRenderPass_, fbDesc);
         }
 
-        vkCommandBuffers_.resize(vkSwapchainImages_.size());
+        vkCommandBuffers_.resize(swapchainImages.size());
         vk::CommandBufferAllocateInfo allocInfo{ logicalDevice_->GetCommandPool(graphicsQueue_), vk::CommandBufferLevel::ePrimary, static_cast<uint32_t>(vkCommandBuffers_.size()) };
 
         auto result = logicalDevice_->GetDevice().allocateCommandBuffers(&allocInfo, vkCommandBuffers_.data());
@@ -298,18 +283,10 @@ namespace vku {
 
     void VKWindow::DestroySwapchainImages()
     {
-        for (auto& frameBuffer : vkSwapchainFrameBuffers_) {
-            if (frameBuffer) logicalDevice_->GetDevice().destroyFramebuffer(frameBuffer);
-            frameBuffer = vk::Framebuffer();
-        }
+        swapchainFramebuffers_.clear();
 
         if (vkSwapchainRenderPass_) logicalDevice_->GetDevice().destroyRenderPass(vkSwapchainRenderPass_);
         vkSwapchainRenderPass_ = vk::RenderPass();
-
-        for (auto& imgView : vkSwapchainImageViews_) {
-            if (imgView) logicalDevice_->GetDevice().destroyImageView(imgView);
-            imgView = vk::ImageView();
-        }
     }
 
     // ReSharper disable once CppMemberFunctionMayBeStatic
@@ -400,7 +377,8 @@ namespace vku {
             std::array<vk::ClearValue, 2> clearColor;
             clearColor[0].setColor(vk::ClearColorValue{ std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f } });
             clearColor[1].setDepthStencil(vk::ClearDepthStencilValue{ 0.0f, 0 });
-            vk::RenderPassBeginInfo renderPassBeginInfo{ vkSwapchainRenderPass_, vkSwapchainFrameBuffers_[i], vk::Rect2D(vk::Offset2D(0, 0), vkSurfaceExtend_), 1, clearColor.data() };
+            vk::RenderPassBeginInfo renderPassBeginInfo{ vkSwapchainRenderPass_, swapchainFramebuffers_[i].GetFramebuffer(),
+                vk::Rect2D(vk::Offset2D(0, 0), vkSurfaceExtend_), 1, clearColor.data() };
             vkCommandBuffers_[i].beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
             fillFunc(vkCommandBuffers_[i]);

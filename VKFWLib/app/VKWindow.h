@@ -14,6 +14,7 @@ struct GLFWwindow;
 
 namespace vku {
     namespace gfx{
+        class Framebuffer;
         class LogicalDevice;
     }
 
@@ -90,13 +91,14 @@ namespace vku {
         /** Holds the swap chain. */
         vk::SwapchainKHR vkSwapchain_;
         /** Holds the swap chain images. */
-        std::vector<vk::Image> vkSwapchainImages_;
+        // std::vector<vk::Image> vkSwapchainImages_;
         /** Holds the swap chain image views. */
-        std::vector<vk::ImageView> vkSwapchainImageViews_;
+        // std::vector<vk::ImageView> vkSwapchainImageViews_;
         /** Holds the swap chain render pass. */
         vk::RenderPass vkSwapchainRenderPass_;
         /** Holds the swap chain frame buffers. */
-        std::vector<vk::Framebuffer> vkSwapchainFrameBuffers_;
+        std::vector<gfx::Framebuffer> swapchainFramebuffers_;
+        // std::vector<vk::Framebuffer> vkSwapchainFrameBuffers_;
         /** Holds the swap chain command buffers. */
         std::vector<vk::CommandBuffer> vkCommandBuffers_;
         /** Holds the semaphore to notify when a new swap image is available. */
