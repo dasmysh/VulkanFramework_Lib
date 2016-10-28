@@ -13,8 +13,12 @@ link_directories(${Boost_LIBRARY_DIRS})
 option(GLFW_BUILD_DOCS OFF)
 option(GLFW_BUILD_EXAMPLES OFF)
 option(GLFW_BUILD_TESTS OFF)
+option(GLFW_INSTALL OFF)
 add_subdirectory(extern/glfw)
 
+option(ADD_FATAL_EXAMPLE OFF)
+option(ADD_BUILD_WIN_SHARED ON)
+option(USE_DYNAMIC_LOGGING_LEVELS ON)
 add_subdirectory(extern/g3log)
 
 SET(CMAKE_DEBUG_POSTFIX "")
@@ -71,5 +75,5 @@ target_include_directories(${FWLIB_LIBNAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/$
 target_compile_definitions(${FWLIB_LIBNAME} PUBLIC VULKAN_HPP_TYPESAFE_CONVERSION)
 target_compile_definitions(${FWLIB_LIBNAME} PRIVATE VKUFW_EXPORT)
 
-target_link_libraries(${FWLIB_LIBNAME} ${VULKAN_LIBRARY} glfw ${GLFW_LIBRARIES} g3logger)
+target_link_libraries(${FWLIB_LIBNAME} ${VULKAN_LIBRARY} glfw ${GLFW_LIBRARIES} g3logger_shared)
 set_property(TARGET ${FWLIB_LIBNAME} APPEND PROPERTY COMPILE_DEFINITIONS $<$<CONFIG:DebugOpenGLCalls>:_OGL_DEBUG_MSGS> _CRT_SECURE_NO_WARNINGS _SCL_SECURE_NO_WARNINGS)

@@ -151,15 +151,15 @@ namespace vku {
         if (configFile.is_open()) {
             boost::archive::xml_iarchive ia(configFile);
             ia >> boost::serialization::make_nvp("configuration", config_);
-
-            // always directly write configuration to update version.
-            std::ofstream ofs(configFileName, std::ios::out);
-            boost::archive::xml_oarchive oa(ofs);
-            oa << boost::serialization::make_nvp("configuration", config_);
         }
         else {
             LOG(DEBUG) << L"Configuration file not found. Using standard config.";
         }
+
+        // always directly write configuration to update version.
+        std::ofstream ofs(configFileName, std::ios::out);
+        boost::archive::xml_oarchive oa(ofs);
+        oa << boost::serialization::make_nvp("configuration", config_);
 
         InitVulkan(applicationName, applicationVersion);
         instance_ = this;
@@ -346,7 +346,9 @@ namespace vku {
 
     void ApplicationBase::InitVulkan(const std::string& applicationName, uint32_t applicationVersion)
     {
-        LOG(INFO) << "Initializing Vulkan...";
+        {
+            LOG(INFO) << "Initializing Vulkan...";
+        }
         std::vector<const char*> enabledExtensions;
         auto glfwExtensionCount = 0U;
         auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
