@@ -28,23 +28,23 @@ namespace vku {
     class ApplicationBase
     {
     public:
-        ApplicationBase(const std::string& applicationName, uint32_t applicationVersion, const std::string& configFileName);
+        VKUDllExport ApplicationBase(const std::string& applicationName, uint32_t applicationVersion, const std::string& configFileName);
         ApplicationBase(const ApplicationBase&) = delete;
         ApplicationBase(ApplicationBase&&) = delete;
         ApplicationBase& operator=(const ApplicationBase&) = delete;
         ApplicationBase& operator=(ApplicationBase&&) = delete;
-        virtual ~ApplicationBase();
+        virtual VKUDllExport ~ApplicationBase();
 
         static ApplicationBase& instance() { return *instance_; };
 
         /** Starts the application. */
-        void StartRun();
+        void VKUDllExport StartRun();
         /** Checks if the application is still running. */
-        bool IsRunning() const;
+        bool VKUDllExport IsRunning() const;
         /** Make one application <em>step</em> (rendering etc.). */
-        void Step();
+        void VKUDllExport Step();
         /** Called if the application is to end running. */
-        void EndRun();
+        void VKUDllExport EndRun();
 
         bool IsPaused() const { return pause_; }
         bool IsGUIMode() const { return guiMode_; }
@@ -52,7 +52,7 @@ namespace vku {
 
         void SetPause(bool pause);
 
-        virtual bool HandleKeyboard(int key, int scancode, int action, int mods, VKWindow* sender);
+        virtual bool VKUDllExport HandleKeyboard(int key, int scancode, int action, int mods, VKWindow* sender);
         bool HandleMouse(int button, int action, int mods, float mouseWheelDelta, VKWindow* sender);
         virtual bool HandleMouseApp(int button, int action, int mods, float mouseWheelDelta, VKWindow* sender) = 0;
         void OnResize(unsigned int width, unsigned int height);

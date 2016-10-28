@@ -55,6 +55,12 @@ const LEVELS VK_WARNING{ WARNING.value + 1,{ "Vulkan WARNING" } };
 const LEVELS VK_PERF_WARNING{ WARNING.value + 2,{ "Vulkan PERFORMANCE WARNING" } };
 const LEVELS VK_ERROR{ WARNING.value + 3,{ "Vulkan ERROR" } };
 
+#ifdef VKUFW_EXPORT
+#define VKUDllExport   __declspec( dllexport )
+#else
+#define VKUDllExport   __declspec( dllimport )
+#endif
+
 #include "constants.h"
 #include "app/Configuration.h"
 // #include "gfx/vk/VKRAIIWrapper.h"
