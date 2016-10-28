@@ -156,10 +156,12 @@ namespace vku {
             LOG(DEBUG) << L"Configuration file not found. Using standard config.";
         }
 
-        // always directly write configuration to update version.
-        std::ofstream ofs(configFileName, std::ios::out);
-        boost::archive::xml_oarchive oa(ofs);
-        oa << boost::serialization::make_nvp("configuration", config_);
+        {
+            // always directly write configuration to update version.
+            std::ofstream ofs(configFileName, std::ios::out);
+            boost::archive::xml_oarchive oa(ofs);
+            oa << boost::serialization::make_nvp("configuration", config_);
+        }
 
         InitVulkan(applicationName, applicationVersion);
         instance_ = this;
