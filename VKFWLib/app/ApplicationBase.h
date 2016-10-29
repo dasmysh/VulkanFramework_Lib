@@ -15,7 +15,7 @@ namespace vku {
     namespace cfg {
         class Configuration;
 
-        vk::SurfaceFormatKHR GetVulkanSurfaceFormatFromConfig(const WindowCfg& cfg);
+        std::vector<vk::SurfaceFormatKHR> GetVulkanSurfaceFormatsFromConfig(const WindowCfg& cfg);
         vk::PresentModeKHR GetVulkanPresentModeFromConfig(const WindowCfg& cfg);
         uint32_t GetVulkanAdditionalImageCountFromConfig(const WindowCfg& cfg);
     }

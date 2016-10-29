@@ -233,7 +233,24 @@ namespace vku {
         DestroySwapchainImages();
 
         auto surfaceCapabilities = logicalDevice_->GetPhysicalDevice().getSurfaceCapabilitiesKHR(vkSurface_);
-        auto surfaceFormat = cfg::GetVulkanSurfaceFormatFromConfig(*config_);
+        auto deviceSurfaceFormats = logicalDevice_->GetPhysicalDevice().getSurfaceFormatsKHR(vkSurface_);
+        auto surfaceFormats = cfg::GetVulkanSurfaceFormatsFromConfig(*config_);
+        std::sort(deviceSurfaceFormats.begin(), deviceSurfaceFormats.end(), [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0.format < f1.format; });
+        std::sort(surfaceFormats.begin(), surfaceFormats.end(), [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0.format < f1.format; });
+
+        vk::SurfaceFormatKHR surfaceFormat;
+        if (deviceSurfaceFormats.size() == 1 && deviceSurfaceFormats[0].format == vk::Format::eUndefined) surfaceFormat = surfaceFormats[0];
+        else {
+            std::vector<vk::SurfaceFormatKHR> formatIntersection;
+            std::set_intersection(deviceSurfaceFormats.begin(), deviceSurfaceFormats.end(), surfaceFormats.begin(), surfaceFormats.end(),
+                std::back_inserter(formatIntersection), [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0 == f1; });
+            if (!formatIntersection.empty()) surfaceFormat = formatIntersection[0]; // no color space check here as color space does not depend on the color space flag but the actual format.
+            else {
+                LOG(FATAL) << "No suitable surface format found after correct enumeration (this should never happen).";
+                throw std::runtime_error("No suitable surface format found after correct enumeration (this should never happen).");
+            }
+        }
+
         auto presentMode = cfg::GetVulkanPresentModeFromConfig(*config_);
         vkSurfaceExtend_ = vk::Extent2D{ static_cast<uint32_t>(config_->windowWidth_), static_cast<uint32_t>(config_->windowHeight_) };
         auto imageCount = surfaceCapabilities.minImageCount + cfg::GetVulkanAdditionalImageCountFromConfig(*config_);
@@ -244,7 +261,7 @@ namespace vku {
                 vkSurfaceExtend_, 1, vk::ImageUsageFlagBits::eColorAttachment, vk::SharingMode::eExclusive, 0, nullptr, surfaceCapabilities.currentTransform,
                 vk::CompositeAlphaFlagBitsKHR::eOpaque, presentMode, true, oldSwapChain };
             auto newSwapChain = logicalDevice_->GetDevice().createSwapchainKHR(swapChainCreateInfo);
-            logicalDevice_->GetDevice().destroySwapchainKHR(oldSwapChain);
+            if (oldSwapChain) logicalDevice_->GetDevice().destroySwapchainKHR(oldSwapChain);
             vkSwapchain_ = newSwapChain;
         }
 
@@ -289,18 +306,21 @@ namespace vku {
         vkSwapchainRenderPass_ = vk::RenderPass();
     }
 
-    // ReSharper disable once CppMemberFunctionMayBeStatic
-    // ReSharper disable once CppMemberFunctionMayBeConst
     void VKWindow::ReleaseVulkan()
     {
         logicalDevice_->GetDevice().waitIdle();
 
         //TODO ImGui_ImplGlfwGL3_Shutdown();
 
+        if (vkImageAvailableSemaphore_) logicalDevice_->GetDevice().destroySemaphore(vkImageAvailableSemaphore_);
+        vkImageAvailableSemaphore_ = vk::Semaphore();
+        if (vkRenderingFinishedSemaphore_) logicalDevice_->GetDevice().destroySemaphore(vkRenderingFinishedSemaphore_);
+        vkRenderingFinishedSemaphore_ = vk::Semaphore();
+
         DestroySwapchainImages();
         if (vkSwapchain_) logicalDevice_->GetDevice().destroySwapchainKHR(vkSwapchain_);
         vkSwapchain_ = vk::SwapchainKHR();
-        logicalDevice_.release();
+        logicalDevice_.reset();
         if (vkSurface_) ApplicationBase::instance().GetVKInstance().destroySurfaceKHR(vkSurface_);
         vkSurface_ = vk::SurfaceKHR();
     }

@@ -102,15 +102,54 @@ namespace vku {
 
     namespace cfg {
 
-        vk::SurfaceFormatKHR GetVulkanSurfaceFormatFromConfig(const WindowCfg& cfg)
+        std::vector<vk::SurfaceFormatKHR> GetVulkanSurfaceFormatsFromConfig(const WindowCfg& cfg)
         {
-            auto format = vk::Format::eR8G8B8A8Unorm;
-            if (cfg.backbufferBits_ == 32) format = vk::Format::eR8G8B8A8Unorm;
-            if (cfg.backbufferBits_ == 24) format = vk::Format::eR8G8B8Unorm;
-            if (cfg.backbufferBits_ == 16) format = vk::Format::eR5G6B5UnormPack16;
-            vk::ColorSpaceKHR colorSpace = {};
-            if (cfg.useSRGB_) colorSpace = vk::ColorSpaceKHR::eSrgbNonlinear;
-            return vk::SurfaceFormatKHR{ format, colorSpace };
+            std::vector<vk::SurfaceFormatKHR> result;
+            vk::SurfaceFormatKHR fmt;
+            if (cfg.backbufferBits_ == 32) {
+                if (cfg.useSRGB_) {
+                    fmt.format = vk::Format::eR8G8B8A8Srgb;
+                    result.push_back(fmt);
+                    fmt.format = vk::Format::eB8G8R8A8Srgb;
+                    result.push_back(fmt);
+                }
+                else {
+                    fmt.format = vk::Format::eR8G8B8A8Unorm;
+                    result.push_back(fmt);
+                    fmt.format = vk::Format::eB8G8R8A8Unorm;
+                    result.push_back(fmt);
+                }
+            }
+
+            if (cfg.backbufferBits_ == 24) {
+                if (cfg.useSRGB_) {
+                    fmt.format = vk::Format::eR8G8B8Srgb;
+                    result.push_back(fmt);
+                    fmt.format = vk::Format::eB8G8R8Srgb;
+                    result.push_back(fmt);
+                }
+                else {
+                    fmt.format = vk::Format::eR8G8B8Unorm;
+                    result.push_back(fmt);
+                    fmt.format = vk::Format::eB8G8R8Unorm;
+                    result.push_back(fmt);
+                }
+            }
+
+            if (cfg.backbufferBits_ == 16) {
+                if (!cfg.useSRGB_) {
+                    fmt.format = vk::Format::eR5G6B5UnormPack16;
+                    result.push_back(fmt);
+                    fmt.format = vk::Format::eR5G5B5A1UnormPack16;
+                    result.push_back(fmt);
+                    fmt.format = vk::Format::eB5G6R5UnormPack16;
+                    result.push_back(fmt);
+                    fmt.format = vk::Format::eB5G5R5A1UnormPack16;
+                    result.push_back(fmt);
+                }
+            }
+
+            return result;
         }
 
         vk::PresentModeKHR GetVulkanPresentModeFromConfig(const WindowCfg& cfg)
@@ -140,20 +179,20 @@ namespace vku {
      * @param configFileName the configuration file to use.
      */
     ApplicationBase::ApplicationBase(const std::string& applicationName, uint32_t applicationVersion, const std::string& configFileName) :
-        configFileName_{ configFileName_ },
+        configFileName_{ configFileName },
         pause_(true),
         stopped_(false),
         currentTime_(0.0),
         elapsedTime_(0.0)
     {
-        LOG(DEBUG) << L"Trying to load configuration.";
+        LOG(DEBUG) << "Trying to load configuration.";
         std::ifstream configFile(configFileName, std::ios::in);
         if (configFile.is_open()) {
             boost::archive::xml_iarchive ia(configFile);
             ia >> boost::serialization::make_nvp("configuration", config_);
         }
         else {
-            LOG(DEBUG) << L"Configuration file not found. Using standard config.";
+            LOG(DEBUG) << "Configuration file not found. Using standard config.";
         }
 
         {
@@ -174,10 +213,11 @@ namespace vku {
 
     ApplicationBase::~ApplicationBase()
     {
+        windows_.clear();
         if (vkDebugReportCB_) vk::DestroyDebugReportCallbackEXT(vkInstance_, vkDebugReportCB_, nullptr);
         if (vkInstance_) vkInstance_.destroy();
 
-        LOG(DEBUG) << L"Exiting application. Saving configuration to file.";
+        LOG(DEBUG) << "Exiting application. Saving configuration to file.";
         std::ofstream ofs(configFileName_, std::ios::out);
         boost::archive::xml_oarchive oa(ofs);
         oa << boost::serialization::make_nvp("configuration", config_);
@@ -192,8 +232,8 @@ namespace vku {
 
     void ApplicationBase::SetPause(bool pause)
     {
-        LOG_IF(INFO, pause) << L"Begin pause";
-        LOG_IF(INFO, !pause) << L"End pause";
+        LOG_IF(INFO, pause) << "Begin pause";
+        LOG_IF(INFO, !pause) << "End pause";
         pause_ = pause;
     }
 
@@ -452,12 +492,13 @@ namespace vku {
 
     std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const vk::SurfaceKHR& surface) const
     {
-        auto requestedFormat = cfg::GetVulkanSurfaceFormatFromConfig(windowCfg);
+        auto requestedFormats = cfg::GetVulkanSurfaceFormatsFromConfig(windowCfg);
+        std::sort(requestedFormats.begin(), requestedFormats.end(), [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0.format < f1.format; });
         auto requestedPresentMode = cfg::GetVulkanPresentModeFromConfig(windowCfg);
         auto requestedAdditionalImgCnt = cfg::GetVulkanAdditionalImageCountFromConfig(windowCfg);
         glm::uvec2 requestedExtend(windowCfg.windowWidth_, windowCfg.windowHeight_);
 
-        return CreateLogicalDevice(windowCfg.queues_, surface, [&surface, &requestedFormat, &requestedPresentMode, &requestedAdditionalImgCnt, &requestedExtend](const vk::PhysicalDevice& device)
+        return CreateLogicalDevice(windowCfg.queues_, surface, [&surface, &requestedFormats, &requestedPresentMode, &requestedAdditionalImgCnt, &requestedExtend](const vk::PhysicalDevice& device)
         {
             auto deviceSurfaceCaps = device.getSurfaceCapabilitiesKHR(surface);
             auto deviceSurfaceFormats = device.getSurfaceFormatsKHR(surface);
@@ -465,9 +506,16 @@ namespace vku {
             auto formatSupported = false, presentModeSupported = false, sizeSupported = false, imageCountSupported = false;
 
             if (deviceSurfaceFormats.size() == 1 && deviceSurfaceFormats[0].format == vk::Format::eUndefined) formatSupported = true;
-            else for (const auto& availableFormat : deviceSurfaceFormats) {
-                if (availableFormat.format == requestedFormat.format && availableFormat.colorSpace == requestedFormat.colorSpace) formatSupported = true;
+            else {
+                std::sort(deviceSurfaceFormats.begin(), deviceSurfaceFormats.end(), [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0.format < f1.format; });
+                std::vector<vk::SurfaceFormatKHR> formatIntersection;
+                std::set_intersection(deviceSurfaceFormats.begin(), deviceSurfaceFormats.end(), requestedFormats.begin(), requestedFormats.end(),
+                    std::back_inserter(formatIntersection), [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0 == f1; });
+                if (!formatIntersection.empty()) formatSupported = true; // no color space check here as color space does not depend on the color space flag but the actual format.
             }
+            /*else for (const auto& availableFormat : deviceSurfaceFormats) {
+                if (availableFormat.format == requestedFormat.format && availableFormat.colorSpace == requestedFormat.colorSpace) formatSupported = true;
+            }*/
 
             for (const auto& availablePresentMode : presentModes) {
                 if (availablePresentMode == requestedPresentMode) presentModeSupported = true;
