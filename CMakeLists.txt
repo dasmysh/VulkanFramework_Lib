@@ -5,6 +5,7 @@ set(FWLIB_LIBNAME ${FWLIB_LIBNAME} PARENT_SCOPE)
 project(${FWLIB_LIBNAME})
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/extern/glfw/CMake/modules")
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompileSpirvShader.cmake")
 
 find_package(Boost 1.58.0 REQUIRED)
 find_package(Vulkan 1.0.30.0 REQUIRED)
@@ -36,6 +37,20 @@ set(FWLIB_RESOURCE_BASE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/resour
 set(FWLIB_RESOURCE_BASE_PATH ${FWLIB_RESOURCE_BASE_PATH} PARENT_SCOPE)
 
 file(GLOB_RECURSE LIB_RES_FILES ${FWLIB_RESOURCE_BASE_PATH}/*.*)
+file(GLOB_RECURSE LIB_SHADERS 
+    ${FWLIB_RESOURCE_BASE_PATH}/*.vert 
+    ${FWLIB_RESOURCE_BASE_PATH}/*.frag 
+    ${FWLIB_RESOURCE_BASE_PATH}/*.comp 
+    ${FWLIB_RESOURCE_BASE_PATH}/*.tesc 
+    ${FWLIB_RESOURCE_BASE_PATH}/*.tese
+    ${FWLIB_RESOURCE_BASE_PATH}/*.geom)
+set(LIB_COMPILED_SHADERS "")
+foreach(SHADER ${LIB_SHADERS})
+    compile_spirv_shader(${LIB_SHADERS})
+    list(APPEND LIB_COMPILED_SHADERS ${COMPILE_SPIRV_SHADER_RETURN})
+endforeach()
+source_group("CompiledShaders" FILES ${LIB_COMPILED_SHADERS})
+
 file(GLOB LIB_TOP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.h
 	${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.cpp)
@@ -71,7 +86,7 @@ endforeach()
 file(GLOB LIB_CONFIGS CMakeLists.txt Readme.md .gitattributes .gitignore .gitmodules)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME} ${VULKAN_INCLUDE_DIR} extern/glfw/include/ extern/glm/ extern/g3log/src ${Boost_INCLUDE_DIRS})
-add_library(${FWLIB_LIBNAME} SHARED ${LIB_TMP_FILES} ${LIB_TOP_FILES} ${LIB_RES_FILES} ${LIB_CONFIGS} ${EXTERN_SOURCES})
+add_library(${FWLIB_LIBNAME} SHARED ${LIB_COMPILED_SHADERS} ${LIB_TMP_FILES} ${LIB_TOP_FILES} ${LIB_RES_FILES} ${LIB_CONFIGS} ${EXTERN_SOURCES})
 target_include_directories(${FWLIB_LIBNAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}  ${VULKAN_INCLUDE_DIR} extern/glfw/include/ extern/glm/ extern/g3log/src ${Boost_INCLUDE_DIRS})
 target_compile_definitions(${FWLIB_LIBNAME} PUBLIC VULKAN_HPP_TYPESAFE_CONVERSION)
 target_compile_definitions(${FWLIB_LIBNAME} PRIVATE VKUFW_EXPORT)
