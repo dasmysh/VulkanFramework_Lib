@@ -14,7 +14,7 @@
 #include "g3log/logmessage.hpp"
 namespace vku {
 
-    class RotationFileSink {
+    class RotationFileSink final {
     public:
         RotationFileSink(const std::string &log_prefix, const std::string &log_directory, unsigned int rotSize = 5, const std::string &logger_id = "g3log");
         virtual ~RotationFileSink();

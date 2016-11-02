@@ -14,7 +14,7 @@
 #include "g3log/logmessage.hpp"
 namespace vku {
 
-    class FileSink {
+    class FileSink final {
     public:
         FileSink(const std::string &log_prefix, const std::string &log_directory, bool useTimestamp = false, const std::string &logger_id = "g3log");
         virtual ~FileSink();

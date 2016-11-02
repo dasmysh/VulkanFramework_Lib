@@ -36,16 +36,16 @@ namespace vk {
 namespace vku {
 
     /**
-    * Logs the debug output of Vulkan.
-    * @param flags the logs severity flags
-    * @param objType the actual type of obj
-    * @param obj the object that threw the message
-    * @param location
-    * @param code
-    * @param layerPrefix
-    * @param msg the debug message
-    * @param userData the user supplied data
-    */
+     * Logs the debug output of Vulkan.
+     * @param flags the logs severity flags
+     * @param objType the actual type of obj
+     * @param obj the object that threw the message
+     * @param location
+     * @param code
+     * @param layerPrefix
+     * @param msg the debug message
+     * @param userData the user supplied data
+     */
     static VKAPI_ATTR VkBool32 VKAPI_CALL DebugOutputCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,
         uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData) {
 

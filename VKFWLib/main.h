@@ -63,7 +63,8 @@ const LEVELS VK_ERROR{ WARNING.value + 3,{ "Vulkan ERROR" } };
 
 #include "constants.h"
 #include "app/Configuration.h"
-// #include "gfx/vk/VKRAIIWrapper.h"
+#include "core/resources/Resource.h"
+#include "core/resources/ResourceManager.h"
 
 namespace vku {
     class ApplicationBase;

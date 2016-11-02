@@ -16,7 +16,7 @@ namespace vku {
 
         class LogicalDevice;
 
-        struct FramebufferDescriptor
+        struct FramebufferDescriptor final
         {
             /** Holds the texture descriptors. */
             std::vector<TextureDescriptor> tex_;
@@ -24,7 +24,7 @@ namespace vku {
             vk::ImageViewType type_ = vk::ImageViewType::e2D;
         };
 
-        class Framebuffer
+        class Framebuffer final
         {
         public:
             Framebuffer(LogicalDevice* logicalDevice, const glm::uvec2& size, const std::vector<vk::Image>& images, const vk::RenderPass& renderPass, const FramebufferDescriptor& desc);
@@ -35,6 +35,9 @@ namespace vku {
             Framebuffer& operator=(Framebuffer&&) noexcept;
             ~Framebuffer();
 
+            glm::uvec2 GetSize() const { return size_; }
+            unsigned int GetWidth() const { return size_.x; }
+            unsigned int GetHeight() const { return size_.y; }
             const vk::Framebuffer& GetFramebuffer() const { return vkFramebuffer_; }
 
         private:

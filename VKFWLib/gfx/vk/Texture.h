@@ -13,7 +13,7 @@
 namespace vku {
     namespace gfx {
 
-        struct TextureDescriptor
+        struct TextureDescriptor final
         {
             /** Holds the bytes per pixel of the format. */
             unsigned int bytesPP_;
@@ -26,7 +26,7 @@ namespace vku {
                 bytesPP_{ bytesPP }, format_{ format }, samples_{ samples } {}
         };
 
-        class Texture
+        class Texture final
         {
         public:
             Texture();

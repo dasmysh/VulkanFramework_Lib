@@ -58,7 +58,7 @@ namespace boost {
 namespace vku {
     namespace cfg {
 
-        struct QueueCfg
+        struct QueueCfg final
         {
             QueueCfg();
             QueueCfg(const QueueCfg&);
@@ -115,7 +115,7 @@ namespace vku {
             BOOST_SERIALIZATION_SPLIT_MEMBER()
         };
 
-        class WindowCfg
+        class WindowCfg final
         {
         public:
             WindowCfg();
@@ -202,7 +202,7 @@ namespace vku {
         };
 
 
-        class Configuration
+        class Configuration final
         {
         public:
             Configuration();

@@ -13,7 +13,7 @@
 namespace vku {
     namespace stdext {
 
-        template <typename T> class owned_ptr
+        template <typename T> class owned_ptr final
         {
         public:
             owned_ptr() : ptr_{ nullptr }, owned_{ false } {};

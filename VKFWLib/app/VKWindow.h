@@ -20,7 +20,7 @@ namespace vku {
 
     class ApplicationBase;
 
-    class VKWindow
+    class VKWindow final
     {
     public:
         explicit VKWindow(cfg::WindowCfg& conf);
@@ -28,7 +28,7 @@ namespace vku {
         VKWindow(VKWindow&&) noexcept;
         VKWindow& operator=(const VKWindow&) = delete;
         VKWindow& operator=(VKWindow&&) noexcept;
-        virtual ~VKWindow();
+        ~VKWindow();
 
         bool IsFocused() const { return focused_; }
         bool IsClosing() const;

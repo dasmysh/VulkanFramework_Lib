@@ -11,6 +11,9 @@
 #include "main.h"
 
 namespace vku {
+
+    class ShaderManager;
+
     namespace gfx {
 
         struct DeviceQueueDesc
@@ -24,11 +27,11 @@ namespace vku {
             std::vector<float> priorities_;
         };
 
-        class LogicalDevice
+        class LogicalDevice final
         {
         public:
             LogicalDevice(const vk::PhysicalDevice& phDevice, const std::vector<DeviceQueueDesc>& queueDescs, const vk::SurfaceKHR& surface = vk::SurfaceKHR());
-            LogicalDevice(const LogicalDevice&);
+            LogicalDevice(const LogicalDevice&); // TODO: implement [10/30/2016 Sebastian Maisch]
             LogicalDevice(LogicalDevice&&);
             LogicalDevice& operator=(const LogicalDevice&);
             LogicalDevice& operator=(LogicalDevice&&);
@@ -45,6 +48,8 @@ namespace vku {
             void CmdDebugMarkerBeginEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const;
             void CmdDebugMarkerEndEXT(VkCommandBuffer cmdBuffer) const;
             void CmdDebugMarkerInsertEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const;
+
+            ShaderManager* GetShaderManager() const { return shaderManager_.get(); }
 
         private:
             PFN_vkVoidFunction LoadVKDeviceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false) const;
@@ -67,6 +72,9 @@ namespace vku {
             PFN_vkCmdDebugMarkerBeginEXT fpCmdDebugMarkerBeginEXT = nullptr;
             PFN_vkCmdDebugMarkerEndEXT fpCmdDebugMarkerEndEXT = nullptr;
             PFN_vkCmdDebugMarkerInsertEXT fpCmdDebugMarkerInsertEXT = nullptr;
+
+            /** Holds the shader manager. */
+            std::unique_ptr<ShaderManager> shaderManager_;
         };
     }
 }

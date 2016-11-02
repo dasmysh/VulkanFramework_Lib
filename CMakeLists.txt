@@ -49,7 +49,10 @@ foreach(SHADER ${LIB_SHADERS})
     compile_spirv_shader(${LIB_SHADERS})
     list(APPEND LIB_COMPILED_SHADERS ${COMPILE_SPIRV_SHADER_RETURN})
 endforeach()
-source_group("CompiledShaders" FILES ${LIB_COMPILED_SHADERS})
+if(NOT "${LIB_COMPILED_SHADERS}" STREQUAL "")
+    LIST(REMOVE_ITEM LIB_RES_FILES ${LIB_COMPILED_SHADERS})
+    source_group("Resources\\CompiledShaders" FILES ${LIB_COMPILED_SHADERS})
+endif()
 
 file(GLOB LIB_TOP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.h
