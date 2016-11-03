@@ -268,6 +268,7 @@ namespace vku {
         auto swapchainImages = logicalDevice_->GetDevice().getSwapchainImagesKHR(vkSwapchain_);
 
         {
+            // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
             vk::AttachmentDescription colorAttachment{ vk::AttachmentDescriptionFlags(), surfaceFormat.format, vk::SampleCountFlagBits::e1,
                 vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore,
                 vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
@@ -280,6 +281,7 @@ namespace vku {
             vkSwapchainRenderPass_ = logicalDevice_->GetDevice().createRenderPass(renderPassInfo);
         }
 
+        // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
         gfx::FramebufferDescriptor fbDesc;
         fbDesc.tex_.emplace_back(config_->backbufferBits_ / 8, surfaceFormat.format, vk::SampleCountFlagBits::e1);
         swapchainFramebuffers_.reserve(swapchainImages.size());

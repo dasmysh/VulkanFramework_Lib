@@ -138,7 +138,7 @@ namespace vku {
         virtual void LoadResource(const std::string& resId, std::shared_ptr<ResourceType>& spResource)
         {
             try {
-                spResource = std::move(LoadingPolicy::CreateResource(TranslateCreationParameters(resId)), device_);
+                spResource = std::move(LoadingPolicy::CreateResource(TranslateCreationParameters(resId), device_));
             }
             catch (const resource_loading_error& loadingError) {
                 auto resid = boost::get_error_info<resid_info>(loadingError);

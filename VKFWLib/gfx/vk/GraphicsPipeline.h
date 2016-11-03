@@ -28,7 +28,7 @@ namespace vku {
 
             void ResetShaders(const std::vector<std::shared_ptr<Shader>>& shaders);
             void ResetFramebuffer(const Framebuffer& fb, unsigned int numViewports, unsigned int numScissors) const;
-            void CreatePipeline(bool keepState);
+            void CreatePipeline(bool keepState, vk::RenderPass renderPass, unsigned int subpass, vk::PipelineLayout pipelineLayout);
 
             vk::Viewport& GetViewport(unsigned int idx) const { assert(state_); return state_->viewports_[idx]; }
             vk::Rect2D& GetScissor(unsigned int idx) const { assert(state_); return state_->scissors_[idx]; }
@@ -39,7 +39,7 @@ namespace vku {
             vk::PipelineColorBlendAttachmentState& GetColorBlendAttachment(unsigned int idx) const { assert(state_); return state_->colorBlendAttachments_[idx]; }
             vk::PipelineColorBlendStateCreateInfo& GetColorBlending() const { assert(state_); return state_->colorBlending_; }
             std::vector<vk::DynamicState>& GetDynamicStates() const { assert(state_); return state_->dynamicStates_; }
-            vk::PipelineLayoutCreateInfo& GetPipelineLayout() const { assert(state_); return state_->pipelineLayoutInfo_; }
+            // vk::PipelineLayoutCreateInfo& GetPipelineLayout() const { assert(state_); return state_->pipelineLayoutInfo_; }
 
         private:
 
@@ -72,7 +72,7 @@ namespace vku {
                 /** Holds the dynamic states. */
                 std::vector<vk::DynamicState> dynamicStates_;
                 /** Holds the pipeline layout. */
-                vk::PipelineLayoutCreateInfo pipelineLayoutInfo_;
+                // vk::PipelineLayoutCreateInfo pipelineLayoutInfo_;
             };
 
             /** Holds the device. */
@@ -82,7 +82,7 @@ namespace vku {
             /** Holds the state. */
             std::unique_ptr<State> state_;
             /** Holds the pipeline. */
-            vk::Pipeline pipeline_;
+            vk::Pipeline vkPipeline_;
         };
     }
 }

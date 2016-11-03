@@ -44,8 +44,8 @@ namespace vku { namespace gfx {
         state_->colorBlending_ = vk::PipelineColorBlendStateCreateInfo{ vk::PipelineColorBlendStateCreateFlags(), VK_FALSE, vk::LogicOp::eCopy,
             static_cast<uint32_t>(state_->colorBlendAttachments_.size()), state_->colorBlendAttachments_.data(), {{ 0.0f, 0.0f, 0.0f, 0.0f }} };
 
-        state_->pipelineLayoutInfo_ = vk::PipelineLayoutCreateInfo{ vk::PipelineLayoutCreateFlags(), };
-        pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        // state_->pipelineLayoutInfo_ = vk::PipelineLayoutCreateInfo{ vk::PipelineLayoutCreateFlags(), };
+        /*pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = 0; // Optional
         pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
         pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
@@ -53,12 +53,14 @@ namespace vku { namespace gfx {
 
 
         vk::GraphicsPipelineCreateInfo gpCreateInfo{ , };
-        device_->GetDevice().createGraphicsPipeline(vk::PipelineCache(), );
+        device_->GetDevice().createGraphicsPipeline(vk::PipelineCache(), );*/
     }
 
 
     GraphicsPipeline::~GraphicsPipeline()
     {
+        if (vkPipeline_) device_->GetDevice().destroyPipeline(vkPipeline_);
+        vkPipeline_ = vk::Pipeline();
     }
 
     void GraphicsPipeline::ResetShaders(const std::vector<std::shared_ptr<Shader>>& shaders)
@@ -82,20 +84,21 @@ namespace vku { namespace gfx {
         state_->multisampling_ = vk::PipelineMultisampleStateCreateInfo{ vk::PipelineMultisampleStateCreateFlags(), vk::SampleCountFlagBits::e1, VK_FALSE, 1.0f, nullptr, VK_FALSE, VK_FALSE };
     }
 
-    void GraphicsPipeline::CreatePipeline(bool keepState)
+    void GraphicsPipeline::CreatePipeline(bool keepState, vk::RenderPass renderPass, unsigned int subpass, vk::PipelineLayout pipelineLayout)
     {
         assert(state_);
         vk::PipelineDynamicStateCreateInfo dynamicState{ vk::PipelineDynamicStateCreateFlags(), static_cast<uint32_t>(state_->dynamicStates_.size()), state_->dynamicStates_.data() };
 
-        auto pipelineLayout = device_->GetDevice().createPipelineLayout(state_->pipelineLayoutInfo_);
+        // auto pipelineLayout = device_->GetDevice().createPipelineLayout(state_->pipelineLayoutInfo_);
+        // device_->GetDevice().destroyP
         
         vk::GraphicsPipelineCreateInfo pipelineInfo{ vk::PipelineCreateFlags(),
             static_cast<uint32_t>(state_->shaderStageInfos_.size()), state_->shaderStageInfos_.data(),
             &state_->vertexInputCreateInfo_, &state_->inputAssemblyCreateInfo_, &state_->tesselation_,
             &state_->viewportState_, &state_->rasterizer_, &state_->multisampling_, &state_->depthStencil_,
-            &state_->colorBlending_, &dynamicState, pipelineLayout, renderPass_ };
+            &state_->colorBlending_, &dynamicState, pipelineLayout, renderPass, subpass };
 
-        pipeline_ = device_->GetDevice().createGraphicsPipeline(vk::PipelineCache(), pipelineInfo);
+        vkPipeline_ = device_->GetDevice().createGraphicsPipeline(vk::PipelineCache(), pipelineInfo);
 
         if (!keepState) state_.reset();
     }
