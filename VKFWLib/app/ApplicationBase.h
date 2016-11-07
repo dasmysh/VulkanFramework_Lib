@@ -49,6 +49,7 @@ namespace vku {
         bool IsPaused() const { return pause_; }
         bool IsGUIMode() const { return guiMode_; }
         VKWindow* GetFocusedWindow();
+        VKWindow* GetWindow(unsigned int idx) { return &windows_[idx]; }
 
         void SetPause(bool pause);
 

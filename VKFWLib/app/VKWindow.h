@@ -37,6 +37,9 @@ namespace vku {
         bool MessageBoxQuestion(const std::string& title, const std::string& content) const;
 
         cfg::WindowCfg& GetConfig() const { return *config_; };
+        gfx::LogicalDevice& GetDevice() const { return *logicalDevice_; }
+        const std::vector<gfx::Framebuffer>& GetFramebuffers() const { return swapchainFramebuffers_; }
+        vk::RenderPass GetRenderPass() const { return vkSwapchainRenderPass_; }
 
         bool IsMouseButtonPressed(int button) const;
         bool IsKeyPressed(int key) const;
@@ -90,15 +93,10 @@ namespace vku {
         unsigned int graphicsQueue_ = 0;
         /** Holds the swap chain. */
         vk::SwapchainKHR vkSwapchain_;
-        /** Holds the swap chain images. */
-        // std::vector<vk::Image> vkSwapchainImages_;
-        /** Holds the swap chain image views. */
-        // std::vector<vk::ImageView> vkSwapchainImageViews_;
         /** Holds the swap chain render pass. */
         vk::RenderPass vkSwapchainRenderPass_;
         /** Holds the swap chain frame buffers. */
         std::vector<gfx::Framebuffer> swapchainFramebuffers_;
-        // std::vector<vk::Framebuffer> vkSwapchainFrameBuffers_;
         /** Holds the swap chain command buffers. */
         std::vector<vk::CommandBuffer> vkCommandBuffers_;
         /** Holds the semaphore to notify when a new swap image is available. */
