@@ -58,10 +58,11 @@ namespace vku { namespace gfx {
 
     void Shader::LoadCompiledShaderFromFile()
     {
-        std::ifstream file(GetFilename(), std::ios::ate | std::ios::binary);
+        auto filename = FindResourceLocation(GetFilename()) + ".spv";
+        std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
         if (!file.is_open()) {
-            LOG(FATAL) << "Could not open shader file (" << GetFilename() << ").";
+            LOG(FATAL) << "Could not open shader file (" << filename << ").";
             throw std::runtime_error("Could not open shader file.");
         }
         auto fileSize = static_cast<size_t>(file.tellg());
@@ -70,7 +71,7 @@ namespace vku { namespace gfx {
         file.read(buffer.data(), fileSize);
         file.close();
 
-        vk::ShaderModuleCreateInfo moduleCreateInfo{ vk::ShaderModuleCreateFlags(), fileSize, reinterpret_cast<uint32_t*>(buffer.data) };
+        vk::ShaderModuleCreateInfo moduleCreateInfo{ vk::ShaderModuleCreateFlags(), fileSize, reinterpret_cast<uint32_t*>(buffer.data()) };
 
         shaderModule_ = device_->GetDevice().createShaderModule(moduleCreateInfo);
     }

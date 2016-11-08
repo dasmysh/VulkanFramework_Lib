@@ -38,22 +38,22 @@ namespace vku {
         static ApplicationBase& instance() { return *instance_; };
 
         /** Starts the application. */
-        void VKUDllExport StartRun();
+        VKUDllExport void StartRun();
         /** Checks if the application is still running. */
-        bool VKUDllExport IsRunning() const;
+        VKUDllExport bool IsRunning() const;
         /** Make one application <em>step</em> (rendering etc.). */
-        void VKUDllExport Step();
+        VKUDllExport void Step();
         /** Called if the application is to end running. */
-        void VKUDllExport EndRun();
+        VKUDllExport void EndRun();
 
         bool IsPaused() const { return pause_; }
         bool IsGUIMode() const { return guiMode_; }
-        VKWindow* GetFocusedWindow();
-        VKWindow* GetWindow(unsigned int idx) { return &windows_[idx]; }
+        VKUDllExport VKWindow* GetFocusedWindow();
+        VKUDllExport VKWindow* GetWindow(unsigned int idx);
 
         void SetPause(bool pause);
 
-        virtual bool VKUDllExport HandleKeyboard(int key, int scancode, int action, int mods, VKWindow* sender);
+        virtual VKUDllExport bool HandleKeyboard(int key, int scancode, int action, int mods, VKWindow* sender);
         bool HandleMouse(int button, int action, int mods, float mouseWheelDelta, VKWindow* sender);
         virtual bool HandleMouseApp(int button, int action, int mods, float mouseWheelDelta, VKWindow* sender) = 0;
         void OnResize(unsigned int width, unsigned int height);

@@ -29,6 +29,7 @@ namespace vku {
             void ResetShaders(const std::vector<std::shared_ptr<Shader>>& shaders);
             void ResetFramebuffer(const Framebuffer& fb, unsigned int numViewports, unsigned int numScissors) const;
             void CreatePipeline(bool keepState, vk::RenderPass renderPass, unsigned int subpass, vk::PipelineLayout pipelineLayout);
+            vk::Pipeline GetPipeline() const { return vkPipeline_; }
 
             vk::Viewport& GetViewport(unsigned int idx) const { assert(state_); return state_->viewports_[idx]; }
             vk::Rect2D& GetScissor(unsigned int idx) const { assert(state_); return state_->scissors_[idx]; }

@@ -71,7 +71,7 @@ namespace vku {
         {
             if (this != &rhs) {
                 ResourceManager tmp{ rhs };
-                std::swap(this, tmp);
+                std::swap(*this, tmp);
             }
             return *this;
         }

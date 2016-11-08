@@ -230,6 +230,11 @@ namespace vku {
         return focusWindow;
     }
 
+    VKWindow* ApplicationBase::GetWindow(unsigned idx)
+    {
+        return &windows_[idx];
+    }
+
     void ApplicationBase::SetPause(bool pause)
     {
         LOG_IF(INFO, pause) << "Begin pause";

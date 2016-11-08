@@ -392,6 +392,8 @@ namespace vku {
 
     void VKWindow::UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer)>& fillFunc) const
     {
+        // sync here...
+        logicalDevice_->GetDevice().resetCommandPool(logicalDevice_->GetCommandPool(graphicsQueue_), vk::CommandPoolResetFlags());
         for (auto i = 0U; i < vkCommandBuffers_.size(); ++i) {
             vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eSimultaneousUse };
             vkCommandBuffers_[i].begin(cmdBufferBeginInfo);

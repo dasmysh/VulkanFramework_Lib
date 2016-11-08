@@ -65,6 +65,8 @@ namespace vku { namespace gfx {
             vk::CommandPoolCreateInfo poolInfo{ vk::CommandPoolCreateFlags(), queueDescs[i].familyIndex_ };
             vkCmdPools_[i] = vkDevice_.createCommandPool(poolInfo);
         }
+
+        shaderManager_ = std::make_unique<ShaderManager>(this);
     }
 
 
