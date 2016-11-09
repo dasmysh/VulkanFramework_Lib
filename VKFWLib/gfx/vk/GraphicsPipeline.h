@@ -27,6 +27,7 @@ namespace vku {
             ~GraphicsPipeline();
 
             void ResetShaders(const std::vector<std::shared_ptr<Shader>>& shaders);
+            template<class Vertex> void ResetVertexInput() const;
             void ResetFramebuffer(const glm::uvec2& size, unsigned int numViewports, unsigned int numScissors) const;
             void CreatePipeline(bool keepState, vk::RenderPass renderPass, unsigned int subpass, vk::PipelineLayout pipelineLayout);
             vk::Pipeline GetPipeline() const { return vkPipeline_; }
@@ -40,7 +41,6 @@ namespace vku {
             vk::PipelineColorBlendAttachmentState& GetColorBlendAttachment(unsigned int idx) const { assert(state_); return state_->colorBlendAttachments_[idx]; }
             vk::PipelineColorBlendStateCreateInfo& GetColorBlending() const { assert(state_); return state_->colorBlending_; }
             std::vector<vk::DynamicState>& GetDynamicStates() const { assert(state_); return state_->dynamicStates_; }
-            // vk::PipelineLayoutCreateInfo& GetPipelineLayout() const { assert(state_); return state_->pipelineLayoutInfo_; }
 
         private:
 
@@ -72,8 +72,6 @@ namespace vku {
                 vk::PipelineColorBlendStateCreateInfo colorBlending_;
                 /** Holds the dynamic states. */
                 std::vector<vk::DynamicState> dynamicStates_;
-                /** Holds the pipeline layout. */
-                // vk::PipelineLayoutCreateInfo pipelineLayoutInfo_;
             };
 
             /** Holds the device. */
@@ -85,6 +83,13 @@ namespace vku {
             /** Holds the pipeline. */
             vk::Pipeline vkPipeline_;
         };
+
+        template <class Vertex>
+        void GraphicsPipeline::ResetVertexInput() const
+        {
+            state_->vertexInputCreateInfo_ = vk::PipelineVertexInputStateCreateInfo{ vk::PipelineVertexInputStateCreateFlags(), 1, &Vertex::bindingDescription_,
+                static_cast<uint32_t>(Vertex::attributeDescriptions_.size()), Vertex::attributeDescriptions_.data() };
+        }
     }
 }
 
