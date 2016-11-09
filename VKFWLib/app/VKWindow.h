@@ -99,6 +99,8 @@ namespace vku {
         std::vector<gfx::Framebuffer> swapchainFramebuffers_;
         /** Holds the swap chain command buffers. */
         std::vector<vk::CommandBuffer> vkCommandBuffers_;
+        /** Hold a fence for each command buffer to signal it is processed. */
+        std::vector<vk::Fence> vkCmdBufferFences_;
         /** Holds the semaphore to notify when a new swap image is available. */
         vk::Semaphore vkImageAvailableSemaphore_;
         /** Holds the semaphore to notify when rendering is finished. */

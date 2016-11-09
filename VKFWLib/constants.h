@@ -16,4 +16,6 @@ namespace vku {
     static const uint32_t engineVersionMinor = 1;
     static const uint32_t engineVersionPatch = 0;
     static const uint32_t engineVersion = (((engineVersionMajor) << 22) | ((engineVersionMinor) << 12) | (engineVersionPatch));
+
+    static const uint64_t defaultFenceTimeout = 100000000000U;
 }

@@ -229,6 +229,10 @@ namespace vku {
 
         if (vkCommandBuffers_.size() > 0) logicalDevice_->GetDevice().freeCommandBuffers(logicalDevice_->GetCommandPool(graphicsQueue_),
             static_cast<uint32_t>(vkCommandBuffers_.size()), vkCommandBuffers_.data());
+        for (auto& fence : vkCmdBufferFences_) {
+            if(fence) logicalDevice_->GetDevice().destroyFence(fence);
+            fence = vk::Fence();
+        }
 
         DestroySwapchainImages();
 
@@ -298,6 +302,10 @@ namespace vku {
             LOG(FATAL) << "Could not allocate command buffers(" << vk::to_string(result) << ").";
             throw std::runtime_error("Could not allocate command buffers.");
         }
+
+        vk::FenceCreateInfo fenceCreateInfo{ vk::FenceCreateFlagBits::eSignaled };
+        vkCmdBufferFences_.resize(vkCommandBuffers_.size());
+        for (auto& fence : vkCmdBufferFences_) fence = logicalDevice_->GetDevice().createFence(fenceCreateInfo);
     }
 
     void VKWindow::DestroySwapchainImages()
@@ -313,6 +321,11 @@ namespace vku {
         logicalDevice_->GetDevice().waitIdle();
 
         //TODO ImGui_ImplGlfwGL3_Shutdown();
+
+        for (auto& fence : vkCmdBufferFences_) {
+            if (fence) logicalDevice_->GetDevice().destroyFence(fence);
+            fence = vk::Fence();
+        }
 
         if (vkImageAvailableSemaphore_) logicalDevice_->GetDevice().destroySemaphore(vkImageAvailableSemaphore_);
         vkImageAvailableSemaphore_ = vk::Semaphore();
@@ -369,8 +382,21 @@ namespace vku {
         vk::PipelineStageFlags waitStages[]{ vk::PipelineStageFlagBits::eColorAttachmentOutput };
         vk::SubmitInfo submitInfo{ 1, &vkImageAvailableSemaphore_, waitStages, 1, &vkCommandBuffers_[currentlyRenderedImage_], 1, &vkRenderingFinishedSemaphore_ };
 
+        {
+            auto syncResult = logicalDevice_->GetDevice().getFenceStatus(vkCmdBufferFences_[currentlyRenderedImage_]);
+            while (syncResult == vk::Result::eTimeout || syncResult == vk::Result::eNotReady)
+                syncResult = logicalDevice_->GetDevice().waitForFences(vkCmdBufferFences_[currentlyRenderedImage_], VK_TRUE, defaultFenceTimeout);
+
+            if (syncResult != vk::Result::eSuccess) {
+                LOG(FATAL) << "Error synchronizing command buffer. (" << vk::to_string(syncResult) << ").";
+                throw std::runtime_error("Error synchronizing command buffer.");
+            }
+
+            logicalDevice_->GetDevice().resetFences(vkCmdBufferFences_[currentlyRenderedImage_]);
+        }
+
         vk::ArrayProxy<const vk::SubmitInfo> submitInfos{ 1, &submitInfo };
-        logicalDevice_->GetQueue(graphicsQueue_, 0).submit(submitInfos, vk::Fence()); //<- fence to be signaled
+        logicalDevice_->GetQueue(graphicsQueue_, 0).submit(submitInfos, vkCmdBufferFences_[currentlyRenderedImage_]);
     }
 
     void VKWindow::SubmitFrame()
@@ -392,7 +418,17 @@ namespace vku {
 
     void VKWindow::UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer)>& fillFunc) const
     {
-        // sync here...
+        {
+            auto syncResult = vk::Result::eTimeout;
+            while (syncResult == vk::Result::eTimeout)
+                syncResult = logicalDevice_->GetDevice().waitForFences(vkCmdBufferFences_, VK_TRUE, defaultFenceTimeout);
+
+            if (syncResult != vk::Result::eSuccess) {
+                LOG(FATAL) << "Error synchronizing command buffers. (" << vk::to_string(syncResult) << ").";
+                throw std::runtime_error("Error synchronizing command buffers.");
+            }
+        }
+
         logicalDevice_->GetDevice().resetCommandPool(logicalDevice_->GetCommandPool(graphicsQueue_), vk::CommandPoolResetFlags());
         for (auto i = 0U; i < vkCommandBuffers_.size(); ++i) {
             vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eSimultaneousUse };
