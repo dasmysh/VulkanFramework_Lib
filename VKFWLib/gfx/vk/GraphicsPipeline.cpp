@@ -13,7 +13,7 @@
 
 namespace vku { namespace gfx {
 
-    GraphicsPipeline::GraphicsPipeline(gfx::LogicalDevice* device, const std::vector<std::shared_ptr<Shader>>& shaders, const Framebuffer& fb, unsigned int numBlendAttachments) :
+    GraphicsPipeline::GraphicsPipeline(gfx::LogicalDevice* device, const std::vector<std::shared_ptr<Shader>>& shaders, const glm::uvec2& size, unsigned int numBlendAttachments) :
         device_{ device },
         shaders_{ shaders },
         state_{ std::make_unique<State>() }
@@ -23,7 +23,7 @@ namespace vku { namespace gfx {
         // TODO: gets filled by model later (vertexInputCreateInfo_, inputAssemblyCreateInfo_). [10/31/2016 Sebastian Maisch]
         state_->inputAssemblyCreateInfo_.setTopology(vk::PrimitiveTopology::eTriangleList);
 
-        ResetFramebuffer(fb, 1, 1);
+        ResetFramebuffer(size, 1, 1);
 
         state_->rasterizer_ = vk::PipelineRasterizationStateCreateInfo{ vk::PipelineRasterizationStateCreateFlags(), VK_FALSE,
             VK_FALSE, vk::PolygonMode::eFill, vk::CullModeFlagBits::eBack, vk::FrontFace::eClockwise, VK_FALSE, 0.0f, 0.0f, 0.0f, 1.0f };
@@ -73,12 +73,12 @@ namespace vku { namespace gfx {
         }
     }
 
-    void GraphicsPipeline::ResetFramebuffer(const Framebuffer& fb, unsigned int numViewports, unsigned int numScissors) const
+    void GraphicsPipeline::ResetFramebuffer(const glm::uvec2& size, unsigned int numViewports, unsigned int numScissors) const
     {
         state_->viewports_.resize(numViewports);
-        for (auto& viewport : state_->viewports_) viewport = vk::Viewport{ 0.0f, 0.0f, static_cast<float>(fb.GetWidth()), static_cast<float>(fb.GetHeight()), 0.0f, 1.0f };
+        for (auto& viewport : state_->viewports_) viewport = vk::Viewport{ 0.0f, 0.0f, static_cast<float>(size.x), static_cast<float>(size.y), 0.0f, 1.0f };
         state_->scissors_.resize(numScissors);
-        for (auto& scissor : state_->scissors_) scissor = vk::Rect2D{ vk::Offset2D(), vk::Extent2D{ fb.GetWidth(), fb.GetHeight() } };
+        for (auto& scissor : state_->scissors_) scissor = vk::Rect2D{ vk::Offset2D(), vk::Extent2D{ size.x, size.y } };
         
         state_->viewportState_ = vk::PipelineViewportStateCreateInfo{ vk::PipelineViewportStateCreateFlags(), numViewports, state_->viewports_.data(), numScissors, state_->scissors_.data() };
         state_->multisampling_ = vk::PipelineMultisampleStateCreateInfo{ vk::PipelineMultisampleStateCreateFlags(), vk::SampleCountFlagBits::e1, VK_FALSE, 1.0f, nullptr, VK_FALSE, VK_FALSE };

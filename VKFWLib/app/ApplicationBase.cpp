@@ -299,13 +299,13 @@ namespace vku {
     /**
      * Handles resize events.
      */
-    void ApplicationBase::OnResize(unsigned int width, unsigned int height)
+    void ApplicationBase::OnResize(unsigned int width, unsigned int height, const VKWindow* window)
     {
         glm::uvec2 screenSize(width, height);
-        Resize(screenSize);
+        Resize(screenSize, window);
     }
 
-    void ApplicationBase::Resize(const glm::uvec2&)
+    void ApplicationBase::Resize(const glm::uvec2&, const VKWindow*)
     {
     }
 

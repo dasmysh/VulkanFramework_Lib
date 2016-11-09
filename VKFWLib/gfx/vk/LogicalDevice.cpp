@@ -94,12 +94,12 @@ namespace vku { namespace gfx {
         return func;
     }
 
-    std::unique_ptr<GraphicsPipeline> LogicalDevice::CreateGraphicsPipeline(const std::vector<std::string>& shaderNames, const Framebuffer& fb, unsigned numBlendAttachments)
+    std::unique_ptr<GraphicsPipeline> LogicalDevice::CreateGraphicsPipeline(const std::vector<std::string>& shaderNames, const glm::uvec2& size, unsigned numBlendAttachments)
     {
         std::vector<std::shared_ptr<Shader>> shaders(shaderNames.size());
         for (auto i = 0U; i < shaderNames.size(); ++i) shaders[i] = shaderManager_->GetResource(shaderNames[i]);
 
-        return std::make_unique<GraphicsPipeline>(this, shaders, fb, numBlendAttachments);
+        return std::make_unique<GraphicsPipeline>(this, shaders, size, numBlendAttachments);
     }
 
     VkResult LogicalDevice::DebugMarkerSetObjectTagEXT(VkDevice device, VkDebugMarkerObjectTagInfoEXT* tagInfo) const

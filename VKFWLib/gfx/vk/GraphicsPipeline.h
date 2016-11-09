@@ -19,7 +19,7 @@ namespace vku {
         class GraphicsPipeline final
         {
         public:
-            GraphicsPipeline(gfx::LogicalDevice* device, const std::vector<std::shared_ptr<Shader>>& shaders, const Framebuffer& fb, unsigned int numBlendAttachments);
+            GraphicsPipeline(gfx::LogicalDevice* device, const std::vector<std::shared_ptr<Shader>>& shaders, const glm::uvec2& size, unsigned int numBlendAttachments);
             GraphicsPipeline(const GraphicsPipeline&);
             GraphicsPipeline& operator=(const GraphicsPipeline&);
             GraphicsPipeline(GraphicsPipeline&&) noexcept;
@@ -27,7 +27,7 @@ namespace vku {
             ~GraphicsPipeline();
 
             void ResetShaders(const std::vector<std::shared_ptr<Shader>>& shaders);
-            void ResetFramebuffer(const Framebuffer& fb, unsigned int numViewports, unsigned int numScissors) const;
+            void ResetFramebuffer(const glm::uvec2& size, unsigned int numViewports, unsigned int numScissors) const;
             void CreatePipeline(bool keepState, vk::RenderPass renderPass, unsigned int subpass, vk::PipelineLayout pipelineLayout);
             vk::Pipeline GetPipeline() const { return vkPipeline_; }
 

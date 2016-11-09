@@ -45,7 +45,7 @@ namespace vku {
             const vk::Queue& GetQueue(unsigned int familyIndex, unsigned int queueIndex) const { return vkQueues_[familyIndex][queueIndex]; }
             const vk::CommandPool& GetCommandPool(unsigned int familyIndex) const { return vkCmdPools_[familyIndex]; }
 
-            std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline(const std::vector<std::string>& shaderNames, const Framebuffer& fb, unsigned int numBlendAttachments);
+            std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline(const std::vector<std::string>& shaderNames, const glm::uvec2& size, unsigned int numBlendAttachments);
 
             VkResult DebugMarkerSetObjectTagEXT(VkDevice device, VkDebugMarkerObjectTagInfoEXT* tagInfo) const;
             VkResult DebugMarkerSetObjectNameEXT(VkDevice device, VkDebugMarkerObjectNameInfoEXT* nameInfo) const;

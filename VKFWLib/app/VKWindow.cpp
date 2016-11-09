@@ -216,7 +216,7 @@ namespace vku {
         vkImageAvailableSemaphore_ = logicalDevice_->GetDevice().createSemaphore(semaphoreInfo);
         vkRenderingFinishedSemaphore_ = logicalDevice_->GetDevice().createSemaphore(semaphoreInfo);
 
-        LOG(INFO) << L"Initializing Vulkan surface... done.";
+        LOG(INFO) << "Initializing Vulkan surface... done.";
 
         // fbo.Resize(config_->windowWidth_, config_->windowHeight_);
 
@@ -395,8 +395,8 @@ namespace vku {
             logicalDevice_->GetDevice().resetFences(vkCmdBufferFences_[currentlyRenderedImage_]);
         }
 
-        vk::ArrayProxy<const vk::SubmitInfo> submitInfos{ 1, &submitInfo };
-        logicalDevice_->GetQueue(graphicsQueue_, 0).submit(submitInfos, vkCmdBufferFences_[currentlyRenderedImage_]);
+        // vk::ArrayProxy<const vk::SubmitInfo> submitInfos{ 1, &submitInfo };
+        logicalDevice_->GetQueue(graphicsQueue_, 0).submit(submitInfo, vkCmdBufferFences_[currentlyRenderedImage_]);
     }
 
     void VKWindow::SubmitFrame()
@@ -477,10 +477,10 @@ namespace vku {
 
     void VKWindow::WindowSizeCallback(int width, int height)
     {
-        LOG(INFO) << L"Got window resize event (" << width << ", " << height << ") ...";
+        LOG(INFO) << "Got window resize event (" << width << ", " << height << ") ...";
         if (width == 0 || height == 0) return;
 
-        LOG(DEBUG) << L"Begin HandleResize()";
+        LOG(DEBUG) << "Begin HandleResize()";
 
         config_->windowWidth_ = width;
         config_->windowHeight_ = height;
@@ -492,10 +492,10 @@ namespace vku {
 
         try {
             // TODO: notify all resources depending on this...
-            ApplicationBase::instance().OnResize(width, height);
+            ApplicationBase::instance().OnResize(width, height, this);
         }
         catch (std::runtime_error e) {
-            LOG(FATAL) << L"Could not reacquire resources after resize: " << e.what();
+            LOG(FATAL) << "Could not reacquire resources after resize: " << e.what();
             throw std::runtime_error("Could not reacquire resources after resize.");
         }
     }
@@ -509,13 +509,13 @@ namespace vku {
     // ReSharper disable once CppMemberFunctionMayBeStatic
     void VKWindow::WindowCloseCallback() const
     {
-        LOG(INFO) << L"Got close event ...";
+        LOG(INFO) << "Got close event ...";
     }
 
     // ReSharper disable once CppMemberFunctionMayBeStatic
     void VKWindow::FramebufferSizeCallback(int width, int height) const
     {
-        LOG(INFO) << L"Got framebuffer resize event (" << width << ", " << height << ") ...";
+        LOG(INFO) << "Got framebuffer resize event (" << width << ", " << height << ") ...";
     }
 
     void VKWindow::WindowIconifyCallback(int iconified)

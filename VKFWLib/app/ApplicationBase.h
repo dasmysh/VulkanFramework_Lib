@@ -56,8 +56,8 @@ namespace vku {
         virtual VKUDllExport bool HandleKeyboard(int key, int scancode, int action, int mods, VKWindow* sender);
         bool HandleMouse(int button, int action, int mods, float mouseWheelDelta, VKWindow* sender);
         virtual bool HandleMouseApp(int button, int action, int mods, float mouseWheelDelta, VKWindow* sender) = 0;
-        void OnResize(unsigned int width, unsigned int height);
-        virtual void Resize(const glm::uvec2& screenSize);
+        void OnResize(unsigned int width, unsigned int height, const VKWindow* window);
+        virtual void Resize(const glm::uvec2& screenSize, const VKWindow* window);
 
         const cfg::Configuration& GetConfig() const { return config_; };
         const std::vector<const char*>& GetVKValidationLayers() const { return vkValidationLayers_; }
