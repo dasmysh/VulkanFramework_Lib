@@ -25,7 +25,7 @@ namespace vku {
     class Resource
     {
     public:
-        explicit Resource(const std::string& resourceId, gfx::LogicalDevice* device);
+        Resource(const std::string& resourceId, const gfx::LogicalDevice* device);
         Resource(const Resource&);
         Resource& operator=(const Resource&);
         Resource(Resource&&) noexcept;
@@ -60,7 +60,7 @@ namespace vku {
         static bool parseNamedFlag(const std::string& str, std::string& name);
 
         /** Holds the device object for dependencies. */
-        gfx::LogicalDevice* device_;
+        const gfx::LogicalDevice* device_;
 
     private:
         static std::string GetNormalizedResourceId(const std::string& resId);

@@ -16,7 +16,7 @@ namespace vku { namespace gfx {
     class Buffer final
     {
     public:
-        Buffer(LogicalDevice* device, vk::BufferUsageFlags usage);
+        Buffer(const LogicalDevice* device, vk::BufferUsageFlags usage);
         ~Buffer();
         Buffer(const Buffer&);
         Buffer& operator=(const Buffer&);
@@ -27,8 +27,8 @@ namespace vku { namespace gfx {
         void UploadData(size_t offset, size_t size, const void* data);
         void DownloadData(size_t size, void* data) const;
 
-        unsigned int GetSize() const { return size_; }
-        vk::Buffer GetBuffer() const { return buffer_; }
+        size_t GetSize() const { return size_; }
+        const vk::Buffer* GetBuffer() const { return &buffer_; }
 
         template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> InitializeData(const T& data);
         template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> UploadData(size_t offset, const T& data);
@@ -40,7 +40,7 @@ namespace vku { namespace gfx {
         void UploadDataInternal(size_t offset, size_t size, const void* data) const;
 
         /** Holds the device. */
-        LogicalDevice* device_;
+        const LogicalDevice* device_;
         /** Holds the Vulkan buffer object. */
         vk::Buffer buffer_;
         /** Holds the Vulkan device memory for the buffer. */

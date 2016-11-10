@@ -16,7 +16,7 @@ namespace vku {
         class Shader final : public Resource
         {
         public:
-            Shader(const std::string& shaderFilename, gfx::LogicalDevice* device);
+            Shader(const std::string& shaderFilename, const LogicalDevice* device);
             Shader(const Shader&);
             Shader& operator=(const Shader&);
             Shader(Shader&&) noexcept;

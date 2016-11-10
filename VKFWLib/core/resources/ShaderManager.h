@@ -15,7 +15,7 @@ namespace vku {
     class ShaderManager final : public ResourceManager<gfx::Shader>
     {
     public:
-        explicit ShaderManager(gfx::LogicalDevice* device);
+        explicit ShaderManager(const gfx::LogicalDevice* device);
         ShaderManager(const ShaderManager&);
         ShaderManager& operator=(const ShaderManager&);
         ShaderManager(ShaderManager&&) noexcept;

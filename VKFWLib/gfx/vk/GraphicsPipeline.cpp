@@ -9,18 +9,16 @@
 #include "GraphicsPipeline.h"
 #include "LogicalDevice.h"
 #include "core/resources/ShaderManager.h"
-#include "Framebuffer.h"
 
 namespace vku { namespace gfx {
 
-    GraphicsPipeline::GraphicsPipeline(gfx::LogicalDevice* device, const std::vector<std::shared_ptr<Shader>>& shaders, const glm::uvec2& size, unsigned int numBlendAttachments) :
+    GraphicsPipeline::GraphicsPipeline(const LogicalDevice* device, const std::vector<std::shared_ptr<Shader>>& shaders, const glm::uvec2& size, unsigned int numBlendAttachments) :
         device_{ device },
         shaders_{ shaders },
         state_{ std::make_unique<State>() }
     {
         ResetShaders(shaders);
 
-        // TODO: gets filled by model later (vertexInputCreateInfo_, inputAssemblyCreateInfo_). [10/31/2016 Sebastian Maisch]
         state_->inputAssemblyCreateInfo_.setTopology(vk::PrimitiveTopology::eTriangleList);
 
         ResetFramebuffer(size, 1, 1);
@@ -44,16 +42,14 @@ namespace vku { namespace gfx {
         state_->colorBlending_ = vk::PipelineColorBlendStateCreateInfo{ vk::PipelineColorBlendStateCreateFlags(), VK_FALSE, vk::LogicOp::eCopy,
             static_cast<uint32_t>(state_->colorBlendAttachments_.size()), state_->colorBlendAttachments_.data(), {{ 0.0f, 0.0f, 0.0f, 0.0f }} };
 
+        state_->dynamicStates_.push_back(vk::DynamicState::eLineWidth);
+
         // state_->pipelineLayoutInfo_ = vk::PipelineLayoutCreateInfo{ vk::PipelineLayoutCreateFlags(), };
         /*pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         pipelineLayoutInfo.setLayoutCount = 0; // Optional
         pipelineLayoutInfo.pSetLayouts = nullptr; // Optional
         pipelineLayoutInfo.pushConstantRangeCount = 0; // Optional
-        pipelineLayoutInfo.pPushConstantRanges = 0; // Optional
-
-
-        vk::GraphicsPipelineCreateInfo gpCreateInfo{ , };
-        device_->GetDevice().createGraphicsPipeline(vk::PipelineCache(), );*/
+        pipelineLayoutInfo.pPushConstantRanges = 0; // Optional*/
     }
 
 
@@ -79,7 +75,7 @@ namespace vku { namespace gfx {
         for (auto& viewport : state_->viewports_) viewport = vk::Viewport{ 0.0f, 0.0f, static_cast<float>(size.x), static_cast<float>(size.y), 0.0f, 1.0f };
         state_->scissors_.resize(numScissors);
         for (auto& scissor : state_->scissors_) scissor = vk::Rect2D{ vk::Offset2D(), vk::Extent2D{ size.x, size.y } };
-        
+
         state_->viewportState_ = vk::PipelineViewportStateCreateInfo{ vk::PipelineViewportStateCreateFlags(), numViewports, state_->viewports_.data(), numScissors, state_->scissors_.data() };
         state_->multisampling_ = vk::PipelineMultisampleStateCreateInfo{ vk::PipelineMultisampleStateCreateFlags(), vk::SampleCountFlagBits::e1, VK_FALSE, 1.0f, nullptr, VK_FALSE, VK_FALSE };
     }
@@ -89,9 +85,6 @@ namespace vku { namespace gfx {
         assert(state_);
         vk::PipelineDynamicStateCreateInfo dynamicState{ vk::PipelineDynamicStateCreateFlags(), static_cast<uint32_t>(state_->dynamicStates_.size()), state_->dynamicStates_.data() };
 
-        // auto pipelineLayout = device_->GetDevice().createPipelineLayout(state_->pipelineLayoutInfo_);
-        // device_->GetDevice().destroyP
-        
         vk::GraphicsPipelineCreateInfo pipelineInfo{ vk::PipelineCreateFlags(),
             static_cast<uint32_t>(state_->shaderStageInfos_.size()), state_->shaderStageInfos_.data(),
             &state_->vertexInputCreateInfo_, &state_->inputAssemblyCreateInfo_, &state_->tesselation_,

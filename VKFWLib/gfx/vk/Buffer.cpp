@@ -11,7 +11,7 @@
 
 namespace vku { namespace gfx {
 
-    Buffer::Buffer(LogicalDevice* device, vk::BufferUsageFlags usage) :
+    Buffer::Buffer(const LogicalDevice* device, vk::BufferUsageFlags usage) :
         device_{ device },
         size_{ 0 },
         usage_{ usage }

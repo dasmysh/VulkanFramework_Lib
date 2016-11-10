@@ -22,7 +22,7 @@ namespace vku {
      * Constructor.
      * @param resourceId the resource id to use
      */
-    Resource::Resource(const std::string& resourceId, gfx::LogicalDevice* device) :
+    Resource::Resource(const std::string& resourceId, const gfx::LogicalDevice* device) :
         device_{ device },
         id_{ GetNormalizedResourceId(resourceId) }
     {

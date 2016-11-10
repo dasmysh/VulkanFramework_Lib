@@ -13,7 +13,7 @@ namespace vku {
      * Constructor.
      * @param device the device to create resources in this manager.
      */
-    ShaderManager::ShaderManager(gfx::LogicalDevice* device) :
+    ShaderManager::ShaderManager(const gfx::LogicalDevice* device) :
         ResourceManager(device)
     {
     }

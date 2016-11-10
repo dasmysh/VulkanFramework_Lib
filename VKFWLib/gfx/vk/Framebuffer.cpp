@@ -11,7 +11,7 @@
 
 namespace vku { namespace gfx {
 
-    Framebuffer::Framebuffer(LogicalDevice* logicalDevice, const glm::uvec2& size, const std::vector<vk::Image>& images, const vk::RenderPass& renderPass, const FramebufferDescriptor& desc) :
+    Framebuffer::Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size, const std::vector<vk::Image>& images, const vk::RenderPass& renderPass, const FramebufferDescriptor& desc) :
         logicalDevice_{ logicalDevice },
         size_{ size },
         renderPass_{ renderPass },
@@ -23,7 +23,7 @@ namespace vku { namespace gfx {
         CreateFB();
     }
 
-    Framebuffer::Framebuffer(LogicalDevice* logicalDevice, const glm::uvec2& size, const vk::RenderPass& renderPass, const FramebufferDescriptor& desc) :
+    Framebuffer::Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size, const vk::RenderPass& renderPass, const FramebufferDescriptor& desc) :
         logicalDevice_{ logicalDevice },
         size_{ size },
         renderPass_{ renderPass },

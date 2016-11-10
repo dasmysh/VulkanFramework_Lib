@@ -27,8 +27,8 @@ namespace vku {
         class Framebuffer final
         {
         public:
-            Framebuffer(LogicalDevice* logicalDevice, const glm::uvec2& size, const std::vector<vk::Image>& images, const vk::RenderPass& renderPass, const FramebufferDescriptor& desc);
-            Framebuffer(LogicalDevice* logicalDevice, const glm::uvec2& size, const vk::RenderPass& renderPass, const FramebufferDescriptor& desc);
+            Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size, const std::vector<vk::Image>& images, const vk::RenderPass& renderPass, const FramebufferDescriptor& desc);
+            Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size, const vk::RenderPass& renderPass, const FramebufferDescriptor& desc);
             Framebuffer(const Framebuffer&);
             Framebuffer(Framebuffer&&) noexcept;
             Framebuffer& operator=(const Framebuffer&);
@@ -45,7 +45,7 @@ namespace vku {
             void CreateFB();
 
             /** Holds the logical device. */
-            LogicalDevice* logicalDevice_;
+            const LogicalDevice* logicalDevice_;
             /** Holds the framebuffer size. */
             glm::uvec2 size_;
             /** Holds the render pass. */

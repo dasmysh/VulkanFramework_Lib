@@ -13,7 +13,7 @@
 
 namespace vku { namespace gfx {
     
-    Shader::Shader(const std::string& shaderFilename, gfx::LogicalDevice* device) :
+    Shader::Shader(const std::string& shaderFilename, const LogicalDevice* device) :
         Resource{ shaderFilename, device },
         type_{ vk::ShaderStageFlagBits::eVertex },
         strType_{ "vertex" }

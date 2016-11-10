@@ -28,7 +28,7 @@ namespace vku {
     template<typename rType>
     struct DefaultResourceLoadingPolicy
     {
-        static std::shared_ptr<rType> CreateResource(const std::string& resId, gfx::LogicalDevice* device)
+        static std::shared_ptr<rType> CreateResource(const std::string& resId, const gfx::LogicalDevice* device)
         {
             return std::move(std::make_shared<rType>(resId, device));
         }
@@ -55,7 +55,7 @@ namespace vku {
 
     public:
         /** Constructor for resource managers. */
-        explicit ResourceManager(gfx::LogicalDevice* device) : device_{ device } {}
+        explicit ResourceManager(const gfx::LogicalDevice* device) : device_{ device } {}
 
         /** Copy constructor. */
         ResourceManager(const ResourceManager& rhs) :
@@ -172,6 +172,6 @@ namespace vku {
         /** Holds the resources managed. */
         ResourceMap resources;
         /** Holds the device for this resource. */
-        gfx::LogicalDevice* device_;
+        const gfx::LogicalDevice* device_;
     };
 }
