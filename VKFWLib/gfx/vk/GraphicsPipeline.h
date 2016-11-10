@@ -19,7 +19,7 @@ namespace vku {
         class GraphicsPipeline final
         {
         public:
-            GraphicsPipeline(gfx::LogicalDevice* device, const std::vector<std::shared_ptr<Shader>>& shaders, const glm::uvec2& size, unsigned int numBlendAttachments);
+            GraphicsPipeline(LogicalDevice* device, const std::vector<std::shared_ptr<Shader>>& shaders, const glm::uvec2& size, unsigned int numBlendAttachments);
             GraphicsPipeline(const GraphicsPipeline&);
             GraphicsPipeline& operator=(const GraphicsPipeline&);
             GraphicsPipeline(GraphicsPipeline&&) noexcept;
@@ -75,7 +75,7 @@ namespace vku {
             };
 
             /** Holds the device. */
-            gfx::LogicalDevice* device_;
+            LogicalDevice* device_;
             /** Holds the shaders used in this pipeline. */
             std::vector<std::shared_ptr<Shader>> shaders_;
             /** Holds the state. */
