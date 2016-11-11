@@ -11,10 +11,21 @@
 
 namespace vku { namespace gfx {
 
-    Buffer::Buffer(const LogicalDevice* device, vk::BufferUsageFlags usage) :
+    Buffer::Buffer(const LogicalDevice* device, vk::BufferUsageFlags usage,
+        vk::MemoryPropertyFlags memoryFlags, const std::vector<uint32_t>& queueFamilyIndices) :
         device_{ device },
         size_{ 0 },
-        usage_{ usage }
+        usage_{ usage },
+        memoryProperties_{ memoryFlags },
+        queueFamilyIndices_{ queueFamilyIndices }
+    {
+    }
+
+    Buffer::Buffer(const LogicalDevice* device, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags memoryFlags) :
+        device_{ device },
+        size_{ 0 },
+        usage_{ usage },
+        memoryProperties_{ memoryFlags }
     {
     }
 
@@ -73,12 +84,14 @@ namespace vku { namespace gfx {
 
     void Buffer::InitializeData(size_t size, const void* data)
     {
+        // TODO: check for host bit, transfer via staging buffer... [11/10/2016 Sebastian Maisch]
         InitializeBuffer(size);
         UploadData(0, size, data);
     }
 
     void Buffer::UploadData(size_t offset, size_t size, const void* data)
     {
+        // TODO: check for host bit, transfer via staging buffer... [11/10/2016 Sebastian Maisch]
         if (offset + size > size_) {
             std::vector<int8_t> tmp(offset);
             DownloadData(tmp);
@@ -91,6 +104,7 @@ namespace vku { namespace gfx {
 
     void Buffer::DownloadData(size_t size, void* data) const
     {
+        // TODO: check for host bit, transfer via staging buffer... [11/10/2016 Sebastian Maisch]
         auto deviceMem = device_->GetDevice().mapMemory(bufferDeviceMemory_, 0, size, vk::MemoryMapFlags());
         memcpy(data, deviceMem, size);
         device_->GetDevice().unmapMemory(bufferDeviceMemory_);
@@ -114,10 +128,15 @@ namespace vku { namespace gfx {
 
         size_ = size;
         vk::BufferCreateInfo bufferCreateInfo{ vk::BufferCreateFlags(), static_cast<vk::DeviceSize>(size_), usage_, vk::SharingMode::eExclusive };
+        if (queueFamilyIndices_.size() > 0) {
+            bufferCreateInfo.setQueueFamilyIndexCount(static_cast<uint32_t>(queueFamilyIndices_.size()));
+            bufferCreateInfo.setPQueueFamilyIndices(queueFamilyIndices_.data());
+        }
+        if (queueFamilyIndices_.size() > 1) bufferCreateInfo.setSharingMode(vk::SharingMode::eExclusive);
         buffer_ = device_->GetDevice().createBuffer(bufferCreateInfo);
 
         auto memRequirements = device_->GetDevice().getBufferMemoryRequirements(buffer_);
-        vk::MemoryAllocateInfo allocInfo{ memRequirements.size, FindMemoryType(memRequirements.memoryTypeBits, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent) };
+        vk::MemoryAllocateInfo allocInfo{ memRequirements.size, FindMemoryType(memRequirements.memoryTypeBits, memoryProperties_) };
         bufferDeviceMemory_ = device_->GetDevice().allocateMemory(allocInfo);
         device_->GetDevice().bindBufferMemory(buffer_, bufferDeviceMemory_, 0);
     }

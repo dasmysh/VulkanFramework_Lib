@@ -16,7 +16,9 @@ namespace vku { namespace gfx {
     class Buffer final
     {
     public:
-        Buffer(const LogicalDevice* device, vk::BufferUsageFlags usage);
+        Buffer(const LogicalDevice* device, vk::BufferUsageFlags usage,
+            vk::MemoryPropertyFlags memoryFlags, const std::vector<uint32_t>& queueFamilyIndices);
+        Buffer(const LogicalDevice* device, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags memoryFlags);
         ~Buffer();
         Buffer(const Buffer&);
         Buffer& operator=(const Buffer&);
@@ -49,6 +51,10 @@ namespace vku { namespace gfx {
         size_t size_;
         /** Holds the buffer usage. */
         vk::BufferUsageFlags usage_;
+        /** Holds the memory properties. */
+        vk::MemoryPropertyFlags memoryProperties_;
+        /** Holds the queue family indices. */
+        std::vector<uint32_t> queueFamilyIndices_;
     };
 
     template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> Buffer::InitializeData(const T& data)
