@@ -21,39 +21,12 @@ namespace vku { namespace gfx {
     {
     }
 
-    Buffer::Buffer(const LogicalDevice* device, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags memoryFlags) :
-        device_{ device },
-        size_{ 0 },
-        usage_{ usage },
-        memoryProperties_{ memoryFlags }
-    {
-    }
-
     Buffer::~Buffer()
     {
         if (buffer_) device_->GetDevice().destroyBuffer(buffer_);
         buffer_ = vk::Buffer();
         if (bufferDeviceMemory_) device_->GetDevice().freeMemory(bufferDeviceMemory_);
         bufferDeviceMemory_ = vk::DeviceMemory();
-    }
-
-    Buffer::Buffer(const Buffer& rhs) :
-        device_{ rhs.device_ },
-        size_{ rhs.size_ },
-        usage_{ rhs.usage_ }
-    {
-        std::vector<int8_t> tmp(size_);
-        rhs.DownloadData(tmp);
-        InitializeData(tmp);
-    }
-
-    Buffer& Buffer::operator=(const Buffer& rhs)
-    {
-        if (this != &rhs) {
-            auto tmp{ rhs };
-            std::swap(*this, tmp);
-        }
-        return *this;
     }
 
     Buffer::Buffer(Buffer&& rhs) noexcept :
@@ -80,34 +53,6 @@ namespace vku { namespace gfx {
         rhs.bufferDeviceMemory_ = vk::DeviceMemory();
         rhs.size_ = 0;
         return *this;
-    }
-
-    void Buffer::InitializeData(size_t size, const void* data)
-    {
-        // TODO: check for host bit, transfer via staging buffer... [11/10/2016 Sebastian Maisch]
-        InitializeBuffer(size);
-        UploadData(0, size, data);
-    }
-
-    void Buffer::UploadData(size_t offset, size_t size, const void* data)
-    {
-        // TODO: check for host bit, transfer via staging buffer... [11/10/2016 Sebastian Maisch]
-        if (offset + size > size_) {
-            std::vector<int8_t> tmp(offset);
-            DownloadData(tmp);
-            InitializeBuffer(offset + size);
-            UploadDataInternal(0, offset, tmp.data());
-        }
-
-        UploadDataInternal(offset, size, data);
-    }
-
-    void Buffer::DownloadData(size_t size, void* data) const
-    {
-        // TODO: check for host bit, transfer via staging buffer... [11/10/2016 Sebastian Maisch]
-        auto deviceMem = device_->GetDevice().mapMemory(bufferDeviceMemory_, 0, size, vk::MemoryMapFlags());
-        memcpy(data, deviceMem, size);
-        device_->GetDevice().unmapMemory(bufferDeviceMemory_);
     }
 
     uint32_t Buffer::FindMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const
@@ -141,10 +86,32 @@ namespace vku { namespace gfx {
         device_->GetDevice().bindBufferMemory(buffer_, bufferDeviceMemory_, 0);
     }
 
-    void Buffer::UploadDataInternal(size_t offset, size_t size, const void* data) const
+    vk::CommandBuffer Buffer::CopyBufferAsync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx, vk::Fence fence) const
     {
-        auto deviceMem = device_->GetDevice().mapMemory(bufferDeviceMemory_, offset, size, vk::MemoryMapFlags());
-        memcpy(deviceMem, data, size);
-        device_->GetDevice().unmapMemory(bufferDeviceMemory_);
+        assert(usage_ & vk::BufferUsageFlagBits::eTransferSrc);
+        assert(dstBuffer.usage_ & vk::BufferUsageFlagBits::eTransferDst);
+        assert(size_ <= dstBuffer.size_);
+
+        vk::CommandBufferAllocateInfo cmdBufferallocInfo{ device_->GetCommandPool(copyQueueIdx.first) , vk::CommandBufferLevel::ePrimary, 1 };
+        auto transferCmdBuffers = device_->GetDevice().allocateCommandBuffers(cmdBufferallocInfo);
+
+        vk::CommandBufferBeginInfo beginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
+        transferCmdBuffers[0].begin(beginInfo);
+        vk::BufferCopy copyRegion{ 0, 0, size_ };
+        transferCmdBuffers[0].copyBuffer(buffer_, dstBuffer.buffer_, copyRegion);
+        transferCmdBuffers[0].end();
+
+        vk::SubmitInfo submitInfo{ 0, nullptr, nullptr, static_cast<uint32_t>(transferCmdBuffers.size()), transferCmdBuffers.data(), 0, nullptr };
+        device_->GetQueue(copyQueueIdx.first, copyQueueIdx.second).submit(submitInfo, fence);
+
+        return transferCmdBuffers[0];
+    }
+
+    void Buffer::CopyBufferSync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx, vk::Fence fence) const
+    {
+        auto cmdBuffer = CopyBufferAsync(dstBuffer, copyQueueIdx, fence);
+        device_->GetQueue(copyQueueIdx.first, copyQueueIdx.second).waitIdle();
+
+        device_->GetDevice().freeCommandBuffers(device_->GetCommandPool(copyQueueIdx.first), cmdBuffer);
     }
 }}

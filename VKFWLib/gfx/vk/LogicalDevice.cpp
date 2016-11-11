@@ -15,10 +15,11 @@
 namespace vku { namespace gfx {
 
     LogicalDevice::LogicalDevice(const vk::PhysicalDevice& phDevice, const std::vector<DeviceQueueDesc>& queueDescs, const vk::SurfaceKHR& surface) :
-        vkPhysicalDevice_(phDevice)
+        vkPhysicalDevice_(phDevice),
+        queueDescriptions_(queueDescs)
     {
         std::vector<vk::DeviceQueueCreateInfo> queueCreateInfo;
-        for (const auto& queueDesc : queueDescs) {
+        for (const auto& queueDesc : queueDescriptions_) {
             queueCreateInfo.emplace_back(vk::DeviceQueueCreateFlags(), queueDesc.familyIndex_, static_cast<uint32_t>(queueDesc.priorities_.size()), queueDesc.priorities_.data());
         }
         auto deviceFeatures = vkPhysicalDevice_.getFeatures();
@@ -44,11 +45,11 @@ namespace vku { namespace gfx {
             &deviceFeatures };
 
         vkDevice_ = vkPhysicalDevice_.createDevice(deviceCreateInfo);
-        vkQueues_.resize(queueDescs.size());
-        for (auto i = 0U; i < queueDescs.size(); ++i) {
-            vkQueues_[i].resize(queueDescs[i].priorities_.size());
+        vkQueues_.resize(queueDescriptions_.size());
+        for (auto i = 0U; i < queueDescriptions_.size(); ++i) {
+            vkQueues_[i].resize(queueDescriptions_[i].priorities_.size());
             for (auto j = 0U; j < vkQueues_[i].size(); ++j) {
-                vkQueues_[i][j] = vkDevice_.getQueue(queueDescs[i].familyIndex_, j);
+                vkQueues_[i][j] = vkDevice_.getQueue(queueDescriptions_[i].familyIndex_, j);
             }
         }
 

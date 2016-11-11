@@ -9,37 +9,35 @@
 #pragma once
 
 #include "main.h"
-#include <core/type_traits.h>
+#include "LogicalDevice.h"
 
 namespace vku { namespace gfx {
 
-    class Buffer final
+    class Buffer
     {
     public:
-        Buffer(const LogicalDevice* device, vk::BufferUsageFlags usage,
-            vk::MemoryPropertyFlags memoryFlags, const std::vector<uint32_t>& queueFamilyIndices);
-        Buffer(const LogicalDevice* device, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags memoryFlags);
-        ~Buffer();
-        Buffer(const Buffer&);
-        Buffer& operator=(const Buffer&);
+        Buffer(const LogicalDevice* device, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags memoryFlags = vk::MemoryPropertyFlags(),
+            const std::vector<uint32_t>& queueFamilyIndices = std::vector<uint32_t>{});
+        virtual ~Buffer();
+        Buffer(const Buffer&) = delete;
+        Buffer& operator=(const Buffer&) = delete;
         Buffer(Buffer&&) noexcept;
         Buffer& operator=(Buffer&&) noexcept;
 
-        void InitializeData(size_t size, const void* data);
-        void UploadData(size_t offset, size_t size, const void* data);
-        void DownloadData(size_t size, void* data) const;
+        void InitializeBuffer(size_t size);
+        vk::CommandBuffer CopyBufferAsync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx, vk::Fence fence = vk::Fence()) const;
+        void CopyBufferSync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx, vk::Fence fence = vk::Fence()) const;
 
         size_t GetSize() const { return size_; }
         const vk::Buffer* GetBuffer() const { return &buffer_; }
 
-        template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> InitializeData(const T& data);
-        template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> UploadData(size_t offset, const T& data);
-        template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value>  DownloadData(T& data) const;
+    protected:
+        Buffer CopyWithoutData() const { return Buffer{ device_, usage_, memoryProperties_, queueFamilyIndices_ }; }
+        vk::DeviceMemory GetDeviceMemory() const { return bufferDeviceMemory_; }
+        vk::Device GetDevice() const { return device_->GetDevice(); }
 
     private:
         uint32_t FindMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const;
-        void InitializeBuffer(size_t size);
-        void UploadDataInternal(size_t offset, size_t size, const void* data) const;
 
         /** Holds the device. */
         const LogicalDevice* device_;
@@ -56,19 +54,4 @@ namespace vku { namespace gfx {
         /** Holds the queue family indices. */
         std::vector<uint32_t> queueFamilyIndices_;
     };
-
-    template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> Buffer::InitializeData(const T& data)
-    {
-        InitializeData(static_cast<unsigned int>(sizeof(T::value_type) * data.size()), data.data());
-    }
-
-    template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> Buffer::UploadData(size_t offset, const T& data)
-    {
-        UploadData(offset, static_cast<unsigned int>(sizeof(T::value_type) * data.size()), data.data());
-    }
-
-    template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> Buffer::DownloadData(T& data) const
-    {
-        DownloadData(static_cast<unsigned int>(sizeof(T::value_type) * data.size()), data.data());
-    }
 }}

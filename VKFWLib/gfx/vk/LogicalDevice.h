@@ -43,6 +43,7 @@ namespace vku {
             const vk::PhysicalDevice& GetPhysicalDevice() const { return vkPhysicalDevice_; }
             const vk::Device& GetDevice() const { return vkDevice_; }
             const vk::Queue& GetQueue(unsigned int familyIndex, unsigned int queueIndex) const { return vkQueues_[familyIndex][queueIndex]; }
+            const DeviceQueueDesc& GetQueueInfo(unsigned int familyIndex) const { return queueDescriptions_[familyIndex]; }
             const vk::CommandPool& GetCommandPool(unsigned int familyIndex) const { return vkCmdPools_[familyIndex]; }
 
             std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline(const std::vector<std::string>& shaderNames, const glm::uvec2& size, unsigned int numBlendAttachments);
@@ -66,6 +67,7 @@ namespace vku {
             std::vector<std::vector<vk::Queue>> vkQueues_;
             /** Holds a command pool for each queue family. */
             std::vector<vk::CommandPool> vkCmdPools_;
+            std::vector<DeviceQueueDesc> queueDescriptions_;
 
             /** Holds whether debug markers are enabled. */
             bool enableDebugMarkers_ = false;
