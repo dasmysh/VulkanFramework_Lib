@@ -86,7 +86,9 @@ namespace vku { namespace gfx {
         device_->GetDevice().bindBufferMemory(buffer_, bufferDeviceMemory_, 0);
     }
 
-    vk::CommandBuffer Buffer::CopyBufferAsync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx, vk::Fence fence) const
+    vk::CommandBuffer Buffer::CopyBufferAsync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx,
+        const std::vector<vk::Semaphore>& waitSemaphores, const std::vector<vk::Semaphore>& signalSemaphores,
+        vk::Fence fence) const
     {
         assert(usage_ & vk::BufferUsageFlagBits::eTransferSrc);
         assert(dstBuffer.usage_ & vk::BufferUsageFlagBits::eTransferDst);
@@ -101,15 +103,17 @@ namespace vku { namespace gfx {
         transferCmdBuffers[0].copyBuffer(buffer_, dstBuffer.buffer_, copyRegion);
         transferCmdBuffers[0].end();
 
-        vk::SubmitInfo submitInfo{ 0, nullptr, nullptr, static_cast<uint32_t>(transferCmdBuffers.size()), transferCmdBuffers.data(), 0, nullptr };
+        vk::SubmitInfo submitInfo{ static_cast<uint32_t>(waitSemaphores.size()), waitSemaphores.data(),
+            nullptr, static_cast<uint32_t>(transferCmdBuffers.size()), transferCmdBuffers.data(),
+            static_cast<uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
         device_->GetQueue(copyQueueIdx.first, copyQueueIdx.second).submit(submitInfo, fence);
 
         return transferCmdBuffers[0];
     }
 
-    void Buffer::CopyBufferSync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx, vk::Fence fence) const
+    void Buffer::CopyBufferSync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx) const
     {
-        auto cmdBuffer = CopyBufferAsync(dstBuffer, copyQueueIdx, fence);
+        auto cmdBuffer = CopyBufferAsync(dstBuffer, copyQueueIdx);
         device_->GetQueue(copyQueueIdx.first, copyQueueIdx.second).waitIdle();
 
         device_->GetDevice().freeCommandBuffers(device_->GetCommandPool(copyQueueIdx.first), cmdBuffer);

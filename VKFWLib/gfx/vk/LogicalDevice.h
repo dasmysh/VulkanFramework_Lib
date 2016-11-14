@@ -42,9 +42,9 @@ namespace vku {
 
             const vk::PhysicalDevice& GetPhysicalDevice() const { return vkPhysicalDevice_; }
             const vk::Device& GetDevice() const { return vkDevice_; }
-            const vk::Queue& GetQueue(unsigned int familyIndex, unsigned int queueIndex) const { return vkQueues_[familyIndex][queueIndex]; }
+            const vk::Queue& GetQueue(unsigned int familyIndex, unsigned int queueIndex) const { return vkQueuesByRequestedFamily_[familyIndex][queueIndex]; }
             const DeviceQueueDesc& GetQueueInfo(unsigned int familyIndex) const { return queueDescriptions_[familyIndex]; }
-            const vk::CommandPool& GetCommandPool(unsigned int familyIndex) const { return vkCmdPools_[familyIndex]; }
+            const vk::CommandPool& GetCommandPool(unsigned int familyIndex) const { return vkCmdPoolsByRequestedQFamily_[familyIndex]; }
 
             std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline(const std::vector<std::string>& shaderNames, const glm::uvec2& size, unsigned int numBlendAttachments);
 
@@ -63,11 +63,17 @@ namespace vku {
             vk::PhysicalDevice vkPhysicalDevice_;
             /** Holds the actual device. */
             vk::Device vkDevice_;
-            /** Holds the queues. */
-            std::vector<std::vector<vk::Queue>> vkQueues_;
-            /** Holds a command pool for each queue family. */
-            std::vector<vk::CommandPool> vkCmdPools_;
+            /** Holds the queues by device queue family. */
+            std::map<uint32_t, std::vector<vk::Queue>> vkQueuesByDeviceFamily_;
+            /** Holds a command pool for each device queue family. */
+            std::map<uint32_t, vk::CommandPool> vkCmdPoolsByDeviceQFamily_;
+
+            /** Holds the queue descriptions. */
             std::vector<DeviceQueueDesc> queueDescriptions_;
+            /** Holds the queues by requested queue family. */
+            std::vector<std::vector<vk::Queue>> vkQueuesByRequestedFamily_;
+            /** Holds a command pool for each requested queue family. */
+            std::vector<vk::CommandPool> vkCmdPoolsByRequestedQFamily_;
 
             /** Holds whether debug markers are enabled. */
             bool enableDebugMarkers_ = false;

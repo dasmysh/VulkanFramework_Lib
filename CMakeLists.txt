@@ -1,10 +1,9 @@
-cmake_minimum_required(VERSION 3.6)
+cmake_minimum_required(VERSION 3.7)
 
 set(FWLIB_LIBNAME VKFWLib)
 set(FWLIB_LIBNAME ${FWLIB_LIBNAME} PARENT_SCOPE)
 project(${FWLIB_LIBNAME})
 
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/extern/glfw/CMake/modules")
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompileSpirvShader.cmake")
 
 find_package(Boost 1.58.0 REQUIRED)

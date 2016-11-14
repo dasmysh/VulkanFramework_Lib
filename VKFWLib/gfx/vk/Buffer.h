@@ -25,8 +25,11 @@ namespace vku { namespace gfx {
         Buffer& operator=(Buffer&&) noexcept;
 
         void InitializeBuffer(size_t size);
-        vk::CommandBuffer CopyBufferAsync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx, vk::Fence fence = vk::Fence()) const;
-        void CopyBufferSync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx, vk::Fence fence = vk::Fence()) const;
+        vk::CommandBuffer CopyBufferAsync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx,
+                const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
+                const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
+                vk::Fence fence = vk::Fence()) const;
+        void CopyBufferSync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx) const;
 
         size_t GetSize() const { return size_; }
         const vk::Buffer* GetBuffer() const { return &buffer_; }

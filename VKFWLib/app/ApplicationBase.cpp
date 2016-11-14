@@ -88,12 +88,20 @@ namespace vku {
             auto queueCount = static_cast<uint32_t>(queueProps.size());
             for (uint32_t i = 0; i < queueCount; i++) {
                 if (queueProps[i].queueCount < desc.priorities_.size()) continue;
-                if (queueProps[i].queueFlags & reqFlags) {
+
+                if ((reqFlags == vk::QueueFlagBits::eTransfer && queueProps[i].queueFlags == vk::QueueFlagBits::eTransfer)
+                    || (reqFlags != vk::QueueFlagBits::eTransfer && queueProps[i].queueFlags & reqFlags)) {
                     if (surface && desc.graphics_ && !device.getSurfaceSupportKHR(i, surface)) {
                         continue;
                     }
                     return i;
                 }
+                /*if (queueProps[i].queueFlags & reqFlags) {
+                    if (surface && desc.graphics_ && !device.getSurfaceSupportKHR(i, surface)) {
+                        continue;
+                    }
+                    return i;
+                }*/
             }
             return -1;
         }

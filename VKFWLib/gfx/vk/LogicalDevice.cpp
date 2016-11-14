@@ -18,9 +18,19 @@ namespace vku { namespace gfx {
         vkPhysicalDevice_(phDevice),
         queueDescriptions_(queueDescs)
     {
+        std::map<uint32_t, std::vector<std::pair<uint32_t, uint32_t>>> deviceQFamilyToRequested;
+        std::map<uint32_t, std::vector<float>> deviceQFamilyPriorities;
+        for (auto i = 0U; i < queueDescriptions_.size(); ++i) {
+            for (auto j = 0U; j < queueDescriptions_[i].priorities_.size(); ++j) {
+                deviceQFamilyToRequested[queueDescriptions_[i].familyIndex_].emplace_back(std::make_pair(i, j));
+                deviceQFamilyPriorities[queueDescriptions_[i].familyIndex_].push_back(queueDescriptions_[i].priorities_[j]);
+            }
+        }
+
         std::vector<vk::DeviceQueueCreateInfo> queueCreateInfo;
         for (const auto& queueDesc : queueDescriptions_) {
-            queueCreateInfo.emplace_back(vk::DeviceQueueCreateFlags(), queueDesc.familyIndex_, static_cast<uint32_t>(queueDesc.priorities_.size()), queueDesc.priorities_.data());
+            auto& priorities = deviceQFamilyPriorities[queueDesc.familyIndex_];
+            queueCreateInfo.emplace_back(vk::DeviceQueueCreateFlags(), queueDesc.familyIndex_, static_cast<uint32_t>(priorities.size()), priorities.data());
         }
         auto deviceFeatures = vkPhysicalDevice_.getFeatures();
         std::vector<const char*> enabledDeviceExtensions;
@@ -45,11 +55,22 @@ namespace vku { namespace gfx {
             &deviceFeatures };
 
         vkDevice_ = vkPhysicalDevice_.createDevice(deviceCreateInfo);
-        vkQueues_.resize(queueDescriptions_.size());
-        for (auto i = 0U; i < queueDescriptions_.size(); ++i) {
-            vkQueues_[i].resize(queueDescriptions_[i].priorities_.size());
-            for (auto j = 0U; j < vkQueues_[i].size(); ++j) {
-                vkQueues_[i][j] = vkDevice_.getQueue(queueDescriptions_[i].familyIndex_, j);
+        vkQueuesByRequestedFamily_.resize(queueDescriptions_.size());
+        for (auto i = 0U; i < queueDescriptions_.size(); ++i) vkQueuesByRequestedFamily_[i].resize(queueDescriptions_[i].priorities_.size());
+        vkCmdPoolsByRequestedQFamily_.resize(queueDescriptions_.size());
+
+        for (const auto& deviceQueueDesc : deviceQFamilyToRequested) {
+            const auto& priorities = deviceQFamilyPriorities[deviceQueueDesc.first];
+            const auto& mappings = deviceQueueDesc.second;
+            vkQueuesByDeviceFamily_[deviceQueueDesc.first].resize(priorities.size());
+
+            vk::CommandPoolCreateInfo poolInfo{ vk::CommandPoolCreateFlags(), deviceQueueDesc.first };
+            vkCmdPoolsByDeviceQFamily_[deviceQueueDesc.first] = vkDevice_.createCommandPool(poolInfo);
+
+            for (auto j = 0U; j < priorities.size(); ++j) {
+                vkQueuesByDeviceFamily_[deviceQueueDesc.first][j] = vkDevice_.getQueue(deviceQueueDesc.first, j);
+                vkQueuesByRequestedFamily_[mappings[j].first][mappings[j].second] = vkQueuesByDeviceFamily_[deviceQueueDesc.first][j];
+                vkCmdPoolsByRequestedQFamily_[mappings[j].first] = vkCmdPoolsByDeviceQFamily_[deviceQueueDesc.first];
             }
         }
 
@@ -61,22 +82,19 @@ namespace vku { namespace gfx {
             fpCmdDebugMarkerInsertEXT = reinterpret_cast<PFN_vkCmdDebugMarkerInsertEXT>(LoadVKDeviceFunction("vkCmdDebugMarkerInsertEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
         }
 
-        vkCmdPools_.resize(queueDescs.size());
-        for (auto i = 0U; i < vkCmdPools_.size(); ++i) {
-            vk::CommandPoolCreateInfo poolInfo{ vk::CommandPoolCreateFlags(), queueDescs[i].familyIndex_ };
-            vkCmdPools_[i] = vkDevice_.createCommandPool(poolInfo);
-        }
-
         shaderManager_ = std::make_unique<ShaderManager>(this);
     }
 
 
     LogicalDevice::~LogicalDevice()
     {
-        for (auto& cmdPool : vkCmdPools_) {
-            if (cmdPool) vkDevice_.destroyCommandPool(cmdPool);
-            cmdPool = vk::CommandPool();
+        for (auto& cmdPool : vkCmdPoolsByDeviceQFamily_) {
+            if (cmdPool.second) vkDevice_.destroyCommandPool(cmdPool.second);
         }
+        vkCmdPoolsByDeviceQFamily_.clear();
+        vkCmdPoolsByRequestedQFamily_.clear();
+        vkQueuesByDeviceFamily_.clear();
+        vkQueuesByRequestedFamily_.clear();
 
         if (vkDevice_) vkDevice_.destroy();
     }

@@ -10,7 +10,7 @@
 
 #include "main.h"
 #include "Buffer.h"
-#include <core/type_traits.h>
+#include "core/type_traits.h"
 
 namespace vku { namespace gfx {
     class DeviceBuffer;
@@ -40,16 +40,16 @@ namespace vku { namespace gfx {
 
     template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> HostBuffer::InitializeData(const T& data)
     {
-        InitializeData(static_cast<unsigned int>(sizeof(T::value_type) * data.size()), data.data());
+        InitializeData(static_cast<size_t>(sizeof(T::value_type) * data.size()), data.data());
     }
 
     template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> HostBuffer::UploadData(size_t offset, const T& data)
     {
-        UploadData(offset, static_cast<unsigned int>(sizeof(T::value_type) * data.size()), data.data());
+        UploadData(offset, static_cast<size_t>(sizeof(T::value_type) * data.size()), data.data());
     }
 
     template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> HostBuffer::DownloadData(T& data) const
     {
-        DownloadData(static_cast<unsigned int>(sizeof(T::value_type) * data.size()), data.data());
+        DownloadData(static_cast<size_t>(sizeof(T::value_type) * data.size()), data.data());
     }
 }}
