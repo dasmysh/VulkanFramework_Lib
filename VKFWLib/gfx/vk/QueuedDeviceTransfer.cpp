@@ -19,7 +19,10 @@ namespace vku { namespace gfx {
     }
 
 
-    QueuedDeviceTransfer::~QueuedDeviceTransfer() = default;
+    QueuedDeviceTransfer::~QueuedDeviceTransfer()
+    {
+        if (!transferCmdBuffers_.empty()) FinishTransfer();
+    }
 
     QueuedDeviceTransfer::QueuedDeviceTransfer(QueuedDeviceTransfer&& rhs) noexcept :
         device_{ rhs.device_ },

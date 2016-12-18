@@ -8,6 +8,7 @@
 
 #include "Buffer.h"
 #include "LogicalDevice.h"
+#include "BufferGroup.h"
 
 namespace vku { namespace gfx {
 
@@ -34,7 +35,9 @@ namespace vku { namespace gfx {
         buffer_{ rhs.buffer_ },
         bufferDeviceMemory_{ rhs.bufferDeviceMemory_ },
         size_{ rhs.size_ },
-        usage_{ rhs.usage_ }
+        usage_{ rhs.usage_ },
+        memoryProperties_{ rhs.memoryProperties_ },
+        queueFamilyIndices_{ std::move(rhs.queueFamilyIndices_) }
     {
         rhs.buffer_ = vk::Buffer();
         rhs.bufferDeviceMemory_ = vk::DeviceMemory();
@@ -49,25 +52,15 @@ namespace vku { namespace gfx {
         bufferDeviceMemory_ = rhs.bufferDeviceMemory_;
         size_ = rhs.size_;
         usage_ = rhs.usage_;
+        memoryProperties_ = rhs.memoryProperties_;
+        queueFamilyIndices_ = std::move(rhs.queueFamilyIndices_);
         rhs.buffer_ = vk::Buffer();
         rhs.bufferDeviceMemory_ = vk::DeviceMemory();
         rhs.size_ = 0;
         return *this;
     }
 
-    uint32_t Buffer::FindMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const
-    {
-        auto memProperties = device_->GetPhysicalDevice().getMemoryProperties();
-        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-            if ((typeFilter & (1 << i)) && (memProperties.memoryTypes[i].propertyFlags & properties) == properties) {
-                return i;
-            }
-        }
-
-        throw std::runtime_error("failed to find suitable memory type!");
-    }
-
-    void Buffer::InitializeBuffer(size_t size)
+    void Buffer::InitializeBuffer(size_t size, bool initMemory)
     {
         this->~Buffer();
 
@@ -80,10 +73,12 @@ namespace vku { namespace gfx {
         if (queueFamilyIndices_.size() > 1) bufferCreateInfo.setSharingMode(vk::SharingMode::eExclusive);
         buffer_ = device_->GetDevice().createBuffer(bufferCreateInfo);
 
-        auto memRequirements = device_->GetDevice().getBufferMemoryRequirements(buffer_);
-        vk::MemoryAllocateInfo allocInfo{ memRequirements.size, FindMemoryType(memRequirements.memoryTypeBits, memoryProperties_) };
-        bufferDeviceMemory_ = device_->GetDevice().allocateMemory(allocInfo);
-        device_->GetDevice().bindBufferMemory(buffer_, bufferDeviceMemory_, 0);
+        if (initMemory) {
+            auto memRequirements = device_->GetDevice().getBufferMemoryRequirements(buffer_);
+            vk::MemoryAllocateInfo allocInfo{ memRequirements.size, BufferGroup::FindMemoryType(device_, memRequirements.memoryTypeBits, memoryProperties_) };
+            bufferDeviceMemory_ = device_->GetDevice().allocateMemory(allocInfo);
+            device_->GetDevice().bindBufferMemory(buffer_, bufferDeviceMemory_, 0);
+        }
     }
 
     vk::CommandBuffer Buffer::CopyBufferAsync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx,
@@ -95,20 +90,19 @@ namespace vku { namespace gfx {
         assert(size_ <= dstBuffer.size_);
 
         vk::CommandBufferAllocateInfo cmdBufferallocInfo{ device_->GetCommandPool(copyQueueIdx.first) , vk::CommandBufferLevel::ePrimary, 1 };
-        auto transferCmdBuffers = device_->GetDevice().allocateCommandBuffers(cmdBufferallocInfo);
+        auto transferCmdBuffer = device_->GetDevice().allocateCommandBuffers(cmdBufferallocInfo)[0];
 
         vk::CommandBufferBeginInfo beginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
-        transferCmdBuffers[0].begin(beginInfo);
+        transferCmdBuffer.begin(beginInfo);
         vk::BufferCopy copyRegion{ 0, 0, size_ };
-        transferCmdBuffers[0].copyBuffer(buffer_, dstBuffer.buffer_, copyRegion);
-        transferCmdBuffers[0].end();
+        transferCmdBuffer.copyBuffer(buffer_, dstBuffer.buffer_, copyRegion);
+        transferCmdBuffer.end();
 
         vk::SubmitInfo submitInfo{ static_cast<uint32_t>(waitSemaphores.size()), waitSemaphores.data(),
-            nullptr, static_cast<uint32_t>(transferCmdBuffers.size()), transferCmdBuffers.data(),
-            static_cast<uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
+            nullptr, 1, &transferCmdBuffer, static_cast<uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
         device_->GetQueue(copyQueueIdx.first, copyQueueIdx.second).submit(submitInfo, fence);
 
-        return transferCmdBuffers[0];
+        return transferCmdBuffer;
     }
 
     void Buffer::CopyBufferSync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx) const

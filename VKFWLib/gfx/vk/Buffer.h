@@ -24,7 +24,7 @@ namespace vku { namespace gfx {
         Buffer(Buffer&&) noexcept;
         Buffer& operator=(Buffer&&) noexcept;
 
-        void InitializeBuffer(size_t size);
+        void InitializeBuffer(size_t size, bool initMemory = true);
         vk::CommandBuffer CopyBufferAsync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx,
                 const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
                 const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
@@ -33,6 +33,7 @@ namespace vku { namespace gfx {
 
         size_t GetSize() const { return size_; }
         const vk::Buffer* GetBuffer() const { return &buffer_; }
+        vk::MemoryPropertyFlags GetMemoryProperties() const { return memoryProperties_; }
 
     protected:
         Buffer CopyWithoutData() const { return Buffer{ device_, usage_, memoryProperties_, queueFamilyIndices_ }; }
@@ -40,8 +41,6 @@ namespace vku { namespace gfx {
         vk::Device GetDevice() const { return device_->GetDevice(); }
 
     private:
-        uint32_t FindMemoryType(uint32_t typeFilter, vk::MemoryPropertyFlags properties) const;
-
         /** Holds the device. */
         const LogicalDevice* device_;
         /** Holds the Vulkan buffer object. */
