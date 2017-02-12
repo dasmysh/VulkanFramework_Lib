@@ -102,7 +102,7 @@ namespace vku {
          * @param time the time elapsed since the application started
          * @param elapsed the time elapsed since the last frame
          */
-        virtual void FrameMove(float time, float elapsed) = 0;
+        virtual void FrameMove(float time, float elapsed, const VKWindow* window) = 0;
         /** Render the scene. */
         virtual void RenderScene(const VKWindow* window) = 0;
         /** Render the scenes GUI. */
@@ -117,7 +117,6 @@ namespace vku {
 
         void CheckVKInstanceExtensions(const std::vector<const char*>& enabledExtensions);
         void CheckVKInstanceLayers();
-        static constexpr uint32_t NUM_GRAPHICS_QUEUES = 1;
 
         /** Holds the Vulkan validation layers. */
         std::vector<const char*> vkValidationLayers_;

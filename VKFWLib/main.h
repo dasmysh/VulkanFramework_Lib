@@ -31,6 +31,8 @@
 #include <vector>
 #pragma warning(pop)
 
+#define GLM_FORCE_DEPTH_ZERO_TO_ONE
+
 #pragma warning(disable : 4201)
 #include <glm/glm.hpp>
 #pragma warning(default : 4201)

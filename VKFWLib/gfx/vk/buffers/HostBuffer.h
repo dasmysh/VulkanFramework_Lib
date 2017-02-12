@@ -26,10 +26,12 @@ namespace vku { namespace gfx {
         HostBuffer(HostBuffer&&) noexcept;
         HostBuffer& operator=(HostBuffer&&) noexcept;
 
+        void InitializeData(size_t bufferSize, size_t dataSize, const void* data);
         void InitializeData(size_t size, const void* data);
         void UploadData(size_t offset, size_t size, const void* data);
         void DownloadData(size_t size, void* data) const;
 
+        template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> InitializeData(size_t bufferSize, const T& data);
         template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> InitializeData(const T& data);
         template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> UploadData(size_t offset, const T& data);
         template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value>  DownloadData(T& data) const;
@@ -38,18 +40,23 @@ namespace vku { namespace gfx {
         void UploadDataInternal(size_t offset, size_t size, const void* data) const;
     };
 
+    template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> HostBuffer::InitializeData(size_t bufferSize, const T& data)
+    {
+        InitializeData(bufferSize, byteSizeOf(data), data.data());
+    }
+
     template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> HostBuffer::InitializeData(const T& data)
     {
-        InitializeData(static_cast<size_t>(sizeof(T::value_type) * data.size()), data.data());
+        InitializeData(byteSizeOf(data), data.data());
     }
 
     template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> HostBuffer::UploadData(size_t offset, const T& data)
     {
-        UploadData(offset, static_cast<size_t>(sizeof(T::value_type) * data.size()), data.data());
+        UploadData(offset, byteSizeOf(data), data.data());
     }
 
     template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> HostBuffer::DownloadData(T& data) const
     {
-        DownloadData(static_cast<size_t>(sizeof(T::value_type) * data.size()), data.data());
+        DownloadData(byteSizeOf(data), data.data());
     }
 }}

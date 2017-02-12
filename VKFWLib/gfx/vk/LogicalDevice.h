@@ -56,11 +56,15 @@ namespace vku {
 
             ShaderManager* GetShaderManager() const { return shaderManager_.get(); }
 
+            size_t CalculateUniformBufferAlignment(size_t size) const;
+
         private:
             PFN_vkVoidFunction LoadVKDeviceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false) const;
 
             /** Holds the physical device. */
             vk::PhysicalDevice vkPhysicalDevice_;
+            /** Holds the physical device limits. */
+            vk::PhysicalDeviceLimits vkPhysicalDeviceLimits_;
             /** Holds the actual device. */
             vk::Device vkDevice_;
             /** Holds the queues by device queue family. */

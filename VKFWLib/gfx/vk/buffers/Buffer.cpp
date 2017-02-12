@@ -7,7 +7,6 @@
  */
 
 #include "Buffer.h"
-#include "LogicalDevice.h"
 #include "BufferGroup.h"
 
 namespace vku { namespace gfx {
@@ -81,20 +80,21 @@ namespace vku { namespace gfx {
         }
     }
 
-    vk::CommandBuffer Buffer::CopyBufferAsync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx,
-        const std::vector<vk::Semaphore>& waitSemaphores, const std::vector<vk::Semaphore>& signalSemaphores,
-        vk::Fence fence) const
+    vk::CommandBuffer Buffer::CopyBufferAsync(size_t srcOffset, const Buffer& dstBuffer, size_t dstOffset,
+        size_t size, std::pair<uint32_t, uint32_t> copyQueueIdx, const std::vector<vk::Semaphore>& waitSemaphores,
+        const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
     {
         assert(usage_ & vk::BufferUsageFlagBits::eTransferSrc);
         assert(dstBuffer.usage_ & vk::BufferUsageFlagBits::eTransferDst);
-        assert(size_ <= dstBuffer.size_);
+        assert(srcOffset + size <= size_);
+        assert(dstOffset + size <= dstBuffer.size_);
 
         vk::CommandBufferAllocateInfo cmdBufferallocInfo{ device_->GetCommandPool(copyQueueIdx.first) , vk::CommandBufferLevel::ePrimary, 1 };
         auto transferCmdBuffer = device_->GetDevice().allocateCommandBuffers(cmdBufferallocInfo)[0];
 
         vk::CommandBufferBeginInfo beginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
         transferCmdBuffer.begin(beginInfo);
-        vk::BufferCopy copyRegion{ 0, 0, size_ };
+        vk::BufferCopy copyRegion{ srcOffset, dstOffset, size };
         transferCmdBuffer.copyBuffer(buffer_, dstBuffer.buffer_, copyRegion);
         transferCmdBuffer.end();
 
@@ -103,6 +103,13 @@ namespace vku { namespace gfx {
         device_->GetQueue(copyQueueIdx.first, copyQueueIdx.second).submit(submitInfo, fence);
 
         return transferCmdBuffer;
+    }
+
+    vk::CommandBuffer Buffer::CopyBufferAsync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx,
+        const std::vector<vk::Semaphore>& waitSemaphores, const std::vector<vk::Semaphore>& signalSemaphores,
+        vk::Fence fence) const
+    {
+        return CopyBufferAsync(0, dstBuffer, 0, size_, copyQueueIdx, waitSemaphores, signalSemaphores, fence);
     }
 
     void Buffer::CopyBufferSync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx) const

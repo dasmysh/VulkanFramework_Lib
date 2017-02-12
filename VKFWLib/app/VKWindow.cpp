@@ -214,6 +214,7 @@ namespace vku {
 
         vk::SemaphoreCreateInfo semaphoreInfo{ };
         vkImageAvailableSemaphore_ = logicalDevice_->GetDevice().createSemaphore(semaphoreInfo);
+        vkDataAvailableSemaphore_ = logicalDevice_->GetDevice().createSemaphore(semaphoreInfo);
         vkRenderingFinishedSemaphore_ = logicalDevice_->GetDevice().createSemaphore(semaphoreInfo);
 
         LOG(INFO) << "Initializing Vulkan surface... done.";
@@ -329,6 +330,8 @@ namespace vku {
 
         if (vkImageAvailableSemaphore_) logicalDevice_->GetDevice().destroySemaphore(vkImageAvailableSemaphore_);
         vkImageAvailableSemaphore_ = vk::Semaphore();
+        if (vkDataAvailableSemaphore_) logicalDevice_->GetDevice().destroySemaphore(vkDataAvailableSemaphore_);
+        vkDataAvailableSemaphore_ = vk::Semaphore();
         if (vkRenderingFinishedSemaphore_) logicalDevice_->GetDevice().destroySemaphore(vkRenderingFinishedSemaphore_);
         vkRenderingFinishedSemaphore_ = vk::Semaphore();
 
@@ -379,8 +382,9 @@ namespace vku {
 
     void VKWindow::DrawCurrentCommandBuffer() const
     {
-        vk::PipelineStageFlags waitStages[]{ vk::PipelineStageFlagBits::eColorAttachmentOutput };
-        vk::SubmitInfo submitInfo{ 1, &vkImageAvailableSemaphore_, waitStages, 1, &vkCommandBuffers_[currentlyRenderedImage_], 1, &vkRenderingFinishedSemaphore_ };
+        vk::PipelineStageFlags waitStages[]{ vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eTopOfPipe };
+        vk::Semaphore waitSemaphores[]{ vkImageAvailableSemaphore_, vkDataAvailableSemaphore_ };
+        vk::SubmitInfo submitInfo{ 2, waitSemaphores, waitStages, 1, &vkCommandBuffers_[currentlyRenderedImage_], 1, &vkRenderingFinishedSemaphore_ };
 
         {
             auto syncResult = logicalDevice_->GetDevice().getFenceStatus(vkCmdBufferFences_[currentlyRenderedImage_]);
@@ -416,7 +420,7 @@ namespace vku {
         ++frameCount_;
     }
 
-    void VKWindow::UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer)>& fillFunc) const
+    void VKWindow::UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer, uint32_t cmdBufferIndex)>& fillFunc) const
     {
         {
             auto syncResult = vk::Result::eTimeout;
@@ -441,7 +445,7 @@ namespace vku {
                 vk::Rect2D(vk::Offset2D(0, 0), vkSurfaceExtend_), 1, clearColor.data() };
             vkCommandBuffers_[i].beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
-            fillFunc(vkCommandBuffers_[i]);
+            fillFunc(vkCommandBuffers_[i], i);
 
             vkCommandBuffers_[i].endRenderPass();
             vkCommandBuffers_[i].end();

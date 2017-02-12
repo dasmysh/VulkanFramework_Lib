@@ -16,6 +16,7 @@ namespace vku { namespace gfx {
 
     LogicalDevice::LogicalDevice(const vk::PhysicalDevice& phDevice, const std::vector<DeviceQueueDesc>& queueDescs, const vk::SurfaceKHR& surface) :
         vkPhysicalDevice_(phDevice),
+        vkPhysicalDeviceLimits_(phDevice.getProperties().limits),
         queueDescriptions_(queueDescs)
     {
         std::map<uint32_t, std::vector<std::pair<uint32_t, uint32_t>>> deviceQFamilyToRequested;
@@ -144,5 +145,11 @@ namespace vku { namespace gfx {
     void LogicalDevice::CmdDebugMarkerInsertEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const
     {
         if (enableDebugMarkers_) fpCmdDebugMarkerInsertEXT(cmdBuffer, markerInfo);
+    }
+
+    size_t LogicalDevice::CalculateUniformBufferAlignment(size_t size) const
+    {
+        auto factor = vkPhysicalDeviceLimits_.minUniformBufferOffsetAlignment;
+        return size + factor - 1 - ((size + factor - 1) % factor);
     }
 }}

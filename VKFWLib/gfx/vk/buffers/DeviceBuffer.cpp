@@ -7,7 +7,6 @@
  */
 
 #include "DeviceBuffer.h"
-#include "LogicalDevice.h"
 #include "HostBuffer.h"
 
 namespace vku { namespace gfx {

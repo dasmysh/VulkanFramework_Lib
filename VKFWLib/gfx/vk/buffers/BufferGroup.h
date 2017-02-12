@@ -9,7 +9,7 @@
 #pragma once
 
 #include "main.h"
-#include "LogicalDevice.h"
+#include "gfx/vk/LogicalDevice.h"
 #include "core/type_traits.h"
 #include "DeviceBuffer.h"
 
@@ -70,6 +70,6 @@ namespace vku { namespace gfx {
     std::enable_if_t<has_contiguous_memory<T>::value> BufferGroup::AddBufferToGroup(vk::BufferUsageFlags usage,
         const T& data, const std::vector<uint32_t>& queueFamilyIndices)
     {
-        AddBufferToGroup(usage, static_cast<size_t>(sizeof(T::value_type) * data.size()), data.data(), queueFamilyIndices);
+        AddBufferToGroup(usage, byteSizeOf(data), data.data(), queueFamilyIndices);
     }
 }}

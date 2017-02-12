@@ -7,7 +7,6 @@
  */
 
 #include "HostBuffer.h"
-#include "LogicalDevice.h"
 #include "DeviceBuffer.h"
 
 namespace vku { namespace gfx {
@@ -49,10 +48,15 @@ namespace vku { namespace gfx {
         return *this;
     }
 
+    void HostBuffer::InitializeData(size_t bufferSize, size_t dataSize, const void* data)
+    {
+        InitializeBuffer(bufferSize);
+        UploadData(0, dataSize, data);
+    }
+
     void HostBuffer::InitializeData(size_t size, const void* data)
     {
-        InitializeBuffer(size);
-        UploadData(0, size, data);
+        InitializeData(size, size, data);
     }
 
     void HostBuffer::UploadData(size_t offset, size_t size, const void* data)

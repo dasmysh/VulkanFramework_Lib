@@ -346,10 +346,6 @@ namespace vku {
         currentTime_ = currentTime;
         glfwPollEvents();
 
-        if (!this->pause_ && (!config_.pauseOnKillFocus_ || GetFocusedWindow())) {
-            FrameMove(static_cast<float>(currentTime_), static_cast<float>(elapsedTime_));
-        }
-
         /*TODO ImGui_ImplGlfwGL3_NewFrame();
         if (guiMode_) {
             mainWin.BatchDraw([&](GLBatchRenderTarget & rt) {
@@ -359,9 +355,17 @@ namespace vku {
         }*/
 
         for (auto& window : windows_) {
-            RenderScene(&window);
-
             window.PrepareFrame();
+        }
+
+        if (!this->pause_ && (!config_.pauseOnKillFocus_ || GetFocusedWindow())) {
+            for (auto& window : windows_) {
+                FrameMove(static_cast<float>(currentTime_), static_cast<float>(elapsedTime_), &window);
+            }
+        }
+
+        for (auto& window : windows_) {
+            RenderScene(&window);
             window.DrawCurrentCommandBuffer();
             window.SubmitFrame();
         }

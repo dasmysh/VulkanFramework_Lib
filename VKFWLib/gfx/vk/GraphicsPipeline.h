@@ -20,8 +20,8 @@ namespace vku {
         {
         public:
             GraphicsPipeline(const LogicalDevice* device, const std::vector<std::shared_ptr<Shader>>& shaders, const glm::uvec2& size, unsigned int numBlendAttachments);
-            GraphicsPipeline(const GraphicsPipeline&);
-            GraphicsPipeline& operator=(const GraphicsPipeline&);
+            GraphicsPipeline(const GraphicsPipeline&) = delete;
+            GraphicsPipeline& operator=(const GraphicsPipeline&) = delete;
             GraphicsPipeline(GraphicsPipeline&&) noexcept;
             GraphicsPipeline& operator=(GraphicsPipeline&&) noexcept;
             ~GraphicsPipeline();

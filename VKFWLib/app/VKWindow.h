@@ -59,7 +59,10 @@ namespace vku {
         void SubmitFrame();
 
         // for primary cmd buffer: dirty bit, update if needed. (start cmd buffer, begin render pass, execute other buffers, end pass, end buffer)
-        void UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer)>& fillFunc) const;
+        void UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer, uint32_t cmdBufferIndex)>& fillFunc) const;
+
+        uint32_t GetCurrentlyRenderedImageIndex() const { return currentlyRenderedImage_; }
+        vk::Semaphore GetDataAvailableSemaphore() const { return vkDataAvailableSemaphore_; }
 
     private:
         void WindowPosCallback(int xpos, int ypos) const;
@@ -103,6 +106,8 @@ namespace vku {
         std::vector<vk::Fence> vkCmdBufferFences_;
         /** Holds the semaphore to notify when a new swap image is available. */
         vk::Semaphore vkImageAvailableSemaphore_;
+        /** Holds the semaphore to notify when the data for that frame is uploaded to the GPU. */
+        vk::Semaphore vkDataAvailableSemaphore_;
         /** Holds the semaphore to notify when rendering is finished. */
         vk::Semaphore vkRenderingFinishedSemaphore_;
         /** Holds the currently rendered image. */

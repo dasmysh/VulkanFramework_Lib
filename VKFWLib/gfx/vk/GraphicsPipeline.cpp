@@ -24,7 +24,7 @@ namespace vku { namespace gfx {
         ResetFramebuffer(size, 1, 1);
 
         state_->rasterizer_ = vk::PipelineRasterizationStateCreateInfo{ vk::PipelineRasterizationStateCreateFlags(), VK_FALSE,
-            VK_FALSE, vk::PolygonMode::eFill, vk::CullModeFlagBits::eBack, vk::FrontFace::eClockwise, VK_FALSE, 0.0f, 0.0f, 0.0f, 1.0f };
+            VK_FALSE, vk::PolygonMode::eFill, vk::CullModeFlagBits::eBack, vk::FrontFace::eCounterClockwise, VK_FALSE, 0.0f, 0.0f, 0.0f, 1.0f };
         vk::StencilOpState frontStencilOpState{};
         vk::StencilOpState backStencilOpState{};
         state_->depthStencil_ = vk::PipelineDepthStencilStateCreateInfo{ vk::PipelineDepthStencilStateCreateFlags(),
@@ -52,6 +52,27 @@ namespace vku { namespace gfx {
         pipelineLayoutInfo.pPushConstantRanges = 0; // Optional*/
     }
 
+    GraphicsPipeline::GraphicsPipeline(GraphicsPipeline&& rhs) noexcept :
+        device_{ rhs.device_ },
+        shaders_{ std::move(rhs.shaders_) },
+        state_{ std::move(rhs.state_) },
+        vkPipeline_{ rhs.vkPipeline_ }
+    {
+        rhs.vkPipeline_ = vk::Pipeline();
+    }
+
+    GraphicsPipeline& GraphicsPipeline::operator=(GraphicsPipeline&& rhs) noexcept
+    {
+        if (this != &rhs) {
+            this->~GraphicsPipeline();
+            device_ = rhs.device_;
+            shaders_ = std::move(rhs.shaders_);
+            state_ = std::move(rhs.state_);
+            vkPipeline_ = rhs.vkPipeline_;
+            rhs.vkPipeline_ = vk::Pipeline();
+        }
+        return *this;
+    }
 
     GraphicsPipeline::~GraphicsPipeline()
     {

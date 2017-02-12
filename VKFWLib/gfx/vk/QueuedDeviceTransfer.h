@@ -29,16 +29,29 @@ namespace vku { namespace gfx {
 
         std::unique_ptr<DeviceBuffer> CreateDeviceBufferWithData(vk::BufferUsageFlags deviceBufferUsage,
             vk::MemoryPropertyFlags memoryFlags, const std::vector<uint32_t>& deviceBufferQueues,
+            size_t bufferSize, size_t dataSize, const void* data);
+        std::unique_ptr<DeviceBuffer> CreateDeviceBufferWithData(vk::BufferUsageFlags deviceBufferUsage,
+            vk::MemoryPropertyFlags memoryFlags, const std::vector<uint32_t>& deviceBufferQueues,
             size_t size, const void* data);
+        void TransferDataToBuffer(size_t dataSize, const void* data, const Buffer& dst, size_t dstOffset);
+
+        void AddTransferToQueue(const Buffer& src, size_t srcOffset, const Buffer& dst, size_t dstOffset, size_t copySize);
         void AddTransferToQueue(const Buffer& src, const Buffer& dst);
 
         void FinishTransfer();
-        
+
         template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> CreateDeviceBufferWithData(
             vk::BufferUsageFlags deviceBufferUsage, vk::MemoryPropertyFlags memoryFlags,
                 const std::vector<uint32_t>& deviceBufferQueues, const T& data);
+        template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> CreateDeviceBufferWithData(
+            vk::BufferUsageFlags deviceBufferUsage, vk::MemoryPropertyFlags memoryFlags,
+            const std::vector<uint32_t>& deviceBufferQueues, size_t bufferSize, const T& data);
+
+        template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> TransferDataToBuffer(const T& data, const Buffer& dst, size_t dstOffset);
 
     private:
+        void AddStagingBuffer(size_t dataSize, const void* data);
+
         /** Holds the device. */
         const LogicalDevice* device_;
         /** Holds the transfer queue used. */
@@ -50,9 +63,21 @@ namespace vku { namespace gfx {
     };
 
     template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> QueuedDeviceTransfer::CreateDeviceBufferWithData(
+        vk::BufferUsageFlags deviceBufferUsage, vk::MemoryPropertyFlags memoryFlags, const std::vector<uint32_t>& deviceBufferQueues, size_t bufferSize, const T& data)
+    {
+        return CreateDeviceBufferWithData(deviceBufferUsage, memoryFlags, deviceBufferQueues,
+            bufferSize, byteSizeOf(data), data.data());
+    }
+
+    template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> QueuedDeviceTransfer::CreateDeviceBufferWithData(
         vk::BufferUsageFlags deviceBufferUsage, vk::MemoryPropertyFlags memoryFlags, const std::vector<uint32_t>& deviceBufferQueues, const T& data)
     {
         return CreateDeviceBufferWithData(deviceBufferUsage, memoryFlags, deviceBufferQueues,
-            static_cast<size_t>(sizeof(T::value_type) * data.size()), data.data());
+            byteSizeOf(data), data.data());
+    }
+
+    template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> QueuedDeviceTransfer::TransferDataToBuffer(const T& data, const Buffer& dst, size_t dstOffset)
+    {
+        TransferDataToBuffer(byteSizeOf(data), data.data(), dst, dstOffset);
     }
 }}

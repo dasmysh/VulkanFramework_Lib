@@ -12,7 +12,7 @@
 #include "DeviceBuffer.h"
 #include "HostBuffer.h"
 // ReSharper restore CppUnusedIncludeDirective
-#include "QueuedDeviceTransfer.h"
+#include "gfx/vk/QueuedDeviceTransfer.h"
 
 namespace vku { namespace gfx {
 

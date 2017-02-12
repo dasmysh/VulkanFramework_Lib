@@ -9,7 +9,7 @@
 #pragma once
 
 #include "main.h"
-#include "LogicalDevice.h"
+#include "gfx/vk/LogicalDevice.h"
 
 namespace vku { namespace gfx {
 
@@ -25,10 +25,15 @@ namespace vku { namespace gfx {
         Buffer& operator=(Buffer&&) noexcept;
 
         void InitializeBuffer(size_t size, bool initMemory = true);
-        vk::CommandBuffer CopyBufferAsync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx,
+        vk::CommandBuffer CopyBufferAsync(size_t srcOffset, const Buffer& dstBuffer, size_t dstOffset,
+                size_t size, std::pair<uint32_t, uint32_t> copyQueueIdx,
                 const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
                 const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
-                vk::Fence fence = vk::Fence()) const;
+            vk::Fence fence = vk::Fence()) const;
+        vk::CommandBuffer CopyBufferAsync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx,
+            const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
+            const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
+            vk::Fence fence = vk::Fence()) const;
         void CopyBufferSync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx) const;
 
         size_t GetSize() const { return size_; }
