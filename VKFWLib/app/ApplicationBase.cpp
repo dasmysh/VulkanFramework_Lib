@@ -494,6 +494,18 @@ namespace vku {
             }
         }
 
+#ifdef FW_DEBUG_PIPELINE
+        if (vkPhysicalDevices_.size() == 1) {
+            auto devProps = (*vkPhysicalDevices_.begin()).second.getProperties();
+            if (devProps.pipelineCacheUUID[0] == 'r' && devProps.pipelineCacheUUID[1] == 'd' &&
+                devProps.pipelineCacheUUID[2] == 'o' && devProps.pipelineCacheUUID[3] == 'c') {
+                physicalDevice = (*vkPhysicalDevices_.begin()).second;
+                foundDevice = true;
+                while (deviceQueueDesc.size() < queueDescs.size()) deviceQueueDesc.emplace_back(0, queueDescs[deviceQueueDesc.size()].priorities_);
+            }
+        }
+#endif
+
         if (!foundDevice) {
             LOG(FATAL) << "Could not find suitable Vulkan GPU.";
             throw std::runtime_error("Could not find suitable Vulkan GPU.");

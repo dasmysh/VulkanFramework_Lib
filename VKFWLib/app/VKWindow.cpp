@@ -399,7 +399,6 @@ namespace vku {
             logicalDevice_->GetDevice().resetFences(vkCmdBufferFences_[currentlyRenderedImage_]);
         }
 
-        // vk::ArrayProxy<const vk::SubmitInfo> submitInfos{ 1, &submitInfo };
         logicalDevice_->GetQueue(graphicsQueue_, 0).submit(submitInfo, vkCmdBufferFences_[currentlyRenderedImage_]);
     }
 

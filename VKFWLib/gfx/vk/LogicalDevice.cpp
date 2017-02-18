@@ -29,10 +29,24 @@ namespace vku { namespace gfx {
         }
 
         std::vector<vk::DeviceQueueCreateInfo> queueCreateInfo;
+#ifdef FW_DEBUG_PIPELINE
+        bool singleQueueOnly = false;
+        {
+            auto devProps = vkPhysicalDevice_.getProperties();
+            if (devProps.pipelineCacheUUID[0] == 'r' && devProps.pipelineCacheUUID[1] == 'd' &&
+                devProps.pipelineCacheUUID[2] == 'o' && devProps.pipelineCacheUUID[3] == 'c') singleQueueOnly = true;
+        }
+
+        if (singleQueueOnly) {
+            float prio = 1.0f;
+            queueCreateInfo.emplace_back(vk::DeviceQueueCreateFlags(), 0, 1, &prio);
+        } else // i wonder if i can make this part even more unreadable ...
+#endif
         for (const auto& queueDesc : queueDescriptions_) {
             auto& priorities = deviceQFamilyPriorities[queueDesc.familyIndex_];
             queueCreateInfo.emplace_back(vk::DeviceQueueCreateFlags(), queueDesc.familyIndex_, static_cast<uint32_t>(priorities.size()), priorities.data());
         }
+
         auto deviceFeatures = vkPhysicalDevice_.getFeatures();
         std::vector<const char*> enabledDeviceExtensions;
 
@@ -68,7 +82,15 @@ namespace vku { namespace gfx {
             vk::CommandPoolCreateInfo poolInfo{ vk::CommandPoolCreateFlags(), deviceQueueDesc.first };
             vkCmdPoolsByDeviceQFamily_[deviceQueueDesc.first] = vkDevice_.createCommandPool(poolInfo);
 
+#ifdef FW_DEBUG_PIPELINE
+            vk::Queue vkSingleQueue;
+            if (singleQueueOnly) vkSingleQueue = vkDevice_.getQueue(0, 0);
+#endif
             for (auto j = 0U; j < priorities.size(); ++j) {
+#ifdef FW_DEBUG_PIPELINE
+                if (singleQueueOnly) vkQueuesByDeviceFamily_[deviceQueueDesc.first][j] = vkSingleQueue;
+                else // i wonder if i can make this part even more unreadable ...
+#endif
                 vkQueuesByDeviceFamily_[deviceQueueDesc.first][j] = vkDevice_.getQueue(deviceQueueDesc.first, j);
                 vkQueuesByRequestedFamily_[mappings[j].first][mappings[j].second] = vkQueuesByDeviceFamily_[deviceQueueDesc.first][j];
                 vkCmdPoolsByRequestedQFamily_[mappings[j].first] = vkCmdPoolsByDeviceQFamily_[deviceQueueDesc.first];

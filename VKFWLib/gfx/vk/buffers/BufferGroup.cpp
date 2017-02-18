@@ -25,8 +25,10 @@ namespace vku { namespace gfx {
 
     BufferGroup::~BufferGroup()
     {
+        hostBuffers_.clear();
         if (hostBufferMemory_) device_->GetDevice().freeMemory(hostBufferMemory_);
         hostBufferMemory_ = vk::DeviceMemory();
+        deviceBuffers_.clear();
         if (deviceBufferMemory_) device_->GetDevice().freeMemory(deviceBufferMemory_);
         deviceBufferMemory_ = vk::DeviceMemory();
     }

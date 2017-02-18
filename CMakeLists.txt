@@ -21,6 +21,8 @@ set(ADD_BUILD_WIN_SHARED ON CACHE BOOL "Build shared library on Windows" FORCE)
 set(USE_DYNAMIC_LOGGING_LEVELS ON CACHE BOOL "Turn ON/OFF log levels. An disabled level will not push logs of that level to the sink. By default dynamic logging is disabled" FORCE)
 add_subdirectory(extern/g3log)
 
+set(FW_DEBUG_PIPELINE ON CACHE BOOL "Checks if application is started from RenderDoc and uses only a single queue then.")
+
 SET(CMAKE_DEBUG_POSTFIX "")
 
 if(MSVC)
@@ -55,7 +57,7 @@ endif()
 
 file(GLOB LIB_TOP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.h
-	${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.cpp)
 file(GLOB_RECURSE LIB_TMP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.cpp
@@ -73,7 +75,7 @@ source_group(" " FILES ${LIB_TOP_FILES})
 
 foreach(f ${LIB_RES_FILES})
     file(RELATIVE_PATH SRCGR ${FWLIB_RESOURCE_BASE_PATH} ${f})
-	set(SRCGR "Resources/${SRCGR}")
+    set(SRCGR "Resources/${SRCGR}")
     string(REGEX REPLACE "(.*)(/[^/]*)$" "\\1" SRCGR ${SRCGR})
     string(REPLACE / \\ SRCGR ${SRCGR})
     source_group("${SRCGR}" FILES ${f})
@@ -81,7 +83,7 @@ endforeach()
 
 file(GLOB_RECURSE LIB_RES_OBJ_FILES ${FWLIB_RESOURCE_BASE_PATH}/*.obj)
 foreach(f ${LIB_RES_OBJ_FILES})
-	set_source_files_properties(${f} PROPERTIES HEADER_FILE_ONLY TRUE)
+    set_source_files_properties(${f} PROPERTIES HEADER_FILE_ONLY TRUE)
 endforeach()
 
 
@@ -92,6 +94,10 @@ add_library(${FWLIB_LIBNAME} SHARED ${LIB_COMPILED_SHADERS} ${LIB_TMP_FILES} ${L
 target_include_directories(${FWLIB_LIBNAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}  ${VULKAN_INCLUDE_DIR} extern/glfw/include/ extern/glm/ extern/g3log/src ${Boost_INCLUDE_DIRS})
 target_compile_definitions(${FWLIB_LIBNAME} PUBLIC VULKAN_HPP_TYPESAFE_CONVERSION)
 target_compile_definitions(${FWLIB_LIBNAME} PRIVATE VKUFW_EXPORT)
+
+if (${FW_DEBUG_PIPELINE})
+    target_compile_definitions(${FWLIB_LIBNAME} PUBLIC FW_DEBUG_PIPELINE)
+endif()
 
 target_link_libraries(${FWLIB_LIBNAME} ${VULKAN_LIBRARY} glfw ${GLFW_LIBRARIES} g3logger_shared)
 set_property(TARGET ${FWLIB_LIBNAME} APPEND PROPERTY COMPILE_DEFINITIONS $<$<CONFIG:DebugOpenGLCalls>:_OGL_DEBUG_MSGS> _CRT_SECURE_NO_WARNINGS _SCL_SECURE_NO_WARNINGS)
