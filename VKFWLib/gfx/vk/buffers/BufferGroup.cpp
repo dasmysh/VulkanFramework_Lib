@@ -123,29 +123,4 @@ namespace vku { namespace gfx {
         sizes.push_back(static_cast<unsigned int>(memRequirements.size));
         allocInfo.allocationSize += memRequirements.size;
     }
-
-    uint32_t BufferGroup::FindMemoryType(const LogicalDevice* device, uint32_t typeFilter, vk::MemoryPropertyFlags properties)
-    {
-        auto memProperties = device->GetPhysicalDevice().getMemoryProperties();
-        for (uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-            if (CheckMemoryType(memProperties, i, typeFilter, properties)) return i;
-        }
-
-        LOG(FATAL) << "Failed to find suitable memory type (" << vk::to_string(properties) << ").";
-        throw std::runtime_error("Failed to find suitable memory type.");
-    }
-
-    bool BufferGroup::CheckMemoryType(const LogicalDevice* device, uint32_t typeToCheck, uint32_t typeFilter,
-        vk::MemoryPropertyFlags properties)
-    {
-        auto memProperties = device->GetPhysicalDevice().getMemoryProperties();
-        return CheckMemoryType(memProperties, typeToCheck, typeFilter, properties);
-    }
-
-    bool BufferGroup::CheckMemoryType(const vk::PhysicalDeviceMemoryProperties& memProperties, uint32_t typeToCheck,
-        uint32_t typeFilter, vk::MemoryPropertyFlags properties)
-    {
-        if ((typeFilter & (1 << typeToCheck)) && (memProperties.memoryTypes[typeToCheck].propertyFlags & properties) == properties) return true;
-        return false;
-    }
 }}

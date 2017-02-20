@@ -10,6 +10,7 @@
 
 #include "main.h"
 #include "gfx/vk/LogicalDevice.h"
+#include "gfx/vk/memory/DeviceMemory.h"
 
 namespace vku { namespace gfx {
 
@@ -37,13 +38,12 @@ namespace vku { namespace gfx {
         void CopyBufferSync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx) const;
 
         size_t GetSize() const { return size_; }
-        const vk::Buffer* GetBuffer() const { return &buffer_; }
-        vk::MemoryPropertyFlags GetMemoryProperties() const { return memoryProperties_; }
+        vk::Buffer GetBuffer() const { return buffer_; }
+        const vk::Buffer* GetBufferPtr() const { return &buffer_; }
+        const DeviceMemory& GetDeviceMemory() const { return bufferDeviceMemory_; }
 
     protected:
-        Buffer CopyWithoutData() const { return Buffer{ device_, usage_, memoryProperties_, queueFamilyIndices_ }; }
-        vk::DeviceMemory GetDeviceMemory() const { return bufferDeviceMemory_; }
-        vk::Device GetDevice() const { return device_->GetDevice(); }
+        Buffer CopyWithoutData() const { return Buffer{ device_, usage_, bufferDeviceMemory_.GetMemoryProperties(), queueFamilyIndices_ }; }
 
     private:
         /** Holds the device. */
@@ -51,13 +51,11 @@ namespace vku { namespace gfx {
         /** Holds the Vulkan buffer object. */
         vk::Buffer buffer_;
         /** Holds the Vulkan device memory for the buffer. */
-        vk::DeviceMemory bufferDeviceMemory_;
+        DeviceMemory bufferDeviceMemory_;
         /** Holds the current size of the buffer in bytes. */
         size_t size_;
         /** Holds the buffer usage. */
         vk::BufferUsageFlags usage_;
-        /** Holds the memory properties. */
-        vk::MemoryPropertyFlags memoryProperties_;
         /** Holds the queue family indices. */
         std::vector<uint32_t> queueFamilyIndices_;
     };

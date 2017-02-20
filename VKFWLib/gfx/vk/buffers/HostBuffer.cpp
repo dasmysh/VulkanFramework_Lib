@@ -73,15 +73,11 @@ namespace vku { namespace gfx {
 
     void HostBuffer::DownloadData(size_t size, void* data) const
     {
-        auto deviceMem = GetDevice().mapMemory(GetDeviceMemory(), 0, size, vk::MemoryMapFlags());
-        memcpy(data, deviceMem, size);
-        GetDevice().unmapMemory(GetDeviceMemory());
+        GetDeviceMemory().CopyFromHostMemory(0, size, data);
     }
 
     void HostBuffer::UploadDataInternal(size_t offset, size_t size, const void* data) const
     {
-        auto deviceMem = GetDevice().mapMemory(GetDeviceMemory(), offset, size, vk::MemoryMapFlags());
-        memcpy(deviceMem, data, size);
-        GetDevice().unmapMemory(GetDeviceMemory());
+        GetDeviceMemory().CopyToHostMemory(offset, size, data);
     }
 }}

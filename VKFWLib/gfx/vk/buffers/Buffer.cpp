@@ -14,9 +14,9 @@ namespace vku { namespace gfx {
     Buffer::Buffer(const LogicalDevice* device, vk::BufferUsageFlags usage,
         vk::MemoryPropertyFlags memoryFlags, const std::vector<uint32_t>& queueFamilyIndices) :
         device_{ device },
+        bufferDeviceMemory_{ device, memoryFlags },
         size_{ 0 },
         usage_{ usage },
-        memoryProperties_{ memoryFlags },
         queueFamilyIndices_{ queueFamilyIndices }
     {
     }
@@ -25,21 +25,17 @@ namespace vku { namespace gfx {
     {
         if (buffer_) device_->GetDevice().destroyBuffer(buffer_);
         buffer_ = vk::Buffer();
-        if (bufferDeviceMemory_) device_->GetDevice().freeMemory(bufferDeviceMemory_);
-        bufferDeviceMemory_ = vk::DeviceMemory();
     }
 
     Buffer::Buffer(Buffer&& rhs) noexcept :
         device_{ rhs.device_ },
         buffer_{ rhs.buffer_ },
-        bufferDeviceMemory_{ rhs.bufferDeviceMemory_ },
+        bufferDeviceMemory_{ std::move(rhs.bufferDeviceMemory_) },
         size_{ rhs.size_ },
         usage_{ rhs.usage_ },
-        memoryProperties_{ rhs.memoryProperties_ },
         queueFamilyIndices_{ std::move(rhs.queueFamilyIndices_) }
     {
         rhs.buffer_ = vk::Buffer();
-        rhs.bufferDeviceMemory_ = vk::DeviceMemory();
         rhs.size_ = 0;
     }
 
@@ -48,13 +44,11 @@ namespace vku { namespace gfx {
         this->~Buffer();
         device_ = rhs.device_;
         buffer_ = rhs.buffer_;
-        bufferDeviceMemory_ = rhs.bufferDeviceMemory_;
+        bufferDeviceMemory_ = std::move(rhs.bufferDeviceMemory_);
         size_ = rhs.size_;
         usage_ = rhs.usage_;
-        memoryProperties_ = rhs.memoryProperties_;
         queueFamilyIndices_ = std::move(rhs.queueFamilyIndices_);
         rhs.buffer_ = vk::Buffer();
-        rhs.bufferDeviceMemory_ = vk::DeviceMemory();
         rhs.size_ = 0;
         return *this;
     }
@@ -74,9 +68,8 @@ namespace vku { namespace gfx {
 
         if (initMemory) {
             auto memRequirements = device_->GetDevice().getBufferMemoryRequirements(buffer_);
-            vk::MemoryAllocateInfo allocInfo{ memRequirements.size, BufferGroup::FindMemoryType(device_, memRequirements.memoryTypeBits, memoryProperties_) };
-            bufferDeviceMemory_ = device_->GetDevice().allocateMemory(allocInfo);
-            device_->GetDevice().bindBufferMemory(buffer_, bufferDeviceMemory_, 0);
+            bufferDeviceMemory_.InitializeMemory(memRequirements);
+            bufferDeviceMemory_.BindToBuffer(*this, 0);
         }
     }
 

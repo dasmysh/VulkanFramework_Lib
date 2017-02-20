@@ -9,7 +9,7 @@
 #pragma once
 
 #include "main.h"
-#include "Texture.h"
+#include "gfx/vk/textures/Texture.h"
 
 namespace vku {
     namespace gfx {
