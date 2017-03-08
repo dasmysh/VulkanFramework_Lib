@@ -62,8 +62,9 @@ namespace vku {
         const cfg::Configuration& GetConfig() const { return config_; };
         const std::vector<const char*>& GetVKValidationLayers() const { return vkValidationLayers_; }
         const vk::Instance& GetVKInstance() const { return vkInstance_; }
-        std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const std::vector<cfg::QueueCfg>& queueDescs, const vk::SurfaceKHR& surface = vk::SurfaceKHR()) const;
-        std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const vk::SurfaceKHR& surface) const;
+        std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const cfg::WindowCfg& windowCfg,
+            const vk::SurfaceKHR& surface = vk::SurfaceKHR()) const;
+        // std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const vk::SurfaceKHR& surface) const;
 
     private:
         class GLFWInitObject
@@ -112,7 +113,8 @@ namespace vku {
         void InitVulkan(const std::string& applicationName, uint32_t applicationVersion);
         static unsigned int ScorePhysicalDevice(const vk::PhysicalDevice& device);
         static bool CheckDeviceExtensions(const vk::PhysicalDevice& device, const std::vector<std::string>& requiredExtensions);
-        std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const std::vector<cfg::QueueCfg>& queueDescs, const vk::SurfaceKHR& surface, std::function<bool(const vk::PhysicalDevice&)> additionalDeviceChecks) const;
+        std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const cfg::WindowCfg& windowCfg,
+            const vk::SurfaceKHR& surface, std::function<bool(const vk::PhysicalDevice&)> additionalDeviceChecks) const;
         PFN_vkVoidFunction LoadVKInstanceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false) const;
 
         void CheckVKInstanceExtensions(const std::vector<const char*>& enabledExtensions);

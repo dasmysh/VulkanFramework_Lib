@@ -6,14 +6,15 @@
  * @brief  Implementation of a general host accessible Vulkan image.
  */
 
+#define GLM_FORCE_SWIZZLE
+
 #include "HostTexture.h"
 
 namespace vku { namespace gfx {
 
-    HostTexture::HostTexture(const LogicalDevice* device, uint32_t width, uint32_t height, uint32_t depth,
-        const TextureDescriptor& desc, const std::vector<uint32_t>& queueFamilyIndices) :
-        Texture{ device, width, height, depth,
-            TextureDescriptor(desc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent), queueFamilyIndices }
+    HostTexture::HostTexture(const LogicalDevice* device, const TextureDescriptor& desc,
+        const std::vector<uint32_t>& queueFamilyIndices) :
+        Texture{ device, TextureDescriptor(desc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent), queueFamilyIndices }
     {
     }
 
@@ -22,9 +23,16 @@ namespace vku { namespace gfx {
     HostTexture::HostTexture(const HostTexture& rhs) :
         Texture{ rhs.CopyWithoutData() }
     {
-        std::vector<int8_t> tmp(GetSize());
-        rhs.DownloadData(tmp);
-        InitializeData(tmp);
+        auto texSize = rhs.GetSize();
+        auto mipLevels = rhs.GetMipLevels();
+        InitializeImage(texSize, mipLevels);
+        std::vector<int8_t> tmp(texSize.x * texSize.y * texSize.z);
+        for (auto ml = 0U; ml < mipLevels; ++ml) {
+            for (auto al = 0U; al < texSize.w; ++al) {
+                rhs.DownloadData(ml, al, texSize.xyz, tmp.data());
+                UploadData(ml, al, glm::u32vec3(0), texSize.xyz, tmp.data());
+            }
+        }
     }
 
     HostTexture& HostTexture::operator=(const HostTexture& rhs)
@@ -48,45 +56,40 @@ namespace vku { namespace gfx {
         return *this;
     }
 
-    void HostTexture::InitializeData(size_t bufferSize, size_t dataSize, const void* data)
+    void HostTexture::InitializeData(const glm::u32vec4& textureSize, uint32_t mipLevels, const glm::u32vec4& dataSize, const void* data)
     {
-        InitializeBuffer(bufferSize);
-        UploadData(0, dataSize, data);
-    }
-
-    void HostTexture::InitializeData(size_t size, const void* data)
-    {
-        InitializeData(size, size, data);
-    }
-
-    void HostTexture::UploadData(size_t offset, size_t size, const void* data)
-    {
-        if (offset + size > GetSize()) {
-            std::vector<int8_t> tmp(offset);
-            DownloadData(tmp);
-            InitializeBuffer(offset + size);
-            UploadDataInternal(0, offset, tmp.data());
+        auto byData = reinterpret_cast<const uint8_t*>(data);
+        InitializeImage(textureSize, mipLevels);
+        for (auto al = 0U; al < dataSize.w; ++al) {
+            auto layerData = &byData[dataSize.x * dataSize.y * dataSize.z * al];
+            UploadData(0, al, glm::u32vec3(0), dataSize.xyz, layerData);
         }
-
-        UploadDataInternal(offset, size, data);
     }
 
-    void HostTexture::DownloadData(size_t size, void* data) const
+    void HostTexture::InitializeData(const glm::u32vec4& size, uint32_t mipLevels, const void* data)
     {
-        vk::SubresourceLayout layout;
-
-        vk::ImageSubresource subresource{ vk::ImageAspectFlagBits::eColor, 0, 0 };
-        subresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-        subresource.mipLevel = 0;
-        subresource.arrayLayer = 0;
-
-        VkSubresourceLayout stagingImageLayout;
-        vkGetImageSubresourceLayout(device, stagingImage, &subresource, &stagingImageLayout);
-        GetDeviceMemory().CopyFromHostMemory(0, size, data);
+        InitializeData(size, mipLevels, size, data);
     }
 
-    void HostTexture::UploadDataInternal(size_t offset, size_t size, const void* data) const
+    void HostTexture::UploadData(uint32_t mipLevel, uint32_t arrayLayer,
+        const glm::u32vec3& offset, const glm::u32vec3& size, const void* data)
     {
-        GetDeviceMemory().CopyToHostMemory(offset, size, data);
+        assert(offset.x + size.x <= GetSize().x);
+        assert(offset.y + size.y <= GetSize().y);
+        assert(offset.z + size.z <= GetSize().z);
+        assert(arrayLayer < GetSize().w);
+        assert(mipLevel < GetMipLevels());
+
+        vk::ImageSubresource subresource{ GetValidAspects(), mipLevel, arrayLayer };
+        auto layout = GetDevice().getImageSubresourceLayout(GetImage(), subresource);
+        GetDeviceMemory().CopyToHostMemory(0, offset, layout, size, data);
+    }
+
+    void HostTexture::DownloadData(uint32_t mipLevel, uint32_t arrayLayer, const glm::u32vec3& size, void* data) const
+    {
+        vk::ImageSubresource subresource{ GetValidAspects(), mipLevel, arrayLayer };
+        auto layout = GetDevice().getImageSubresourceLayout(GetImage(), subresource);
+
+        GetDeviceMemory().CopyFromHostMemory(0, glm::u32vec3(0), layout, size, data);
     }
 }}

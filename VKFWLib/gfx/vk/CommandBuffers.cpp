@@ -19,7 +19,28 @@ namespace vku { namespace gfx {
         vkCmdBuffers_ = device_->GetDevice().allocateCommandBuffers(cmdBufferallocInfo);
     }
 
-    void CommandBuffers::beginSingleTimeSubmit(unsigned int bufferIdx)
+    vk::CommandBuffer CommandBuffers::beginSingleTimeSubmit(const LogicalDevice* device, unsigned int queueFamily)
+    {
+        vk::CommandBufferAllocateInfo cmdBufferallocInfo{ device->GetCommandPool(queueFamily) , vk::CommandBufferLevel::ePrimary, 1 };
+        auto cmdBuffer = device->GetDevice().allocateCommandBuffers(cmdBufferallocInfo)[0];
+
+        vk::CommandBufferBeginInfo beginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
+        cmdBuffer.begin(beginInfo);
+        return cmdBuffer;
+    }
+
+    void CommandBuffers::endSingleTimeSubmit(const LogicalDevice* device, vk::CommandBuffer cmdBuffer,
+        unsigned int queueFamily, unsigned int queueIndex, const std::vector<vk::Semaphore>& waitSemaphores,
+        const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence)
+    {
+        cmdBuffer.end();
+
+        vk::SubmitInfo submitInfo{ static_cast<uint32_t>(waitSemaphores.size()), waitSemaphores.data(),
+            nullptr, 1, &cmdBuffer, static_cast<uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
+        device->GetQueue(queueFamily, queueIndex).submit(submitInfo, fence);
+    }
+
+    /*void CommandBuffers::beginSingleTimeSubmit(unsigned int bufferIdx)
     {
         vk::CommandBufferBeginInfo beginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
         vkCmdBuffers_[bufferIdx].begin(beginInfo);
@@ -34,5 +55,5 @@ namespace vku { namespace gfx {
         vk::SubmitInfo submitInfo{ static_cast<uint32_t>(waitSemaphores.size()), waitSemaphores.data(),
             nullptr, 1, &vkCmdBuffers_[bufferIdx], static_cast<uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
         device_->GetQueue(queueFamily_, queueIndex).submit(submitInfo, fence);
-    }
+    }*/
 }}

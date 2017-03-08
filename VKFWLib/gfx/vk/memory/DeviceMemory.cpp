@@ -81,10 +81,12 @@ namespace vku { namespace gfx {
         MapAndProcess(offset, size, [data](void* deviceMem, size_t size) { memcpy(deviceMem, data, size); });
     }
 
-    void DeviceMemory::CopyToHostMemory(size_t offset, const vk::SubresourceLayout& layout, const glm::u64vec4& dataSize, const void* data) const
+    void DeviceMemory::CopyToHostMemory(size_t offsetToTexture, const glm::u32vec3& offset,
+        const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize, const void* data) const
     {
         auto dataBytes = reinterpret_cast<const uint8_t*>(data);
-        MapAndProcess(offset, layout, dataSize, [dataBytes](void* deviceMem, size_t offset, size_t size) { memcpy(deviceMem, &dataBytes[offset], size); });
+        MapAndProcess(offsetToTexture, offset, layout, dataSize,
+            [dataBytes](void* deviceMem, size_t offset, size_t size) { memcpy(deviceMem, &dataBytes[offset], size); });
     }
 
     void DeviceMemory::CopyFromHostMemory(size_t offset, size_t size, void* data) const
@@ -92,10 +94,12 @@ namespace vku { namespace gfx {
         MapAndProcess(offset, size, [data](void* deviceMem, size_t size) { memcpy(data, deviceMem, size); });
     }
 
-    void DeviceMemory::CopyFromHostMemory(size_t offset, const vk::SubresourceLayout& layout, const glm::u64vec4& dataSize, void* data) const
+    void DeviceMemory::CopyFromHostMemory(size_t offsetToTexture, const glm::u32vec3& offset,
+        const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize, void* data) const
     {
         auto dataBytes = reinterpret_cast<uint8_t*>(data);
-        MapAndProcess(offset, layout, dataSize, [dataBytes](void* deviceMem, size_t offset, size_t size) { memcpy(&dataBytes[offset], deviceMem, size); });
+        MapAndProcess(offsetToTexture, offset, layout, dataSize,
+            [dataBytes](void* deviceMem, size_t offset, size_t size) { memcpy(&dataBytes[offset], deviceMem, size); });
     }
 
     uint32_t DeviceMemory::FindMemoryType(const LogicalDevice* device, uint32_t typeFilter, vk::MemoryPropertyFlags properties)
@@ -131,38 +135,29 @@ namespace vku { namespace gfx {
         device_->GetDevice().unmapMemory(vkDeviceMemory_);
     }
 
-    void DeviceMemory::MapAndProcess(size_t offset, const vk::SubresourceLayout& layout, const glm::u64vec4& dataSize,
+    void DeviceMemory::MapAndProcess(size_t offsetToTexture, const glm::u32vec3& offset, const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize,
         const std::function<void(void* deviceMem, size_t offset, size_t size)>& processFunc) const
     {
         assert(memoryProperties_ & (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent));
-        auto deviceMem = device_->GetDevice().mapMemory(vkDeviceMemory_, offset + layout.offset, layout.size);
+        auto mapOffset = offset.z * layout.depthPitch + offsetToTexture;
+        auto deviceMem = device_->GetDevice().mapMemory(vkDeviceMemory_, mapOffset + layout.offset, layout.size);
         auto deviceBytes = reinterpret_cast<uint8_t*>(deviceMem);
 
-        if (layout.rowPitch == dataSize.x && layout.depthPitch == dataSize.y && layout.arrayPitch == dataSize.z) {
-            processFunc(deviceBytes, 0, dataSize.x * dataSize.y * dataSize.z * dataSize.w);
-        }
-        else if (layout.rowPitch == dataSize.x && layout.depthPitch == dataSize.y) {
-            auto sliceSize = dataSize.x * dataSize.y * dataSize.z;
-            for (auto slice = 0U; slice < dataSize.w; ++slice)
-                processFunc(&deviceBytes[slice * layout.arrayPitch], slice * sliceSize, sliceSize);
-        }
-        else if (layout.rowPitch == dataSize.x) {
-            for (auto slice = 0U; slice < dataSize.w; ++slice) {
-                for (auto z = 0U; z < dataSize.z; ++z) {
-                    auto deviceMemPos = slice * layout.arrayPitch + z * layout.depthPitch;
-                    auto dataMemPos = (slice * dataSize.z + z) * dataSize.x * dataSize.y;
-                    processFunc(&deviceBytes[deviceMemPos], dataMemPos, dataSize.x * dataSize.y);
-                }
+        if (layout.rowPitch == dataSize.x && layout.depthPitch == dataSize.y
+            && offset.x == 0 && offset.y == 0) {
+            processFunc(deviceBytes, 0, dataSize.x * dataSize.y * dataSize.z);
+        } else if (layout.rowPitch == dataSize.x && offset.x == 0) {
+            for (auto z = 0U; z < dataSize.z; ++z) {
+                auto deviceMemPos = z * layout.depthPitch + offset.y * layout.rowPitch;
+                auto dataMemPos = z * dataSize.x * dataSize.y;
+                processFunc(&deviceBytes[deviceMemPos], dataMemPos, dataSize.x * dataSize.y);
             }
-        }
-        else {
-            for (auto slice = 0U; slice < dataSize.w; ++slice) {
-                for (auto z = 0U; z < dataSize.z; ++z) {
-                    for (auto y = 0U; y < dataSize.y; ++y) {
-                        auto deviceMemPos = slice * layout.arrayPitch + z * layout.depthPitch + y * layout.rowPitch;
-                        auto dataMemPos = ((slice * dataSize.z + z) * dataSize.x + y) * dataSize.y;
-                        processFunc(&deviceBytes[deviceMemPos], dataMemPos, dataSize.x);
-                    }
+        } else {
+            for (auto z = 0U; z < dataSize.z; ++z) {
+                for (auto y = 0U; y < dataSize.y; ++y) {
+                    auto deviceMemPos = z * layout.depthPitch + (offset.y + y) * layout.rowPitch + offset.x;
+                    auto dataMemPos = (z * dataSize.y + y) * dataSize.x;
+                    processFunc(&deviceBytes[deviceMemPos], dataMemPos, dataSize.x);
                 }
             }
         }

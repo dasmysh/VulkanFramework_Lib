@@ -18,8 +18,9 @@ namespace vku { namespace gfx {
     public:
         CommandBuffers(const LogicalDevice* device, unsigned int queueFamily, vk::CommandBufferLevel level, uint32_t numBuffers);
 
-        void beginSingleTimeSubmit(unsigned int bufferIdx);
-        void endSingleTimeSubmit(unsigned int bufferIdx, unsigned int queueIndex,
+        static vk::CommandBuffer beginSingleTimeSubmit(const LogicalDevice* device, unsigned int queueFamily);
+        static void endSingleTimeSubmit(const LogicalDevice* device, vk::CommandBuffer cmdBuffer,
+            unsigned int queueFamily, unsigned int queueIndex,
             const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
             const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
             vk::Fence fence = vk::Fence());

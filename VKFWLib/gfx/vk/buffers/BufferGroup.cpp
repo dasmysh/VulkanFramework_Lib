@@ -94,8 +94,8 @@ namespace vku { namespace gfx {
 
         auto deviceOffset = 0U, hostOffset = 0U;
         for (auto i = 0U; i < deviceBuffers_.size(); ++i) {
-            device_->GetDevice().bindBufferMemory(*hostBuffers_[i].GetBuffer(), hostBufferMemory_, hostOffset);
-            device_->GetDevice().bindBufferMemory(*deviceBuffers_[i].GetBuffer(), deviceBufferMemory_, deviceOffset);
+            device_->GetDevice().bindBufferMemory(hostBuffers_[i].GetBuffer(), hostBufferMemory_, hostOffset);
+            device_->GetDevice().bindBufferMemory(deviceBuffers_[i].GetBuffer(), deviceBufferMemory_, deviceOffset);
             if (transfer) {
                 auto deviceMem = device_->GetDevice().mapMemory(hostBufferMemory_, hostOffset, bufferContents_[i].first, vk::MemoryMapFlags());
                 memcpy(deviceMem, bufferContents_[i].second, bufferContents_[i].first);
@@ -112,9 +112,9 @@ namespace vku { namespace gfx {
 
     void BufferGroup::FillAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo, std::vector<uint32_t>& sizes) const
     {
-        auto memRequirements = device_->GetDevice().getBufferMemoryRequirements(*buffer->GetBuffer());
-        if (allocInfo.allocationSize == 0) allocInfo.memoryTypeIndex = FindMemoryType(device_, memRequirements.memoryTypeBits, buffer->GetMemoryProperties());
-        else if (!CheckMemoryType(device_, allocInfo.memoryTypeIndex, memRequirements.memoryTypeBits, buffer->GetMemoryProperties())) {
+        auto memRequirements = device_->GetDevice().getBufferMemoryRequirements(buffer->GetBuffer());
+        if (allocInfo.allocationSize == 0) allocInfo.memoryTypeIndex = DeviceMemory::FindMemoryType(device_, memRequirements.memoryTypeBits, buffer->GetDeviceMemory().GetMemoryProperties());
+        else if (!DeviceMemory::CheckMemoryType(device_, allocInfo.memoryTypeIndex, memRequirements.memoryTypeBits, buffer->GetDeviceMemory().GetMemoryProperties())) {
             LOG(FATAL) << "BufferGroup memory type (" << allocInfo.memoryTypeIndex << ") does not fit required memory type for buffer ("
                 << std::hex << memRequirements.memoryTypeBits << ").";
             throw std::runtime_error("BufferGroup memory type does not fit required memory type for buffer.");

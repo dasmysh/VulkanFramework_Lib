@@ -16,6 +16,10 @@ namespace vku { namespace gfx {
     class DeviceBuffer;
     class HostBuffer;
     class Buffer;
+    class DeviceTexture;
+    class HostTexture;
+    class Texture;
+    struct TextureDescriptor;
 
     class QueuedDeviceTransfer final
     {
@@ -30,13 +34,21 @@ namespace vku { namespace gfx {
         std::unique_ptr<DeviceBuffer> CreateDeviceBufferWithData(vk::BufferUsageFlags deviceBufferUsage,
             vk::MemoryPropertyFlags memoryFlags, const std::vector<uint32_t>& deviceBufferQueues,
             size_t bufferSize, size_t dataSize, const void* data);
+        std::unique_ptr<DeviceTexture> CreateDeviceTextureWithData(const TextureDescriptor& textureDesc,
+            const std::vector<uint32_t>& deviceBufferQueues, const glm::u32vec4& textureSize,
+            uint32_t mipLevels, const glm::u32vec4& dataSize, const void* data);
         std::unique_ptr<DeviceBuffer> CreateDeviceBufferWithData(vk::BufferUsageFlags deviceBufferUsage,
             vk::MemoryPropertyFlags memoryFlags, const std::vector<uint32_t>& deviceBufferQueues,
             size_t size, const void* data);
+        std::unique_ptr<DeviceTexture> CreateDeviceTextureWithData(const TextureDescriptor& textureDesc,
+            const std::vector<uint32_t>& deviceBufferQueues, const glm::u32vec4& size,
+            uint32_t mipLevels, const void* data);
+
         void TransferDataToBuffer(size_t dataSize, const void* data, const Buffer& dst, size_t dstOffset);
 
         void AddTransferToQueue(const Buffer& src, size_t srcOffset, const Buffer& dst, size_t dstOffset, size_t copySize);
         void AddTransferToQueue(const Buffer& src, const Buffer& dst);
+        void AddTransferToQueue(const Texture& src, const Texture& dst);
 
         void FinishTransfer();
 
@@ -51,6 +63,8 @@ namespace vku { namespace gfx {
 
     private:
         void AddStagingBuffer(size_t dataSize, const void* data);
+        void AddStagingTexture(const glm::u32vec4& size, uint32_t mipLevels,
+            const TextureDescriptor& textureDesc, const void* data);
 
         /** Holds the device. */
         const LogicalDevice* device_;
@@ -58,6 +72,8 @@ namespace vku { namespace gfx {
         std::pair<uint32_t, uint32_t> transferQueue_;
         /** Holds all staging buffers. */
         std::vector<HostBuffer> stagingBuffers_;
+        /** Holds all staging textures. */
+        std::vector<HostTexture> stagingTextures_;
         /** Holds all command buffers for transfer. */
         std::vector<vk::CommandBuffer> transferCmdBuffers_;
     };

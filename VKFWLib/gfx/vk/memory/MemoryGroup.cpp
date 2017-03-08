@@ -60,7 +60,7 @@ namespace vku { namespace gfx {
         return *this;
     }
 
-    unsigned BufferGroup::AddBufferToGroup(vk::BufferUsageFlags usage, size_t size, const std::vector<uint32_t>& queueFamilyIndices)
+    unsigned MemoryGroup::AddBufferToGroup(vk::BufferUsageFlags usage, size_t size, const std::vector<uint32_t>& queueFamilyIndices)
     {
         deviceBuffers_.emplace_back(device_, vk::BufferUsageFlagBits::eTransferDst | usage, memoryProperties_, queueFamilyIndices);
         deviceBuffers_.back().InitializeBuffer(size, false);
@@ -72,12 +72,39 @@ namespace vku { namespace gfx {
         return static_cast<unsigned int>(deviceBuffers_.size() - 1);
     }
 
-    unsigned BufferGroup::AddBufferToGroup(vk::BufferUsageFlags usage, size_t size, const void* data, const std::vector<uint32_t>& queueFamilyIndices)
+    unsigned MemoryGroup::AddBufferToGroup(vk::BufferUsageFlags usage, size_t size, const void* data, const std::vector<uint32_t>& queueFamilyIndices)
     {
         auto idx = AddBufferToGroup(usage, size, queueFamilyIndices);
         bufferContents_.back().first = size;
         bufferContents_.back().second = data;
         return idx;
+    }
+
+    unsigned MemoryGroup::AddTextureToGroup(const TextureDescriptor& desc, const glm::u32vec4& size,
+        uint32_t mipLevels, const std::vector<uint32_t>& queueFamilyIndices)
+    {
+        deviceImages_.emplace_back(device_, TextureDescriptor(desc, vk::ImageUsageFlagBits::eTransferDst), queueFamilyIndices);
+        deviceImages_.back().InitializeImage(size, mipLevels, false);
+
+        TextureDescriptor stagingTexDesc{ desc, vk::ImageUsageFlagBits::eTransferSrc };
+        stagingTexDesc.imageTiling_ = vk::ImageTiling::eLinear;
+        hostImages_.emplace_back(device_, stagingTexDesc, queueFamilyIndices);
+        hostImages_.back().InitializeImage(size, mipLevels, false);
+
+        return static_cast<unsigned int>(deviceImages_.size() - 1);
+    }
+
+    void MemoryGroup::AddDataToTextureInGroup(unsigned textureIdx, vk::ImageAspectFlags aspectFlags,
+        uint32_t mipLevel, uint32_t arrayLayer, const glm::u32vec3& size, const void* data)
+    {
+        ImageContensDesc imgContDesc;
+        imgContDesc.imageIdx_ = textureIdx;
+        imgContDesc.aspectFlags_ = aspectFlags;
+        imgContDesc.mipLevel_ = mipLevel;
+        imgContDesc.arrayLayer_ = arrayLayer;
+        imgContDesc.size_ = size;
+        imgContDesc.data_ = data;
+        imageContents_.push_back(imgContDesc);
     }
 
     void MemoryGroup::FinalizeGroup(QueuedDeviceTransfer* transfer)
@@ -106,15 +133,23 @@ namespace vku { namespace gfx {
             hostOffset += hostSizes[i];
             deviceOffset += deviceSizes[i];
         }
-        for (auto i = 0U; i < deviceImages_.size(); ++i) {
-            hostMemory_.BindToTexture(hostImages_[i], hostOffset);
-            deviceMemory_.BindToTexture(deviceImages_[i], deviceOffset);
+
+        std::vector<uint32_t> deviceImageOffsets, hostImageOffsets;
+        for (auto i = 0U; i < deviceBuffers_.size(); ++i) {
+            hostImageOffsets[i] = hostOffset;
+            deviceImageOffsets[i] = deviceOffset;
+            hostOffset += hostSizes[i + hostBuffers_.size()];
+            deviceOffset += deviceSizes[i + deviceBuffers_.size()];
+        }
+        for (const auto& contentDesc : imageContents_) {
+            hostMemory_.BindToTexture(hostImages_[contentDesc.imageIdx_], hostImageOffsets[contentDesc.imageIdx_]);
+            deviceMemory_.BindToTexture(deviceImages_[contentDesc.imageIdx_], deviceImageOffsets[contentDesc.imageIdx_]);
             if (transfer) {
-                hostMemory_.CopyToHostMemory(hostOffset, layout, imageContents_[i].first, imageContents_[i].second)
-                transfer->AddTransferToQueue(hostImages_[i], deviceImages_[i]);
+                vk::ImageSubresource imgSubresource{ contentDesc.aspectFlags_, contentDesc.mipLevel_, contentDesc.arrayLayer_ };
+                auto subresourceLayout = device_->GetDevice().getImageSubresourceLayout(hostImages_[contentDesc.imageIdx_].GetImage(), imgSubresource);
+                hostMemory_.CopyToHostMemory(hostOffset, glm::u32vec3(0), subresourceLayout, contentDesc.size_, contentDesc.data_);
+                transfer->AddTransferToQueue(hostImages_[contentDesc.imageIdx_], deviceImages_[contentDesc.imageIdx_]);
             }
-            hostOffset += hostSizes[i];
-            deviceOffset += deviceSizes[i];
         }
     }
 

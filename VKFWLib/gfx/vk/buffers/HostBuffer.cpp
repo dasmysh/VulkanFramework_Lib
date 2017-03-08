@@ -22,7 +22,7 @@ namespace vku { namespace gfx {
     HostBuffer::HostBuffer(const HostBuffer& rhs) :
         Buffer{ rhs.CopyWithoutData() }
     {
-        std::vector<int8_t> tmp(GetSize());
+        std::vector<int8_t> tmp(rhs.GetSize());
         rhs.DownloadData(tmp);
         InitializeData(tmp);
     }

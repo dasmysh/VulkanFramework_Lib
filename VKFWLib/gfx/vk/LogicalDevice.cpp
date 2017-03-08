@@ -14,7 +14,9 @@
 
 namespace vku { namespace gfx {
 
-    LogicalDevice::LogicalDevice(const vk::PhysicalDevice& phDevice, const std::vector<DeviceQueueDesc>& queueDescs, const vk::SurfaceKHR& surface) :
+    LogicalDevice::LogicalDevice(const cfg::WindowCfg& windowCfg, const vk::PhysicalDevice& phDevice,
+        const std::vector<DeviceQueueDesc>& queueDescs, const vk::SurfaceKHR& surface) :
+        windowCfg_(windowCfg),
         vkPhysicalDevice_(phDevice),
         vkPhysicalDeviceLimits_(phDevice.getProperties().limits),
         queueDescriptions_(queueDescs)

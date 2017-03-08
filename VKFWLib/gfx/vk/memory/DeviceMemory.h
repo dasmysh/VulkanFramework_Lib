@@ -33,10 +33,12 @@ namespace vku { namespace gfx {
         void BindToTexture(Texture& texture, size_t offset) const;
 
         void CopyToHostMemory(size_t offset, size_t size, const void* data) const;
-        void CopyToHostMemory(size_t offset, const vk::SubresourceLayout& layout, const glm::u64vec4& dataSize, const void* data) const;
+        void CopyToHostMemory(size_t offsetToTexture, const glm::u32vec3& offset,
+            const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize, const void* data) const;
 
         void CopyFromHostMemory(size_t offset, size_t size, void* data) const;
-        void CopyFromHostMemory(size_t offset, const vk::SubresourceLayout& layout, const glm::u64vec4& dataSize, void* data) const;
+        void CopyFromHostMemory(size_t offsetToTexture, const glm::u32vec3& offset,
+            const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize, void* data) const;
 
         vk::MemoryPropertyFlags GetMemoryProperties() const { return memoryProperties_; }
 
@@ -48,7 +50,8 @@ namespace vku { namespace gfx {
         static bool CheckMemoryType(const vk::PhysicalDeviceMemoryProperties& memProperties, uint32_t typeToCheck,
             uint32_t typeFilter, vk::MemoryPropertyFlags properties);
         void MapAndProcess(size_t offset, size_t size, const std::function<void(void* deviceMem, size_t size)>& processFunc) const;
-        void MapAndProcess(size_t offset, const vk::SubresourceLayout& layout, const glm::u64vec4& dataSize,
+        void MapAndProcess(size_t offsetToTexture, const glm::u32vec3& offset,
+            const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize,
             const std::function<void(void* deviceMem, size_t offset, size_t size)>& processFunc) const;
 
         /** Holds the device. */

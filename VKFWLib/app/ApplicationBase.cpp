@@ -468,7 +468,8 @@ namespace vku {
         LOG(INFO) << "Initializing Vulkan... done.";
     }
 
-    std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(const std::vector<cfg::QueueCfg>& queueDescs, const vk::SurfaceKHR& surface, std::function<bool(const vk::PhysicalDevice&)> additionalDeviceChecks) const
+    std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(const cfg::WindowCfg& windowCfg,
+        const vk::SurfaceKHR& surface, std::function<bool(const vk::PhysicalDevice&)> additionalDeviceChecks) const
     {
         vk::PhysicalDevice physicalDevice;
         std::vector<gfx::DeviceQueueDesc> deviceQueueDesc;
@@ -481,13 +482,13 @@ namespace vku {
             if (!CheckDeviceExtensions(device.second, requiredExtensions)) continue;
             if (!additionalDeviceChecks(device.second)) continue;
 
-            for (const auto& queueDesc : queueDescs) {
+            for (const auto& queueDesc : windowCfg.queues_) {
                 auto queueFamilyIndex = qf::findQueueFamily(device.second, queueDesc, surface);
                 if (queueFamilyIndex != -1) deviceQueueDesc.emplace_back(queueFamilyIndex, queueDesc.priorities_);
                 else break;
             }
 
-            if (deviceQueueDesc.size() == queueDescs.size()) {
+            if (deviceQueueDesc.size() == windowCfg.queues_.size()) {
                 physicalDevice = device.second;
                 foundDevice = true;
                 break;
@@ -501,7 +502,7 @@ namespace vku {
                 devProps.pipelineCacheUUID[2] == 'o' && devProps.pipelineCacheUUID[3] == 'c') {
                 physicalDevice = (*vkPhysicalDevices_.begin()).second;
                 foundDevice = true;
-                while (deviceQueueDesc.size() < queueDescs.size()) deviceQueueDesc.emplace_back(0, queueDescs[deviceQueueDesc.size()].priorities_);
+                while (deviceQueueDesc.size() < windowCfg.queues_.size()) deviceQueueDesc.emplace_back(0, windowCfg.queues_[deviceQueueDesc.size()].priorities_);
             }
         }
 #endif
@@ -511,13 +512,14 @@ namespace vku {
             throw std::runtime_error("Could not find suitable Vulkan GPU.");
         }
 
-        return std::make_unique<gfx::LogicalDevice>(physicalDevice, deviceQueueDesc, surface);
+        return std::make_unique<gfx::LogicalDevice>(windowCfg, physicalDevice, deviceQueueDesc, surface);
     }
 
-    std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(const std::vector<cfg::QueueCfg>& queueDescs, const vk::SurfaceKHR& surface) const
+    /*std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(const cfg::WindowCfg& windowCfg,
+        const vk::SurfaceKHR& surface) const
     {
-        return CreateLogicalDevice(queueDescs, surface, [](const vk::PhysicalDevice&) { return true; });
-    }
+        return CreateLogicalDevice(windowCfg, surface, [](const vk::PhysicalDevice&) { return true; });
+    }*/
 
     std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const vk::SurfaceKHR& surface) const
     {
@@ -527,7 +529,7 @@ namespace vku {
         auto requestedAdditionalImgCnt = cfg::GetVulkanAdditionalImageCountFromConfig(windowCfg);
         glm::uvec2 requestedExtend(windowCfg.windowWidth_, windowCfg.windowHeight_);
 
-        return CreateLogicalDevice(windowCfg.queues_, surface, [&surface, &requestedFormats, &requestedPresentMode, &requestedAdditionalImgCnt, &requestedExtend](const vk::PhysicalDevice& device)
+        return CreateLogicalDevice(windowCfg, surface, [&surface, &requestedFormats, &requestedPresentMode, &requestedAdditionalImgCnt, &requestedExtend](const vk::PhysicalDevice& device)
         {
             auto deviceSurfaceCaps = device.getSurfaceCapabilitiesKHR(surface);
             auto deviceSurfaceFormats = device.getSurfaceFormatsKHR(surface);

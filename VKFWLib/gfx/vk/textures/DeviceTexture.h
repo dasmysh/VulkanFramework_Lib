@@ -16,8 +16,7 @@ namespace vku { namespace gfx {
     class DeviceTexture final : public Texture
     {
     public:
-        DeviceTexture(const LogicalDevice* device, uint32_t width, uint32_t height, uint32_t depth,
-            const TextureDescriptor& desc,
+        DeviceTexture(const LogicalDevice* device, const TextureDescriptor& desc,
             const std::vector<uint32_t>& queueFamilyIndices = std::vector<uint32_t>{});
         ~DeviceTexture();
         DeviceTexture(const DeviceTexture&) = delete;

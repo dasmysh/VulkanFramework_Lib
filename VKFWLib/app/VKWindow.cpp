@@ -48,11 +48,8 @@ namespace vku {
         logicalDevice_{ std::move(rhs.logicalDevice_) },
         graphicsQueue_{ std::move(rhs.graphicsQueue_) },
         vkSwapchain_{ std::move(rhs.vkSwapchain_) },
-        //vkSwapchainImages_{ std::move(rhs.vkSwapchainImages_) },
-        //vkSwapchainImageViews_{ std::move(rhs.vkSwapchainImageViews_) },
         vkSwapchainRenderPass_{ std::move(rhs.vkSwapchainRenderPass_) },
         swapchainFramebuffers_{ std::move(rhs.swapchainFramebuffers_) },
-        //vkSwapchainFrameBuffers_{ std::move(rhs.vkSwapchainFrameBuffers_) },
         vkCommandBuffers_{ std::move(rhs.vkCommandBuffers_) },
         vkImageAvailableSemaphore_{ std::move(rhs.vkImageAvailableSemaphore_) },
         vkRenderingFinishedSemaphore_{ std::move(rhs.vkRenderingFinishedSemaphore_) },
@@ -85,11 +82,8 @@ namespace vku {
             logicalDevice_ = std::move(rhs.logicalDevice_);
             graphicsQueue_ = std::move(rhs.graphicsQueue_);
             vkSwapchain_ = std::move(rhs.vkSwapchain_);
-            //vkSwapchainImages_ = std::move(rhs.vkSwapchainImages_);
-            //vkSwapchainImageViews_ = std::move(rhs.vkSwapchainImageViews_);
             vkSwapchainRenderPass_ = std::move(rhs.vkSwapchainRenderPass_);
             swapchainFramebuffers_ = std::move(rhs.swapchainFramebuffers_);
-            //vkSwapchainFrameBuffers_ = std::move(rhs.vkSwapchainFrameBuffers_);
             vkCommandBuffers_ = std::move(rhs.vkCommandBuffers_);
             vkImageAvailableSemaphore_ = std::move(rhs.vkImageAvailableSemaphore_);
             vkRenderingFinishedSemaphore_ = std::move(rhs.vkRenderingFinishedSemaphore_);

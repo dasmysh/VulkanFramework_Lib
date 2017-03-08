@@ -14,6 +14,10 @@ namespace vku {
 
     class ShaderManager;
 
+    namespace cfg {
+        class WindowCfg;
+    }
+
     namespace gfx {
         class GraphicsPipeline;
         class Framebuffer;
@@ -32,7 +36,8 @@ namespace vku {
         class LogicalDevice final
         {
         public:
-            LogicalDevice(const vk::PhysicalDevice& phDevice, const std::vector<DeviceQueueDesc>& queueDescs, const vk::SurfaceKHR& surface = vk::SurfaceKHR());
+            LogicalDevice(const cfg::WindowCfg& windowCfg, const vk::PhysicalDevice& phDevice,
+                const std::vector<DeviceQueueDesc>& queueDescs, const vk::SurfaceKHR& surface = vk::SurfaceKHR());
             LogicalDevice(const LogicalDevice&); // TODO: implement [10/30/2016 Sebastian Maisch]
             LogicalDevice(LogicalDevice&&);
             LogicalDevice& operator=(const LogicalDevice&);
@@ -54,6 +59,7 @@ namespace vku {
             void CmdDebugMarkerEndEXT(VkCommandBuffer cmdBuffer) const;
             void CmdDebugMarkerInsertEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const;
 
+            const cfg::WindowCfg& GetWindowCfg() const { return windowCfg_; }
             ShaderManager* GetShaderManager() const { return shaderManager_.get(); }
 
             size_t CalculateUniformBufferAlignment(size_t size) const;
@@ -61,6 +67,8 @@ namespace vku {
         private:
             PFN_vkVoidFunction LoadVKDeviceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false) const;
 
+            /** Holds the configuration of the window associated with this device. */
+            const cfg::WindowCfg& windowCfg_;
             /** Holds the physical device. */
             vk::PhysicalDevice vkPhysicalDevice_;
             /** Holds the physical device limits. */
