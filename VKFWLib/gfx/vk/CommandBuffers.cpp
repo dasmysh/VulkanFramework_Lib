@@ -10,7 +10,7 @@
 
 namespace vku { namespace gfx {
 
-    CommandBuffers::CommandBuffers(const LogicalDevice* device, unsigned int queueFamily, vk::CommandBufferLevel level, uint32_t numBuffers):
+    CommandBuffers::CommandBuffers(const LogicalDevice* device, unsigned int queueFamily, vk::CommandBufferLevel level, std::uint32_t numBuffers):
         device_{ device },
         queueFamily_{ queueFamily }
     {
@@ -35,8 +35,8 @@ namespace vku { namespace gfx {
     {
         cmdBuffer.end();
 
-        vk::SubmitInfo submitInfo{ static_cast<uint32_t>(waitSemaphores.size()), waitSemaphores.data(),
-            nullptr, 1, &cmdBuffer, static_cast<uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
+        vk::SubmitInfo submitInfo{ static_cast<std::uint32_t>(waitSemaphores.size()), waitSemaphores.data(),
+            nullptr, 1, &cmdBuffer, static_cast<std::uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
         device->GetQueue(queueFamily, queueIndex).submit(submitInfo, fence);
     }
 
@@ -52,8 +52,8 @@ namespace vku { namespace gfx {
     {
         vkCmdBuffers_[bufferIdx].end();
 
-        vk::SubmitInfo submitInfo{ static_cast<uint32_t>(waitSemaphores.size()), waitSemaphores.data(),
-            nullptr, 1, &vkCmdBuffers_[bufferIdx], static_cast<uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
+        vk::SubmitInfo submitInfo{ static_cast<std::uint32_t>(waitSemaphores.size()), waitSemaphores.data(),
+            nullptr, 1, &vkCmdBuffers_[bufferIdx], static_cast<std::uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
         device_->GetQueue(queueFamily_, queueIndex).submit(submitInfo, fence);
     }*/
 }}

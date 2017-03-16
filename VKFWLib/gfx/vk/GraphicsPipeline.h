@@ -88,7 +88,7 @@ namespace vku {
         void GraphicsPipeline::ResetVertexInput() const
         {
             state_->vertexInputCreateInfo_ = vk::PipelineVertexInputStateCreateInfo{ vk::PipelineVertexInputStateCreateFlags(), 1, &Vertex::bindingDescription_,
-                static_cast<uint32_t>(Vertex::attributeDescriptions_.size()), Vertex::attributeDescriptions_.data() };
+                static_cast<std::uint32_t>(Vertex::attributeDescriptions_.size()), Vertex::attributeDescriptions_.data() };
         }
     }
 }

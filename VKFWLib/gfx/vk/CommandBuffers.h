@@ -16,7 +16,7 @@ namespace vku { namespace gfx {
     class CommandBuffers
     {
     public:
-        CommandBuffers(const LogicalDevice* device, unsigned int queueFamily, vk::CommandBufferLevel level, uint32_t numBuffers);
+        CommandBuffers(const LogicalDevice* device, unsigned int queueFamily, vk::CommandBufferLevel level, std::uint32_t numBuffers);
 
         static vk::CommandBuffer beginSingleTimeSubmit(const LogicalDevice* device, unsigned int queueFamily);
         static void endSingleTimeSubmit(const LogicalDevice* device, vk::CommandBuffer cmdBuffer,

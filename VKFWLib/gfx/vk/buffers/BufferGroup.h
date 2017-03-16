@@ -28,19 +28,19 @@ namespace vku { namespace gfx {
         BufferGroup(BufferGroup&&) noexcept;
         BufferGroup& operator=(BufferGroup&&) noexcept;
 
-        unsigned int AddBufferToGroup(vk::BufferUsageFlags usage, size_t size,
-            const std::vector<uint32_t>& queueFamilyIndices = std::vector<uint32_t>{});
-        unsigned int AddBufferToGroup(vk::BufferUsageFlags usage, size_t size, const void* data,
-            const std::vector<uint32_t>& queueFamilyIndices = std::vector<uint32_t>{});
+        unsigned int AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size,
+            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
+        unsigned int AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size, const void* data,
+            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         void FinalizeGroup(QueuedDeviceTransfer* transfer = nullptr);
 
         DeviceBuffer* GetBuffer(unsigned int bufferIdx) { return &deviceBuffers_[bufferIdx]; }
 
         template<class T> std::enable_if_t<has_contiguous_memory<T>::value> AddBufferToGroup(vk::BufferUsageFlags usage, const T& data,
-            const std::vector<uint32_t>& queueFamilyIndices = std::vector<uint32_t>{});
+            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
 
     private:
-        void FillAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo, std::vector<uint32_t>& sizes) const;
+        void FillAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo, std::vector<std::uint32_t>& sizes) const;
 
         /** Holds the device. */
         const LogicalDevice* device_;
@@ -56,12 +56,12 @@ namespace vku { namespace gfx {
         vk::MemoryPropertyFlags memoryProperties_;
 
         /** Holds the buffer contents that need to be transfered. */
-        std::vector<std::pair<size_t, const void*>> bufferContents_;
+        std::vector<std::pair<std::size_t, const void*>> bufferContents_;
     };
 
     template <class T>
     std::enable_if_t<has_contiguous_memory<T>::value> BufferGroup::AddBufferToGroup(vk::BufferUsageFlags usage,
-        const T& data, const std::vector<uint32_t>& queueFamilyIndices)
+        const T& data, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         AddBufferToGroup(usage, byteSizeOf(data), data.data(), queueFamilyIndices);
     }

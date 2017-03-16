@@ -12,7 +12,7 @@
 namespace vku { namespace gfx {
 
     HostBuffer::HostBuffer(const LogicalDevice* device, vk::BufferUsageFlags usage,
-        vk::MemoryPropertyFlags memoryFlags, const std::vector<uint32_t>& queueFamilyIndices) :
+        vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices) :
         Buffer{ device, usage, memoryFlags | vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, queueFamilyIndices }
     {
     }
@@ -22,7 +22,7 @@ namespace vku { namespace gfx {
     HostBuffer::HostBuffer(const HostBuffer& rhs) :
         Buffer{ rhs.CopyWithoutData() }
     {
-        std::vector<int8_t> tmp(rhs.GetSize());
+        std::vector<std::uint8_t> tmp(rhs.GetSize());
         rhs.DownloadData(tmp);
         InitializeData(tmp);
     }
@@ -48,21 +48,21 @@ namespace vku { namespace gfx {
         return *this;
     }
 
-    void HostBuffer::InitializeData(size_t bufferSize, size_t dataSize, const void* data)
+    void HostBuffer::InitializeData(std::size_t bufferSize, std::size_t dataSize, const void* data)
     {
         InitializeBuffer(bufferSize);
         UploadData(0, dataSize, data);
     }
 
-    void HostBuffer::InitializeData(size_t size, const void* data)
+    void HostBuffer::InitializeData(std::size_t size, const void* data)
     {
         InitializeData(size, size, data);
     }
 
-    void HostBuffer::UploadData(size_t offset, size_t size, const void* data)
+    void HostBuffer::UploadData(std::size_t offset, std::size_t size, const void* data)
     {
         if (offset + size > GetSize()) {
-            std::vector<int8_t> tmp(offset);
+            std::vector<std::uint8_t> tmp(offset);
             DownloadData(tmp);
             InitializeBuffer(offset + size);
             UploadDataInternal(0, offset, tmp.data());
@@ -71,12 +71,12 @@ namespace vku { namespace gfx {
         UploadDataInternal(offset, size, data);
     }
 
-    void HostBuffer::DownloadData(size_t size, void* data) const
+    void HostBuffer::DownloadData(std::size_t size, void* data) const
     {
         GetDeviceMemory().CopyFromHostMemory(0, size, data);
     }
 
-    void HostBuffer::UploadDataInternal(size_t offset, size_t size, const void* data) const
+    void HostBuffer::UploadDataInternal(std::size_t offset, std::size_t size, const void* data) const
     {
         GetDeviceMemory().CopyToHostMemory(offset, size, data);
     }

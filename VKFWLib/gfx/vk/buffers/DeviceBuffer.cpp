@@ -12,7 +12,7 @@
 namespace vku { namespace gfx {
 
     DeviceBuffer::DeviceBuffer(const LogicalDevice* device, vk::BufferUsageFlags usage,
-        vk::MemoryPropertyFlags memoryFlags, const std::vector<uint32_t>& queueFamilyIndices) :
+        vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices) :
         Buffer{ device, usage, memoryFlags | vk::MemoryPropertyFlagBits::eDeviceLocal, queueFamilyIndices }
     {
     }

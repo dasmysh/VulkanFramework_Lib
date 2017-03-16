@@ -7,35 +7,35 @@
  */
 
 #include "Shader.h"
-#include <boost/algorithm/string/predicate.hpp>
 #include <fstream>
 #include "LogicalDevice.h"
+#include "core/string_algorithms.h"
 
-namespace vku { namespace gfx {
-    
-    Shader::Shader(const std::string& shaderFilename, const LogicalDevice* device) :
-        Resource{ shaderFilename, device },
+namespace vku::gfx {
+
+    Shader::Shader(const std::string & resourceId, const LogicalDevice * device, const std::string & shaderFilename) :
+        Resource{ resourceId, device },
+        shaderFilename_{ shaderFilename },
         type_{ vk::ShaderStageFlagBits::eVertex },
         strType_{ "vertex" }
     {
-        auto shaderDefinition = GetParameters();
-        if (boost::ends_with(shaderDefinition[0], ".frag")) {
+        if (ends_with(shaderFilename_, ".frag")) {
             type_ = vk::ShaderStageFlagBits::eFragment;
             strType_ = "fragment";
         }
-        else if (boost::ends_with(shaderDefinition[0], ".geom")) {
+        else if (ends_with(shaderFilename_, ".geom")) {
             type_ = vk::ShaderStageFlagBits::eGeometry;
             strType_ = "geometry";
         }
-        else if (boost::ends_with(shaderDefinition[0], ".tesc")) {
+        else if (ends_with(shaderFilename_, ".tesc")) {
             type_ = vk::ShaderStageFlagBits::eTessellationControl;
             strType_ = "tesselation control";
         }
-        else if (boost::ends_with(shaderDefinition[0], ".tese")) {
+        else if (ends_with(shaderFilename_, ".tese")) {
             type_ = vk::ShaderStageFlagBits::eTessellationEvaluation;
             strType_ = "tesselation evaluation";
         }
-        else if (boost::ends_with(shaderDefinition[0], ".comp")) {
+        else if (ends_with(shaderFilename_, ".comp")) {
             type_ = vk::ShaderStageFlagBits::eCompute;
             strType_ = "compute";
         }
@@ -43,9 +43,14 @@ namespace vku { namespace gfx {
         LoadCompiledShaderFromFile();
     }
 
+    Shader::Shader(const std::string& shaderFilename, const LogicalDevice* device) :
+        Shader{ shaderFilename, device, shaderFilename }
+    {
+    }
+
     Shader::~Shader()
     {
-        if (shaderModule_) device_->GetDevice().destroyShaderModule(shaderModule_);
+        if (shaderModule_) GetDevice()->GetDevice().destroyShaderModule(shaderModule_);
         shaderModule_ = vk::ShaderModule();
     }
 
@@ -58,21 +63,21 @@ namespace vku { namespace gfx {
 
     void Shader::LoadCompiledShaderFromFile()
     {
-        auto filename = FindResourceLocation(GetFilename()) + ".spv";
+        auto filename = FindResourceLocation(shaderFilename_) + ".spv";
         std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
         if (!file.is_open()) {
             LOG(FATAL) << "Could not open shader file (" << filename << ").";
             throw std::runtime_error("Could not open shader file.");
         }
-        auto fileSize = static_cast<size_t>(file.tellg());
+        auto fileSize = static_cast<std::size_t>(file.tellg());
         std::vector<char> buffer(fileSize);
         file.seekg(0);
         file.read(buffer.data(), fileSize);
         file.close();
 
-        vk::ShaderModuleCreateInfo moduleCreateInfo{ vk::ShaderModuleCreateFlags(), fileSize, reinterpret_cast<uint32_t*>(buffer.data()) };
+        vk::ShaderModuleCreateInfo moduleCreateInfo{ vk::ShaderModuleCreateFlags(), fileSize, reinterpret_cast<std::uint32_t*>(buffer.data()) };
 
-        shaderModule_ = device_->GetDevice().createShaderModule(moduleCreateInfo);
+        shaderModule_ = GetDevice()->GetDevice().createShaderModule(moduleCreateInfo);
     }
-}}
+}

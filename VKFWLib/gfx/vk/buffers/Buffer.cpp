@@ -13,7 +13,7 @@
 namespace vku { namespace gfx {
 
     Buffer::Buffer(const LogicalDevice* device, vk::BufferUsageFlags usage,
-        vk::MemoryPropertyFlags memoryFlags, const std::vector<uint32_t>& queueFamilyIndices) :
+        vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices) :
         device_{ device },
         bufferDeviceMemory_{ device, memoryFlags },
         size_{ 0 },
@@ -54,14 +54,14 @@ namespace vku { namespace gfx {
         return *this;
     }
 
-    void Buffer::InitializeBuffer(size_t size, bool initMemory)
+    void Buffer::InitializeBuffer(std::size_t size, bool initMemory)
     {
         this->~Buffer();
 
         size_ = size;
         vk::BufferCreateInfo bufferCreateInfo{ vk::BufferCreateFlags(), static_cast<vk::DeviceSize>(size_), usage_, vk::SharingMode::eExclusive };
         if (queueFamilyIndices_.size() > 0) {
-            bufferCreateInfo.setQueueFamilyIndexCount(static_cast<uint32_t>(queueFamilyIndices_.size()));
+            bufferCreateInfo.setQueueFamilyIndexCount(static_cast<std::uint32_t>(queueFamilyIndices_.size()));
             bufferCreateInfo.setPQueueFamilyIndices(queueFamilyIndices_.data());
         }
         if (queueFamilyIndices_.size() > 1) bufferCreateInfo.setSharingMode(vk::SharingMode::eExclusive);
@@ -74,8 +74,8 @@ namespace vku { namespace gfx {
         }
     }
 
-    vk::CommandBuffer Buffer::CopyBufferAsync(size_t srcOffset, const Buffer& dstBuffer, size_t dstOffset,
-        size_t size, std::pair<uint32_t, uint32_t> copyQueueIdx, const std::vector<vk::Semaphore>& waitSemaphores,
+    vk::CommandBuffer Buffer::CopyBufferAsync(std::size_t srcOffset, const Buffer& dstBuffer, std::size_t dstOffset,
+        std::size_t size, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx, const std::vector<vk::Semaphore>& waitSemaphores,
         const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
     {
         assert(usage_ & vk::BufferUsageFlagBits::eTransferSrc);
@@ -95,21 +95,21 @@ namespace vku { namespace gfx {
             waitSemaphores, signalSemaphores, fence);
         /*transferCmdBuffer.end();
 
-        vk::SubmitInfo submitInfo{ static_cast<uint32_t>(waitSemaphores.size()), waitSemaphores.data(),
-            nullptr, 1, &transferCmdBuffer, static_cast<uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
+        vk::SubmitInfo submitInfo{ static_cast<std::uint32_t>(waitSemaphores.size()), waitSemaphores.data(),
+            nullptr, 1, &transferCmdBuffer, static_cast<std::uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
         device_->GetQueue(copyQueueIdx.first, copyQueueIdx.second).submit(submitInfo, fence);*/
 
         return transferCmdBuffer;
     }
 
-    vk::CommandBuffer Buffer::CopyBufferAsync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx,
+    vk::CommandBuffer Buffer::CopyBufferAsync(const Buffer& dstBuffer, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
         const std::vector<vk::Semaphore>& waitSemaphores, const std::vector<vk::Semaphore>& signalSemaphores,
         vk::Fence fence) const
     {
         return CopyBufferAsync(0, dstBuffer, 0, size_, copyQueueIdx, waitSemaphores, signalSemaphores, fence);
     }
 
-    void Buffer::CopyBufferSync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx) const
+    void Buffer::CopyBufferSync(const Buffer& dstBuffer, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx) const
     {
         auto cmdBuffer = CopyBufferAsync(dstBuffer, copyQueueIdx);
         device_->GetQueue(copyQueueIdx.first, copyQueueIdx.second).waitIdle();

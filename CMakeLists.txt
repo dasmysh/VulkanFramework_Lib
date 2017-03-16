@@ -6,9 +6,7 @@ project(${FWLIB_LIBNAME})
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompileSpirvShader.cmake")
 
-find_package(Boost 1.58.0 REQUIRED)
 find_package(Vulkan 1.0.30.0 REQUIRED)
-link_directories(${Boost_LIBRARY_DIRS})
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "Build the GLFW documentation" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "Build the GLFW example programs" FORCE)
@@ -26,7 +24,7 @@ set(FW_DEBUG_PIPELINE ON CACHE BOOL "Checks if application is started from Rende
 SET(CMAKE_DEBUG_POSTFIX "")
 
 if(MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /WX /EHsc")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /WX /EHsc /std:c++latest")
 else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unused-function -Wno-unused-parameter -Wextra -Wpedantic -std=c++14")
     if(NOT WIN32)
@@ -89,9 +87,9 @@ endforeach()
 
 file(GLOB LIB_CONFIGS CMakeLists.txt Readme.md .gitattributes .gitignore .gitmodules)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME} ${VULKAN_INCLUDE_DIR} extern/glfw/include/ extern/glm/ extern/g3log/src ${Boost_INCLUDE_DIRS} extern/stb/)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME} ${VULKAN_INCLUDE_DIR} extern/glfw/include/ extern/glm/ extern/g3log/src extern/stb/ extern/cereal/include)
 add_library(${FWLIB_LIBNAME} SHARED ${LIB_COMPILED_SHADERS} ${LIB_TMP_FILES} ${LIB_TOP_FILES} ${LIB_RES_FILES} ${LIB_CONFIGS} ${EXTERN_SOURCES})
-target_include_directories(${FWLIB_LIBNAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}  ${VULKAN_INCLUDE_DIR} extern/glfw/include/ extern/glm/ extern/g3log/src ${Boost_INCLUDE_DIRS})
+target_include_directories(${FWLIB_LIBNAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME} ${VULKAN_INCLUDE_DIR} extern/glfw/include/ extern/glm/ extern/g3log/src extern/cereal/include)
 target_compile_definitions(${FWLIB_LIBNAME} PUBLIC VULKAN_HPP_TYPESAFE_CONVERSION)
 target_compile_definitions(${FWLIB_LIBNAME} PRIVATE VKUFW_EXPORT)
 

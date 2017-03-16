@@ -29,37 +29,37 @@ namespace vku { namespace gfx {
         void InitializeMemory(const vk::MemoryRequirements& memRequirements);
         void InitializeMemory(const vk::MemoryAllocateInfo& memAllocateInfo);
 
-        void BindToBuffer(Buffer& buffer, size_t offset) const;
-        void BindToTexture(Texture& texture, size_t offset) const;
+        void BindToBuffer(Buffer& buffer, std::size_t offset) const;
+        void BindToTexture(Texture& texture, std::size_t offset) const;
 
-        void CopyToHostMemory(size_t offset, size_t size, const void* data) const;
-        void CopyToHostMemory(size_t offsetToTexture, const glm::u32vec3& offset,
+        void CopyToHostMemory(std::size_t offset, std::size_t size, const void* data) const;
+        void CopyToHostMemory(std::size_t offsetToTexture, const glm::u32vec3& offset,
             const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize, const void* data) const;
 
-        void CopyFromHostMemory(size_t offset, size_t size, void* data) const;
-        void CopyFromHostMemory(size_t offsetToTexture, const glm::u32vec3& offset,
+        void CopyFromHostMemory(std::size_t offset, std::size_t size, void* data) const;
+        void CopyFromHostMemory(std::size_t offsetToTexture, const glm::u32vec3& offset,
             const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize, void* data) const;
 
         vk::MemoryPropertyFlags GetMemoryProperties() const { return memoryProperties_; }
 
-        static uint32_t FindMemoryType(const LogicalDevice* device, uint32_t typeFilter, vk::MemoryPropertyFlags properties);
-        static bool CheckMemoryType(const LogicalDevice* device, uint32_t typeToCheck, uint32_t typeFilter,
+        static std::uint32_t FindMemoryType(const LogicalDevice* device, std::uint32_t typeFilter, vk::MemoryPropertyFlags properties);
+        static bool CheckMemoryType(const LogicalDevice* device, std::uint32_t typeToCheck, std::uint32_t typeFilter,
             vk::MemoryPropertyFlags properties);
 
     private:
-        static bool CheckMemoryType(const vk::PhysicalDeviceMemoryProperties& memProperties, uint32_t typeToCheck,
-            uint32_t typeFilter, vk::MemoryPropertyFlags properties);
-        void MapAndProcess(size_t offset, size_t size, const std::function<void(void* deviceMem, size_t size)>& processFunc) const;
-        void MapAndProcess(size_t offsetToTexture, const glm::u32vec3& offset,
+        static bool CheckMemoryType(const vk::PhysicalDeviceMemoryProperties& memProperties, std::uint32_t typeToCheck,
+            std::uint32_t typeFilter, vk::MemoryPropertyFlags properties);
+        void MapAndProcess(std::size_t offset, std::size_t size, const std::function<void(void* deviceMem, std::size_t size)>& processFunc) const;
+        void MapAndProcess(std::size_t offsetToTexture, const glm::u32vec3& offset,
             const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize,
-            const std::function<void(void* deviceMem, size_t offset, size_t size)>& processFunc) const;
+            const std::function<void(void* deviceMem, std::size_t offset, std::size_t size)>& processFunc) const;
 
         /** Holds the device. */
         const LogicalDevice* device_;
         /** Holds the Vulkan device memory. */
         vk::DeviceMemory vkDeviceMemory_;
         /** Holds the current size of the memory in bytes. */
-        size_t size_;
+        std::size_t size_;
         /** Holds the memory properties. */
         vk::MemoryPropertyFlags memoryProperties_;
     };

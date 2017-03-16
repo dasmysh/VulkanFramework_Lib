@@ -34,7 +34,7 @@ namespace vku {
     template<typename T, std::size_t N>
     struct has_contiguous_memory<T[N]> : std::true_type{};
 
-    template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value, size_t> byteSizeOf(const T& data) {
-        return static_cast<size_t>(sizeof(T::value_type) * data.size());
+    template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value, std::size_t> byteSizeOf(const T& data) {
+        return static_cast<std::size_t>(sizeof(T::value_type) * data.size());
     }
 }

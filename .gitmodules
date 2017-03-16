@@ -11,3 +11,7 @@
 	path = extern/stb
 	url = https://github.com/nothings/stb.git
 	branch = master
+[submodule "extern/cereal"]
+	path = extern/cereal
+	url = https://github.com/USCiLab/cereal
+	branch = master

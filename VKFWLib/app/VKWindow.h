@@ -59,9 +59,9 @@ namespace vku {
         void SubmitFrame();
 
         // for primary cmd buffer: dirty bit, update if needed. (start cmd buffer, begin render pass, execute other buffers, end pass, end buffer)
-        void UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer, uint32_t cmdBufferIndex)>& fillFunc) const;
+        void UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer, std::uint32_t cmdBufferIndex)>& fillFunc) const;
 
-        uint32_t GetCurrentlyRenderedImageIndex() const { return currentlyRenderedImage_; }
+        std::uint32_t GetCurrentlyRenderedImageIndex() const { return currentlyRenderedImage_; }
         vk::Semaphore GetDataAvailableSemaphore() const { return vkDataAvailableSemaphore_; }
 
     private:
@@ -111,7 +111,7 @@ namespace vku {
         /** Holds the semaphore to notify when rendering is finished. */
         vk::Semaphore vkRenderingFinishedSemaphore_;
         /** Holds the currently rendered image. */
-        uint32_t currentlyRenderedImage_ = 0;
+        std::uint32_t currentlyRenderedImage_ = 0;
 
 
         /** Holds the current mouse position. */
@@ -131,7 +131,7 @@ namespace vku {
         /** Holds whether the window is in focus. */
         bool focused_;
         /** The number (id) of the current frame. */
-        uint64_t frameCount_;
+        std::uint64_t frameCount_;
 
         void InitWindow();
         void InitVulkan();

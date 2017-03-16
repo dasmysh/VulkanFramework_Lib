@@ -110,7 +110,7 @@ namespace vku { namespace gfx {
     {
         assert(desc_.type_ == vk::ImageViewType::e2D || desc_.type_ == vk::ImageViewType::eCube);
         assert(images_.size() == desc_.tex_.size());
-        uint32_t layerCount = 1;
+        std::uint32_t layerCount = 1;
         if (desc_.type_ == vk::ImageViewType::eCube) layerCount = 6;
 
         // TODO: handle depth/stencil buffers... [10/27/2016 Sebastian Maisch]
@@ -123,7 +123,7 @@ namespace vku { namespace gfx {
         }
 
         vk::FramebufferCreateInfo fbCreateInfo{ vk::FramebufferCreateFlags(), renderPass_,
-            static_cast<uint32_t>(desc_.tex_.size()), vkAttachmentsImageView_.data(), size_.x, size_.y, layerCount };
+            static_cast<std::uint32_t>(desc_.tex_.size()), vkAttachmentsImageView_.data(), size_.x, size_.y, layerCount };
         vkFramebuffer_ = logicalDevice_->GetDevice().createFramebuffer(fbCreateInfo);
     }
 }}

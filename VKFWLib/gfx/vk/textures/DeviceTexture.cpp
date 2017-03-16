@@ -11,7 +11,7 @@
 namespace vku { namespace gfx {
 
     DeviceTexture::DeviceTexture(const LogicalDevice* device, const TextureDescriptor& desc,
-        const std::vector<uint32_t>& queueFamilyIndices) :
+        const std::vector<std::uint32_t>& queueFamilyIndices) :
         Texture{ device, TextureDescriptor(desc, vk::MemoryPropertyFlagBits::eDeviceLocal), queueFamilyIndices }
     {
     }

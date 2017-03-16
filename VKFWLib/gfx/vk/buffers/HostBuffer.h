@@ -19,28 +19,28 @@ namespace vku { namespace gfx {
     {
     public:
         HostBuffer(const LogicalDevice* device, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags memoryFlags = vk::MemoryPropertyFlags(),
-            const std::vector<uint32_t>& queueFamilyIndices = std::vector<uint32_t>{});
+            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         ~HostBuffer();
         HostBuffer(const HostBuffer&);
         HostBuffer& operator=(const HostBuffer&);
         HostBuffer(HostBuffer&&) noexcept;
         HostBuffer& operator=(HostBuffer&&) noexcept;
 
-        void InitializeData(size_t bufferSize, size_t dataSize, const void* data);
-        void InitializeData(size_t size, const void* data);
-        void UploadData(size_t offset, size_t size, const void* data);
-        void DownloadData(size_t size, void* data) const;
+        void InitializeData(std::size_t bufferSize, std::size_t dataSize, const void* data);
+        void InitializeData(std::size_t size, const void* data);
+        void UploadData(std::size_t offset, std::size_t size, const void* data);
+        void DownloadData(std::size_t size, void* data) const;
 
-        template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> InitializeData(size_t bufferSize, const T& data);
+        template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> InitializeData(std::size_t bufferSize, const T& data);
         template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> InitializeData(const T& data);
-        template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> UploadData(size_t offset, const T& data);
+        template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> UploadData(std::size_t offset, const T& data);
         template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value>  DownloadData(T& data) const;
 
     private:
-        void UploadDataInternal(size_t offset, size_t size, const void* data) const;
+        void UploadDataInternal(std::size_t offset, std::size_t size, const void* data) const;
     };
 
-    template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> HostBuffer::InitializeData(size_t bufferSize, const T& data)
+    template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> HostBuffer::InitializeData(std::size_t bufferSize, const T& data)
     {
         InitializeData(bufferSize, byteSizeOf(data), data.data());
     }
@@ -50,7 +50,7 @@ namespace vku { namespace gfx {
         InitializeData(byteSizeOf(data), data.data());
     }
 
-    template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> HostBuffer::UploadData(size_t offset, const T& data)
+    template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> HostBuffer::UploadData(std::size_t offset, const T& data)
     {
         UploadData(offset, byteSizeOf(data), data.data());
     }

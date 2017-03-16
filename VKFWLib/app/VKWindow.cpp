@@ -223,7 +223,7 @@ namespace vku {
         logicalDevice_->GetDevice().waitIdle();
 
         if (vkCommandBuffers_.size() > 0) logicalDevice_->GetDevice().freeCommandBuffers(logicalDevice_->GetCommandPool(graphicsQueue_),
-            static_cast<uint32_t>(vkCommandBuffers_.size()), vkCommandBuffers_.data());
+            static_cast<std::uint32_t>(vkCommandBuffers_.size()), vkCommandBuffers_.data());
         for (auto& fence : vkCmdBufferFences_) {
             if(fence) logicalDevice_->GetDevice().destroyFence(fence);
             fence = vk::Fence();
@@ -251,7 +251,7 @@ namespace vku {
         }
 
         auto presentMode = cfg::GetVulkanPresentModeFromConfig(*config_);
-        vkSurfaceExtend_ = vk::Extent2D{ static_cast<uint32_t>(config_->windowWidth_), static_cast<uint32_t>(config_->windowHeight_) };
+        vkSurfaceExtend_ = vk::Extent2D{ static_cast<std::uint32_t>(config_->windowWidth_), static_cast<std::uint32_t>(config_->windowHeight_) };
         auto imageCount = surfaceCapabilities.minImageCount + cfg::GetVulkanAdditionalImageCountFromConfig(*config_);
 
         {
@@ -290,7 +290,8 @@ namespace vku {
         }
 
         vkCommandBuffers_.resize(swapchainImages.size());
-        vk::CommandBufferAllocateInfo allocInfo{ logicalDevice_->GetCommandPool(graphicsQueue_), vk::CommandBufferLevel::ePrimary, static_cast<uint32_t>(vkCommandBuffers_.size()) };
+        vk::CommandBufferAllocateInfo allocInfo{ logicalDevice_->GetCommandPool(graphicsQueue_),
+            vk::CommandBufferLevel::ePrimary, static_cast<std::uint32_t>(vkCommandBuffers_.size()) };
 
         auto result = logicalDevice_->GetDevice().allocateCommandBuffers(&allocInfo, vkCommandBuffers_.data());
         if (result != vk::Result::eSuccess) {
@@ -361,7 +362,7 @@ namespace vku {
 
     void VKWindow::PrepareFrame()
     {
-        auto result = logicalDevice_->GetDevice().acquireNextImageKHR(vkSwapchain_, std::numeric_limits<uint64_t>::max(), vkImageAvailableSemaphore_, vk::Fence());
+        auto result = logicalDevice_->GetDevice().acquireNextImageKHR(vkSwapchain_, std::numeric_limits<std::uint64_t>::max(), vkImageAvailableSemaphore_, vk::Fence());
         currentlyRenderedImage_ = result.value;
 
         if (result.result == vk::Result::eErrorOutOfDateKHR) {
@@ -413,7 +414,7 @@ namespace vku {
         ++frameCount_;
     }
 
-    void VKWindow::UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer, uint32_t cmdBufferIndex)>& fillFunc) const
+    void VKWindow::UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer, std::uint32_t cmdBufferIndex)>& fillFunc) const
     {
         {
             auto syncResult = vk::Result::eTimeout;

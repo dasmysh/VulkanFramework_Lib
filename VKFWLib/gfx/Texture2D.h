@@ -17,23 +17,32 @@ namespace vku { namespace gfx {
     class DeviceTexture;
     struct TextureDescriptor;
 
+    struct stbi_error {};
+    struct invalid_texture_channels { unsigned int imgChannels_; };
+
     class Texture2D final : public Resource
     {
     public:
-        Texture2D(const std::string& textureFilename, const LogicalDevice* device,
-            QueuedDeviceTransfer& transfer, const std::vector<uint32_t>& queueFamilyIndices = std::vector<uint32_t>{});
-        Texture2D(const std::string& textureFilename, const LogicalDevice* device,
-            MemoryGroup& memGroup, const std::vector<uint32_t>& queueFamilyIndices = std::vector<uint32_t>{});
+        Texture2D(const std::string& resourceId, const LogicalDevice* device, const std::string& textureFilename, bool useSRGB,
+            QueuedDeviceTransfer& transfer, const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
+        Texture2D(const std::string& textureFilename, const LogicalDevice* device, bool useSRGB,
+            QueuedDeviceTransfer& transfer, const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
+        Texture2D(const std::string& resourceId, const LogicalDevice* device, const std::string& textureFilename, bool useSRGB,
+            MemoryGroup& memGroup, const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
+        Texture2D(const std::string& textureFilename, const LogicalDevice* device, bool useSRGB,
+            MemoryGroup& memGroup, const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         ~Texture2D();
 
     private:
-        Texture2D(const std::string& textureFilename, const LogicalDevice* device_);
-        void LoadTextureLDR(const std::string& filename,
+        Texture2D(const std::string& resourceId, const std::string& textureFilename, const LogicalDevice* device_);
+        void LoadTextureLDR(const std::string& filename, bool useSRGB,
             const std::function<void(const glm::u32vec4& size, const TextureDescriptor& desc, const void* data)>& loadFn);
         void LoadTextureHDR(const std::string& filename);
         void InitializeSampler();
-        std::tuple<unsigned int, vk::Format> FindFormat(const std::string& filename, int imgChannels) const;
+        std::tuple<unsigned int, vk::Format> FindFormat(const std::string& filename, int imgChannels, bool useSRGB) const;
 
+        /** Holds the texture file name. */
+        std::string textureFilename_;
         /** Holds the unique pointer to the texture used. */
         std::unique_ptr<DeviceTexture> texturePtr_;
         /** Holds the index in the memory group to the texture used. */

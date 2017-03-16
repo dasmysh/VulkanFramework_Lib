@@ -60,7 +60,7 @@ namespace vku { namespace gfx {
         return *this;
     }
 
-    unsigned MemoryGroup::AddBufferToGroup(vk::BufferUsageFlags usage, size_t size, const std::vector<uint32_t>& queueFamilyIndices)
+    unsigned MemoryGroup::AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         deviceBuffers_.emplace_back(device_, vk::BufferUsageFlagBits::eTransferDst | usage, memoryProperties_, queueFamilyIndices);
         deviceBuffers_.back().InitializeBuffer(size, false);
@@ -72,7 +72,7 @@ namespace vku { namespace gfx {
         return static_cast<unsigned int>(deviceBuffers_.size() - 1);
     }
 
-    unsigned MemoryGroup::AddBufferToGroup(vk::BufferUsageFlags usage, size_t size, const void* data, const std::vector<uint32_t>& queueFamilyIndices)
+    unsigned MemoryGroup::AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size, const void* data, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         auto idx = AddBufferToGroup(usage, size, queueFamilyIndices);
         bufferContents_.back().first = size;
@@ -81,7 +81,7 @@ namespace vku { namespace gfx {
     }
 
     unsigned MemoryGroup::AddTextureToGroup(const TextureDescriptor& desc, const glm::u32vec4& size,
-        uint32_t mipLevels, const std::vector<uint32_t>& queueFamilyIndices)
+        std::uint32_t mipLevels, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         deviceImages_.emplace_back(device_, TextureDescriptor(desc, vk::ImageUsageFlagBits::eTransferDst), queueFamilyIndices);
         deviceImages_.back().InitializeImage(size, mipLevels, false);
@@ -95,7 +95,7 @@ namespace vku { namespace gfx {
     }
 
     void MemoryGroup::AddDataToTextureInGroup(unsigned textureIdx, vk::ImageAspectFlags aspectFlags,
-        uint32_t mipLevel, uint32_t arrayLayer, const glm::u32vec3& size, const void* data)
+        std::uint32_t mipLevel, std::uint32_t arrayLayer, const glm::u32vec3& size, const void* data)
     {
         ImageContensDesc imgContDesc;
         imgContDesc.imageIdx_ = textureIdx;
@@ -110,7 +110,7 @@ namespace vku { namespace gfx {
     void MemoryGroup::FinalizeGroup(QueuedDeviceTransfer* transfer)
     {
         vk::MemoryAllocateInfo deviceAllocInfo, hostAllocInfo;
-        std::vector<uint32_t> deviceSizes, hostSizes;
+        std::vector<std::uint32_t> deviceSizes, hostSizes;
         for (auto i = 0U; i < deviceBuffers_.size(); ++i) {
             FillBufferAllocationInfo(&hostBuffers_[i], hostAllocInfo, hostSizes);
             FillBufferAllocationInfo(&deviceBuffers_[i], deviceAllocInfo, deviceSizes);
@@ -134,7 +134,7 @@ namespace vku { namespace gfx {
             deviceOffset += deviceSizes[i];
         }
 
-        std::vector<uint32_t> deviceImageOffsets, hostImageOffsets;
+        std::vector<std::uint32_t> deviceImageOffsets, hostImageOffsets;
         for (auto i = 0U; i < deviceBuffers_.size(); ++i) {
             hostImageOffsets[i] = hostOffset;
             deviceImageOffsets[i] = deviceOffset;
@@ -153,20 +153,20 @@ namespace vku { namespace gfx {
         }
     }
 
-    void MemoryGroup::FillBufferAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo, std::vector<uint32_t>& sizes) const
+    void MemoryGroup::FillBufferAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo, std::vector<std::uint32_t>& sizes) const
     {
         auto memRequirements = device_->GetDevice().getBufferMemoryRequirements(buffer->GetBuffer());
         FillAllocationInfo(memRequirements, buffer->GetDeviceMemory().GetMemoryProperties(), allocInfo, sizes);
     }
 
-    void MemoryGroup::FillImageAllocationInfo(Texture* image, vk::MemoryAllocateInfo& allocInfo, std::vector<uint32_t>& sizes) const
+    void MemoryGroup::FillImageAllocationInfo(Texture* image, vk::MemoryAllocateInfo& allocInfo, std::vector<std::uint32_t>& sizes) const
     {
         auto memRequirements = device_->GetDevice().getImageMemoryRequirements(image->GetImage());
         FillAllocationInfo(memRequirements, image->GetDeviceMemory().GetMemoryProperties(), allocInfo, sizes);
     }
 
     void MemoryGroup::FillAllocationInfo(const vk::MemoryRequirements& memRequirements, vk::MemoryPropertyFlags memProperties,
-        vk::MemoryAllocateInfo& allocInfo, std::vector<uint32_t>& sizes) const
+        vk::MemoryAllocateInfo& allocInfo, std::vector<std::uint32_t>& sizes) const
     {
         if (allocInfo.allocationSize == 0) allocInfo.memoryTypeIndex =
             DeviceMemory::FindMemoryType(device_, memRequirements.memoryTypeBits, memProperties);

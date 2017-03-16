@@ -21,8 +21,8 @@ namespace vku { namespace gfx {
         vkPhysicalDeviceLimits_(phDevice.getProperties().limits),
         queueDescriptions_(queueDescs)
     {
-        std::map<uint32_t, std::vector<std::pair<uint32_t, uint32_t>>> deviceQFamilyToRequested;
-        std::map<uint32_t, std::vector<float>> deviceQFamilyPriorities;
+        std::map<std::uint32_t, std::vector<std::pair<std::uint32_t, std::uint32_t>>> deviceQFamilyToRequested;
+        std::map<std::uint32_t, std::vector<float>> deviceQFamilyPriorities;
         for (auto i = 0U; i < queueDescriptions_.size(); ++i) {
             for (auto j = 0U; j < queueDescriptions_[i].priorities_.size(); ++j) {
                 deviceQFamilyToRequested[queueDescriptions_[i].familyIndex_].emplace_back(std::make_pair(i, j));
@@ -46,7 +46,7 @@ namespace vku { namespace gfx {
 #endif
         for (const auto& queueDesc : queueDescriptions_) {
             auto& priorities = deviceQFamilyPriorities[queueDesc.familyIndex_];
-            queueCreateInfo.emplace_back(vk::DeviceQueueCreateFlags(), queueDesc.familyIndex_, static_cast<uint32_t>(priorities.size()), priorities.data());
+            queueCreateInfo.emplace_back(vk::DeviceQueueCreateFlags(), queueDesc.familyIndex_, static_cast<std::uint32_t>(priorities.size()), priorities.data());
         }
 
         auto deviceFeatures = vkPhysicalDevice_.getFeatures();
@@ -66,9 +66,9 @@ namespace vku { namespace gfx {
             if (surface) enabledDeviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME); // checked this extension earlier
         }
 
-        vk::DeviceCreateInfo deviceCreateInfo{ vk::DeviceCreateFlags(), static_cast<uint32_t>(queueCreateInfo.size()), queueCreateInfo.data(),
-            static_cast<uint32_t>(ApplicationBase::instance().GetVKValidationLayers().size()), ApplicationBase::instance().GetVKValidationLayers().data(),
-            static_cast<uint32_t>(enabledDeviceExtensions.size()), enabledDeviceExtensions.data(),
+        vk::DeviceCreateInfo deviceCreateInfo{ vk::DeviceCreateFlags(), static_cast<std::uint32_t>(queueCreateInfo.size()), queueCreateInfo.data(),
+            static_cast<std::uint32_t>(ApplicationBase::instance().GetVKValidationLayers().size()), ApplicationBase::instance().GetVKValidationLayers().data(),
+            static_cast<std::uint32_t>(enabledDeviceExtensions.size()), enabledDeviceExtensions.data(),
             &deviceFeatures };
 
         vkDevice_ = vkPhysicalDevice_.createDevice(deviceCreateInfo);
@@ -171,7 +171,7 @@ namespace vku { namespace gfx {
         if (enableDebugMarkers_) fpCmdDebugMarkerInsertEXT(cmdBuffer, markerInfo);
     }
 
-    size_t LogicalDevice::CalculateUniformBufferAlignment(size_t size) const
+    std::size_t LogicalDevice::CalculateUniformBufferAlignment(std::size_t size) const
     {
         auto factor = vkPhysicalDeviceLimits_.minUniformBufferOffsetAlignment;
         return size + factor - 1 - ((size + factor - 1) % factor);

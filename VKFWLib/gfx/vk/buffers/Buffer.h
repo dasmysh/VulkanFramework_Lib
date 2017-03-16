@@ -18,26 +18,26 @@ namespace vku { namespace gfx {
     {
     public:
         Buffer(const LogicalDevice* device, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags memoryFlags = vk::MemoryPropertyFlags(),
-            const std::vector<uint32_t>& queueFamilyIndices = std::vector<uint32_t>{});
+            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         virtual ~Buffer();
         Buffer(const Buffer&) = delete;
         Buffer& operator=(const Buffer&) = delete;
         Buffer(Buffer&&) noexcept;
         Buffer& operator=(Buffer&&) noexcept;
 
-        void InitializeBuffer(size_t size, bool initMemory = true);
-        vk::CommandBuffer CopyBufferAsync(size_t srcOffset, const Buffer& dstBuffer, size_t dstOffset,
-                size_t size, std::pair<uint32_t, uint32_t> copyQueueIdx,
-                const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
-                const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
-            vk::Fence fence = vk::Fence()) const;
-        vk::CommandBuffer CopyBufferAsync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx,
+        void InitializeBuffer(std::size_t size, bool initMemory = true);
+        vk::CommandBuffer CopyBufferAsync(std::size_t srcOffset, const Buffer& dstBuffer, std::size_t dstOffset,
+            std::size_t size, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
             const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
             const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
             vk::Fence fence = vk::Fence()) const;
-        void CopyBufferSync(const Buffer& dstBuffer, std::pair<uint32_t, uint32_t> copyQueueIdx) const;
+        vk::CommandBuffer CopyBufferAsync(const Buffer& dstBuffer, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
+            const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
+            const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
+            vk::Fence fence = vk::Fence()) const;
+        void CopyBufferSync(const Buffer& dstBuffer, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx) const;
 
-        size_t GetSize() const { return size_; }
+        std::size_t GetSize() const { return size_; }
         vk::Buffer GetBuffer() const { return buffer_; }
         const vk::Buffer* GetBufferPtr() const { return &buffer_; }
         const DeviceMemory& GetDeviceMemory() const { return bufferDeviceMemory_; }
@@ -53,10 +53,10 @@ namespace vku { namespace gfx {
         /** Holds the Vulkan device memory for the buffer. */
         DeviceMemory bufferDeviceMemory_;
         /** Holds the current size of the buffer in bytes. */
-        size_t size_;
+        std::size_t size_;
         /** Holds the buffer usage. */
         vk::BufferUsageFlags usage_;
         /** Holds the queue family indices. */
-        std::vector<uint32_t> queueFamilyIndices_;
+        std::vector<std::uint32_t> queueFamilyIndices_;
     };
 }}

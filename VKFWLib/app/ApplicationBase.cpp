@@ -21,8 +21,7 @@
 #include <GLFW/glfw3.h>
 #include <fstream>
 #include <set>
-#include <boost/archive/xml_oarchive.hpp>
-#include <boost/archive/xml_iarchive.hpp>
+#include <cereal/archives/xml.hpp>
 
 #include "gfx/vk/LogicalDevice.h"
 
@@ -47,7 +46,7 @@ namespace vku {
      * @param userData the user supplied data
      */
     static VKAPI_ATTR VkBool32 VKAPI_CALL DebugOutputCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objType,
-        uint64_t obj, size_t location, int32_t code, const char* layerPrefix, const char* msg, void* userData) {
+        std::uint64_t obj, std::size_t location, std::int32_t code, const char* layerPrefix, const char* msg, void* userData) {
 
         auto vkLogLevel = VK_GEN;
         if (flags | VK_DEBUG_REPORT_DEBUG_BIT_EXT) vkLogLevel = VK_DEBUG;
@@ -85,8 +84,8 @@ namespace vku {
             if (desc.sparseBinding_) reqFlags |= vk::QueueFlagBits::eSparseBinding;
 
             auto queueProps = device.getQueueFamilyProperties();
-            auto queueCount = static_cast<uint32_t>(queueProps.size());
-            for (uint32_t i = 0; i < queueCount; i++) {
+            auto queueCount = static_cast<std::uint32_t>(queueProps.size());
+            for (std::uint32_t i = 0; i < queueCount; i++) {
                 if (queueProps[i].queueCount < desc.priorities_.size()) continue;
 
                 if ((reqFlags == vk::QueueFlagBits::eTransfer && queueProps[i].queueFlags == vk::QueueFlagBits::eTransfer)
@@ -169,7 +168,7 @@ namespace vku {
             return presentMode;
         }
 
-        uint32_t GetVulkanAdditionalImageCountFromConfig(const WindowCfg& cfg)
+        std::uint32_t GetVulkanAdditionalImageCountFromConfig(const WindowCfg& cfg)
         {
             if (cfg.swapOptions_ == SwapOptions::TRIPLE_BUFFERING) return 1;
             return 0;
@@ -186,7 +185,7 @@ namespace vku {
      * @param applicationVersion the applications version.
      * @param configFileName the configuration file to use.
      */
-    ApplicationBase::ApplicationBase(const std::string& applicationName, uint32_t applicationVersion, const std::string& configFileName) :
+    ApplicationBase::ApplicationBase(const std::string& applicationName, std::uint32_t applicationVersion, const std::string& configFileName) :
         configFileName_{ configFileName },
         pause_(true),
         stopped_(false),
@@ -196,8 +195,8 @@ namespace vku {
         LOG(DEBUG) << "Trying to load configuration.";
         std::ifstream configFile(configFileName, std::ios::in);
         if (configFile.is_open()) {
-            boost::archive::xml_iarchive ia(configFile);
-            ia >> boost::serialization::make_nvp("configuration", config_);
+            cereal::XMLInputArchive ia(configFile);
+            ia >> cereal::make_nvp("configuration", config_);
         }
         else {
             LOG(DEBUG) << "Configuration file not found. Using standard config.";
@@ -206,8 +205,8 @@ namespace vku {
         {
             // always directly write configuration to update version.
             std::ofstream ofs(configFileName, std::ios::out);
-            boost::archive::xml_oarchive oa(ofs);
-            oa << boost::serialization::make_nvp("configuration", config_);
+            cereal::XMLOutputArchive oa(ofs);
+            oa << cereal::make_nvp("configuration", config_);
         }
 
         InitVulkan(applicationName, applicationVersion);
@@ -227,8 +226,8 @@ namespace vku {
 
         LOG(DEBUG) << "Exiting application. Saving configuration to file.";
         std::ofstream ofs(configFileName_, std::ios::out);
-        boost::archive::xml_oarchive oa(ofs);
-        oa << boost::serialization::make_nvp("configuration", config_);
+        cereal::XMLOutputArchive oa(ofs);
+        oa << cereal::make_nvp("configuration", config_);
     }
 
     VKWindow* ApplicationBase::GetFocusedWindow()
@@ -403,7 +402,7 @@ namespace vku {
         }
     }
 
-    void ApplicationBase::InitVulkan(const std::string& applicationName, uint32_t applicationVersion)
+    void ApplicationBase::InitVulkan(const std::string& applicationName, std::uint32_t applicationVersion)
     {
         {
             LOG(INFO) << "Initializing Vulkan...";
@@ -428,8 +427,8 @@ namespace vku {
 
         {
             vk::ApplicationInfo appInfo{ applicationName.c_str(), applicationVersion, engineName, engineVersion, VK_API_VERSION_1_0 };
-            vk::InstanceCreateInfo createInfo{ vk::InstanceCreateFlags(), &appInfo, static_cast<uint32_t>(vkValidationLayers_.size()), vkValidationLayers_.data(),
-                static_cast<uint32_t>(enabledExtensions.size()), enabledExtensions.data() };
+            vk::InstanceCreateInfo createInfo{ vk::InstanceCreateFlags(), &appInfo, static_cast<std::uint32_t>(vkValidationLayers_.size()), vkValidationLayers_.data(),
+                static_cast<std::uint32_t>(enabledExtensions.size()), enabledExtensions.data() };
 
             vkInstance_ = vk::createInstance(createInfo);
 

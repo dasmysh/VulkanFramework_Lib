@@ -40,7 +40,7 @@ namespace vku { namespace gfx {
         }
 
         state_->colorBlending_ = vk::PipelineColorBlendStateCreateInfo{ vk::PipelineColorBlendStateCreateFlags(), VK_FALSE, vk::LogicOp::eCopy,
-            static_cast<uint32_t>(state_->colorBlendAttachments_.size()), state_->colorBlendAttachments_.data(), {{ 0.0f, 0.0f, 0.0f, 0.0f }} };
+            static_cast<std::uint32_t>(state_->colorBlendAttachments_.size()), state_->colorBlendAttachments_.data(), {{ 0.0f, 0.0f, 0.0f, 0.0f }} };
 
         state_->dynamicStates_.push_back(vk::DynamicState::eLineWidth);
 
@@ -104,10 +104,10 @@ namespace vku { namespace gfx {
     void GraphicsPipeline::CreatePipeline(bool keepState, vk::RenderPass renderPass, unsigned int subpass, vk::PipelineLayout pipelineLayout)
     {
         assert(state_);
-        vk::PipelineDynamicStateCreateInfo dynamicState{ vk::PipelineDynamicStateCreateFlags(), static_cast<uint32_t>(state_->dynamicStates_.size()), state_->dynamicStates_.data() };
+        vk::PipelineDynamicStateCreateInfo dynamicState{ vk::PipelineDynamicStateCreateFlags(), static_cast<std::uint32_t>(state_->dynamicStates_.size()), state_->dynamicStates_.data() };
 
         vk::GraphicsPipelineCreateInfo pipelineInfo{ vk::PipelineCreateFlags(),
-            static_cast<uint32_t>(state_->shaderStageInfos_.size()), state_->shaderStageInfos_.data(),
+            static_cast<std::uint32_t>(state_->shaderStageInfos_.size()), state_->shaderStageInfos_.data(),
             &state_->vertexInputCreateInfo_, &state_->inputAssemblyCreateInfo_, &state_->tesselation_,
             &state_->viewportState_, &state_->rasterizer_, &state_->multisampling_, &state_->depthStencil_,
             &state_->colorBlending_, &dynamicState, pipelineLayout, renderPass, subpass };

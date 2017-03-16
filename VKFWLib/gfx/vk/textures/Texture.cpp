@@ -45,7 +45,7 @@ namespace vku { namespace gfx {
     }
 
     Texture::Texture(const LogicalDevice* device, const TextureDescriptor& desc,
-        const std::vector<uint32_t>& queueFamilyIndices) :
+        const std::vector<std::uint32_t>& queueFamilyIndices) :
         device_{ device },
         imageDeviceMemory_{ device, desc.memoryProperties_ },
         size_{ 0 },
@@ -56,7 +56,7 @@ namespace vku { namespace gfx {
         assert(desc_.bytesPP_ > 0);
     }
 
-    void Texture::InitializeImage(const glm::u32vec4& size, uint32_t mipLevels, bool initMemory)
+    void Texture::InitializeImage(const glm::u32vec4& size, std::uint32_t mipLevels, bool initMemory)
     {
         assert(size.x > 0);
         assert(size.y > 0);
@@ -74,7 +74,7 @@ namespace vku { namespace gfx {
             mipLevels, size_.w, desc_.samples_, desc_.imageTiling_,
             desc_.imageUsage_, desc_.sharingMode_, 0, nullptr, desc_.imageLayout_ };
         if (queueFamilyIndices_.size() > 0) {
-            imgCreateInfo.setQueueFamilyIndexCount(static_cast<uint32_t>(queueFamilyIndices_.size()));
+            imgCreateInfo.setQueueFamilyIndexCount(static_cast<std::uint32_t>(queueFamilyIndices_.size()));
             imgCreateInfo.setPQueueFamilyIndices(queueFamilyIndices_.data());
         }
 
@@ -93,9 +93,9 @@ namespace vku { namespace gfx {
         // TODO: implement [3/8/2017 mysh]
     }
 
-    vk::CommandBuffer Texture::CopyImageAsync(uint32_t srcMipLevel, const glm::u32vec4& srcOffset, const Texture& dstImage,
-        uint32_t dstMipLevel, const glm::u32vec4& dstOffset, const glm::u32vec4& size,
-        std::pair<uint32_t, uint32_t> copyQueueIdx, const std::vector<vk::Semaphore>& waitSemaphores,
+    vk::CommandBuffer Texture::CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, const Texture& dstImage,
+        std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset, const glm::u32vec4& size,
+        std::pair<std::uint32_t, std::uint32_t> copyQueueIdx, const std::vector<vk::Semaphore>& waitSemaphores,
         const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
     {
         assert(desc_.imageUsage_ & vk::ImageUsageFlagBits::eTransferSrc);
@@ -119,27 +119,27 @@ namespace vku { namespace gfx {
         vk::ImageSubresourceLayers subresourceLayersSrc{ GetValidAspects(), srcMipLevel, srcOffset.w, size.w };
         vk::ImageSubresourceLayers subresourceLayersDst{ dstImage.GetValidAspects(), dstMipLevel, dstOffset.w, size.w };
         vk::ImageCopy copyRegion{ subresourceLayersSrc,
-            vk::Offset3D{ static_cast<int32_t>(srcOffset.x), static_cast<int32_t>(srcOffset.y), static_cast<int32_t>(srcOffset.z) },
+            vk::Offset3D{ static_cast<std::int32_t>(srcOffset.x), static_cast<std::int32_t>(srcOffset.y), static_cast<std::int32_t>(srcOffset.z) },
             subresourceLayersDst,
-            vk::Offset3D{ static_cast<int32_t>(dstOffset.x), static_cast<int32_t>(dstOffset.y), static_cast<int32_t>(dstOffset.z) },
+            vk::Offset3D{ static_cast<std::int32_t>(dstOffset.x), static_cast<std::int32_t>(dstOffset.y), static_cast<std::int32_t>(dstOffset.z) },
             vk::Extent3D{ size.x / desc_.bytesPP_, size.y, size.z } };
         transferCmdBuffer.copyImage(vkImage_, desc_.imageLayout_, dstImage.vkImage_, dstImage.desc_.imageLayout_, copyRegion);
         transferCmdBuffer.end();
 
-        vk::SubmitInfo submitInfo{ static_cast<uint32_t>(waitSemaphores.size()), waitSemaphores.data(),
-            nullptr, 1, &transferCmdBuffer, static_cast<uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
+        vk::SubmitInfo submitInfo{ static_cast<std::uint32_t>(waitSemaphores.size()), waitSemaphores.data(),
+            nullptr, 1, &transferCmdBuffer, static_cast<std::uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
         device_->GetQueue(copyQueueIdx.first, copyQueueIdx.second).submit(submitInfo, fence);
 
         return transferCmdBuffer;
     }
 
-    vk::CommandBuffer Texture::CopyImageAsync(const Texture& dstImage, std::pair<uint32_t, uint32_t> copyQueueIdx,
+    vk::CommandBuffer Texture::CopyImageAsync(const Texture& dstImage, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
         const std::vector<vk::Semaphore>& waitSemaphores, const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
     {
         return CopyImageAsync(0, glm::u32vec4(0), dstImage, 0, glm::u32vec4(0), size_, copyQueueIdx, waitSemaphores, signalSemaphores, fence);
     }
 
-    void Texture::CopyImageSync(const Texture& dstImage, std::pair<uint32_t, uint32_t> copyQueueIdx) const
+    void Texture::CopyImageSync(const Texture& dstImage, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx) const
     {
         auto cmdBuffer = CopyImageAsync(dstImage, copyQueueIdx);
         device_->GetQueue(copyQueueIdx.first, copyQueueIdx.second).waitIdle();

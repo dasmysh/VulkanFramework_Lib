@@ -13,7 +13,7 @@
 namespace vku { namespace gfx {
 
     HostTexture::HostTexture(const LogicalDevice* device, const TextureDescriptor& desc,
-        const std::vector<uint32_t>& queueFamilyIndices) :
+        const std::vector<std::uint32_t>& queueFamilyIndices) :
         Texture{ device, TextureDescriptor(desc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent), queueFamilyIndices }
     {
     }
@@ -26,7 +26,7 @@ namespace vku { namespace gfx {
         auto texSize = rhs.GetSize();
         auto mipLevels = rhs.GetMipLevels();
         InitializeImage(texSize, mipLevels);
-        std::vector<int8_t> tmp(texSize.x * texSize.y * texSize.z);
+        std::vector<std::uint8_t> tmp(texSize.x * texSize.y * texSize.z);
         for (auto ml = 0U; ml < mipLevels; ++ml) {
             for (auto al = 0U; al < texSize.w; ++al) {
                 rhs.DownloadData(ml, al, texSize.xyz, tmp.data());
@@ -56,9 +56,9 @@ namespace vku { namespace gfx {
         return *this;
     }
 
-    void HostTexture::InitializeData(const glm::u32vec4& textureSize, uint32_t mipLevels, const glm::u32vec4& dataSize, const void* data)
+    void HostTexture::InitializeData(const glm::u32vec4& textureSize, std::uint32_t mipLevels, const glm::u32vec4& dataSize, const void* data)
     {
-        auto byData = reinterpret_cast<const uint8_t*>(data);
+        auto byData = reinterpret_cast<const std::uint8_t*>(data);
         InitializeImage(textureSize, mipLevels);
         for (auto al = 0U; al < dataSize.w; ++al) {
             auto layerData = &byData[dataSize.x * dataSize.y * dataSize.z * al];
@@ -66,12 +66,12 @@ namespace vku { namespace gfx {
         }
     }
 
-    void HostTexture::InitializeData(const glm::u32vec4& size, uint32_t mipLevels, const void* data)
+    void HostTexture::InitializeData(const glm::u32vec4& size, std::uint32_t mipLevels, const void* data)
     {
         InitializeData(size, mipLevels, size, data);
     }
 
-    void HostTexture::UploadData(uint32_t mipLevel, uint32_t arrayLayer,
+    void HostTexture::UploadData(std::uint32_t mipLevel, std::uint32_t arrayLayer,
         const glm::u32vec3& offset, const glm::u32vec3& size, const void* data)
     {
         assert(offset.x + size.x <= GetSize().x);
@@ -85,7 +85,7 @@ namespace vku { namespace gfx {
         GetDeviceMemory().CopyToHostMemory(0, offset, layout, size, data);
     }
 
-    void HostTexture::DownloadData(uint32_t mipLevel, uint32_t arrayLayer, const glm::u32vec3& size, void* data) const
+    void HostTexture::DownloadData(std::uint32_t mipLevel, std::uint32_t arrayLayer, const glm::u32vec3& size, void* data) const
     {
         vk::ImageSubresource subresource{ GetValidAspects(), mipLevel, arrayLayer };
         auto layout = GetDevice().getImageSubresourceLayout(GetImage(), subresource);

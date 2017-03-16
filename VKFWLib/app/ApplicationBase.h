@@ -17,7 +17,7 @@ namespace vku {
 
         std::vector<vk::SurfaceFormatKHR> GetVulkanSurfaceFormatsFromConfig(const WindowCfg& cfg);
         vk::PresentModeKHR GetVulkanPresentModeFromConfig(const WindowCfg& cfg);
-        uint32_t GetVulkanAdditionalImageCountFromConfig(const WindowCfg& cfg);
+        std::uint32_t GetVulkanAdditionalImageCountFromConfig(const WindowCfg& cfg);
     }
     namespace gfx {
         class LogicalDevice;
@@ -28,7 +28,7 @@ namespace vku {
     class ApplicationBase
     {
     public:
-        VKUDllExport ApplicationBase(const std::string& applicationName, uint32_t applicationVersion, const std::string& configFileName);
+        VKUDllExport ApplicationBase(const std::string& applicationName, std::uint32_t applicationVersion, const std::string& configFileName);
         ApplicationBase(const ApplicationBase&) = delete;
         ApplicationBase(ApplicationBase&&) = delete;
         ApplicationBase& operator=(const ApplicationBase&) = delete;
@@ -110,7 +110,7 @@ namespace vku {
         virtual void RenderGUI() = 0;
 
     private:
-        void InitVulkan(const std::string& applicationName, uint32_t applicationVersion);
+        void InitVulkan(const std::string& applicationName, std::uint32_t applicationVersion);
         static unsigned int ScorePhysicalDevice(const vk::PhysicalDevice& device);
         static bool CheckDeviceExtensions(const vk::PhysicalDevice& device, const std::vector<std::string>& requiredExtensions);
         std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const cfg::WindowCfg& windowCfg,

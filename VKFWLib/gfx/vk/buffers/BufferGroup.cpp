@@ -61,7 +61,7 @@ namespace vku { namespace gfx {
         return *this;
     }
 
-    unsigned BufferGroup::AddBufferToGroup(vk::BufferUsageFlags usage, size_t size, const std::vector<uint32_t>& queueFamilyIndices)
+    unsigned BufferGroup::AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         deviceBuffers_.emplace_back(device_, vk::BufferUsageFlagBits::eTransferDst | usage, memoryProperties_, queueFamilyIndices);
         deviceBuffers_.back().InitializeBuffer(size, false);
@@ -73,7 +73,7 @@ namespace vku { namespace gfx {
         return static_cast<unsigned int>(deviceBuffers_.size() - 1);
     }
 
-    unsigned BufferGroup::AddBufferToGroup(vk::BufferUsageFlags usage, size_t size, const void* data, const std::vector<uint32_t>& queueFamilyIndices)
+    unsigned BufferGroup::AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size, const void* data, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         auto idx = AddBufferToGroup(usage, size, queueFamilyIndices);
         bufferContents_.back().first = size;
@@ -84,7 +84,7 @@ namespace vku { namespace gfx {
     void BufferGroup::FinalizeGroup(QueuedDeviceTransfer* transfer)
     {
         vk::MemoryAllocateInfo deviceAllocInfo, hostAllocInfo;
-        std::vector<uint32_t> deviceSizes, hostSizes;
+        std::vector<std::uint32_t> deviceSizes, hostSizes;
         for (auto i = 0U; i < deviceBuffers_.size(); ++i) {
             FillAllocationInfo(&hostBuffers_[i], hostAllocInfo, hostSizes);
             FillAllocationInfo(&deviceBuffers_[i], deviceAllocInfo, deviceSizes);
@@ -110,7 +110,7 @@ namespace vku { namespace gfx {
         }
     }
 
-    void BufferGroup::FillAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo, std::vector<uint32_t>& sizes) const
+    void BufferGroup::FillAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo, std::vector<std::uint32_t>& sizes) const
     {
         auto memRequirements = device_->GetDevice().getBufferMemoryRequirements(buffer->GetBuffer());
         if (allocInfo.allocationSize == 0) allocInfo.memoryTypeIndex = DeviceMemory::FindMemoryType(device_, memRequirements.memoryTypeBits, buffer->GetDeviceMemory().GetMemoryProperties());

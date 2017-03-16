@@ -17,6 +17,7 @@ namespace vku {
         {
         public:
             Shader(const std::string& shaderFilename, const LogicalDevice* device);
+            Shader(const std::string& resourceId, const LogicalDevice* device, const std::string& shaderFilename);
             Shader(const Shader&);
             Shader& operator=(const Shader&);
             Shader(Shader&&) noexcept;
@@ -28,6 +29,8 @@ namespace vku {
         private:
             void LoadCompiledShaderFromFile();
 
+            /** Holds the shader filename. */
+            std::string shaderFilename_;
             /** Holds the compiled shader. */
             vk::ShaderModule shaderModule_;
             /** Holds the shaders type. */

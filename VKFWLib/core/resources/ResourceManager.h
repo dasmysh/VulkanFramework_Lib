@@ -8,31 +8,22 @@
 
 #pragma once
 
-#include <boost/exception/all.hpp>
+namespace vku::gfx {
+    class LogicalDevice;
+}
 
 namespace vku {
-    namespace gfx {
-        class LogicalDevice;
-    }
 
     class ApplicationBase;
 
-    using errdesc_info = boost::error_info<struct tag_errdesc, std::string>;
-    using resid_info = boost::error_info<struct tag_resid, std::string>;
-
-    /**
-     * Exception base class for resource loading errors.
-     */
-    struct resource_loading_error : virtual boost::exception, virtual std::exception { };
-
-    template<typename rType>
+    /*template<typename rType>
     struct DefaultResourceLoadingPolicy
     {
         static std::shared_ptr<rType> CreateResource(const std::string& resId, const gfx::LogicalDevice* device)
         {
             return std::move(std::make_shared<rType>(resId, device));
         }
-    };
+    };*/
 
     /**
      * @brief  Base class for all resource managers.
@@ -40,7 +31,7 @@ namespace vku {
      * @author Sebastian Maisch <sebastian.maisch@googlemail.com>
      * @date   2014.01.03
      */
-    template<typename rType, bool reloadLoop = false, typename ResourceLoadingPolicy = DefaultResourceLoadingPolicy<rType>>
+    template<typename rType, bool reloadLoop = false>//, typename ResourceLoadingPolicy = DefaultResourceLoadingPolicy<rType>>
     class ResourceManager
     {
     protected:
@@ -49,9 +40,7 @@ namespace vku {
         /** The resource map type. */
         using ResourceMap = std::unordered_map<std::string, std::weak_ptr<rType>>;
         /** The type of this base class. */
-        using ResourceManagerBase = ResourceManager<rType, reloadLoop, ResourceLoadingPolicy>;
-        /** The resource loading policy used. */
-        using LoadingPolicy = ResourceLoadingPolicy;
+        using ResourceManagerBase = ResourceManager<rType, reloadLoop>;
 
     public:
         /** Constructor for resource managers. */
@@ -61,8 +50,8 @@ namespace vku {
         ResourceManager(const ResourceManager& rhs) :
             device_{ rhs.device_ }
         {
-            for (const auto& res : rhs.resources) {
-                resources.emplace(res.first, std::weak_ptr<ResourceType>());
+            for (const auto& res : rhs.resources_) {
+                resources_.emplace(res.first, std::weak_ptr<ResourceType>());
             }
         }
 
@@ -77,13 +66,13 @@ namespace vku {
         }
 
         /** Move constructor. */
-        ResourceManager(ResourceManager&& rhs) noexcept : resources{ std::move(rhs.resources) }, device_{ rhs.device_ } {}
+        ResourceManager(ResourceManager&& rhs) noexcept : resources_{ std::move(rhs.resources_) }, device_{ rhs.device_ } {}
         /** Move assignment operator. */
         ResourceManager& operator=(ResourceManager&& rhs) noexcept
         {
             if (this != &rhs) {
                 this->~ResourceManager();
-                resources = std::move(rhs.resources);
+                resources_ = std::move(rhs.resources_);
                 device_ = rhs.device_;
             }
             return *this;
@@ -96,23 +85,24 @@ namespace vku {
          * @param resId the resources id
          * @return the resource as a shared pointer
          */
-        std::shared_ptr<ResourceType> GetResource(const std::string& resId)
+        template<typename... Args>
+        std::shared_ptr<ResourceType> GetResource(const std::string& resId, Args&&... args)
         {
             std::weak_ptr<ResourceType> wpResource;
             try {
-                wpResource = resources.at(resId);
+                wpResource = resources_.at(resId);
             }
             catch (std::out_of_range e) {
                 LOG(INFO) << "No resource with id \"" << resId << "\" found. Creating new one.";
             }
             if (wpResource.expired()) {
                 std::shared_ptr<ResourceType> spResource(nullptr);
-                LoadResource(resId, spResource);
+                LoadResource(resId, spResource, std::forward<Args>(args)...);
                 while (reloadLoop && !spResource) {
                     LoadResource(resId, spResource);
                 }
                 wpResource = spResource;
-                resources.insert(std::move(std::make_pair(resId, wpResource)));
+                resources_.insert(std::move(std::make_pair(resId, wpResource)));
                 return std::move(spResource);
             }
             return wpResource.lock();
@@ -125,7 +115,8 @@ namespace vku {
          */
         bool HasResource(const std::string& resId) const
         {
-            return (resources.find(resId) != resources.end());
+            auto rit = resources_.find(resId);
+            return (rit != resources_.end()) && !rit->expired();
         }
 
 
@@ -135,12 +126,12 @@ namespace vku {
          * @param resId the resource id to load.
          * @param spResource pointer to the resource to fill.
          */
-        virtual void LoadResource(const std::string& resId, std::shared_ptr<ResourceType>& spResource)
+        template<typename... Args>
+        void LoadResource(const std::string& resId, std::shared_ptr<ResourceType>& spResource, Args&&... args)
         {
-            try {
-                spResource = std::move(LoadingPolicy::CreateResource(TranslateCreationParameters(resId), device_));
-            }
-            catch (const resource_loading_error& loadingError) {
+            spResource = std::make_shared<rType>(resId, device_, std::forward<Args>(args)...);
+            
+            /*catch (const resource_loading_error& loadingError) {
                 auto resid = boost::get_error_info<resid_info>(loadingError);
                 auto filename = boost::get_error_info<boost::errinfo_file_name>(loadingError);
                 auto errDesc = boost::get_error_info<errdesc_info>(loadingError);
@@ -149,12 +140,7 @@ namespace vku {
                     << "Filename: " << (filename == nullptr ? "-" : filename->c_str()) << std::endl
                     << "Description: " << (errDesc == nullptr ? "-" : errDesc->c_str());
                 if (!reloadLoop) throw;
-            }
-        }
-
-        virtual std::string TranslateCreationParameters(const std::string& id)
-        {
-            return id;
+            }*/
         }
 
         /**
@@ -165,12 +151,12 @@ namespace vku {
          */
         std::shared_ptr<ResourceType> SetResource(const std::string& resourceName, std::shared_ptr<ResourceType>&& resource)
         {
-            resources[resourceName] = std::move(resource);
-            return resources[resourceName].lock();
+            resources_[resourceName] = std::move(resource);
+            return resources_[resourceName].lock();
         }
 
         /** Holds the resources managed. */
-        ResourceMap resources;
+        ResourceMap resources_;
         /** Holds the device for this resource. */
         const gfx::LogicalDevice* device_;
     };

@@ -61,29 +61,29 @@ namespace vku { namespace gfx {
     {
     public:
         Texture(const LogicalDevice* device, const TextureDescriptor& desc,
-            const std::vector<uint32_t>& queueFamilyIndices = std::vector<uint32_t>{});
+            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         Texture(const Texture&) = delete;
         Texture(Texture&&) noexcept;
         Texture& operator=(const Texture&) = delete;
         Texture& operator=(Texture&&) noexcept;
         ~Texture();
 
-        void InitializeImage(const glm::u32vec4& size, uint32_t mipLevels, bool initMemory = true);
+        void InitializeImage(const glm::u32vec4& size, std::uint32_t mipLevels, bool initMemory = true);
         void TransitionLayout(vk::ImageLayout newLayout) const;
-        vk::CommandBuffer CopyImageAsync(uint32_t srcMipLevel, const glm::u32vec4& srcOffset,
-            const Texture& dstImage, uint32_t dstMipLevel, const glm::u32vec4& dstOffset,
-            const glm::u32vec4& size, std::pair<uint32_t, uint32_t> copyQueueIdx,
+        vk::CommandBuffer CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset,
+            const Texture& dstImage, std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset,
+            const glm::u32vec4& size, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
             const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
             const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
             vk::Fence fence = vk::Fence()) const;
-        vk::CommandBuffer CopyImageAsync(const Texture& dstImage, std::pair<uint32_t, uint32_t> copyQueueIdx,
+        vk::CommandBuffer CopyImageAsync(const Texture& dstImage, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
             const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
             const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
             vk::Fence fence = vk::Fence()) const;
-        void CopyImageSync(const Texture& dstImage, std::pair<uint32_t, uint32_t> copyQueueIdx) const;
+        void CopyImageSync(const Texture& dstImage, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx) const;
 
         const glm::u32vec4& GetSize() const { return size_; }
-        uint32_t GetMipLevels() const { return mipLevels_; }
+        std::uint32_t GetMipLevels() const { return mipLevels_; }
         vk::Image GetImage() const { return vkImage_; }
         const DeviceMemory& GetDeviceMemory() const { return imageDeviceMemory_; }
 
@@ -102,10 +102,10 @@ namespace vku { namespace gfx {
         /** Holds the current size of the texture (x: bytes of line, y: #lines, z: #depth slices, w: #array slices). */
         glm::u32vec4 size_;
         /** Holds the number of MIP levels. */
-        uint32_t mipLevels_;
+        std::uint32_t mipLevels_;
         /** Holds the texture description. */
         TextureDescriptor desc_;
         /** Holds the queue family indices. */
-        std::vector<uint32_t> queueFamilyIndices_;
+        std::vector<std::uint32_t> queueFamilyIndices_;
     };
 }}

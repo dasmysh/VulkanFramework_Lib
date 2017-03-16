@@ -10,7 +10,7 @@
 #include "rotfilesink.h"
 #include "filesinkhelper.inl"
 #include <cassert>
-#include <boost/filesystem.hpp>
+#include <filesystem>
 #include <regex>
 
 namespace vku {
@@ -21,7 +21,7 @@ namespace vku {
         if (logger_id != "") file_name += "." + logger_id;
         auto complete_file_name = file_name + ".log";
 
-        namespace fs = boost::filesystem;
+        namespace fs = std::experimental::filesystem;
         auto complete_file_name_path(fs::absolute(complete_file_name));
         if (fs::exists(complete_file_name_path)) {
             // std::vector<std::pair<fs::path, std::smatch>> oldLogs;

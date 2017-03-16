@@ -25,10 +25,10 @@ namespace vku {
         struct DeviceQueueDesc
         {
             DeviceQueueDesc() = default;
-            DeviceQueueDesc(uint32_t familyIndex, const std::vector<float>& priorities) : familyIndex_(familyIndex), priorities_(priorities) {}
+            DeviceQueueDesc(std::uint32_t familyIndex, const std::vector<float>& priorities) : familyIndex_(familyIndex), priorities_(priorities) {}
 
             /** Holds the family index. */
-            uint32_t familyIndex_;
+            std::uint32_t familyIndex_;
             /** Holds the queues priorities. */
             std::vector<float> priorities_;
         };
@@ -62,7 +62,7 @@ namespace vku {
             const cfg::WindowCfg& GetWindowCfg() const { return windowCfg_; }
             ShaderManager* GetShaderManager() const { return shaderManager_.get(); }
 
-            size_t CalculateUniformBufferAlignment(size_t size) const;
+            std::size_t CalculateUniformBufferAlignment(std::size_t size) const;
 
         private:
             PFN_vkVoidFunction LoadVKDeviceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false) const;
@@ -76,9 +76,9 @@ namespace vku {
             /** Holds the actual device. */
             vk::Device vkDevice_;
             /** Holds the queues by device queue family. */
-            std::map<uint32_t, std::vector<vk::Queue>> vkQueuesByDeviceFamily_;
+            std::map<std::uint32_t, std::vector<vk::Queue>> vkQueuesByDeviceFamily_;
             /** Holds a command pool for each device queue family. */
-            std::map<uint32_t, vk::CommandPool> vkCmdPoolsByDeviceQFamily_;
+            std::map<std::uint32_t, vk::CommandPool> vkCmdPoolsByDeviceQFamily_;
 
             /** Holds the queue descriptions. */
             std::vector<DeviceQueueDesc> queueDescriptions_;
