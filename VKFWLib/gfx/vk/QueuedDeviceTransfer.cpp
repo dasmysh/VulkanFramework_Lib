@@ -11,6 +11,7 @@
 #include "buffers/DeviceBuffer.h"
 #include "textures/HostTexture.h"
 #include "textures/DeviceTexture.h"
+#include "CommandBuffers.h"
 
 namespace vku { namespace gfx {
 
@@ -110,7 +111,14 @@ namespace vku { namespace gfx {
 
     void QueuedDeviceTransfer::AddTransferToQueue(const Texture& src, const Texture& dst)
     {
-        transferCmdBuffers_.push_back(src.CopyImageAsync(dst, transferQueue_));
+        auto imgCopyCmdBuffer = CommandBuffers::beginSingleTimeSubmit(device_, transferQueue_.first);
+        src.TransitionLayout(vk::ImageLayout::eTransferSrcOptimal, imgCopyCmdBuffer);
+        dst.TransitionLayout(vk::ImageLayout::eTransferDstOptimal, imgCopyCmdBuffer);
+        src.CopyImageAsync(0, glm::u32vec4(0), dst, 0, glm::u32vec4(0), src.GetSize(), imgCopyCmdBuffer);
+        CommandBuffers::endSingleTimeSubmit(device_, imgCopyCmdBuffer, transferQueue_.first, transferQueue_.second);
+        dst.TransitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal, imgCopyCmdBuffer);
+
+        transferCmdBuffers_.push_back(imgCopyCmdBuffer);
     }
 
     void QueuedDeviceTransfer::FinishTransfer()

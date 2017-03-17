@@ -74,23 +74,30 @@ namespace vku { namespace gfx {
         }
     }
 
-    vk::CommandBuffer Buffer::CopyBufferAsync(std::size_t srcOffset, const Buffer& dstBuffer, std::size_t dstOffset,
-        std::size_t size, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx, const std::vector<vk::Semaphore>& waitSemaphores,
-        const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
+    void Buffer::CopyBufferAsync(std::size_t srcOffset, const Buffer & dstBuffer, std::size_t dstOffset,
+        std::size_t size, vk::CommandBuffer cmdBuffer) const
     {
         assert(usage_ & vk::BufferUsageFlagBits::eTransferSrc);
         assert(dstBuffer.usage_ & vk::BufferUsageFlagBits::eTransferDst);
         assert(srcOffset + size <= size_);
         assert(dstOffset + size <= dstBuffer.size_);
 
+        vk::BufferCopy copyRegion{ srcOffset, dstOffset, size };
+        cmdBuffer.copyBuffer(buffer_, dstBuffer.buffer_, copyRegion);
+    }
+
+    vk::CommandBuffer Buffer::CopyBufferAsync(std::size_t srcOffset, const Buffer& dstBuffer, std::size_t dstOffset,
+        std::size_t size, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx, const std::vector<vk::Semaphore>& waitSemaphores,
+        const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
+    {
         auto transferCmdBuffer = CommandBuffers::beginSingleTimeSubmit(device_, copyQueueIdx.first);
         /*vk::CommandBufferAllocateInfo cmdBufferallocInfo{ device_->GetCommandPool(copyQueueIdx.first) , vk::CommandBufferLevel::ePrimary, 1 };
         auto transferCmdBuffer = device_->GetDevice().allocateCommandBuffers(cmdBufferallocInfo)[0];
 
         vk::CommandBufferBeginInfo beginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
         transferCmdBuffer.begin(beginInfo);*/
-        vk::BufferCopy copyRegion{ srcOffset, dstOffset, size };
-        transferCmdBuffer.copyBuffer(buffer_, dstBuffer.buffer_, copyRegion);
+        CopyBufferAsync(srcOffset, dstBuffer, dstOffset, size, transferCmdBuffer);
+
         CommandBuffers::endSingleTimeSubmit(device_, transferCmdBuffer, copyQueueIdx.first, copyQueueIdx.second,
             waitSemaphores, signalSemaphores, fence);
         /*transferCmdBuffer.end();

@@ -69,7 +69,14 @@ namespace vku { namespace gfx {
         ~Texture();
 
         void InitializeImage(const glm::u32vec4& size, std::uint32_t mipLevels, bool initMemory = true);
-        void TransitionLayout(vk::ImageLayout newLayout) const;
+        void TransitionLayout(vk::ImageLayout newLayout, vk::CommandBuffer cmdBuffer) const;
+        vk::CommandBuffer TransitionLayout(vk::ImageLayout newLayout,
+            std::pair<std::uint32_t, std::uint32_t> transitionQueueIdx,
+            const std::vector<vk::Semaphore>& waitSemaphores,
+            const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const;
+        void CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset,
+            const Texture& dstImage, std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset,
+            const glm::u32vec4& size, vk::CommandBuffer cmdBuffer) const;
         vk::CommandBuffer CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset,
             const Texture& dstImage, std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset,
             const glm::u32vec4& size, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
@@ -97,6 +104,8 @@ namespace vku { namespace gfx {
         const LogicalDevice* device_;
         /** Holds the Vulkan image object. */
         vk::Image vkImage_;
+        /** Holds the Vulkan image view. */
+        vk::ImageView vkImageView_;
         /** Holds the Vulkan device memory for the image. */
         DeviceMemory imageDeviceMemory_;
         /** Holds the current size of the texture (x: bytes of line, y: #lines, z: #depth slices, w: #array slices). */
