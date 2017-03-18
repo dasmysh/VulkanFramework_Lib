@@ -12,7 +12,7 @@
 #include "core/resources/ShaderManager.h"
 #include "GraphicsPipeline.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     LogicalDevice::LogicalDevice(const cfg::WindowCfg& windowCfg, const vk::PhysicalDevice& phDevice,
         const std::vector<DeviceQueueDesc>& queueDescs, const vk::SurfaceKHR& surface) :
@@ -42,12 +42,13 @@ namespace vku { namespace gfx {
         if (singleQueueOnly) {
             float prio = 1.0f;
             queueCreateInfo.emplace_back(vk::DeviceQueueCreateFlags(), 0, 1, &prio);
-        } else // i wonder if i can make this part even more unreadable ...
-#endif
-        for (const auto& queueDesc : queueDescriptions_) {
-            auto& priorities = deviceQFamilyPriorities[queueDesc.familyIndex_];
-            queueCreateInfo.emplace_back(vk::DeviceQueueCreateFlags(), queueDesc.familyIndex_, static_cast<std::uint32_t>(priorities.size()), priorities.data());
         }
+        else // i wonder if i can make this part even more unreadable ...
+#endif
+            for (const auto& queueDesc : queueDescriptions_) {
+                auto& priorities = deviceQFamilyPriorities[queueDesc.familyIndex_];
+                queueCreateInfo.emplace_back(vk::DeviceQueueCreateFlags(), queueDesc.familyIndex_, static_cast<std::uint32_t>(priorities.size()), priorities.data());
+            }
 
         auto deviceFeatures = vkPhysicalDevice_.getFeatures();
         std::vector<const char*> enabledDeviceExtensions;
@@ -93,7 +94,7 @@ namespace vku { namespace gfx {
                 if (singleQueueOnly) vkQueuesByDeviceFamily_[deviceQueueDesc.first][j] = vkSingleQueue;
                 else // i wonder if i can make this part even more unreadable ...
 #endif
-                vkQueuesByDeviceFamily_[deviceQueueDesc.first][j] = vkDevice_.getQueue(deviceQueueDesc.first, j);
+                    vkQueuesByDeviceFamily_[deviceQueueDesc.first][j] = vkDevice_.getQueue(deviceQueueDesc.first, j);
                 vkQueuesByRequestedFamily_[mappings[j].first][mappings[j].second] = vkQueuesByDeviceFamily_[deviceQueueDesc.first][j];
                 vkCmdPoolsByRequestedQFamily_[mappings[j].first] = vkCmdPoolsByDeviceQFamily_[deviceQueueDesc.first];
             }
@@ -176,4 +177,4 @@ namespace vku { namespace gfx {
         auto factor = vkPhysicalDeviceLimits_.minUniformBufferOffsetAlignment;
         return size + factor - 1 - ((size + factor - 1) % factor);
     }
-}}
+}

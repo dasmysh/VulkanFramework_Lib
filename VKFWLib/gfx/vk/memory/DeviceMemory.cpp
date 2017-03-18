@@ -11,7 +11,7 @@
 #include "gfx/vk/textures/Texture.h"
 #include "gfx/vk/buffers/Buffer.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     DeviceMemory::DeviceMemory(const LogicalDevice* device, vk::MemoryPropertyFlags properties) :
         device_{ device },
@@ -27,8 +27,8 @@ namespace vku { namespace gfx {
     }
 
     DeviceMemory::DeviceMemory(DeviceMemory&& rhs) noexcept :
-        device_{ rhs.device_ },
-        vkDeviceMemory_{ rhs.vkDeviceMemory_},
+    device_{ rhs.device_ },
+        vkDeviceMemory_{ rhs.vkDeviceMemory_ },
         size_{ rhs.size_ },
         memoryProperties_{ rhs.memoryProperties_ }
     {
@@ -127,7 +127,7 @@ namespace vku { namespace gfx {
         return false;
     }
 
-    void DeviceMemory::MapAndProcess(std::size_t offset, std::size_t size, const std::function<void (void* deviceMem, std::size_t size)>& processFunc) const
+    void DeviceMemory::MapAndProcess(std::size_t offset, std::size_t size, const std::function<void(void* deviceMem, std::size_t size)>& processFunc) const
     {
         assert(memoryProperties_ & (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent));
         auto deviceMem = device_->GetDevice().mapMemory(vkDeviceMemory_, offset, size, vk::MemoryMapFlags());
@@ -147,13 +147,15 @@ namespace vku { namespace gfx {
         if (layout.rowPitch == dataSize.x && layout.depthPitch == dataSize.y
             && offset.x == 0 && offset.y == 0) {
             processFunc(deviceBytes, 0, dataSize.x * dataSize.y * dataSize.z);
-        } else if (layout.rowPitch == dataSize.x && offset.x == 0) {
+        }
+        else if (layout.rowPitch == dataSize.x && offset.x == 0) {
             for (auto z = 0U; z < dataSize.z; ++z) {
                 auto deviceMemPos = z * layout.depthPitch + offset.y * layout.rowPitch;
                 auto dataMemPos = z * dataSize.x * dataSize.y;
                 processFunc(&deviceBytes[deviceMemPos], dataMemPos, dataSize.x * dataSize.y);
             }
-        } else {
+        }
+        else {
             for (auto z = 0U; z < dataSize.z; ++z) {
                 for (auto y = 0U; y < dataSize.y; ++y) {
                     auto deviceMemPos = z * layout.depthPitch + (offset.y + y) * layout.rowPitch + offset.x;
@@ -165,4 +167,4 @@ namespace vku { namespace gfx {
 
         device_->GetDevice().unmapMemory(vkDeviceMemory_);
     }
-}}
+}

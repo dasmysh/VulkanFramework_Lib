@@ -11,7 +11,7 @@
 #include "main.h"
 #include "Buffer.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
     class HostBuffer;
 
     class DeviceBuffer final : public Buffer
@@ -25,4 +25,4 @@ namespace vku { namespace gfx {
         DeviceBuffer(DeviceBuffer&&) noexcept;
         DeviceBuffer& operator=(DeviceBuffer&&) noexcept;
     };
-}}
+}

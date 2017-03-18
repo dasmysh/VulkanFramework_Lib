@@ -13,11 +13,11 @@
 #include "gfx/vk/buffers/DeviceBuffer.h"
 #include "gfx/vk/textures/Texture.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     MemoryGroup::MemoryGroup(const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags) :
         device_{ device },
-        deviceMemory_{device, memoryFlags},
+        deviceMemory_{ device, memoryFlags },
         hostMemory_{ device, memoryFlags },
         memoryProperties_{ memoryFlags }
     {
@@ -31,7 +31,7 @@ namespace vku { namespace gfx {
     }
 
     MemoryGroup::MemoryGroup(MemoryGroup&& rhs) noexcept :
-        device_{ rhs.device_ },
+    device_{ rhs.device_ },
         deviceMemory_{ std::move(rhs.deviceMemory_) },
         hostMemory_{ std::move(rhs.hostMemory_) },
         deviceBuffers_{ std::move(rhs.deviceBuffers_) },
@@ -44,7 +44,7 @@ namespace vku { namespace gfx {
     {
     }
 
-        MemoryGroup& MemoryGroup::operator=(MemoryGroup&& rhs) noexcept
+    MemoryGroup& MemoryGroup::operator=(MemoryGroup&& rhs) noexcept
     {
         this->~MemoryGroup();
         device_ = rhs.device_;
@@ -94,7 +94,7 @@ namespace vku { namespace gfx {
         return static_cast<unsigned int>(deviceImages_.size() - 1);
     }
 
-    void MemoryGroup::AddDataToTextureInGroup(unsigned textureIdx, vk::ImageAspectFlags aspectFlags,
+    void MemoryGroup::AddDataToTextureInGroup(unsigned int textureIdx, vk::ImageAspectFlags aspectFlags,
         std::uint32_t mipLevel, std::uint32_t arrayLayer, const glm::u32vec3& size, const void* data)
     {
         ImageContensDesc imgContDesc;
@@ -179,4 +179,4 @@ namespace vku { namespace gfx {
         sizes.push_back(static_cast<unsigned int>(memRequirements.size));
         allocInfo.allocationSize += memRequirements.size;
     }
-}}
+}

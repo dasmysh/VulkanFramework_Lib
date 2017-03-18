@@ -8,9 +8,9 @@
 
 #include "CommandBuffers.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
-    CommandBuffers::CommandBuffers(const LogicalDevice* device, unsigned int queueFamily, vk::CommandBufferLevel level, std::uint32_t numBuffers):
+    CommandBuffers::CommandBuffers(const LogicalDevice* device, unsigned int queueFamily, vk::CommandBufferLevel level, std::uint32_t numBuffers) :
         device_{ device },
         queueFamily_{ queueFamily }
     {
@@ -56,4 +56,4 @@ namespace vku { namespace gfx {
             nullptr, 1, &vkCmdBuffers_[bufferIdx], static_cast<std::uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
         device_->GetQueue(queueFamily_, queueIndex).submit(submitInfo, fence);
     }*/
-}}
+}

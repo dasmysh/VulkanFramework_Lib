@@ -10,25 +10,23 @@
 
 #include "main.h"
 
-namespace vku {
-    namespace gfx {
+namespace vku::gfx {
 
-        class Shader;
+    class Shader;
 
-        class ComputePipeline final : public Resource
-        {
-        public:
-            ComputePipeline(const std::string& shaderStageId, gfx::LogicalDevice* device);
-            ComputePipeline(const ComputePipeline&);
-            ComputePipeline& operator=(const ComputePipeline&);
-            ComputePipeline(ComputePipeline&&) noexcept;
-            ComputePipeline& operator=(ComputePipeline&&) noexcept;
-            ~ComputePipeline();
+    class ComputePipeline final : public Resource
+    {
+    public:
+        ComputePipeline(const std::string& shaderStageId, gfx::LogicalDevice* device);
+        ComputePipeline(const ComputePipeline&);
+        ComputePipeline& operator=(const ComputePipeline&);
+        ComputePipeline(ComputePipeline&&) noexcept;
+        ComputePipeline& operator=(ComputePipeline&&) noexcept;
+        ~ComputePipeline();
 
-        private:
-            /** Holds all shaders in the program. */
-            std::vector<std::shared_ptr<Shader>> shaders;
-        };
-    }
+    private:
+        /** Holds all shaders in the program. */
+        std::vector<std::shared_ptr<Shader>> shaders;
+    };
 }
 

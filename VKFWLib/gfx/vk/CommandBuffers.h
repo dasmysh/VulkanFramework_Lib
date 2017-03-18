@@ -11,7 +11,7 @@
 #include "main.h"
 #include "gfx/vk/LogicalDevice.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     class CommandBuffers
     {
@@ -33,4 +33,4 @@ namespace vku { namespace gfx {
         /** Holds the vulkan command buffer objects. */
         std::vector<vk::CommandBuffer> vkCmdBuffers_;
     };
-}}
+}

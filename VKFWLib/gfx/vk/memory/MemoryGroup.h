@@ -17,7 +17,7 @@
 #include "gfx/vk/textures/DeviceTexture.h"
 #include "gfx/vk/textures/HostTexture.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     class QueuedDeviceTransfer;
 
@@ -99,4 +99,4 @@ namespace vku { namespace gfx {
     {
         AddBufferToGroup(usage, byteSizeOf(data), data.data(), queueFamilyIndices);
     }
-}}
+}

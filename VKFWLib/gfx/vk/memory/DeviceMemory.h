@@ -10,7 +10,7 @@
 
 #include "main.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     class Buffer;
     class Texture;
@@ -63,4 +63,4 @@ namespace vku { namespace gfx {
         /** Holds the memory properties. */
         vk::MemoryPropertyFlags memoryProperties_;
     };
-}}
+}

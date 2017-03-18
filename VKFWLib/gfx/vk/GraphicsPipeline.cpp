@@ -10,7 +10,7 @@
 #include "LogicalDevice.h"
 #include "core/resources/ShaderManager.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     GraphicsPipeline::GraphicsPipeline(const LogicalDevice* device, const std::vector<std::shared_ptr<Shader>>& shaders, const glm::uvec2& size, unsigned int numBlendAttachments) :
         device_{ device },
@@ -53,7 +53,7 @@ namespace vku { namespace gfx {
     }
 
     GraphicsPipeline::GraphicsPipeline(GraphicsPipeline&& rhs) noexcept :
-        device_{ rhs.device_ },
+    device_{ rhs.device_ },
         shaders_{ std::move(rhs.shaders_) },
         state_{ std::move(rhs.state_) },
         vkPipeline_{ rhs.vkPipeline_ }
@@ -116,4 +116,4 @@ namespace vku { namespace gfx {
 
         if (!keepState) state_.reset();
     }
-}}
+}

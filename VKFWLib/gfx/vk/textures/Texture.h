@@ -12,7 +12,7 @@
 #include "gfx/vk/LogicalDevice.h"
 #include "gfx/vk/memory/DeviceMemory.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     struct TextureDescriptor final
     {
@@ -36,7 +36,7 @@ namespace vku { namespace gfx {
         vk::MemoryPropertyFlags memoryProperties_;
 
         TextureDescriptor(const TextureDescriptor& desc, vk::MemoryPropertyFlags memProperties) :
-            bytesPP_{desc.bytesPP_}, createFlags_{ desc.createFlags_ },
+            bytesPP_{ desc.bytesPP_ }, createFlags_{ desc.createFlags_ },
             format_{ desc.format_ }, samples_{ desc.samples_ },
             imageTiling_{ desc.imageTiling_ }, imageUsage_{ desc.imageUsage_ },
             sharingMode_{ desc.sharingMode_ }, imageLayout_{ desc.imageLayout_ },
@@ -117,4 +117,4 @@ namespace vku { namespace gfx {
         /** Holds the queue family indices. */
         std::vector<std::uint32_t> queueFamilyIndices_;
     };
-}}
+}

@@ -11,7 +11,7 @@
 #include "main.h"
 #include "core/type_traits.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     class DeviceBuffer;
     class HostBuffer;
@@ -54,7 +54,7 @@ namespace vku { namespace gfx {
 
         template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> CreateDeviceBufferWithData(
             vk::BufferUsageFlags deviceBufferUsage, vk::MemoryPropertyFlags memoryFlags,
-                const std::vector<std::uint32_t>& deviceBufferQueues, const T& data);
+            const std::vector<std::uint32_t>& deviceBufferQueues, const T& data);
         template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> CreateDeviceBufferWithData(
             vk::BufferUsageFlags deviceBufferUsage, vk::MemoryPropertyFlags memoryFlags,
             const std::vector<std::uint32_t>& deviceBufferQueues, std::size_t bufferSize, const T& data);
@@ -98,4 +98,4 @@ namespace vku { namespace gfx {
     {
         TransferDataToBuffer(byteSizeOf(data), data.data(), dst, dstOffset);
     }
-}}
+}

@@ -13,12 +13,12 @@
 #include "core/type_traits.h"
 #include "DeviceBuffer.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     class HostBuffer;
     class QueuedDeviceTransfer;
 
-    class BufferGroup
+    class [[deprecated("Replaced by MemoryGroup that also handles textures.")]] BufferGroup
     {
     public:
         explicit BufferGroup(const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags = vk::MemoryPropertyFlags());
@@ -65,4 +65,4 @@ namespace vku { namespace gfx {
     {
         AddBufferToGroup(usage, byteSizeOf(data), data.data(), queueFamilyIndices);
     }
-}}
+}

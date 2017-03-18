@@ -11,7 +11,7 @@
 #include "main.h"
 #include "Texture.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     class DeviceTexture final : public Texture
     {
@@ -24,4 +24,4 @@ namespace vku { namespace gfx {
         DeviceTexture(DeviceTexture&&) noexcept;
         DeviceTexture& operator=(DeviceTexture&&) noexcept;
     };
-}}
+}

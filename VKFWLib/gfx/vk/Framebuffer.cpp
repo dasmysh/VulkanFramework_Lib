@@ -9,13 +9,13 @@
 #include "Framebuffer.h"
 #include "LogicalDevice.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     Framebuffer::Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size, const std::vector<vk::Image>& images, const vk::RenderPass& renderPass, const FramebufferDescriptor& desc) :
         logicalDevice_{ logicalDevice },
         size_{ size },
         renderPass_{ renderPass },
-        desc_( desc ),
+        desc_(desc),
         images_{ images },
         imageOwnership_{ false },
         vkAttachmentsImageView_{ desc.tex_.size() }
@@ -27,7 +27,7 @@ namespace vku { namespace gfx {
         logicalDevice_{ logicalDevice },
         size_{ size },
         renderPass_{ renderPass },
-        desc_( desc ),
+        desc_(desc),
         vkAttachmentsImageView_{ desc.tex_.size() }
     {
         CreateImages();
@@ -36,9 +36,9 @@ namespace vku { namespace gfx {
 
     Framebuffer::Framebuffer(const Framebuffer& rhs) :
         logicalDevice_{ rhs.logicalDevice_ },
-        size_ { rhs.size_ },
+        size_{ rhs.size_ },
         renderPass_{ rhs.renderPass_ },
-        desc_( rhs.desc_ ),
+        desc_(rhs.desc_),
         imageOwnership_{ rhs.imageOwnership_ },
         vkAttachmentsImageView_{ desc_.tex_.size() }
     {
@@ -57,10 +57,10 @@ namespace vku { namespace gfx {
     }
 
     Framebuffer::Framebuffer(Framebuffer&& rhs) noexcept :
-        logicalDevice_{ rhs.logicalDevice_ },
+    logicalDevice_{ rhs.logicalDevice_ },
         size_{ rhs.size_ },
         renderPass_{ rhs.renderPass_ },
-        desc_( std::move(rhs.desc_) ),
+        desc_(std::move(rhs.desc_)),
         images_{ std::move(rhs.images_) },
         imageOwnership_{ rhs.imageOwnership_ },
         vkAttachmentsImageView_{ std::move(rhs.vkAttachmentsImageView_) },
@@ -126,4 +126,4 @@ namespace vku { namespace gfx {
             static_cast<std::uint32_t>(desc_.tex_.size()), vkAttachmentsImageView_.data(), size_.x, size_.y, layerCount };
         vkFramebuffer_ = logicalDevice_->GetDevice().createFramebuffer(fbCreateInfo);
     }
-}}
+}

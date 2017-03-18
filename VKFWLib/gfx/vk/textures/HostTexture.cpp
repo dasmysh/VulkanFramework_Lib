@@ -10,7 +10,7 @@
 
 #include "HostTexture.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     HostTexture::HostTexture(const LogicalDevice* device, const TextureDescriptor& desc,
         const std::vector<std::uint32_t>& queueFamilyIndices) :
@@ -45,7 +45,7 @@ namespace vku { namespace gfx {
     }
 
     HostTexture::HostTexture(HostTexture&& rhs) noexcept :
-        Texture{ std::move(rhs) }
+    Texture{ std::move(rhs) }
     {
     }
 
@@ -92,4 +92,4 @@ namespace vku { namespace gfx {
 
         GetDeviceMemory().CopyFromHostMemory(0, glm::u32vec3(0), layout, size, data);
     }
-}}
+}

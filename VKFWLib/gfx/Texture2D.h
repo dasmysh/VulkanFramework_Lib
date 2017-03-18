@@ -10,7 +10,7 @@
 
 #include "main.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     class QueuedDeviceTransfer;
     class MemoryGroup;
@@ -18,7 +18,7 @@ namespace vku { namespace gfx {
     struct TextureDescriptor;
 
     struct stbi_error {};
-    struct invalid_texture_channels { unsigned int imgChannels_; };
+    struct invalid_texture_channels { int imgChannels_; };
 
     class Texture2D final : public Resource
     {
@@ -37,9 +37,10 @@ namespace vku { namespace gfx {
         Texture2D(const std::string& resourceId, const std::string& textureFilename, const LogicalDevice* device_);
         void LoadTextureLDR(const std::string& filename, bool useSRGB,
             const std::function<void(const glm::u32vec4& size, const TextureDescriptor& desc, const void* data)>& loadFn);
-        void LoadTextureHDR(const std::string& filename);
-        void InitializeSampler();
-        std::tuple<unsigned int, vk::Format> FindFormat(const std::string& filename, int imgChannels, bool useSRGB) const;
+        void LoadTextureHDR(const std::string& filename,
+            const std::function<void(const glm::u32vec4& size, const TextureDescriptor& desc, const void* data)>& loadFn);
+        std::tuple<unsigned int, vk::Format> FindFormatLDR(const std::string& filename, int imgChannels, bool useSRGB) const;
+        std::tuple<unsigned int, vk::Format> FindFormatHDR(const std::string& filename, int imgChannels) const;
 
         /** Holds the texture file name. */
         std::string textureFilename_;
@@ -52,4 +53,4 @@ namespace vku { namespace gfx {
         /** Holds the pointer to the texture used. */
         DeviceTexture* texture_;
     };
-}}
+}

@@ -10,7 +10,7 @@
 #include "BufferGroup.h"
 #include "gfx/vk/CommandBuffers.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     Buffer::Buffer(const LogicalDevice* device, vk::BufferUsageFlags usage,
         vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices) :
@@ -123,4 +123,4 @@ namespace vku { namespace gfx {
 
         device_->GetDevice().freeCommandBuffers(device_->GetCommandPool(copyQueueIdx.first), cmdBuffer);
     }
-}}
+}

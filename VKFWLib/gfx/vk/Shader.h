@@ -10,33 +10,31 @@
 
 #include "main.h"
 
-namespace vku {
-    namespace gfx {
+namespace vku::gfx {
 
-        class Shader final : public Resource
-        {
-        public:
-            Shader(const std::string& shaderFilename, const LogicalDevice* device);
-            Shader(const std::string& resourceId, const LogicalDevice* device, const std::string& shaderFilename);
-            Shader(const Shader&);
-            Shader& operator=(const Shader&);
-            Shader(Shader&&) noexcept;
-            Shader& operator=(Shader&&) noexcept;
-            ~Shader();
+    class Shader final : public Resource
+    {
+    public:
+        Shader(const std::string& shaderFilename, const LogicalDevice* device);
+        Shader(const std::string& resourceId, const LogicalDevice* device, const std::string& shaderFilename);
+        Shader(const Shader&);
+        Shader& operator=(const Shader&);
+        Shader(Shader&&) noexcept;
+        Shader& operator=(Shader&&) noexcept;
+        ~Shader();
 
-            void FillShaderStageInfo(vk::PipelineShaderStageCreateInfo& shaderStageCreateInfo) const;
+        void FillShaderStageInfo(vk::PipelineShaderStageCreateInfo& shaderStageCreateInfo) const;
 
-        private:
-            void LoadCompiledShaderFromFile();
+    private:
+        void LoadCompiledShaderFromFile();
 
-            /** Holds the shader filename. */
-            std::string shaderFilename_;
-            /** Holds the compiled shader. */
-            vk::ShaderModule shaderModule_;
-            /** Holds the shaders type. */
-            vk::ShaderStageFlagBits type_;
-            /** Holds the shaders type as a string. */
-            std::string strType_;
-        };
-    }
+        /** Holds the shader filename. */
+        std::string shaderFilename_;
+        /** Holds the compiled shader. */
+        vk::ShaderModule shaderModule_;
+        /** Holds the shaders type. */
+        vk::ShaderStageFlagBits type_;
+        /** Holds the shaders type as a string. */
+        std::string strType_;
+    };
 }

@@ -12,7 +12,8 @@
 #include "Buffer.h"
 #include "core/type_traits.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
+
     class DeviceBuffer;
 
     class HostBuffer final : public Buffer
@@ -59,4 +60,4 @@ namespace vku { namespace gfx {
     {
         DownloadData(byteSizeOf(data), data.data());
     }
-}}
+}

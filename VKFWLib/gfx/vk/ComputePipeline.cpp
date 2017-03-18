@@ -10,7 +10,7 @@
 #include "LogicalDevice.h"
 #include "core/resources/ShaderManager.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     ComputePipeline::ComputePipeline(const std::string& shaderStageId, gfx::LogicalDevice* device) :
         Resource(shaderStageId, device)
@@ -22,4 +22,4 @@ namespace vku { namespace gfx {
     ComputePipeline::~ComputePipeline()
     {
     }
-}}
+}

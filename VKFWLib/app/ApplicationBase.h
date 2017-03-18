@@ -10,18 +10,19 @@
 
 #include "main.h"
 
+namespace vku::cfg {
+    class Configuration;
+
+    std::vector<vk::SurfaceFormatKHR> GetVulkanSurfaceFormatsFromConfig(const WindowCfg& cfg);
+    vk::PresentModeKHR GetVulkanPresentModeFromConfig(const WindowCfg& cfg);
+    std::uint32_t GetVulkanAdditionalImageCountFromConfig(const WindowCfg& cfg);
+}
+
+namespace vku::gfx {
+    class LogicalDevice;
+}
+
 namespace vku {
-
-    namespace cfg {
-        class Configuration;
-
-        std::vector<vk::SurfaceFormatKHR> GetVulkanSurfaceFormatsFromConfig(const WindowCfg& cfg);
-        vk::PresentModeKHR GetVulkanPresentModeFromConfig(const WindowCfg& cfg);
-        std::uint32_t GetVulkanAdditionalImageCountFromConfig(const WindowCfg& cfg);
-    }
-    namespace gfx {
-        class LogicalDevice;
-    }
 
     class VKWindow;
 

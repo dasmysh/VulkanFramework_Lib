@@ -12,11 +12,12 @@
 
 struct GLFWwindow;
 
+namespace vku::gfx {
+    class Framebuffer;
+    class LogicalDevice;
+}
+
 namespace vku {
-    namespace gfx{
-        class Framebuffer;
-        class LogicalDevice;
-    }
 
     class ApplicationBase;
 

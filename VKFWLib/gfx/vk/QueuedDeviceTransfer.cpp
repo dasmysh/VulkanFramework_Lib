@@ -13,7 +13,7 @@
 #include "textures/DeviceTexture.h"
 #include "CommandBuffers.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     QueuedDeviceTransfer::QueuedDeviceTransfer(const LogicalDevice* device, std::pair<std::uint32_t, std::uint32_t> transferQueue) :
         device_{ device },
@@ -28,7 +28,7 @@ namespace vku { namespace gfx {
     }
 
     QueuedDeviceTransfer::QueuedDeviceTransfer(QueuedDeviceTransfer&& rhs) noexcept :
-        device_{ rhs.device_ },
+    device_{ rhs.device_ },
         transferQueue_{ std::move(rhs.transferQueue_) },
         stagingBuffers_{ std::move(rhs.stagingBuffers_) },
         transferCmdBuffers_{ std::move(rhs.transferCmdBuffers_) }
@@ -88,7 +88,7 @@ namespace vku { namespace gfx {
 
     std::unique_ptr<DeviceTexture> QueuedDeviceTransfer::CreateDeviceTextureWithData(
         const TextureDescriptor& textureDesc, const std::vector<std::uint32_t>& deviceBufferQueues,
-            const glm::u32vec4& size, std::uint32_t mipLevels, const void* data)
+        const glm::u32vec4& size, std::uint32_t mipLevels, const void* data)
     {
         return CreateDeviceTextureWithData(textureDesc, deviceBufferQueues, size, mipLevels, size, data);
     }
@@ -142,4 +142,4 @@ namespace vku { namespace gfx {
         stagingTextures_.emplace_back(device_, TextureDescriptor::StagingTextureDesc(textureDesc));
         stagingTextures_.back().InitializeData(size, mipLevels, data);
     }
-}}
+}

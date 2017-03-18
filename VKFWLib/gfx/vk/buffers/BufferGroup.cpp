@@ -14,7 +14,7 @@
 // ReSharper restore CppUnusedIncludeDirective
 #include "gfx/vk/QueuedDeviceTransfer.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     BufferGroup::BufferGroup(const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags) :
         device_{ device },
@@ -34,7 +34,7 @@ namespace vku { namespace gfx {
     }
 
     BufferGroup::BufferGroup(BufferGroup&& rhs) noexcept :
-        device_{ rhs.device_ },
+    device_{ rhs.device_ },
         deviceBufferMemory_{ rhs.deviceBufferMemory_ },
         hostBufferMemory_{ rhs.hostBufferMemory_ },
         deviceBuffers_{ std::move(rhs.deviceBuffers_) },
@@ -123,4 +123,4 @@ namespace vku { namespace gfx {
         sizes.push_back(static_cast<unsigned int>(memRequirements.size));
         allocInfo.allocationSize += memRequirements.size;
     }
-}}
+}

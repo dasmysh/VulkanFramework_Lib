@@ -8,7 +8,7 @@
 
 #include "DeviceTexture.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     DeviceTexture::DeviceTexture(const LogicalDevice* device, const TextureDescriptor& desc,
         const std::vector<std::uint32_t>& queueFamilyIndices) :
@@ -19,7 +19,7 @@ namespace vku { namespace gfx {
     DeviceTexture::~DeviceTexture() = default;
 
     DeviceTexture::DeviceTexture(DeviceTexture&& rhs) noexcept :
-        Texture{ std::move(rhs) }
+    Texture{ std::move(rhs) }
     {
     }
 
@@ -29,4 +29,4 @@ namespace vku { namespace gfx {
         Texture::operator=(std::move(rhs));
         return *this;
     }
-}}
+}

@@ -251,7 +251,12 @@ namespace vku {
         }
 
         auto presentMode = cfg::GetVulkanPresentModeFromConfig(*config_);
-        vkSurfaceExtend_ = vk::Extent2D{ static_cast<std::uint32_t>(config_->windowWidth_), static_cast<std::uint32_t>(config_->windowHeight_) };
+        auto surfaceCaps = logicalDevice_->GetPhysicalDevice().getSurfaceCapabilitiesKHR(vkSurface_);
+        glm::u32vec2 configSurfaceSize(static_cast<std::uint32_t>(config_->windowWidth_), static_cast<std::uint32_t>(config_->windowHeight_));
+        glm::u32vec2 minSurfaceSize(surfaceCaps.minImageExtent.width, surfaceCaps.minImageExtent.height);
+        glm::u32vec2 maxSurfaceSize(surfaceCaps.maxImageExtent.width, surfaceCaps.maxImageExtent.height);
+        auto surfaceExtend = glm::clamp(configSurfaceSize, minSurfaceSize, maxSurfaceSize);
+        vkSurfaceExtend_ = vk::Extent2D{ surfaceExtend.x, surfaceExtend.y };
         auto imageCount = surfaceCapabilities.minImageCount + cfg::GetVulkanAdditionalImageCountFromConfig(*config_);
 
         {
@@ -572,13 +577,13 @@ namespace vku {
     }
 
     // ReSharper disable once CppMemberFunctionMayBeStatic
-    void VKWindow::CharCallback(unsigned) const
+    void VKWindow::CharCallback(unsigned int) const
     {
         // Not needed at this point... [4/7/2016 Sebastian Maisch]
     }
 
     // ReSharper disable once CppMemberFunctionMayBeStatic
-    void VKWindow::CharModsCallback(unsigned, int) const
+    void VKWindow::CharModsCallback(unsigned int, int) const
     {
         // Not needed at this point... [4/7/2016 Sebastian Maisch]
     }
@@ -678,7 +683,7 @@ namespace vku {
         //}
     }
 
-    void VKWindow::glfwCharCallback(GLFWwindow* window, unsigned codepoint)
+    void VKWindow::glfwCharCallback(GLFWwindow* window, unsigned int codepoint)
     {
         //TODO ImGui_ImplGlfwGL3_CharCallback(window, codepoint);
 
@@ -689,7 +694,7 @@ namespace vku {
         //}
     }
 
-    void VKWindow::glfwCharModsCallback(GLFWwindow* window, unsigned codepoint, int mods)
+    void VKWindow::glfwCharModsCallback(GLFWwindow* window, unsigned int codepoint, int mods)
     {
         //TODO auto& io = ImGui::GetIO();
         //if (!io.WantCaptureKeyboard) {

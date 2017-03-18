@@ -17,7 +17,7 @@
 #include "vk/memory/MemoryGroup.h"
 #include "app/VKWindow.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     Texture2D::Texture2D(const std::string& resourceId, const std::string& textureFilename, const LogicalDevice* device) :
         Resource{ textureFilename, device },
@@ -43,15 +43,13 @@ namespace vku { namespace gfx {
         bool useSRGB, QueuedDeviceTransfer & transfer, const std::vector<std::uint32_t>& queueFamilyIndices) :
         Texture2D{ resourceId, textureFilename, device }
     {
-        if (stbi_is_hdr(textureFilename.c_str()) != 0) LoadTextureHDR(textureFilename);
-        else LoadTextureLDR(textureFilename, useSRGB,
-            [this, &transfer, &queueFamilyIndices](const glm::u32vec4& size, const TextureDescriptor& desc, const void* data)
+        auto loadFn = [this, &transfer, &queueFamilyIndices](const glm::u32vec4& size, const TextureDescriptor& desc, const void* data)
         {
             texturePtr_ = transfer.CreateDeviceTextureWithData(desc, queueFamilyIndices, size, 1, data);
             texture_ = texturePtr_.get();
-        });
-
-        InitializeSampler();
+        };
+        if (stbi_is_hdr(textureFilename.c_str()) != 0) LoadTextureHDR(textureFilename, loadFn);
+        else LoadTextureLDR(textureFilename, useSRGB, loadFn);
     }
 
     Texture2D::Texture2D(const std::string& textureFilename, const LogicalDevice* device, bool useSRGB,
@@ -65,16 +63,14 @@ namespace vku { namespace gfx {
         Texture2D{ resourceId, textureFilename, device }
     {
         memoryGroup_ = &memGroup;
-        if (stbi_is_hdr(textureFilename.c_str()) != 0) LoadTextureHDR(textureFilename);
-        else LoadTextureLDR(textureFilename, useSRGB,
-            [this, &memGroup, &queueFamilyIndices](const glm::u32vec4& size, const TextureDescriptor& desc, const void* data)
+        auto loadFn = [this, &memGroup, &queueFamilyIndices](const glm::u32vec4& size, const TextureDescriptor& desc, const void* data)
         {
             textureIdx_ = memGroup.AddTextureToGroup(desc, size, 1, queueFamilyIndices);
             memGroup.AddDataToTextureInGroup(textureIdx_, vk::ImageAspectFlagBits::eColor, 1, size.w, size.xyz, data);
             texture_ = memGroup.GetTexture(textureIdx_);
-        });
-
-        InitializeSampler();
+        };
+        if (stbi_is_hdr(textureFilename.c_str()) != 0) LoadTextureHDR(textureFilename, loadFn);
+        else LoadTextureLDR(textureFilename, useSRGB, loadFn);
     }
 
     Texture2D::Texture2D(const std::string& textureFilename, const LogicalDevice* device, bool useSRGB,
@@ -93,7 +89,7 @@ namespace vku { namespace gfx {
         auto imgWidth = 0, imgHeight = 0, imgChannels = 0;
         auto image = stbi_load(filename.c_str(), &imgWidth, &imgHeight, &imgChannels, 0);
         if (!image) {
-            LOG(FATAL) << "Could not load texture." << std::endl
+            LOG(FATAL) << "Could not load texture (LDR)." << std::endl
                 << "ResourceID: " << getId() << std::endl
                 << "Filename: " << filename << std::endl
                 << "Description: STBI Error.";
@@ -102,7 +98,7 @@ namespace vku { namespace gfx {
         }
 
         unsigned int bytesPP = 4; vk::Format fmt = vk::Format::eR8G8B8A8Unorm;
-        std::tie(bytesPP, fmt) = FindFormat(filename, imgChannels, useSRGB);
+        std::tie(bytesPP, fmt) = FindFormatLDR(filename, imgChannels, useSRGB);
         TextureDescriptor texDesc = TextureDescriptor::SampleOnlyTextureDesc(bytesPP, fmt);
 
         loadFn(glm::u32vec4(imgWidth, imgHeight, 1, 1), texDesc, image);
@@ -110,15 +106,30 @@ namespace vku { namespace gfx {
         stbi_image_free(image);
     }
 
-    void Texture2D::InitializeSampler()
+    void Texture2D::LoadTextureHDR(const std::string& filename,
+        const std::function<void(const glm::u32vec4& size, const TextureDescriptor& desc, const void* data)>& loadFn)
     {
-        if (CheckNamedParameterFlag("mirror")) texture_->SampleWrapMirror();
-        if (CheckNamedParameterFlag("repeat")) texture_->SampleWrapRepeat();
-        if (CheckNamedParameterFlag("clamp")) texture_->SampleWrapClamp();
-        if (CheckNamedParameterFlag("mirror-clamp")) texture_->SampleWrapMirrorClamp();
+        auto imgWidth = 0, imgHeight = 0, imgChannels = 0;
+        auto image = stbi_loadf(filename.c_str(), &imgWidth, &imgHeight, &imgChannels, 0);
+        if (!image) {
+            LOG(FATAL) << "Could not load texture (HDR)." << std::endl
+                << "ResourceID: " << getId() << std::endl
+                << "Filename: " << filename << std::endl
+                << "Description: STBI Error.";
+
+            throw stbi_error{};
+        }
+
+        unsigned int bytesPP = 16; vk::Format fmt = vk::Format::eR32G32B32A32Sfloat;
+        std::tie(bytesPP, fmt) = FindFormatHDR(filename, imgChannels);
+        TextureDescriptor texDesc = TextureDescriptor::SampleOnlyTextureDesc(bytesPP, fmt);
+
+        loadFn(glm::u32vec4(imgWidth, imgHeight, 1, 1), texDesc, image);
+
+        stbi_image_free(image);
     }
 
-    std::tuple<unsigned, vk::Format> Texture2D::FindFormat(const std::string& filename, int imgChannels, bool useSRGB) const
+    std::tuple<unsigned, vk::Format> Texture2D::FindFormatLDR(const std::string& filename, int imgChannels, bool useSRGB) const
     {
         auto useSRGBFormat = (useSRGB && GetDevice()->GetWindowCfg().useSRGB_);
         auto fmt = vk::Format::eR8G8B8A8Unorm;
@@ -137,4 +148,23 @@ namespace vku { namespace gfx {
         }
         return std::make_tuple(bytesPP, fmt);
     }
-}}
+
+    std::tuple<unsigned, vk::Format> Texture2D::FindFormatHDR(const std::string& filename, int imgChannels) const
+    {
+        auto fmt = vk::Format::eR32G32B32A32Sfloat;
+        unsigned int bytesPP = 16;
+        switch (imgChannels) {
+        case 1: fmt = vk::Format::eR32Sfloat; bytesPP = 4; break;
+        case 2: fmt = vk::Format::eR32G32Sfloat; bytesPP = 8; break;
+        case 3: fmt = vk::Format::eR32G32B32Sfloat; bytesPP = 12; break;
+        case 4: fmt = vk::Format::eR32G32B32A32Sfloat; bytesPP = 16; break;
+        default:
+            LOG(FATAL) << "Could not load texture." << std::endl
+                << "ResourceID: " << getId() << std::endl
+                << "Filename: " << filename << std::endl
+                << "Invalid number of texture channels (" << imgChannels << ").";
+            throw invalid_texture_channels{ imgChannels };
+        }
+        return std::make_tuple(bytesPP, fmt);
+    }
+}

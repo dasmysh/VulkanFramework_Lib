@@ -9,7 +9,7 @@
 #include "HostBuffer.h"
 #include "DeviceBuffer.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     HostBuffer::HostBuffer(const LogicalDevice* device, vk::BufferUsageFlags usage,
         vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices) :
@@ -37,7 +37,7 @@ namespace vku { namespace gfx {
     }
 
     HostBuffer::HostBuffer(HostBuffer&& rhs) noexcept :
-        Buffer{ std::move(rhs) }
+    Buffer{ std::move(rhs) }
     {
     }
 
@@ -80,4 +80,4 @@ namespace vku { namespace gfx {
     {
         GetDeviceMemory().CopyToHostMemory(offset, size, data);
     }
-}}
+}

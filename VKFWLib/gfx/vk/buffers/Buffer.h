@@ -12,7 +12,7 @@
 #include "gfx/vk/LogicalDevice.h"
 #include "gfx/vk/memory/DeviceMemory.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     class Buffer
     {
@@ -62,4 +62,4 @@ namespace vku { namespace gfx {
         /** Holds the queue family indices. */
         std::vector<std::uint32_t> queueFamilyIndices_;
     };
-}}
+}

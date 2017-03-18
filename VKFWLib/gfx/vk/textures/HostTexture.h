@@ -12,7 +12,7 @@
 #include "Texture.h"
 #include "core/type_traits.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     class HostTexture final : public Texture
     {
@@ -30,4 +30,4 @@ namespace vku { namespace gfx {
         void UploadData(std::uint32_t mipLevel, std::uint32_t arrayLayer, const glm::u32vec3& offset, const glm::u32vec3& size, const void* data);
         void DownloadData(std::uint32_t mipLevel, std::uint32_t arrayLayer, const glm::u32vec3& size, void* data) const;
     };
-}}
+}

@@ -11,7 +11,7 @@
 #include "gfx/vk/buffers/BufferGroup.h"
 #include "gfx/vk/CommandBuffers.h"
 
-namespace vku { namespace gfx {
+namespace vku::gfx {
 
     TextureDescriptor TextureDescriptor::StagingTextureDesc(unsigned int bytesPP, vk::Format format, vk::SampleCountFlagBits samples)
     {
@@ -55,6 +55,40 @@ namespace vku { namespace gfx {
         queueFamilyIndices_{ queueFamilyIndices }
     {
         assert(desc_.bytesPP_ > 0);
+    }
+
+    Texture::Texture(Texture&& rhs) noexcept :
+        device_{ rhs.device_ },
+        vkImage_{ rhs.vkImage_ },
+        vkImageView_{ rhs.vkImageView_ },
+        imageDeviceMemory_{ std::move(rhs.imageDeviceMemory_) },
+        size_{ rhs.size_ },
+        mipLevels_{ rhs.mipLevels_ },
+        desc_{ rhs.desc_ },
+        queueFamilyIndices_{ std::move(rhs.queueFamilyIndices_) }
+    {
+        rhs.vkImage_ = vk::Image();
+        rhs.vkImageView_ = vk::ImageView();
+        rhs.size_ = glm::u32vec4(0);
+        rhs.mipLevels_ = 0;
+    }
+
+    Texture& Texture::operator=(Texture&& rhs) noexcept
+    {
+        this->~Texture();
+        device_ = rhs.device_;
+        vkImage_ = rhs.vkImage_;
+        vkImageView_ = rhs.vkImageView_;
+        imageDeviceMemory_ = std::move(rhs.imageDeviceMemory_);
+        size_ = rhs.size_;
+        mipLevels_ = rhs.mipLevels_;
+        desc_ = rhs.desc_;
+        queueFamilyIndices_ = std::move(rhs.queueFamilyIndices_);
+        rhs.vkImage_ = vk::Image();
+        rhs.vkImageView_ = vk::ImageView();
+        rhs.size_ = glm::u32vec4(0);
+        rhs.mipLevels_ = 0;
+        return *this;
     }
 
     Texture::~Texture()
@@ -139,7 +173,7 @@ namespace vku { namespace gfx {
         const std::vector<vk::Semaphore>& waitSemaphores,
         const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
     {
-        if (desc_.imageLayout_ == newLayout) return;
+        if (desc_.imageLayout_ == newLayout) return vk::CommandBuffer();
 
         auto transitionCmdBuffer = CommandBuffers::beginSingleTimeSubmit(device_, transitionQueueIdx.first);
         TransitionLayout(newLayout, transitionCmdBuffer);
@@ -229,4 +263,4 @@ namespace vku { namespace gfx {
             || desc_.format_ == vk::Format::eD32SfloatS8Uint) return vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
         return vk::ImageAspectFlagBits::eColor;
     }
-}}
+}

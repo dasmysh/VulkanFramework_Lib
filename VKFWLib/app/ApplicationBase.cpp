@@ -72,109 +72,111 @@ namespace vku {
     {
         glfwTerminate();
     }
+}
 
-    namespace qf {
+namespace vku::qf {
 
-        int findQueueFamily(const vk::PhysicalDevice& device, const cfg::QueueCfg& desc, const vk::SurfaceKHR& surface = vk::SurfaceKHR())
-        {
-            vk::QueueFlags reqFlags;
-            if (!(desc.graphics_ || desc.compute_) && desc.transfer_) reqFlags |= vk::QueueFlagBits::eTransfer;
-            if (desc.graphics_) reqFlags |= vk::QueueFlagBits::eGraphics;
-            if (desc.compute_) reqFlags |= vk::QueueFlagBits::eCompute;
-            if (desc.sparseBinding_) reqFlags |= vk::QueueFlagBits::eSparseBinding;
+    int findQueueFamily(const vk::PhysicalDevice& device, const cfg::QueueCfg& desc, const vk::SurfaceKHR& surface = vk::SurfaceKHR())
+    {
+        vk::QueueFlags reqFlags;
+        if (!(desc.graphics_ || desc.compute_) && desc.transfer_) reqFlags |= vk::QueueFlagBits::eTransfer;
+        if (desc.graphics_) reqFlags |= vk::QueueFlagBits::eGraphics;
+        if (desc.compute_) reqFlags |= vk::QueueFlagBits::eCompute;
+        if (desc.sparseBinding_) reqFlags |= vk::QueueFlagBits::eSparseBinding;
 
-            auto queueProps = device.getQueueFamilyProperties();
-            auto queueCount = static_cast<std::uint32_t>(queueProps.size());
-            for (std::uint32_t i = 0; i < queueCount; i++) {
-                if (queueProps[i].queueCount < desc.priorities_.size()) continue;
+        auto queueProps = device.getQueueFamilyProperties();
+        auto queueCount = static_cast<std::uint32_t>(queueProps.size());
+        for (std::uint32_t i = 0; i < queueCount; i++) {
+            if (queueProps[i].queueCount < desc.priorities_.size()) continue;
 
-                if ((reqFlags == vk::QueueFlagBits::eTransfer && queueProps[i].queueFlags == vk::QueueFlagBits::eTransfer)
-                    || (reqFlags != vk::QueueFlagBits::eTransfer && queueProps[i].queueFlags & reqFlags)) {
-                    if (surface && desc.graphics_ && !device.getSurfaceSupportKHR(i, surface)) {
-                        continue;
-                    }
-                    return i;
+            if ((reqFlags == vk::QueueFlagBits::eTransfer && queueProps[i].queueFlags == vk::QueueFlagBits::eTransfer)
+                || (reqFlags != vk::QueueFlagBits::eTransfer && queueProps[i].queueFlags & reqFlags)) {
+                if (surface && desc.graphics_ && !device.getSurfaceSupportKHR(i, surface)) {
+                    continue;
                 }
-                /*if (queueProps[i].queueFlags & reqFlags) {
-                    if (surface && desc.graphics_ && !device.getSurfaceSupportKHR(i, surface)) {
-                        continue;
-                    }
-                    return i;
-                }*/
+                return i;
             }
-            return -1;
+            /*if (queueProps[i].queueFlags & reqFlags) {
+                if (surface && desc.graphics_ && !device.getSurfaceSupportKHR(i, surface)) {
+                    continue;
+                }
+                return i;
+            }*/
         }
+        return -1;
+    }
+}
+
+
+namespace vku::cfg {
+
+    std::vector<vk::SurfaceFormatKHR> GetVulkanSurfaceFormatsFromConfig(const WindowCfg& cfg)
+    {
+        std::vector<vk::SurfaceFormatKHR> result;
+        vk::SurfaceFormatKHR fmt;
+        if (cfg.backbufferBits_ == 32) {
+            if (cfg.useSRGB_) {
+                fmt.format = vk::Format::eR8G8B8A8Srgb;
+                result.push_back(fmt);
+                fmt.format = vk::Format::eB8G8R8A8Srgb;
+                result.push_back(fmt);
+            }
+            else {
+                fmt.format = vk::Format::eR8G8B8A8Unorm;
+                result.push_back(fmt);
+                fmt.format = vk::Format::eB8G8R8A8Unorm;
+                result.push_back(fmt);
+            }
+        }
+
+        if (cfg.backbufferBits_ == 24) {
+            if (cfg.useSRGB_) {
+                fmt.format = vk::Format::eR8G8B8Srgb;
+                result.push_back(fmt);
+                fmt.format = vk::Format::eB8G8R8Srgb;
+                result.push_back(fmt);
+            }
+            else {
+                fmt.format = vk::Format::eR8G8B8Unorm;
+                result.push_back(fmt);
+                fmt.format = vk::Format::eB8G8R8Unorm;
+                result.push_back(fmt);
+            }
+        }
+
+        if (cfg.backbufferBits_ == 16) {
+            if (!cfg.useSRGB_) {
+                fmt.format = vk::Format::eR5G6B5UnormPack16;
+                result.push_back(fmt);
+                fmt.format = vk::Format::eR5G5B5A1UnormPack16;
+                result.push_back(fmt);
+                fmt.format = vk::Format::eB5G6R5UnormPack16;
+                result.push_back(fmt);
+                fmt.format = vk::Format::eB5G5R5A1UnormPack16;
+                result.push_back(fmt);
+            }
+        }
+
+        return result;
     }
 
-
-    namespace cfg {
-
-        std::vector<vk::SurfaceFormatKHR> GetVulkanSurfaceFormatsFromConfig(const WindowCfg& cfg)
-        {
-            std::vector<vk::SurfaceFormatKHR> result;
-            vk::SurfaceFormatKHR fmt;
-            if (cfg.backbufferBits_ == 32) {
-                if (cfg.useSRGB_) {
-                    fmt.format = vk::Format::eR8G8B8A8Srgb;
-                    result.push_back(fmt);
-                    fmt.format = vk::Format::eB8G8R8A8Srgb;
-                    result.push_back(fmt);
-                }
-                else {
-                    fmt.format = vk::Format::eR8G8B8A8Unorm;
-                    result.push_back(fmt);
-                    fmt.format = vk::Format::eB8G8R8A8Unorm;
-                    result.push_back(fmt);
-                }
-            }
-
-            if (cfg.backbufferBits_ == 24) {
-                if (cfg.useSRGB_) {
-                    fmt.format = vk::Format::eR8G8B8Srgb;
-                    result.push_back(fmt);
-                    fmt.format = vk::Format::eB8G8R8Srgb;
-                    result.push_back(fmt);
-                }
-                else {
-                    fmt.format = vk::Format::eR8G8B8Unorm;
-                    result.push_back(fmt);
-                    fmt.format = vk::Format::eB8G8R8Unorm;
-                    result.push_back(fmt);
-                }
-            }
-
-            if (cfg.backbufferBits_ == 16) {
-                if (!cfg.useSRGB_) {
-                    fmt.format = vk::Format::eR5G6B5UnormPack16;
-                    result.push_back(fmt);
-                    fmt.format = vk::Format::eR5G5B5A1UnormPack16;
-                    result.push_back(fmt);
-                    fmt.format = vk::Format::eB5G6R5UnormPack16;
-                    result.push_back(fmt);
-                    fmt.format = vk::Format::eB5G5R5A1UnormPack16;
-                    result.push_back(fmt);
-                }
-            }
-
-            return result;
-        }
-
-        vk::PresentModeKHR GetVulkanPresentModeFromConfig(const WindowCfg& cfg)
-        {
-            vk::PresentModeKHR presentMode = {};
-            if (cfg.swapOptions_ == cfg::SwapOptions::DOUBLE_BUFFERING) presentMode = vk::PresentModeKHR::eImmediate;
-            if (cfg.swapOptions_ == cfg::SwapOptions::DOUBLE_BUFFERING_VSYNC) presentMode = vk::PresentModeKHR::eFifo;
-            if (cfg.swapOptions_ == cfg::SwapOptions::TRIPLE_BUFFERING) presentMode = vk::PresentModeKHR::eMailbox;
-            return presentMode;
-        }
-
-        std::uint32_t GetVulkanAdditionalImageCountFromConfig(const WindowCfg& cfg)
-        {
-            if (cfg.swapOptions_ == SwapOptions::TRIPLE_BUFFERING) return 1;
-            return 0;
-        }
+    vk::PresentModeKHR GetVulkanPresentModeFromConfig(const WindowCfg& cfg)
+    {
+        vk::PresentModeKHR presentMode = {};
+        if (cfg.swapOptions_ == cfg::SwapOptions::DOUBLE_BUFFERING) presentMode = vk::PresentModeKHR::eImmediate;
+        if (cfg.swapOptions_ == cfg::SwapOptions::DOUBLE_BUFFERING_VSYNC) presentMode = vk::PresentModeKHR::eFifo;
+        if (cfg.swapOptions_ == cfg::SwapOptions::TRIPLE_BUFFERING) presentMode = vk::PresentModeKHR::eMailbox;
+        return presentMode;
     }
 
+    std::uint32_t GetVulkanAdditionalImageCountFromConfig(const WindowCfg& cfg)
+    {
+        if (cfg.swapOptions_ == SwapOptions::TRIPLE_BUFFERING) return 1;
+        return 0;
+    }
+}
+
+namespace vku {
 
     ApplicationBase* ApplicationBase::instance_ = nullptr;
 
@@ -237,7 +239,7 @@ namespace vku {
         return focusWindow;
     }
 
-    VKWindow* ApplicationBase::GetWindow(unsigned idx)
+    VKWindow* ApplicationBase::GetWindow(unsigned int idx)
     {
         return &windows_[idx];
     }
