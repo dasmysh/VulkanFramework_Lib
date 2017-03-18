@@ -46,7 +46,8 @@ namespace vku::gfx {
         DeviceBuffer* GetBuffer(unsigned int bufferIdx) { return &deviceBuffers_[bufferIdx]; }
         DeviceTexture* GetTexture(unsigned int textureIdx) { return &deviceImages_[textureIdx]; }
 
-        template<class T> std::enable_if_t<has_contiguous_memory<T>::value> AddBufferToGroup(vk::BufferUsageFlags usage, const T& data,
+        template<class T> std::enable_if_t<has_contiguous_memory<T>::value, unsigned int> AddBufferToGroup(
+            vk::BufferUsageFlags usage, const T& data,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         template<class T> std::enable_if_t<has_contiguous_memory<T>::value> AddDataToBufferInGroup(
             unsigned int bufferIdx, std::size_t offset, const T& data);
@@ -111,10 +112,10 @@ namespace vku::gfx {
     };
 
     template <class T>
-    std::enable_if_t<has_contiguous_memory<T>::value> MemoryGroup::AddBufferToGroup(vk::BufferUsageFlags usage,
-        const T& data, const std::vector<std::uint32_t>& queueFamilyIndices)
+    std::enable_if_t<has_contiguous_memory<T>::value, unsigned int> MemoryGroup::AddBufferToGroup(
+        vk::BufferUsageFlags usage, const T& data, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
-        AddBufferToGroup(usage, byteSizeOf(data), data.data(), queueFamilyIndices);
+        return AddBufferToGroup(usage, byteSizeOf(data), data.data(), queueFamilyIndices);
     }
 
     template <class T>

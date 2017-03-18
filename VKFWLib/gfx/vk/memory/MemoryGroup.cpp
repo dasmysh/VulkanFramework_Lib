@@ -18,7 +18,7 @@ namespace vku::gfx {
     MemoryGroup::MemoryGroup(const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags) :
         device_{ device },
         deviceMemory_{ device, memoryFlags },
-        hostMemory_{ device, memoryFlags },
+        hostMemory_{ device, memoryFlags | vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent },
         memoryProperties_{ memoryFlags }
     {
     }
@@ -125,6 +125,7 @@ namespace vku::gfx {
         vk::MemoryAllocateInfo hostAllocInfo, deviceAllocInfo;
         std::vector<std::uint32_t> hostOffsets, deviceOffsets;
         hostOffsets.resize(deviceBuffers_.size() + deviceImages_.size());
+        deviceOffsets.resize(deviceBuffers_.size() + deviceImages_.size());
         std::uint32_t hostOffset = 0U, deviceOffset = 0U;
         for (auto i = 0U; i < deviceBuffers_.size(); ++i) {
             hostOffsets[i] = hostOffset;
