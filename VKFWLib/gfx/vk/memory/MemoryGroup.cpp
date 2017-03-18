@@ -68,16 +68,29 @@ namespace vku::gfx {
         hostBuffers_.emplace_back(device_, vk::BufferUsageFlagBits::eTransferSrc, memoryProperties_, queueFamilyIndices);
         hostBuffers_.back().InitializeBuffer(size, false);
 
-        bufferContents_.push_back(std::make_pair(0, nullptr));
         return static_cast<unsigned int>(deviceBuffers_.size() - 1);
     }
 
     unsigned MemoryGroup::AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size, const void* data, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         auto idx = AddBufferToGroup(usage, size, queueFamilyIndices);
-        bufferContents_.back().first = size;
-        bufferContents_.back().second = data;
+        BufferContentsDesc bufferContentsDesc;
+        bufferContentsDesc.bufferIdx_ = idx;
+        bufferContentsDesc.offset_ = 0;
+        bufferContentsDesc.size_ = size;
+        bufferContentsDesc.data_ = data;
+        bufferContents_.push_back(bufferContentsDesc);
         return idx;
+    }
+
+    void MemoryGroup::AddDataToBufferInGroup(unsigned int bufferIdx, std::size_t offset, std::size_t dataSize, const void * data)
+    {
+        BufferContentsDesc bufferContentsDesc;
+        bufferContentsDesc.bufferIdx_ = bufferIdx;
+        bufferContentsDesc.offset_ = offset;
+        bufferContentsDesc.size_ = dataSize;
+        bufferContentsDesc.data_ = data;
+        bufferContents_.push_back(bufferContentsDesc);
     }
 
     unsigned MemoryGroup::AddTextureToGroup(const TextureDescriptor& desc, const glm::u32vec4& size,
@@ -97,7 +110,7 @@ namespace vku::gfx {
     void MemoryGroup::AddDataToTextureInGroup(unsigned int textureIdx, vk::ImageAspectFlags aspectFlags,
         std::uint32_t mipLevel, std::uint32_t arrayLayer, const glm::u32vec3& size, const void* data)
     {
-        ImageContensDesc imgContDesc;
+        ImageContentsDesc imgContDesc;
         imgContDesc.imageIdx_ = textureIdx;
         imgContDesc.aspectFlags_ = aspectFlags;
         imgContDesc.mipLevel_ = mipLevel;
@@ -109,64 +122,62 @@ namespace vku::gfx {
 
     void MemoryGroup::FinalizeGroup(QueuedDeviceTransfer* transfer)
     {
-        vk::MemoryAllocateInfo deviceAllocInfo, hostAllocInfo;
-        std::vector<std::uint32_t> deviceSizes, hostSizes;
+        vk::MemoryAllocateInfo hostAllocInfo, deviceAllocInfo;
+        std::vector<std::uint32_t> hostOffsets, deviceOffsets;
+        hostOffsets.resize(deviceBuffers_.size() + deviceImages_.size());
+        std::uint32_t hostOffset = 0U, deviceOffset = 0U;
         for (auto i = 0U; i < deviceBuffers_.size(); ++i) {
-            FillBufferAllocationInfo(&hostBuffers_[i], hostAllocInfo, hostSizes);
-            FillBufferAllocationInfo(&deviceBuffers_[i], deviceAllocInfo, deviceSizes);
+            hostOffsets[i] = hostOffset;
+            hostOffset += FillBufferAllocationInfo(&hostBuffers_[i], hostAllocInfo);
+            deviceOffsets[i] = deviceOffset;
+            deviceOffset += FillBufferAllocationInfo(&deviceBuffers_[i], deviceAllocInfo);
         }
         for (auto i = 0U; i < deviceImages_.size(); ++i) {
-            FillImageAllocationInfo(&hostImages_[i], hostAllocInfo, hostSizes);
-            FillImageAllocationInfo(&deviceImages_[i], deviceAllocInfo, deviceSizes);
+            hostOffsets[i + hostBuffers_.size()] = hostOffset;
+            hostOffset += FillImageAllocationInfo(&hostImages_[i], hostAllocInfo);
+            deviceOffsets[i + deviceBuffers_.size()] = deviceOffset;
+            deviceOffset += FillImageAllocationInfo(&deviceImages_[i], deviceAllocInfo);
         }
         hostMemory_.InitializeMemory(hostAllocInfo);
         deviceMemory_.InitializeMemory(deviceAllocInfo);
 
-        auto deviceOffset = 0U, hostOffset = 0U;
         for (auto i = 0U; i < deviceBuffers_.size(); ++i) {
-            hostMemory_.BindToBuffer(hostBuffers_[i], hostOffset);
-            deviceMemory_.BindToBuffer(deviceBuffers_[i], deviceOffset);
-            if (transfer) {
-                hostMemory_.CopyToHostMemory(hostOffset, bufferContents_[i].first, bufferContents_[i].second);
-                transfer->AddTransferToQueue(hostBuffers_[i], deviceBuffers_[i]);
-            }
-            hostOffset += hostSizes[i];
-            deviceOffset += deviceSizes[i];
+            hostMemory_.BindToBuffer(hostBuffers_[i], hostOffsets[i]);
+            deviceMemory_.BindToBuffer(deviceBuffers_[i], deviceOffsets[i]);
+        }
+        for (auto i = 0U; i < deviceImages_.size(); ++i) {
+            hostMemory_.BindToTexture(hostImages_[i], hostOffsets[i + hostBuffers_.size()]);
+            deviceMemory_.BindToTexture(deviceImages_[i], deviceOffsets[i + deviceBuffers_.size()]);
         }
 
-        std::vector<std::uint32_t> deviceImageOffsets, hostImageOffsets;
-        for (auto i = 0U; i < deviceBuffers_.size(); ++i) {
-            hostImageOffsets[i] = hostOffset;
-            deviceImageOffsets[i] = deviceOffset;
-            hostOffset += hostSizes[i + hostBuffers_.size()];
-            deviceOffset += deviceSizes[i + deviceBuffers_.size()];
-        }
+        if (!transfer) return;
+
+        for (const auto& contentDesc : bufferContents_) hostMemory_.CopyToHostMemory(
+            hostOffsets[contentDesc.bufferIdx_] + contentDesc.offset_, contentDesc.size_, contentDesc.data_);
         for (const auto& contentDesc : imageContents_) {
-            hostMemory_.BindToTexture(hostImages_[contentDesc.imageIdx_], hostImageOffsets[contentDesc.imageIdx_]);
-            deviceMemory_.BindToTexture(deviceImages_[contentDesc.imageIdx_], deviceImageOffsets[contentDesc.imageIdx_]);
-            if (transfer) {
-                vk::ImageSubresource imgSubresource{ contentDesc.aspectFlags_, contentDesc.mipLevel_, contentDesc.arrayLayer_ };
-                auto subresourceLayout = device_->GetDevice().getImageSubresourceLayout(hostImages_[contentDesc.imageIdx_].GetImage(), imgSubresource);
-                hostMemory_.CopyToHostMemory(hostOffset, glm::u32vec3(0), subresourceLayout, contentDesc.size_, contentDesc.data_);
-                transfer->AddTransferToQueue(hostImages_[contentDesc.imageIdx_], deviceImages_[contentDesc.imageIdx_]);
-            }
+            vk::ImageSubresource imgSubresource{ contentDesc.aspectFlags_, contentDesc.mipLevel_, contentDesc.arrayLayer_ };
+            auto subresourceLayout = device_->GetDevice().getImageSubresourceLayout(hostImages_[contentDesc.imageIdx_].GetImage(), imgSubresource);
+            hostMemory_.CopyToHostMemory(hostOffsets[contentDesc.imageIdx_], glm::u32vec3(0), subresourceLayout, contentDesc.size_, contentDesc.data_);
         }
+
+        for (auto i = 0U; i < deviceBuffers_.size(); ++i) transfer->AddTransferToQueue(hostBuffers_[i], deviceBuffers_[i]);
+        for (auto i = 0U; i < deviceImages_.size(); ++i) transfer->AddTransferToQueue(hostImages_[i], deviceImages_[i]);
     }
 
-    void MemoryGroup::FillBufferAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo, std::vector<std::uint32_t>& sizes) const
+    std::uint32_t MemoryGroup::FillBufferAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo) const
     {
         auto memRequirements = device_->GetDevice().getBufferMemoryRequirements(buffer->GetBuffer());
-        FillAllocationInfo(memRequirements, buffer->GetDeviceMemory().GetMemoryProperties(), allocInfo, sizes);
+        return FillAllocationInfo(memRequirements, buffer->GetDeviceMemory().GetMemoryProperties(), allocInfo);
     }
 
-    void MemoryGroup::FillImageAllocationInfo(Texture* image, vk::MemoryAllocateInfo& allocInfo, std::vector<std::uint32_t>& sizes) const
+    std::uint32_t MemoryGroup::FillImageAllocationInfo(Texture* image, vk::MemoryAllocateInfo& allocInfo) const
     {
         auto memRequirements = device_->GetDevice().getImageMemoryRequirements(image->GetImage());
-        FillAllocationInfo(memRequirements, image->GetDeviceMemory().GetMemoryProperties(), allocInfo, sizes);
+        return FillAllocationInfo(memRequirements, image->GetDeviceMemory().GetMemoryProperties(), allocInfo);
     }
 
-    void MemoryGroup::FillAllocationInfo(const vk::MemoryRequirements& memRequirements, vk::MemoryPropertyFlags memProperties,
-        vk::MemoryAllocateInfo& allocInfo, std::vector<std::uint32_t>& sizes) const
+    std::uint32_t MemoryGroup::FillAllocationInfo(const vk::MemoryRequirements& memRequirements,
+        vk::MemoryPropertyFlags memProperties, vk::MemoryAllocateInfo& allocInfo) const
     {
         if (allocInfo.allocationSize == 0) allocInfo.memoryTypeIndex =
             DeviceMemory::FindMemoryType(device_, memRequirements.memoryTypeBits, memProperties);
@@ -176,7 +187,7 @@ namespace vku::gfx {
             throw std::runtime_error("BufferGroup memory type does not fit required memory type for buffer.");
         }
 
-        sizes.push_back(static_cast<unsigned int>(memRequirements.size));
         allocInfo.allocationSize += memRequirements.size;
+        return static_cast<std::uint32_t>(memRequirements.size);
     }
 }

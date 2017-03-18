@@ -38,6 +38,7 @@ namespace vku::gfx {
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         unsigned int AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size, const void* data,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
+        void AddDataToBufferInGroup(unsigned int bufferIdx, std::size_t offset, std::size_t dataSize, const void* data);
         void AddDataToTextureInGroup(unsigned int textureIdx, vk::ImageAspectFlags aspectFlags,
             std::uint32_t mipLevel, std::uint32_t arrayLayer, const glm::u32vec3& size, const void* data);
         void FinalizeGroup(QueuedDeviceTransfer* transfer = nullptr);
@@ -47,12 +48,14 @@ namespace vku::gfx {
 
         template<class T> std::enable_if_t<has_contiguous_memory<T>::value> AddBufferToGroup(vk::BufferUsageFlags usage, const T& data,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
+        template<class T> std::enable_if_t<has_contiguous_memory<T>::value> AddDataToBufferInGroup(
+            unsigned int bufferIdx, std::size_t offset, const T& data);
 
     private:
-        void FillBufferAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo, std::vector<std::uint32_t>& sizes) const;
-        void FillImageAllocationInfo(Texture* image, vk::MemoryAllocateInfo& allocInfo, std::vector<std::uint32_t>& sizes) const;
-        void FillAllocationInfo(const vk::MemoryRequirements& memRequirements, vk::MemoryPropertyFlags memProperties,
-            vk::MemoryAllocateInfo& allocInfo, std::vector<std::uint32_t>& sizes) const;
+        std::uint32_t FillBufferAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo) const;
+        std::uint32_t FillImageAllocationInfo(Texture* image, vk::MemoryAllocateInfo& allocInfo) const;
+        std::uint32_t FillAllocationInfo(const vk::MemoryRequirements& memRequirements, vk::MemoryPropertyFlags memProperties,
+            vk::MemoryAllocateInfo& allocInfo) const;
 
         /** Holds the device. */
         const LogicalDevice* device_;
@@ -71,10 +74,23 @@ namespace vku::gfx {
         /** Holds the memory properties. */
         vk::MemoryPropertyFlags memoryProperties_;
 
-        struct ImageContensDesc
+        struct BufferContentsDesc
+        {
+            /** The buffer index the contents belong to. */
+            unsigned int bufferIdx_;
+            /** The offset to copy the data to (in bytes). */
+            std::size_t offset_;
+            /** The size of the buffer data (in bytes). */
+            std::size_t size_;
+            /** Pointer to the data to copy. */
+            const void* data_;
+
+        };
+
+        struct ImageContentsDesc
         {
             /** The image index the contents belong to. */
-            std::size_t imageIdx_;
+            unsigned int imageIdx_;
             /** The subresource aspect flags. */
             vk::ImageAspectFlags aspectFlags_;
             /** The MipMap level of the image contents. */
@@ -88,9 +104,10 @@ namespace vku::gfx {
         };
 
         /** Holds the buffer contents that need to be transfered. */
-        std::vector<std::pair<std::size_t, const void*>> bufferContents_;
+        std::vector<BufferContentsDesc> bufferContents_;
+        // TODO: std::vector<std::pair<std::size_t, const void*>> bufferContents_;
         /** Holds the image contents that need to be transfered. */
-        std::vector<ImageContensDesc> imageContents_;
+        std::vector<ImageContentsDesc> imageContents_;
     };
 
     template <class T>
@@ -98,5 +115,12 @@ namespace vku::gfx {
         const T& data, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         AddBufferToGroup(usage, byteSizeOf(data), data.data(), queueFamilyIndices);
+    }
+
+    template <class T>
+    std::enable_if_t<has_contiguous_memory<T>::value> MemoryGroup::AddDataToBufferInGroup(
+        unsigned int bufferIdx, std::size_t offset, const T& data)
+    {
+        AddDataToBufferInGroup(bufferIdx, offset, byteSizeOf(data), data.data());
     }
 }
