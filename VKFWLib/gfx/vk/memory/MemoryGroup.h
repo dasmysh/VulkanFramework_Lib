@@ -31,6 +31,7 @@ namespace vku::gfx {
         MemoryGroup(MemoryGroup&&) noexcept;
         MemoryGroup& operator=(MemoryGroup&&) noexcept;
 
+        static constexpr unsigned int INVALID_INDEX = std::numeric_limits<unsigned int>::max();
         unsigned int AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         unsigned int AddTextureToGroup(const TextureDescriptor& desc,
@@ -41,10 +42,20 @@ namespace vku::gfx {
         void AddDataToBufferInGroup(unsigned int bufferIdx, std::size_t offset, std::size_t dataSize, const void* data);
         void AddDataToTextureInGroup(unsigned int textureIdx, vk::ImageAspectFlags aspectFlags,
             std::uint32_t mipLevel, std::uint32_t arrayLayer, const glm::u32vec3& size, const void* data);
-        void FinalizeGroup(QueuedDeviceTransfer* transfer = nullptr);
+        void FinalizeGroup();
+        void TransferData(QueuedDeviceTransfer& transfer);
+
+        void FillUploadBufferCmdBuffer(unsigned int bufferIdx, vk::CommandBuffer cmdBuffer,
+            std::size_t offset, std::size_t dataSize);
 
         DeviceBuffer* GetBuffer(unsigned int bufferIdx) { return &deviceBuffers_[bufferIdx]; }
+        HostBuffer* GetHostBuffer(unsigned int bufferIdx) { return &hostBuffers_[bufferIdx]; }
         DeviceTexture* GetTexture(unsigned int textureIdx) { return &deviceImages_[textureIdx]; }
+        HostTexture* GetHostTexture(unsigned int textureIdx) { return &hostImages_[textureIdx]; }
+        DeviceMemory* GetHostMemory() { return &hostMemory_; }
+        std::size_t GetHostBufferOffset(unsigned int bufferIdx) { return hostOffsets_[bufferIdx]; }
+        std::size_t GetHostTextureOffset(unsigned int textureIdx) { return hostOffsets_[textureIdx + hostBuffers_.size()]; }
+
 
         template<class T> std::enable_if_t<has_contiguous_memory<T>::value, unsigned int> AddBufferToGroup(
             vk::BufferUsageFlags usage, const T& data,
@@ -53,9 +64,9 @@ namespace vku::gfx {
             unsigned int bufferIdx, std::size_t offset, const T& data);
 
     private:
-        std::uint32_t FillBufferAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo) const;
-        std::uint32_t FillImageAllocationInfo(Texture* image, vk::MemoryAllocateInfo& allocInfo) const;
-        std::uint32_t FillAllocationInfo(const vk::MemoryRequirements& memRequirements, vk::MemoryPropertyFlags memProperties,
+        std::size_t FillBufferAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo) const;
+        std::size_t FillImageAllocationInfo(Texture* image, vk::MemoryAllocateInfo& allocInfo) const;
+        std::size_t FillAllocationInfo(const vk::MemoryRequirements& memRequirements, vk::MemoryPropertyFlags memProperties,
             vk::MemoryAllocateInfo& allocInfo) const;
 
         /** Holds the device. */
@@ -104,9 +115,12 @@ namespace vku::gfx {
             const void* data_;
         };
 
+        /** Holds the offsets for the host memory objects. */
+        std::vector<std::size_t> hostOffsets_;
+        /** Holds the offsets for the device memory objects. */
+        std::vector<std::size_t> deviceOffsets_;
         /** Holds the buffer contents that need to be transfered. */
         std::vector<BufferContentsDesc> bufferContents_;
-        // TODO: std::vector<std::pair<std::size_t, const void*>> bufferContents_;
         /** Holds the image contents that need to be transfered. */
         std::vector<ImageContentsDesc> imageContents_;
     };

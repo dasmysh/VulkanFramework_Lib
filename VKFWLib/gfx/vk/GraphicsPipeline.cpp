@@ -20,6 +20,7 @@ namespace vku::gfx {
         ResetShaders(shaders);
 
         state_->inputAssemblyCreateInfo_.setTopology(vk::PrimitiveTopology::eTriangleList);
+        state_->tesselation_.setPatchControlPoints(1);
 
         ResetFramebuffer(size, 1, 1);
 

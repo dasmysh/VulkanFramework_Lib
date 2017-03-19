@@ -78,12 +78,14 @@ namespace vku::gfx {
 
     void DeviceMemory::CopyToHostMemory(std::size_t offset, std::size_t size, const void* data) const
     {
+        assert(vkDeviceMemory_ && "Device memory must be valid.");
         MapAndProcess(offset, size, [data](void* deviceMem, std::size_t size) { memcpy(deviceMem, data, size); });
     }
 
     void DeviceMemory::CopyToHostMemory(std::size_t offsetToTexture, const glm::u32vec3& offset,
         const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize, const void* data) const
     {
+        assert(vkDeviceMemory_ && "Device memory must be valid.");
         auto dataBytes = reinterpret_cast<const std::uint8_t*>(data);
         MapAndProcess(offsetToTexture, offset, layout, dataSize,
             [dataBytes](void* deviceMem, std::size_t offset, std::size_t size) { memcpy(deviceMem, &dataBytes[offset], size); });
@@ -91,12 +93,14 @@ namespace vku::gfx {
 
     void DeviceMemory::CopyFromHostMemory(std::size_t offset, std::size_t size, void* data) const
     {
+        assert(vkDeviceMemory_ && "Device memory must be valid.");
         MapAndProcess(offset, size, [data](void* deviceMem, std::size_t size) { memcpy(data, deviceMem, size); });
     }
 
     void DeviceMemory::CopyFromHostMemory(std::size_t offsetToTexture, const glm::u32vec3& offset,
         const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize, void* data) const
     {
+        assert(vkDeviceMemory_ && "Device memory must be valid.");
         auto dataBytes = reinterpret_cast<std::uint8_t*>(data);
         MapAndProcess(offsetToTexture, offset, layout, dataSize,
             [dataBytes](void* deviceMem, std::size_t offset, std::size_t size) { memcpy(&dataBytes[offset], deviceMem, size); });

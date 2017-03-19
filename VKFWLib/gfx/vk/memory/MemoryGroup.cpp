@@ -120,64 +120,74 @@ namespace vku::gfx {
         imageContents_.push_back(imgContDesc);
     }
 
-    void MemoryGroup::FinalizeGroup(QueuedDeviceTransfer* transfer)
+    void MemoryGroup::FinalizeGroup()
     {
         vk::MemoryAllocateInfo hostAllocInfo, deviceAllocInfo;
-        std::vector<std::uint32_t> hostOffsets, deviceOffsets;
-        hostOffsets.resize(deviceBuffers_.size() + deviceImages_.size());
-        deviceOffsets.resize(deviceBuffers_.size() + deviceImages_.size());
-        std::uint32_t hostOffset = 0U, deviceOffset = 0U;
+        hostOffsets_.resize(deviceBuffers_.size() + deviceImages_.size());
+        deviceOffsets_.resize(deviceBuffers_.size() + deviceImages_.size());
+        std::size_t hostOffset = 0U, deviceOffset = 0U;
         for (auto i = 0U; i < deviceBuffers_.size(); ++i) {
-            hostOffsets[i] = hostOffset;
+            hostOffsets_[i] = hostOffset;
             hostOffset += FillBufferAllocationInfo(&hostBuffers_[i], hostAllocInfo);
-            deviceOffsets[i] = deviceOffset;
+            deviceOffsets_[i] = deviceOffset;
             deviceOffset += FillBufferAllocationInfo(&deviceBuffers_[i], deviceAllocInfo);
         }
         for (auto i = 0U; i < deviceImages_.size(); ++i) {
-            hostOffsets[i + hostBuffers_.size()] = hostOffset;
+            hostOffsets_[i + hostBuffers_.size()] = hostOffset;
             hostOffset += FillImageAllocationInfo(&hostImages_[i], hostAllocInfo);
-            deviceOffsets[i + deviceBuffers_.size()] = deviceOffset;
+            deviceOffsets_[i + deviceBuffers_.size()] = deviceOffset;
             deviceOffset += FillImageAllocationInfo(&deviceImages_[i], deviceAllocInfo);
         }
         hostMemory_.InitializeMemory(hostAllocInfo);
         deviceMemory_.InitializeMemory(deviceAllocInfo);
 
         for (auto i = 0U; i < deviceBuffers_.size(); ++i) {
-            hostMemory_.BindToBuffer(hostBuffers_[i], hostOffsets[i]);
-            deviceMemory_.BindToBuffer(deviceBuffers_[i], deviceOffsets[i]);
+            hostMemory_.BindToBuffer(hostBuffers_[i], hostOffsets_[i]);
+            deviceMemory_.BindToBuffer(deviceBuffers_[i], deviceOffsets_[i]);
         }
         for (auto i = 0U; i < deviceImages_.size(); ++i) {
-            hostMemory_.BindToTexture(hostImages_[i], hostOffsets[i + hostBuffers_.size()]);
-            deviceMemory_.BindToTexture(deviceImages_[i], deviceOffsets[i + deviceBuffers_.size()]);
+            hostMemory_.BindToTexture(hostImages_[i], hostOffsets_[i + hostBuffers_.size()]);
+            deviceMemory_.BindToTexture(deviceImages_[i], deviceOffsets_[i + deviceBuffers_.size()]);
         }
+    }
 
-        if (!transfer) return;
-
+    void MemoryGroup::TransferData(QueuedDeviceTransfer& transfer)
+    {
         for (const auto& contentDesc : bufferContents_) hostMemory_.CopyToHostMemory(
-            hostOffsets[contentDesc.bufferIdx_] + contentDesc.offset_, contentDesc.size_, contentDesc.data_);
+            hostOffsets_[contentDesc.bufferIdx_] + contentDesc.offset_, contentDesc.size_, contentDesc.data_);
         for (const auto& contentDesc : imageContents_) {
             vk::ImageSubresource imgSubresource{ contentDesc.aspectFlags_, contentDesc.mipLevel_, contentDesc.arrayLayer_ };
             auto subresourceLayout = device_->GetDevice().getImageSubresourceLayout(hostImages_[contentDesc.imageIdx_].GetImage(), imgSubresource);
-            hostMemory_.CopyToHostMemory(hostOffsets[contentDesc.imageIdx_], glm::u32vec3(0), subresourceLayout, contentDesc.size_, contentDesc.data_);
+            hostMemory_.CopyToHostMemory(hostOffsets_[contentDesc.imageIdx_], glm::u32vec3(0), subresourceLayout, contentDesc.size_, contentDesc.data_);
         }
 
-        for (auto i = 0U; i < deviceBuffers_.size(); ++i) transfer->AddTransferToQueue(hostBuffers_[i], deviceBuffers_[i]);
-        for (auto i = 0U; i < deviceImages_.size(); ++i) transfer->AddTransferToQueue(hostImages_[i], deviceImages_[i]);
+        for (auto i = 0U; i < deviceBuffers_.size(); ++i) transfer.AddTransferToQueue(hostBuffers_[i], deviceBuffers_[i]);
+        for (auto i = 0U; i < deviceImages_.size(); ++i) transfer.AddTransferToQueue(hostImages_[i], deviceImages_[i]);
+
+        bufferContents_.clear();
+        imageContents_.clear();
     }
 
-    std::uint32_t MemoryGroup::FillBufferAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo) const
+    void MemoryGroup::FillUploadBufferCmdBuffer(unsigned int bufferIdx, vk::CommandBuffer cmdBuffer,
+        std::size_t offset, std::size_t dataSize)
+    {
+        vk::BufferCopy copyRegion{ offset, offset, dataSize };
+        cmdBuffer.copyBuffer(hostBuffers_[bufferIdx].GetBuffer(), deviceBuffers_[bufferIdx].GetBuffer(), copyRegion);
+    }
+
+    std::size_t MemoryGroup::FillBufferAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo) const
     {
         auto memRequirements = device_->GetDevice().getBufferMemoryRequirements(buffer->GetBuffer());
         return FillAllocationInfo(memRequirements, buffer->GetDeviceMemory().GetMemoryProperties(), allocInfo);
     }
 
-    std::uint32_t MemoryGroup::FillImageAllocationInfo(Texture* image, vk::MemoryAllocateInfo& allocInfo) const
+    std::size_t MemoryGroup::FillImageAllocationInfo(Texture* image, vk::MemoryAllocateInfo& allocInfo) const
     {
         auto memRequirements = device_->GetDevice().getImageMemoryRequirements(image->GetImage());
         return FillAllocationInfo(memRequirements, image->GetDeviceMemory().GetMemoryProperties(), allocInfo);
     }
 
-    std::uint32_t MemoryGroup::FillAllocationInfo(const vk::MemoryRequirements& memRequirements,
+    std::size_t MemoryGroup::FillAllocationInfo(const vk::MemoryRequirements& memRequirements,
         vk::MemoryPropertyFlags memProperties, vk::MemoryAllocateInfo& allocInfo) const
     {
         if (allocInfo.allocationSize == 0) allocInfo.memoryTypeIndex =
@@ -189,6 +199,6 @@ namespace vku::gfx {
         }
 
         allocInfo.allocationSize += memRequirements.size;
-        return static_cast<std::uint32_t>(memRequirements.size);
+        return memRequirements.size;
     }
 }
