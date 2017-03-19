@@ -50,6 +50,7 @@
 #include <g3log/g3log.hpp>
 #include <g3log/loglevels.hpp>
 
+const LEVELS ERROR{ WARNING.value + 200,{ "Vulkan" } };
 const LEVELS VK_GEN{ INFO.value + 2,{ "Vulkan" } };
 const LEVELS VK_DEBUG{ DEBUG.value + 1,{ "Vulkan DEBUG" } };
 const LEVELS VK_INFO{ INFO.value + 1,{ "Vulkan DEBUG" } };

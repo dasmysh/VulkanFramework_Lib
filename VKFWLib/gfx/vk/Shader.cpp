@@ -67,7 +67,7 @@ namespace vku::gfx {
         std::ifstream file(filename, std::ios::ate | std::ios::binary);
 
         if (!file.is_open()) {
-            LOG(FATAL) << "Could not open shader file (" << filename << ").";
+            LOG(ERROR) << "Could not open shader file (" << filename << ").";
             throw std::runtime_error("Could not open shader file.");
         }
         auto fileSize = static_cast<std::size_t>(file.tellg());

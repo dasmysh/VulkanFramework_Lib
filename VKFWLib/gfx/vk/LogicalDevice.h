@@ -21,6 +21,8 @@ namespace vku::cfg {
 namespace vku::gfx {
     class GraphicsPipeline;
     class Framebuffer;
+    class Buffer;
+    class Texture;
 
     struct DeviceQueueDesc
     {
@@ -51,7 +53,8 @@ namespace vku::gfx {
         const DeviceQueueDesc& GetQueueInfo(unsigned int familyIndex) const { return queueDescriptions_[familyIndex]; }
         const vk::CommandPool& GetCommandPool(unsigned int familyIndex) const { return vkCmdPoolsByRequestedQFamily_[familyIndex]; }
 
-        std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline(const std::vector<std::string>& shaderNames, const glm::uvec2& size, unsigned int numBlendAttachments);
+        std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline(const std::vector<std::string>& shaderNames,
+            const glm::uvec2& size, unsigned int numBlendAttachments);
 
         VkResult DebugMarkerSetObjectTagEXT(VkDevice device, VkDebugMarkerObjectTagInfoEXT* tagInfo) const;
         VkResult DebugMarkerSetObjectNameEXT(VkDevice device, VkDebugMarkerObjectNameInfoEXT* nameInfo) const;
@@ -63,6 +66,8 @@ namespace vku::gfx {
         ShaderManager* GetShaderManager() const { return shaderManager_.get(); }
 
         std::size_t CalculateUniformBufferAlignment(std::size_t size) const;
+        std::size_t CalculateBufferImageOffset(const Texture& second, std::size_t currentOffset) const;
+        std::size_t CalculateImageImageOffset(const Texture& first, const Texture& second, std::size_t currentOffset) const;
 
     private:
         PFN_vkVoidFunction LoadVKDeviceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false) const;

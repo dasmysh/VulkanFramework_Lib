@@ -72,7 +72,7 @@ namespace vku {
             if (std::experimental::filesystem::exists(filename)) return filename;
         }
 
-        LOG(FATAL) << "Error while loading resource." << std::endl
+        LOG(ERROR) << "Error while loading resource." << std::endl
             << "ResourceID: " << id_ << std::endl
             << "Filename: " << localFilename << std::endl
             << "Description: Cannot find local resource file.";

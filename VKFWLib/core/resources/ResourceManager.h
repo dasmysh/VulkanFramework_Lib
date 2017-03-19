@@ -16,15 +16,6 @@ namespace vku {
 
     class ApplicationBase;
 
-    /*template<typename rType>
-    struct DefaultResourceLoadingPolicy
-    {
-        static std::shared_ptr<rType> CreateResource(const std::string& resId, const gfx::LogicalDevice* device)
-        {
-            return std::move(std::make_shared<rType>(resId, device));
-        }
-    };*/
-
     /**
      * @brief  Base class for all resource managers.
      *

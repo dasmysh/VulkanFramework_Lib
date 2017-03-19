@@ -11,6 +11,7 @@
 #include "Shader.h"
 #include "core/resources/ShaderManager.h"
 #include "GraphicsPipeline.h"
+#include "textures/Texture.h"
 
 namespace vku::gfx {
 
@@ -139,7 +140,8 @@ namespace vku::gfx {
         return func;
     }
 
-    std::unique_ptr<GraphicsPipeline> LogicalDevice::CreateGraphicsPipeline(const std::vector<std::string>& shaderNames, const glm::uvec2& size, unsigned numBlendAttachments)
+    std::unique_ptr<GraphicsPipeline> LogicalDevice::CreateGraphicsPipeline(const std::vector<std::string>& shaderNames,
+        const glm::uvec2& size, unsigned int numBlendAttachments)
     {
         std::vector<std::shared_ptr<Shader>> shaders(shaderNames.size());
         for (auto i = 0U; i < shaderNames.size(); ++i) shaders[i] = shaderManager_->GetResource(shaderNames[i]);
@@ -172,9 +174,27 @@ namespace vku::gfx {
         if (enableDebugMarkers_) fpCmdDebugMarkerInsertEXT(cmdBuffer, markerInfo);
     }
 
+    constexpr std::size_t CalcAlignedSize(std::size_t size, std::size_t alignment)
+    {
+        return size + alignment - 1 - ((size + alignment - 1) % alignment);
+    }
+
     std::size_t LogicalDevice::CalculateUniformBufferAlignment(std::size_t size) const
     {
         auto factor = vkPhysicalDeviceLimits_.minUniformBufferOffsetAlignment;
-        return size + factor - 1 - ((size + factor - 1) % factor);
+        return CalcAlignedSize(size, factor);
+    }
+
+    std::size_t LogicalDevice::CalculateBufferImageOffset(const Texture& second, std::size_t currentOffset) const
+    {
+        if (second.GetDescriptor().imageTiling_ == vk::ImageTiling::eOptimal)
+            return CalcAlignedSize(currentOffset, vkPhysicalDeviceLimits_.bufferImageGranularity);
+        return currentOffset;
+    }
+    std::size_t LogicalDevice::CalculateImageImageOffset(const Texture & first, const Texture & second, std::size_t currentOffset) const
+    {
+        if (first.GetDescriptor().imageTiling_ != second.GetDescriptor().imageTiling_)
+            return CalcAlignedSize(currentOffset, vkPhysicalDeviceLimits_.bufferImageGranularity);
+        return currentOffset;
     }
 }

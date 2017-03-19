@@ -48,7 +48,7 @@ namespace vku::gfx {
 
         void AddTransferToQueue(const Buffer& src, std::size_t srcOffset, const Buffer& dst, std::size_t dstOffset, std::size_t copySize);
         void AddTransferToQueue(const Buffer& src, const Buffer& dst);
-        void AddTransferToQueue(const Texture& src, const Texture& dst);
+        void AddTransferToQueue(Texture& src, Texture& dst);
 
         void FinishTransfer();
 

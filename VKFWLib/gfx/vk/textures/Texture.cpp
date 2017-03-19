@@ -36,13 +36,21 @@ namespace vku::gfx {
 
     TextureDescriptor TextureDescriptor::SampleOnlyTextureDesc(unsigned int bytesPP, vk::Format format, vk::SampleCountFlagBits samples)
     {
-        TextureDescriptor texDesc(bytesPP, format);
+        TextureDescriptor texDesc(bytesPP, format, samples);
         texDesc.createFlags_ = vk::ImageCreateFlags();
         texDesc.imageTiling_ = vk::ImageTiling::eOptimal;
         texDesc.imageUsage_ = vk::ImageUsageFlagBits::eSampled;
         texDesc.sharingMode_ = vk::SharingMode::eExclusive;
         texDesc.imageLayout_ = vk::ImageLayout::ePreinitialized;
         return texDesc;
+    }
+
+    bool TextureDescriptor::IsFormatSupported(vk::PhysicalDevice physicalDevice)
+    {
+        auto formatProperties = physicalDevice.getFormatProperties(format_);
+        if (imageTiling_ == vk::ImageTiling::eLinear) return formatProperties.linearTilingFeatures != vk::FormatFeatureFlags();
+        if (imageTiling_ == vk::ImageTiling::eOptimal) return formatProperties.optimalTilingFeatures != vk::FormatFeatureFlags();
+        return false;
     }
 
     Texture::Texture(const LogicalDevice* device, const TextureDescriptor& desc,
@@ -111,16 +119,14 @@ namespace vku::gfx {
 
         size_ = glm::u32vec4(size.x * desc_.bytesPP_, size.y, size.z, size.w);
         mipLevels_ = mipLevels;
-        vk::ImageType type = vk::ImageType::e3D;
-        vk::ImageViewType viewType = vk::ImageViewType::e3D;
-        if (size.z == 1 && size.y == 1 && size.w == 1) { type = vk::ImageType::e1D; viewType = vk::ImageViewType::e1D; }
-        else if (size.z == 1 && size.y == 1) { type = vk::ImageType::e1D; viewType = vk::ImageViewType::e1DArray; }
-        else if (size.z == 1 && size.w == 1) { type = vk::ImageType::e2D; viewType = vk::ImageViewType::e2D; }
-        else if (size.z == 1) { type = vk::ImageType::e2D; viewType = vk::ImageViewType::e2DArray; }
-        // else if (size.z == 6 && size.w == 1) { type = vk::ImageType::e2D; viewType = vk::ImageViewType::eCubeMap; }
+        if (size.z == 1 && size.y == 1 && size.w == 1) { type_ = vk::ImageType::e1D; viewType_ = vk::ImageViewType::e1D; }
+        else if (size.z == 1 && size.y == 1) { type_ = vk::ImageType::e1D; viewType_ = vk::ImageViewType::e1DArray; }
+        else if (size.z == 1 && size.w == 1) { type_ = vk::ImageType::e2D; viewType_ = vk::ImageViewType::e2D; }
+        else if (size.z == 1) { type_ = vk::ImageType::e2D; viewType_ = vk::ImageViewType::e2DArray; }
+        // else if (size.z == 6 && size.w == 1) { type_ = vk::ImageType::e2D; viewType_ = vk::ImageViewType::eCubeMap; }
         // TODO: Add cube map support later. [3/17/2017 Sebastian Maisch]
 
-        vk::ImageCreateInfo imgCreateInfo{ desc_.createFlags_, type, desc_.format_,
+        vk::ImageCreateInfo imgCreateInfo{ desc_.createFlags_, type_, desc_.format_,
             vk::Extent3D(size.x, size_.y, size_.z),
             mipLevels, size_.w, desc_.samples_, desc_.imageTiling_,
             desc_.imageUsage_, desc_.sharingMode_, 0, nullptr, desc_.imageLayout_ };
@@ -131,18 +137,22 @@ namespace vku::gfx {
 
         vkImage_ = device_->GetDevice().createImage(imgCreateInfo);
 
-        vk::ImageSubresourceRange imgSubresourceRange{ GetValidAspects(), 0, mipLevels_, 0, size.w };
-        vk::ImageViewCreateInfo imgViewCreateInfo{ vk::ImageViewCreateFlags(), vkImage_, viewType, desc_.format_, vk::ComponentMapping(), imgSubresourceRange };
-        vkImageView_ = device_->GetDevice().createImageView(imgViewCreateInfo);
-
         if (initMemory) {
             vk::MemoryRequirements memRequirements = device_->GetDevice().getImageMemoryRequirements(vkImage_);
             imageDeviceMemory_.InitializeMemory(memRequirements);
             imageDeviceMemory_.BindToTexture(*this, 0);
+            InitializeImageView();
         }
     }
 
-    void Texture::TransitionLayout(vk::ImageLayout newLayout, vk::CommandBuffer cmdBuffer) const
+    void Texture::InitializeImageView()
+    {
+        vk::ImageSubresourceRange imgSubresourceRange{ GetValidAspects(), 0, mipLevels_, 0, size_.w };
+        vk::ImageViewCreateInfo imgViewCreateInfo{ vk::ImageViewCreateFlags(), vkImage_, viewType_, desc_.format_, vk::ComponentMapping(), imgSubresourceRange };
+        vkImageView_ = device_->GetDevice().createImageView(imgViewCreateInfo);
+    }
+
+    void Texture::TransitionLayout(vk::ImageLayout newLayout, vk::CommandBuffer cmdBuffer)
     {
         vk::ImageSubresourceRange subresourceRange{ GetValidAspects(), 0, mipLevels_, 0, size_.w };
         vk::ImageMemoryBarrier transitionBarrier{ vk::AccessFlags(), vk::AccessFlags(), desc_.imageLayout_,
@@ -166,12 +176,13 @@ namespace vku::gfx {
 
         cmdBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe,
             vk::DependencyFlags(), nullptr, nullptr, transitionBarrier);
+        desc_.imageLayout_ = newLayout;
     }
 
     vk::CommandBuffer Texture::TransitionLayout(vk::ImageLayout newLayout,
         std::pair<std::uint32_t, std::uint32_t> transitionQueueIdx,
         const std::vector<vk::Semaphore>& waitSemaphores,
-        const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
+        const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence)
     {
         if (desc_.imageLayout_ == newLayout) return vk::CommandBuffer();
 

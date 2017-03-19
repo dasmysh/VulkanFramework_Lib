@@ -37,11 +37,14 @@ namespace vku::gfx {
         unsigned int AddTextureToGroup(const TextureDescriptor& desc,
             const glm::u32vec4& size, std::uint32_t mipLevels,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
-        unsigned int AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size, const void* data,
+        unsigned int AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size,
+            const void* data, const std::function<void(void*)>& deleter = nullptr,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
-        void AddDataToBufferInGroup(unsigned int bufferIdx, std::size_t offset, std::size_t dataSize, const void* data);
+        void AddDataToBufferInGroup(unsigned int bufferIdx, std::size_t offset, std::size_t dataSize,
+            const void* data, const std::function<void(void*)>& deleter = nullptr);
         void AddDataToTextureInGroup(unsigned int textureIdx, vk::ImageAspectFlags aspectFlags,
-            std::uint32_t mipLevel, std::uint32_t arrayLayer, const glm::u32vec3& size, const void* data);
+            std::uint32_t mipLevel, std::uint32_t arrayLayer, const glm::u32vec3& size,
+            const void* data, const std::function<void(void*)>& deleter = nullptr);
         void FinalizeGroup();
         void TransferData(QueuedDeviceTransfer& transfer);
 
@@ -65,7 +68,7 @@ namespace vku::gfx {
 
     private:
         std::size_t FillBufferAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo) const;
-        std::size_t FillImageAllocationInfo(Texture* image, vk::MemoryAllocateInfo& allocInfo) const;
+        std::size_t FillImageAllocationInfo(Texture* lastImage, Texture* image, std::size_t& imageOffset, vk::MemoryAllocateInfo& allocInfo) const;
         std::size_t FillAllocationInfo(const vk::MemoryRequirements& memRequirements, vk::MemoryPropertyFlags memProperties,
             vk::MemoryAllocateInfo& allocInfo) const;
 
@@ -96,6 +99,8 @@ namespace vku::gfx {
             std::size_t size_;
             /** Pointer to the data to copy. */
             const void* data_;
+            /** Deleter for the data_ element. */
+            std::function<void(void*)> deleter_;
 
         };
 
@@ -113,6 +118,8 @@ namespace vku::gfx {
             glm::u32vec3 size_;
             /** Pointer to the data to copy. */
             const void* data_;
+            /** Deleter for the data_ element. */
+            std::function<void(void*)> deleter_;
         };
 
         /** Holds the offsets for the host memory objects. */
@@ -129,7 +136,7 @@ namespace vku::gfx {
     std::enable_if_t<has_contiguous_memory<T>::value, unsigned int> MemoryGroup::AddBufferToGroup(
         vk::BufferUsageFlags usage, const T& data, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
-        return AddBufferToGroup(usage, byteSizeOf(data), data.data(), queueFamilyIndices);
+        return AddBufferToGroup(usage, byteSizeOf(data), data.data(), nullptr, queueFamilyIndices);
     }
 
     template <class T>

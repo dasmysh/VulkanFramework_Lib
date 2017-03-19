@@ -55,6 +55,8 @@ namespace vku::gfx {
         static TextureDescriptor StagingTextureDesc(const TextureDescriptor orig);
         static TextureDescriptor SampleOnlyTextureDesc(unsigned int bytesPP, vk::Format format, vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1);
         // static TextureDescriptor RenderTargetTextureDesc();
+
+        bool IsFormatSupported(vk::PhysicalDevice physicalDevice);
     };
 
     class Texture
@@ -69,11 +71,12 @@ namespace vku::gfx {
         ~Texture();
 
         void InitializeImage(const glm::u32vec4& size, std::uint32_t mipLevels, bool initMemory = true);
-        void TransitionLayout(vk::ImageLayout newLayout, vk::CommandBuffer cmdBuffer) const;
+        void InitializeImageView();
+        void TransitionLayout(vk::ImageLayout newLayout, vk::CommandBuffer cmdBuffer);
         vk::CommandBuffer TransitionLayout(vk::ImageLayout newLayout,
             std::pair<std::uint32_t, std::uint32_t> transitionQueueIdx,
             const std::vector<vk::Semaphore>& waitSemaphores,
-            const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const;
+            const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence);
         void CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset,
             const Texture& dstImage, std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset,
             const glm::u32vec4& size, vk::CommandBuffer cmdBuffer) const;
@@ -92,7 +95,9 @@ namespace vku::gfx {
         const glm::u32vec4& GetSize() const { return size_; }
         std::uint32_t GetMipLevels() const { return mipLevels_; }
         vk::Image GetImage() const { return vkImage_; }
+        vk::ImageView GetImageView() const { return vkImageView_; }
         const DeviceMemory& GetDeviceMemory() const { return imageDeviceMemory_; }
+        const TextureDescriptor& GetDescriptor() const { return desc_; }
 
     protected:
         Texture CopyWithoutData() const { return Texture{ device_, desc_, queueFamilyIndices_ }; }
@@ -116,5 +121,9 @@ namespace vku::gfx {
         TextureDescriptor desc_;
         /** Holds the queue family indices. */
         std::vector<std::uint32_t> queueFamilyIndices_;
+        /** Holds the image type. */
+        vk::ImageType type_ = vk::ImageType::e3D;
+        /** Holds the image view type. */
+        vk::ImageViewType viewType_ = vk::ImageViewType::e3D;
     };
 }

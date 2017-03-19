@@ -17,8 +17,13 @@ namespace vku::gfx {
     class DeviceTexture;
     struct TextureDescriptor;
 
-    struct stbi_error {};
-    struct invalid_texture_channels { int imgChannels_; };
+    struct stbi_error final : public std::exception {
+        stbi_error() : std::exception{ "STBI Error." } {}
+    };
+    struct invalid_texture_channels final : public std::exception {
+        invalid_texture_channels(int imgChannels) : std::exception{ "Invalid number of image channels." }, imgChannels_{ imgChannels } {}
+        int imgChannels_;
+    };
 
     class Texture2D final : public Resource
     {
@@ -32,6 +37,8 @@ namespace vku::gfx {
         Texture2D(const std::string& textureFilename, const LogicalDevice* device, bool useSRGB,
             MemoryGroup& memGroup, const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         ~Texture2D();
+
+        const DeviceTexture& GetTexture() const { return *texture_; }
 
     private:
         Texture2D(const std::string& resourceId, const std::string& textureFilename, const LogicalDevice* device_);

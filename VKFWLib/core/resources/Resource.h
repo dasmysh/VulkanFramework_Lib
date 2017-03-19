@@ -16,7 +16,8 @@ namespace vku::gfx {
 
 namespace vku {
 
-    struct file_not_found {
+    struct file_not_found final : public std::exception {
+        file_not_found(const std::string& filename) : std::exception{ "File not found." }, filename_{ filename } {}
         std::string filename_;
     };
 

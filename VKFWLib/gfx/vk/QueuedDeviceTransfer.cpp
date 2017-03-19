@@ -109,14 +109,14 @@ namespace vku::gfx {
         AddTransferToQueue(src, 0, dst, 0, src.GetSize());
     }
 
-    void QueuedDeviceTransfer::AddTransferToQueue(const Texture& src, const Texture& dst)
+    void QueuedDeviceTransfer::AddTransferToQueue(Texture& src, Texture& dst)
     {
         auto imgCopyCmdBuffer = CommandBuffers::beginSingleTimeSubmit(device_, transferQueue_.first);
         src.TransitionLayout(vk::ImageLayout::eTransferSrcOptimal, imgCopyCmdBuffer);
         dst.TransitionLayout(vk::ImageLayout::eTransferDstOptimal, imgCopyCmdBuffer);
         src.CopyImageAsync(0, glm::u32vec4(0), dst, 0, glm::u32vec4(0), src.GetSize(), imgCopyCmdBuffer);
-        CommandBuffers::endSingleTimeSubmit(device_, imgCopyCmdBuffer, transferQueue_.first, transferQueue_.second);
         dst.TransitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal, imgCopyCmdBuffer);
+        CommandBuffers::endSingleTimeSubmit(device_, imgCopyCmdBuffer, transferQueue_.first, transferQueue_.second);
 
         transferCmdBuffers_.push_back(imgCopyCmdBuffer);
     }
