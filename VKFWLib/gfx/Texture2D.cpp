@@ -119,8 +119,7 @@ namespace vku::gfx {
 
         loadFn(glm::u32vec4(imgWidth, imgHeight, 1, 1), texDesc, image);
 
-        // This is done in the loadFn or after copying data...
-        // stbi_image_free(image);
+        // Data deletion is handled in the loadFn function.
     }
 
     void Texture2D::LoadTextureHDR(const std::string& filename,
@@ -159,8 +158,7 @@ namespace vku::gfx {
 
         loadFn(glm::u32vec4(imgWidth, imgHeight, 1, 1), texDesc, image);
 
-        // This is done in the loadFn or after copying data...
-        // stbi_image_free(image);
+        // Data deletion is handled in the loadFn function.
     }
 
     std::tuple<unsigned, vk::Format> Texture2D::FindFormatLDR(const std::string& filename, int imgChannels, bool useSRGB) const

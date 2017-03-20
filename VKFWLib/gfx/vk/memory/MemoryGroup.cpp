@@ -164,7 +164,8 @@ namespace vku::gfx {
         for (const auto& contentDesc : imageContents_) {
             vk::ImageSubresource imgSubresource{ contentDesc.aspectFlags_, contentDesc.mipLevel_, contentDesc.arrayLayer_ };
             auto subresourceLayout = device_->GetDevice().getImageSubresourceLayout(hostImages_[contentDesc.imageIdx_].GetImage(), imgSubresource);
-            hostMemory_.CopyToHostMemory(hostOffsets_[contentDesc.imageIdx_], glm::u32vec3(0), subresourceLayout, contentDesc.size_, contentDesc.data_);
+            hostMemory_.CopyToHostMemory(hostOffsets_[contentDesc.imageIdx_ + hostBuffers_.size()], glm::u32vec3(0),
+                subresourceLayout, contentDesc.size_, contentDesc.data_);
             if (contentDesc.deleter_) contentDesc.deleter_(const_cast<void*>(contentDesc.data_));
         }
 

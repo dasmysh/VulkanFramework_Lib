@@ -91,20 +91,9 @@ namespace vku::gfx {
         const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
     {
         auto transferCmdBuffer = CommandBuffers::beginSingleTimeSubmit(device_, copyQueueIdx.first);
-        /*vk::CommandBufferAllocateInfo cmdBufferallocInfo{ device_->GetCommandPool(copyQueueIdx.first) , vk::CommandBufferLevel::ePrimary, 1 };
-        auto transferCmdBuffer = device_->GetDevice().allocateCommandBuffers(cmdBufferallocInfo)[0];
-
-        vk::CommandBufferBeginInfo beginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
-        transferCmdBuffer.begin(beginInfo);*/
         CopyBufferAsync(srcOffset, dstBuffer, dstOffset, size, transferCmdBuffer);
-
         CommandBuffers::endSingleTimeSubmit(device_, transferCmdBuffer, copyQueueIdx.first, copyQueueIdx.second,
             waitSemaphores, signalSemaphores, fence);
-        /*transferCmdBuffer.end();
-
-        vk::SubmitInfo submitInfo{ static_cast<std::uint32_t>(waitSemaphores.size()), waitSemaphores.data(),
-            nullptr, 1, &transferCmdBuffer, static_cast<std::uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
-        device_->GetQueue(copyQueueIdx.first, copyQueueIdx.second).submit(submitInfo, fence);*/
 
         return transferCmdBuffer;
     }

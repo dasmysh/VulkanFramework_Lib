@@ -225,27 +225,9 @@ namespace vku::gfx {
         const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
     {
         auto transferCmdBuffer = CommandBuffers::beginSingleTimeSubmit(device_, copyQueueIdx.first);
-        /*vk::CommandBufferAllocateInfo cmdBufferallocInfo{ device_->GetCommandPool(copyQueueIdx.first) , vk::CommandBufferLevel::ePrimary, 1 };
-        auto transferCmdBuffer = device_->GetDevice().allocateCommandBuffers(cmdBufferallocInfo)[0];*/
-
         CopyImageAsync(srcMipLevel, srcOffset, dstImage, dstMipLevel, dstOffset, size, transferCmdBuffer);
-        /*vk::CommandBufferBeginInfo beginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
-        transferCmdBuffer.begin(beginInfo);*/
-        /*vk::ImageSubresourceLayers subresourceLayersSrc{ GetValidAspects(), srcMipLevel, srcOffset.w, size.w };
-        vk::ImageSubresourceLayers subresourceLayersDst{ dstImage.GetValidAspects(), dstMipLevel, dstOffset.w, size.w };
-        vk::ImageCopy copyRegion{ subresourceLayersSrc,
-            vk::Offset3D{ static_cast<std::int32_t>(srcOffset.x), static_cast<std::int32_t>(srcOffset.y), static_cast<std::int32_t>(srcOffset.z) },
-            subresourceLayersDst,
-            vk::Offset3D{ static_cast<std::int32_t>(dstOffset.x), static_cast<std::int32_t>(dstOffset.y), static_cast<std::int32_t>(dstOffset.z) },
-            vk::Extent3D{ size.x / desc_.bytesPP_, size.y, size.z } };
-        transferCmdBuffer.copyImage(vkImage_, desc_.imageLayout_, dstImage.vkImage_, dstImage.desc_.imageLayout_, copyRegion);*/
         CommandBuffers::endSingleTimeSubmit(device_, transferCmdBuffer, copyQueueIdx.first, copyQueueIdx.second,
             waitSemaphores, signalSemaphores, fence);
-        /*transferCmdBuffer.end();
-
-        vk::SubmitInfo submitInfo{ static_cast<std::uint32_t>(waitSemaphores.size()), waitSemaphores.data(),
-            nullptr, 1, &transferCmdBuffer, static_cast<std::uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
-        device_->GetQueue(copyQueueIdx.first, copyQueueIdx.second).submit(submitInfo, fence);*/
 
         return transferCmdBuffer;
     }
