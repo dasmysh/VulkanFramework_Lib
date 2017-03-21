@@ -29,8 +29,8 @@ namespace vku::gfx {
         vk::StencilOpState frontStencilOpState{};
         vk::StencilOpState backStencilOpState{};
         state_->depthStencil_ = vk::PipelineDepthStencilStateCreateInfo{ vk::PipelineDepthStencilStateCreateFlags(),
-            VK_FALSE, VK_FALSE, vk::CompareOp::eNever, VK_FALSE,
-            VK_FALSE, frontStencilOpState, backStencilOpState, 0.0f, 0.0f };
+            VK_TRUE, VK_TRUE, vk::CompareOp::eLess, VK_FALSE,
+            VK_FALSE, frontStencilOpState, backStencilOpState, 0.0f, 1.0f };
 
         state_->colorBlendAttachments_.resize(numBlendAttachments);
         for (auto& blendAttachment : state_->colorBlendAttachments_) {

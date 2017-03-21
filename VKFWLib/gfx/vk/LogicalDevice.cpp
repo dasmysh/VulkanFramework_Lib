@@ -197,4 +197,16 @@ namespace vku::gfx {
             return CalcAlignedSize(currentOffset, vkPhysicalDeviceLimits_.bufferImageGranularity);
         return currentOffset;
     }
+    std::pair<unsigned int, vk::Format> LogicalDevice::FindSupportedFormat(const std::vector<std::pair<unsigned int, vk::Format>>& candidates,
+        vk::ImageTiling tiling, vk::FormatFeatureFlags features) const
+    {
+        for (const auto& cand : candidates) {
+            vk::FormatProperties formatProps = vkPhysicalDevice_.getFormatProperties(cand.second);
+
+            if (tiling == vk::ImageTiling::eLinear && (formatProps.linearTilingFeatures & features) == features) return cand;
+            else if (tiling == vk::ImageTiling::eOptimal && (formatProps.optimalTilingFeatures & features) == features) return cand;
+        }
+
+        throw std::runtime_error("No candidate format supported.");
+    }
 }

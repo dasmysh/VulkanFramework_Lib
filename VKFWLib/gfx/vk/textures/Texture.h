@@ -54,9 +54,8 @@ namespace vku::gfx {
         static TextureDescriptor StagingTextureDesc(unsigned int bytesPP, vk::Format format, vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1);
         static TextureDescriptor StagingTextureDesc(const TextureDescriptor orig);
         static TextureDescriptor SampleOnlyTextureDesc(unsigned int bytesPP, vk::Format format, vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1);
+        static TextureDescriptor DepthBufferTextureDesc(unsigned int bytesPP, vk::Format format, vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1);
         // static TextureDescriptor RenderTargetTextureDesc();
-
-        bool IsFormatSupported(vk::PhysicalDevice physicalDevice);
     };
 
     class Texture
@@ -103,6 +102,7 @@ namespace vku::gfx {
         Texture CopyWithoutData() const { return Texture{ device_, desc_, queueFamilyIndices_ }; }
         vk::ImageAspectFlags GetValidAspects() const;
         const vk::Device& GetDevice() const { return device_->GetDevice(); }
+        static vk::AccessFlags GetAccessFlagsForLayout(vk::ImageLayout layout);
 
     private:
         /** Holds the device. */

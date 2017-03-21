@@ -97,15 +97,9 @@ namespace vku::gfx {
             throw stbi_error{};
         }
         unsigned int bytesPP = 4; vk::Format fmt = vk::Format::eR8G8B8A8Unorm;
-        std::tie(bytesPP, fmt) = FindFormatLDR(filename, imgChannels, useSRGB);
+        std::tie(bytesPP, fmt) = FindFormat(filename, imgChannels, useSRGB ? FormatProperties::USE_SRGB : FormatProperties::USE_NONE);
         TextureDescriptor texDesc = TextureDescriptor::SampleOnlyTextureDesc(bytesPP, fmt);
-
         int requestedChannels = imgChannels;
-        while (!texDesc.IsFormatSupported(GetDevice()->GetPhysicalDevice())) {
-            requestedChannels += 1;
-            std::tie(bytesPP, fmt) = FindFormatLDR(filename, requestedChannels, useSRGB);
-            texDesc = TextureDescriptor::SampleOnlyTextureDesc(bytesPP, fmt);
-        }
 
         auto image = stbi_load(filename.c_str(), &imgWidth, &imgHeight, &imgChannels, requestedChannels);
         if (!image) {
@@ -136,15 +130,9 @@ namespace vku::gfx {
         }
 
         unsigned int bytesPP = 16; vk::Format fmt = vk::Format::eR32G32B32A32Sfloat;
-        std::tie(bytesPP, fmt) = FindFormatHDR(filename, imgChannels);
+        std::tie(bytesPP, fmt) = FindFormat(filename, imgChannels, FormatProperties::USE_HDR);
         TextureDescriptor texDesc = TextureDescriptor::SampleOnlyTextureDesc(bytesPP, fmt);
-
         int requestedChannels = imgChannels;
-        while (!texDesc.IsFormatSupported(GetDevice()->GetPhysicalDevice())) {
-            requestedChannels += 1;
-            std::tie(bytesPP, fmt) = FindFormatHDR(filename, requestedChannels);
-            texDesc = TextureDescriptor::SampleOnlyTextureDesc(bytesPP, fmt);
-        }
 
         auto image = stbi_loadf(filename.c_str(), &imgWidth, &imgHeight, &imgChannels, requestedChannels);
         if (!image) {
@@ -161,7 +149,7 @@ namespace vku::gfx {
         // Data deletion is handled in the loadFn function.
     }
 
-    std::tuple<unsigned, vk::Format> Texture2D::FindFormatLDR(const std::string& filename, int imgChannels, bool useSRGB) const
+    /*std::tuple<unsigned, vk::Format> Texture2D::FindFormatLDR(const std::string& filename, int imgChannels, bool useSRGB) const
     {
         auto useSRGBFormat = (useSRGB && GetDevice()->GetWindowCfg().useSRGB_);
         auto fmt = vk::Format::eR8G8B8A8Unorm;
@@ -179,9 +167,40 @@ namespace vku::gfx {
             throw invalid_texture_channels{ imgChannels };
         }
         return std::make_tuple(bytesPP, fmt);
+    }*/
+
+    std::pair<unsigned int, vk::Format> Texture2D::FindFormat(const std::string& filename, int& imgChannels, FormatProperties fmtProps) const
+    {
+        std::vector<std::pair<unsigned int, vk::Format>> candiateFormats;
+        if (imgChannels == 1) {
+            if (FormatProperties::USE_SRGB == fmtProps) candiateFormats.emplace_back(std::make_pair(1, vk::Format::eR8Srgb));
+            if (FormatProperties::USE_HDR == fmtProps) candiateFormats.emplace_back(std::make_pair(4, vk::Format::eR32Sfloat));
+            else candiateFormats.emplace_back(std::make_pair(1, vk::Format::eR8Unorm));
+        }
+        if (imgChannels <= 2) {
+            if (FormatProperties::USE_SRGB == fmtProps) candiateFormats.emplace_back(std::make_pair(2, vk::Format::eR8G8Srgb));
+            if (FormatProperties::USE_HDR == fmtProps) candiateFormats.emplace_back(std::make_pair(8, vk::Format::eR32G32Sfloat));
+            else candiateFormats.emplace_back(std::make_pair(2, vk::Format::eR8G8Unorm));
+        }
+        if (imgChannels <= 3) {
+            if (FormatProperties::USE_SRGB == fmtProps) candiateFormats.emplace_back(std::make_pair(3, vk::Format::eR8G8B8Srgb));
+            if (FormatProperties::USE_HDR == fmtProps) candiateFormats.emplace_back(std::make_pair(12, vk::Format::eR32G32B32Sfloat));
+            else candiateFormats.emplace_back(std::make_pair(3, vk::Format::eR8G8B8Unorm));
+        }
+        if (imgChannels <= 4) {
+            if (FormatProperties::USE_SRGB == fmtProps) candiateFormats.emplace_back(std::make_pair(4, vk::Format::eR8G8B8A8Srgb));
+            if (FormatProperties::USE_HDR == fmtProps) candiateFormats.emplace_back(std::make_pair(16, vk::Format::eR32G32B32A32Sfloat));
+            else candiateFormats.emplace_back(std::make_pair(4, vk::Format::eR8G8B8A8Unorm));
+        }
+
+        auto fmt = GetDevice()->FindSupportedFormat(candiateFormats, vk::ImageTiling::eOptimal,
+            vk::FormatFeatureFlagBits::eSampledImage | vk::FormatFeatureFlagBits::eSampledImageFilterLinear);
+        int singleChannelBytes = fmtProps == FormatProperties::USE_HDR ? 4 : 1;
+        imgChannels = fmt.first / singleChannelBytes;
+        return fmt;
     }
 
-    std::tuple<unsigned, vk::Format> Texture2D::FindFormatHDR(const std::string& filename, int imgChannels) const
+    /*std::tuple<unsigned, vk::Format> Texture2D::FindFormatHDR(const std::string& filename, int imgChannels) const
     {
         auto fmt = vk::Format::eR32G32B32A32Sfloat;
         unsigned int bytesPP = 16;
@@ -198,5 +217,5 @@ namespace vku::gfx {
             throw invalid_texture_channels{ imgChannels };
         }
         return std::make_tuple(bytesPP, fmt);
-    }
+    }*/
 }

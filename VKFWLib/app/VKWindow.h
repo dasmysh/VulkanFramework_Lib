@@ -141,6 +141,8 @@ namespace vku {
         void ReleaseWindow();
         void ReleaseVulkan();
 
+        std::pair<unsigned int, vk::Format> FindSupportedDepthFormat() const;
+
     public:
         static void glfwErrorCallback(int error, const char* description);
         static void glfwWindowPosCallback(GLFWwindow* window, int xpos, int ypos);

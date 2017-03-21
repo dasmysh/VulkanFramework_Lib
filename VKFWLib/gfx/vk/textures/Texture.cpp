@@ -45,12 +45,15 @@ namespace vku::gfx {
         return texDesc;
     }
 
-    bool TextureDescriptor::IsFormatSupported(vk::PhysicalDevice physicalDevice)
+    TextureDescriptor TextureDescriptor::DepthBufferTextureDesc(unsigned int bytesPP, vk::Format format, vk::SampleCountFlagBits samples)
     {
-        auto formatProperties = physicalDevice.getFormatProperties(format_);
-        if (imageTiling_ == vk::ImageTiling::eLinear) return formatProperties.linearTilingFeatures != vk::FormatFeatureFlags();
-        if (imageTiling_ == vk::ImageTiling::eOptimal) return formatProperties.optimalTilingFeatures != vk::FormatFeatureFlags();
-        return false;
+        TextureDescriptor texDesc(bytesPP, format, samples);
+        texDesc.createFlags_ = vk::ImageCreateFlags();
+        texDesc.imageTiling_ = vk::ImageTiling::eOptimal;
+        texDesc.imageUsage_ = vk::ImageUsageFlagBits::eDepthStencilAttachment;
+        texDesc.sharingMode_ = vk::SharingMode::eExclusive;
+        texDesc.imageLayout_ = vk::ImageLayout::ePreinitialized;
+        return texDesc;
     }
 
     Texture::Texture(const LogicalDevice* device, const TextureDescriptor& desc,
@@ -73,7 +76,9 @@ namespace vku::gfx {
         size_{ rhs.size_ },
         mipLevels_{ rhs.mipLevels_ },
         desc_{ rhs.desc_ },
-        queueFamilyIndices_{ std::move(rhs.queueFamilyIndices_) }
+        queueFamilyIndices_{ std::move(rhs.queueFamilyIndices_) },
+        type_{ rhs.type_ },
+        viewType_{ rhs.viewType_ }
     {
         rhs.vkImage_ = vk::Image();
         rhs.vkImageView_ = vk::ImageView();
@@ -92,6 +97,8 @@ namespace vku::gfx {
         mipLevels_ = rhs.mipLevels_;
         desc_ = rhs.desc_;
         queueFamilyIndices_ = std::move(rhs.queueFamilyIndices_);
+        type_ = rhs.type_;
+        viewType_ = rhs.viewType_;
         rhs.vkImage_ = vk::Image();
         rhs.vkImageView_ = vk::ImageView();
         rhs.size_ = glm::u32vec4(0);
@@ -158,21 +165,8 @@ namespace vku::gfx {
         vk::ImageMemoryBarrier transitionBarrier{ vk::AccessFlags(), vk::AccessFlags(), desc_.imageLayout_,
             newLayout, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, vkImage_, subresourceRange };
 
-        if (desc_.imageLayout_ == vk::ImageLayout::ePreinitialized && newLayout == vk::ImageLayout::eTransferSrcOptimal) {
-            transitionBarrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
-            transitionBarrier.dstAccessMask = vk::AccessFlagBits::eTransferRead;
-        }
-        else if (desc_.imageLayout_ == vk::ImageLayout::ePreinitialized && newLayout == vk::ImageLayout::eTransferDstOptimal) {
-            transitionBarrier.srcAccessMask = vk::AccessFlagBits::eHostWrite;
-            transitionBarrier.dstAccessMask = vk::AccessFlagBits::eTransferWrite;
-        }
-        else if (desc_.imageLayout_ == vk::ImageLayout::eTransferDstOptimal && newLayout == vk::ImageLayout::eShaderReadOnlyOptimal) {
-            transitionBarrier.srcAccessMask = vk::AccessFlagBits::eTransferWrite;
-            transitionBarrier.dstAccessMask = vk::AccessFlagBits::eShaderRead;
-        }
-        else {
-            throw std::invalid_argument("unsupported layout transition!");
-        }
+        transitionBarrier.srcAccessMask = GetAccessFlagsForLayout(desc_.imageLayout_);
+        transitionBarrier.dstAccessMask = GetAccessFlagsForLayout(newLayout);
 
         cmdBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe,
             vk::DependencyFlags(), nullptr, nullptr, transitionBarrier);
@@ -256,4 +250,20 @@ namespace vku::gfx {
             || desc_.format_ == vk::Format::eD32SfloatS8Uint) return vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
         return vk::ImageAspectFlagBits::eColor;
     }
+
+    vk::AccessFlags Texture::GetAccessFlagsForLayout(vk::ImageLayout layout)
+    {
+        switch (layout) {
+        case vk::ImageLayout::eUndefined: return vk::AccessFlags();
+        case vk::ImageLayout::ePreinitialized: return vk::AccessFlagBits::eHostWrite;
+        case vk::ImageLayout::eTransferDstOptimal: return vk::AccessFlagBits::eTransferWrite;
+        case vk::ImageLayout::eTransferSrcOptimal: return vk::AccessFlagBits::eTransferRead;
+        case vk::ImageLayout::eColorAttachmentOptimal: return vk::AccessFlagBits::eColorAttachmentWrite;
+        case vk::ImageLayout::eDepthStencilAttachmentOptimal:
+            return vk::AccessFlagBits::eDepthStencilAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+        case vk::ImageLayout::eShaderReadOnlyOptimal: return vk::AccessFlagBits::eShaderRead;
+        default: return vk::AccessFlags();
+        }
+    }
+
 }

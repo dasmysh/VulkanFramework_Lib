@@ -9,7 +9,8 @@
 #pragma once
 
 #include "main.h"
-#include "gfx/vk/textures/Texture.h"
+#include "gfx/vk/textures/DeviceTexture.h"
+#include "memory/DeviceMemoryGroup.h"
 
 namespace vku::gfx {
 
@@ -26,8 +27,13 @@ namespace vku::gfx {
     class Framebuffer final
     {
     public:
-        Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size, const std::vector<vk::Image>& images, const vk::RenderPass& renderPass, const FramebufferDescriptor& desc);
-        Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size, const vk::RenderPass& renderPass, const FramebufferDescriptor& desc);
+        Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size, const std::vector<vk::Image>& images,
+            const vk::RenderPass& renderPass, const FramebufferDescriptor& desc,
+            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{},
+            vk::CommandBuffer cmdBuffer = vk::CommandBuffer());
+        Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size, const vk::RenderPass& renderPass,
+            const FramebufferDescriptor& desc, const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{},
+            vk::CommandBuffer cmdBuffer = vk::CommandBuffer());
         Framebuffer(const Framebuffer&);
         Framebuffer(Framebuffer&&) noexcept;
         Framebuffer& operator=(const Framebuffer&);
@@ -40,24 +46,26 @@ namespace vku::gfx {
         const vk::Framebuffer& GetFramebuffer() const { return vkFramebuffer_; }
 
     private:
-        void CreateImages();
+        void CreateImages(vk::CommandBuffer cmdBuffer);
         void CreateFB();
 
         /** Holds the logical device. */
-        const LogicalDevice* logicalDevice_;
+        const LogicalDevice* device_;
         /** Holds the framebuffer size. */
         glm::uvec2 size_;
         /** Holds the render pass. */
         vk::RenderPass renderPass_;
         /** Holds the framebuffer descriptor. */
         FramebufferDescriptor desc_;
-        /** Holds the images in this framebuffer. */
-        std::vector<vk::Image> images_;
-        /** Holds whether this object holds ownership to the images. */
-        bool imageOwnership_ = true;
-        /** Holds the image view for the attachments. */
-        std::vector<vk::ImageView> vkAttachmentsImageView_;
+        /** Holds the device memory group for the owned images. */
+        DeviceMemoryGroup memoryGroup_;
+        /** Holds the externally owned images in this framebuffer. */
+        std::vector<vk::Image> extImages_;
+        /** Holds the image view for the external attachments. */
+        std::vector<vk::ImageView> vkExternalAttachmentsImageView_;
         /** Holds the Vulkan framebuffer object. */
         vk::Framebuffer vkFramebuffer_;
+        /** Holds the queue family indices. */
+        std::vector<std::uint32_t> queueFamilyIndices_;
     };
 }

@@ -69,6 +69,9 @@ namespace vku::gfx {
         std::size_t CalculateBufferImageOffset(const Texture& second, std::size_t currentOffset) const;
         std::size_t CalculateImageImageOffset(const Texture& first, const Texture& second, std::size_t currentOffset) const;
 
+        std::pair<unsigned int, vk::Format> FindSupportedFormat(const std::vector<std::pair<unsigned int, vk::Format>>& candidates,
+            vk::ImageTiling tiling, vk::FormatFeatureFlags features) const;
+
     private:
         PFN_vkVoidFunction LoadVKDeviceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false) const;
 

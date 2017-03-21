@@ -271,16 +271,30 @@ namespace vku {
 
         auto swapchainImages = logicalDevice_->GetDevice().getSwapchainImagesKHR(vkSwapchain_);
 
+        auto dsFormat = FindSupportedDepthFormat();
         {
             // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
             vk::AttachmentDescription colorAttachment{ vk::AttachmentDescriptionFlags(), surfaceFormat.format, vk::SampleCountFlagBits::e1,
                 vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore,
                 vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
                 vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR };
-
             vk::AttachmentReference colorAttachmentRef{ 0, vk::ImageLayout::eColorAttachmentOptimal };
-            vk::SubpassDescription subPass{ vk::SubpassDescriptionFlags(), vk::PipelineBindPoint::eGraphics, 0, nullptr, 1, &colorAttachmentRef, nullptr, nullptr, 0, nullptr };
-            vk::RenderPassCreateInfo renderPassInfo{ vk::RenderPassCreateFlags(), 1, &colorAttachment, 1, &subPass, 0, nullptr };
+            // TODO: check the stencil load/store operations. [3/20/2017 Sebastian Maisch]
+            vk::AttachmentDescription depthAttachment{ vk::AttachmentDescriptionFlags(), dsFormat.second, vk::SampleCountFlagBits::e1,
+                vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare,
+                vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare,
+                vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal };
+            vk::AttachmentReference depthAttachmentRef{ 1, vk::ImageLayout::eDepthStencilAttachmentOptimal };
+
+            vk::SubpassDescription subPass{ vk::SubpassDescriptionFlags(), vk::PipelineBindPoint::eGraphics, 0, nullptr,
+                1, &colorAttachmentRef, nullptr, &depthAttachmentRef, 0, nullptr };
+
+            vk::SubpassDependency dependency{ VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput,
+                vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlags(),
+                vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite };
+            std::array<vk::AttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
+            vk::RenderPassCreateInfo renderPassInfo{ vk::RenderPassCreateFlags(),
+                static_cast<std::uint32_t>(attachments.size()), attachments.data(), 1, &subPass, 1, &dependency };
 
             vkSwapchainRenderPass_ = logicalDevice_->GetDevice().createRenderPass(renderPassInfo);
         }
@@ -288,10 +302,12 @@ namespace vku {
         // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
         gfx::FramebufferDescriptor fbDesc;
         fbDesc.tex_.emplace_back(config_->backbufferBits_ / 8, surfaceFormat.format, vk::SampleCountFlagBits::e1);
+        fbDesc.tex_.push_back(gfx::TextureDescriptor::DepthBufferTextureDesc(dsFormat.first, dsFormat.second, vk::SampleCountFlagBits::e1));
         swapchainFramebuffers_.reserve(swapchainImages.size());
         for (auto i = 0U; i < swapchainImages.size(); ++i) {
             std::vector<vk::Image> attachments{ swapchainImages[i] };
-            swapchainFramebuffers_.emplace_back(logicalDevice_.get(), glm::uvec2(vkSurfaceExtend_.width, vkSurfaceExtend_.height), attachments, vkSwapchainRenderPass_, fbDesc);
+            swapchainFramebuffers_.emplace_back(logicalDevice_.get(), glm::uvec2(vkSurfaceExtend_.width, vkSurfaceExtend_.height),
+                attachments, vkSwapchainRenderPass_, fbDesc);
         }
 
         vkCommandBuffers_.resize(swapchainImages.size());
@@ -341,6 +357,20 @@ namespace vku {
         logicalDevice_.reset();
         if (vkSurface_) ApplicationBase::instance().GetVKInstance().destroySurfaceKHR(vkSurface_);
         vkSurface_ = vk::SurfaceKHR();
+    }
+
+    std::pair<unsigned int, vk::Format> VKWindow::FindSupportedDepthFormat() const
+    {
+        std::vector<std::pair<unsigned int, vk::Format>> candidates;
+        if (config_->depthBufferBits_ == 16 && config_->stencilBufferBits_ == 0) candidates.emplace_back(std::make_pair(2, vk::Format::eD16Unorm));
+        if (config_->depthBufferBits_ <= 24 && config_->stencilBufferBits_ == 0) candidates.emplace_back(std::make_pair(4, vk::Format::eX8D24UnormPack32));
+        if (config_->depthBufferBits_ <= 32 && config_->stencilBufferBits_ == 0) candidates.emplace_back(std::make_pair(4, vk::Format::eD32Sfloat));
+        if (config_->depthBufferBits_ ==  0 && config_->stencilBufferBits_ <= 8) candidates.emplace_back(std::make_pair(1, vk::Format::eS8Uint));
+        if (config_->depthBufferBits_ <= 16 && config_->stencilBufferBits_ <= 8) candidates.emplace_back(std::make_pair(3, vk::Format::eD16UnormS8Uint));
+        if (config_->depthBufferBits_ <= 24 && config_->stencilBufferBits_ <= 8) candidates.emplace_back(std::make_pair(4, vk::Format::eD24UnormS8Uint));
+        if (config_->depthBufferBits_ <= 32 && config_->stencilBufferBits_ <= 8) candidates.emplace_back(std::make_pair(5, vk::Format::eD32SfloatS8Uint));
+
+        return logicalDevice_->FindSupportedFormat(candidates, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
     }
 
     /**
@@ -439,9 +469,9 @@ namespace vku {
 
             std::array<vk::ClearValue, 2> clearColor;
             clearColor[0].setColor(vk::ClearColorValue{ std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f } });
-            clearColor[1].setDepthStencil(vk::ClearDepthStencilValue{ 0.0f, 0 });
+            clearColor[1].setDepthStencil(vk::ClearDepthStencilValue{ 1.0f, 0 });
             vk::RenderPassBeginInfo renderPassBeginInfo{ vkSwapchainRenderPass_, swapchainFramebuffers_[i].GetFramebuffer(),
-                vk::Rect2D(vk::Offset2D(0, 0), vkSurfaceExtend_), 1, clearColor.data() };
+                vk::Rect2D(vk::Offset2D(0, 0), vkSurfaceExtend_), static_cast<std::uint32_t>(clearColor.size()), clearColor.data() };
             vkCommandBuffers_[i].beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
             fillFunc(vkCommandBuffers_[i], i);
