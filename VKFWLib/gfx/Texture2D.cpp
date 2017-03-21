@@ -149,26 +149,6 @@ namespace vku::gfx {
         // Data deletion is handled in the loadFn function.
     }
 
-    /*std::tuple<unsigned, vk::Format> Texture2D::FindFormatLDR(const std::string& filename, int imgChannels, bool useSRGB) const
-    {
-        auto useSRGBFormat = (useSRGB && GetDevice()->GetWindowCfg().useSRGB_);
-        auto fmt = vk::Format::eR8G8B8A8Unorm;
-        unsigned int bytesPP = 4;
-        switch (imgChannels) {
-        case 1: fmt = useSRGBFormat ? vk::Format::eR8Srgb : vk::Format::eR8Unorm; bytesPP = 1; break;
-        case 2: fmt = useSRGBFormat ? vk::Format::eR8G8Srgb : vk::Format::eR8G8Unorm; bytesPP = 2; break;
-        case 3: fmt = useSRGBFormat ? vk::Format::eR8G8B8Srgb : vk::Format::eR8G8B8Unorm; bytesPP = 3; break;
-        case 4: fmt = useSRGBFormat ? vk::Format::eR8G8B8A8Srgb : vk::Format::eR8G8B8A8Unorm; bytesPP = 4; break;
-        default:
-            LOG(ERROR) << "Could not load texture." << std::endl
-                << "ResourceID: " << getId() << std::endl
-                << "Filename: " << filename << std::endl
-                << "Invalid number of texture channels (" << imgChannels << ").";
-            throw invalid_texture_channels{ imgChannels };
-        }
-        return std::make_tuple(bytesPP, fmt);
-    }*/
-
     std::pair<unsigned int, vk::Format> Texture2D::FindFormat(const std::string& filename, int& imgChannels, FormatProperties fmtProps) const
     {
         std::vector<std::pair<unsigned int, vk::Format>> candiateFormats;
@@ -199,23 +179,4 @@ namespace vku::gfx {
         imgChannels = fmt.first / singleChannelBytes;
         return fmt;
     }
-
-    /*std::tuple<unsigned, vk::Format> Texture2D::FindFormatHDR(const std::string& filename, int imgChannels) const
-    {
-        auto fmt = vk::Format::eR32G32B32A32Sfloat;
-        unsigned int bytesPP = 16;
-        switch (imgChannels) {
-        case 1: fmt = vk::Format::eR32Sfloat; bytesPP = 4; break;
-        case 2: fmt = vk::Format::eR32G32Sfloat; bytesPP = 8; break;
-        case 3: fmt = vk::Format::eR32G32B32Sfloat; bytesPP = 12; break;
-        case 4: fmt = vk::Format::eR32G32B32A32Sfloat; bytesPP = 16; break;
-        default:
-            LOG(ERROR) << "Could not load texture." << std::endl
-                << "ResourceID: " << getId() << std::endl
-                << "Filename: " << filename << std::endl
-                << "Invalid number of texture channels (" << imgChannels << ").";
-            throw invalid_texture_channels{ imgChannels };
-        }
-        return std::make_tuple(bytesPP, fmt);
-    }*/
 }

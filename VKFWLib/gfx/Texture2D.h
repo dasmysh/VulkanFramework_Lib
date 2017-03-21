@@ -52,8 +52,6 @@ namespace vku::gfx {
             const std::function<void(const glm::u32vec4& size, const TextureDescriptor& desc, const void* data)>& loadFn);
         void LoadTextureHDR(const std::string& filename,
             const std::function<void(const glm::u32vec4& size, const TextureDescriptor& desc, const void* data)>& loadFn);
-        // std::tuple<unsigned int, vk::Format> FindFormatLDR(const std::string& filename, int imgChannels, bool useSRGB) const;
-        // std::tuple<unsigned int, vk::Format> FindFormatHDR(const std::string& filename, int imgChannels) const;
         std::pair<unsigned int, vk::Format> FindFormat(const std::string& filename, int& imgChannels, FormatProperties fmtProps) const;
 
         /** Holds the texture file name. */
