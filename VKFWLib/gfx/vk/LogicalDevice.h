@@ -10,8 +10,13 @@
 
 #include "main.h"
 
+namespace vku::gfx {
+    class Texture2D;
+}
+
 namespace vku {
     class ShaderManager;
+    using TextureManager = ResourceManager<gfx::Texture2D>;
 }
 
 namespace vku::cfg {
@@ -64,6 +69,7 @@ namespace vku::gfx {
 
         const cfg::WindowCfg& GetWindowCfg() const { return windowCfg_; }
         ShaderManager* GetShaderManager() const { return shaderManager_.get(); }
+        TextureManager* GetTextureManager() const { return textureManager_.get(); }
 
         std::size_t CalculateUniformBufferAlignment(std::size_t size) const;
         std::size_t CalculateBufferImageOffset(const Texture& second, std::size_t currentOffset) const;
@@ -107,5 +113,7 @@ namespace vku::gfx {
 
         /** Holds the shader manager. */
         std::unique_ptr<ShaderManager> shaderManager_;
+        /** Holds the texture manager. */
+        std::unique_ptr<TextureManager> textureManager_;
     };
 }

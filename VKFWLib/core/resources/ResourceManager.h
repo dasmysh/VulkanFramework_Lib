@@ -90,7 +90,7 @@ namespace vku {
                 std::shared_ptr<ResourceType> spResource(nullptr);
                 LoadResource(resId, spResource, std::forward<Args>(args)...);
                 while (reloadLoop && !spResource) {
-                    LoadResource(resId, spResource);
+                    LoadResource(resId, spResource, std::forward<Args>(args)...);
                 }
                 wpResource = spResource;
                 resources_.insert(std::move(std::make_pair(resId, wpResource)));

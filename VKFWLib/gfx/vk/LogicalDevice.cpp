@@ -10,6 +10,7 @@
 #include <app/ApplicationBase.h>
 #include "Shader.h"
 #include "core/resources/ShaderManager.h"
+#include "core/resources/TextureManager.h"
 #include "GraphicsPipeline.h"
 #include "textures/Texture.h"
 
@@ -110,6 +111,7 @@ namespace vku::gfx {
         }
 
         shaderManager_ = std::make_unique<ShaderManager>(this);
+        textureManager_ = std::make_unique<TextureManager>(this);
     }
 
 
