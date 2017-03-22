@@ -19,6 +19,11 @@ set(ADD_BUILD_WIN_SHARED ON CACHE BOOL "Build shared library on Windows" FORCE)
 set(USE_DYNAMIC_LOGGING_LEVELS ON CACHE BOOL "Turn ON/OFF log levels. An disabled level will not push logs of that level to the sink. By default dynamic logging is disabled" FORCE)
 add_subdirectory(extern/g3log)
 
+option(ASSIMP_BUILD_ASSIMP_TOOLS OFF)
+option(ASSIMP_BUILD_SAMPLES OFF)
+option(ASSIMP_BUILD_TESTS OFF)
+add_subdirectory(extern/assimp)
+
 set(FW_DEBUG_PIPELINE ON CACHE BOOL "Checks if application is started from RenderDoc and uses only a single queue then.")
 
 SET(CMAKE_DEBUG_POSTFIX "")
@@ -87,9 +92,9 @@ endforeach()
 
 file(GLOB LIB_CONFIGS CMakeLists.txt Readme.md .gitattributes .gitignore .gitmodules)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME} ${VULKAN_INCLUDE_DIR} extern/glfw/include/ extern/glm/ extern/g3log/src extern/stb/ extern/cereal/include)
+include_directories(${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME} ${VULKAN_INCLUDE_DIR} extern/glfw/include extern/glm extern/g3log/src extern/stb extern/cereal/include extern/assimp/include)
 add_library(${FWLIB_LIBNAME} SHARED ${LIB_COMPILED_SHADERS} ${LIB_TMP_FILES} ${LIB_TOP_FILES} ${LIB_RES_FILES} ${LIB_CONFIGS} ${EXTERN_SOURCES})
-target_include_directories(${FWLIB_LIBNAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME} ${VULKAN_INCLUDE_DIR} extern/glfw/include/ extern/glm/ extern/g3log/src extern/cereal/include)
+target_include_directories(${FWLIB_LIBNAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME} ${VULKAN_INCLUDE_DIR} extern/glfw/include extern/glm extern/g3log/src extern/cereal/include extern/assimp/include)
 target_compile_definitions(${FWLIB_LIBNAME} PUBLIC VULKAN_HPP_TYPESAFE_CONVERSION)
 target_compile_definitions(${FWLIB_LIBNAME} PRIVATE VKUFW_EXPORT)
 
@@ -97,5 +102,5 @@ if (${FW_DEBUG_PIPELINE})
     target_compile_definitions(${FWLIB_LIBNAME} PUBLIC FW_DEBUG_PIPELINE)
 endif()
 
-target_link_libraries(${FWLIB_LIBNAME} ${VULKAN_LIBRARY} glfw ${GLFW_LIBRARIES} g3logger_shared)
+target_link_libraries(${FWLIB_LIBNAME} ${VULKAN_LIBRARY} glfw ${GLFW_LIBRARIES} g3logger_shared assimp)
 set_property(TARGET ${FWLIB_LIBNAME} APPEND PROPERTY COMPILE_DEFINITIONS $<$<CONFIG:DebugOpenGLCalls>:_OGL_DEBUG_MSGS> _CRT_SECURE_NO_WARNINGS _SCL_SECURE_NO_WARNINGS)

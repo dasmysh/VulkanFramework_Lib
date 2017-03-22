@@ -15,3 +15,7 @@
 	path = extern/cereal
 	url = https://github.com/USCiLab/cereal
 	branch = master
+[submodule "extern/assimp"]
+	path = extern/assimp
+	url = https://github.com/assimp/assimp
+	branch = master
