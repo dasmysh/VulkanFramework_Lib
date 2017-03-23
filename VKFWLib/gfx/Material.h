@@ -14,25 +14,41 @@ namespace vku::gfx {
 
     class Texture2D;
 
-    struct Material final
+    struct MaterialInfo final
     {
         /** Holds the materials ambient color. */
-        glm::vec3 ambient;
+        glm::vec3 ambient_;
         /** Holds the materials diffuse albedo. */
-        glm::vec3 diffuse;
+        glm::vec3 diffuse_;
         /** Holds the materials specular albedo. */
-        glm::vec3 specular;
+        glm::vec3 specular_;
         /** Holds the materials alpha value. */
-        float alpha;
+        float alpha_;
         /** Holds the materials specular exponent. */
-        float specularExponent;
+        float specularExponent_;
         /** Holds the materials index of refraction. */
-        float refraction;
+        float refraction_;
         /** Holds the materials diffuse texture. */
-        std::shared_ptr<const Texture2D> diffuseTex;
+        std::string diffuseTextureFilename_;
         /** Holds the materials bump texture. */
-        std::shared_ptr<const Texture2D> bumpTex;
+        std::string bumpMapFilename_;
         /** Holds the materials bump multiplier. */
-        float bumpMultiplier;
+        float bumpMultiplier_;
+
+        template <class Archive>
+        void serialize(Archive& ar, const std::uint32_t)
+        {
+            ar(cereal::make_nvp("objectName", ambient_),
+                cereal::make_nvp("serializationID", diffuse_),
+                cereal::make_nvp("indexOffset", specular_),
+                cereal::make_nvp("numIndices", alpha_),
+                cereal::make_nvp("AABB", specularExponent_),
+                cereal::make_nvp("AABB", refraction_),
+                cereal::make_nvp("AABB", diffuseTextureFilename_),
+                cereal::make_nvp("AABB", bumpMapFilename_),
+                cereal::make_nvp("material", bumpMultiplier_));
+        }
     };
 }
+
+CEREAL_CLASS_VERSION(vku::gfx::MaterialInfo, 1)

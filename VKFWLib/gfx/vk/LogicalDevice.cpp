@@ -10,7 +10,6 @@
 #include <app/ApplicationBase.h>
 #include "Shader.h"
 #include "core/resources/ShaderManager.h"
-#include "core/resources/TextureManager.h"
 #include "GraphicsPipeline.h"
 #include "textures/Texture.h"
 
