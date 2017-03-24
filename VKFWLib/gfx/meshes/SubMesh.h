@@ -15,7 +15,7 @@
 namespace vku::gfx {
 
     struct Material;
-    class Mesh;
+    class MeshInfo;
 
     /**
      * A SubMesh is a sub group of geometry in a mesh. It does not have its own
@@ -26,7 +26,7 @@ namespace vku::gfx {
     public:
         SubMesh() : indexOffset_{ 0 }, numIndices_{ 0 }, materialID_{ std::numeric_limits<unsigned int>::max() }
         { aabb_.minmax[0] = glm::vec3(std::numeric_limits<float>::infinity()); aabb_.minmax[1] = glm::vec3(-std::numeric_limits<float>::infinity()); }
-        SubMesh(const Mesh* mesh, const std::string& objectName, unsigned int indexOffset, unsigned int numIndices, unsigned int materialID);
+        SubMesh(const MeshInfo* mesh, const std::string& objectName, unsigned int indexOffset, unsigned int numIndices, unsigned int materialID);
         SubMesh(const SubMesh&);
         SubMesh& operator=(const SubMesh&);
         SubMesh(SubMesh&&) noexcept;

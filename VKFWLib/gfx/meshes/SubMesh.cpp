@@ -8,7 +8,7 @@
 
 #define GLM_FORCE_SWIZZLE
 #include "SubMesh.h"
-#include "Mesh.h"
+#include "MeshInfo.h"
 
 #undef min
 #undef max
@@ -16,7 +16,7 @@
 namespace vku::gfx {
 
     /** Constructor. */
-    SubMesh::SubMesh(const Mesh* mesh, const std::string& objectName, unsigned int indexOffset, unsigned int numIndices, unsigned int materialID) :
+    SubMesh::SubMesh(const MeshInfo* mesh, const std::string& objectName, unsigned int indexOffset, unsigned int numIndices, unsigned int materialID) :
         objectName_(objectName),
         indexOffset_(indexOffset),
         numIndices_(numIndices),

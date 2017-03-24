@@ -13,6 +13,8 @@
 namespace vku::gfx {
 
     class Texture2D;
+    class LogicalDevice;
+    class MemoryGroup;
 
     struct MaterialInfo final
     {
@@ -28,9 +30,9 @@ namespace vku::gfx {
         float specularExponent_;
         /** Holds the materials index of refraction. */
         float refraction_;
-        /** Holds the materials diffuse texture. */
+        /** Holds the materials diffuse texture file name. */
         std::string diffuseTextureFilename_;
-        /** Holds the materials bump texture. */
+        /** Holds the materials bump map file name. */
         std::string bumpMapFilename_;
         /** Holds the materials bump multiplier. */
         float bumpMultiplier_;
@@ -38,16 +40,35 @@ namespace vku::gfx {
         template <class Archive>
         void serialize(Archive& ar, const std::uint32_t)
         {
-            ar(cereal::make_nvp("objectName", ambient_),
-                cereal::make_nvp("serializationID", diffuse_),
-                cereal::make_nvp("indexOffset", specular_),
-                cereal::make_nvp("numIndices", alpha_),
-                cereal::make_nvp("AABB", specularExponent_),
-                cereal::make_nvp("AABB", refraction_),
-                cereal::make_nvp("AABB", diffuseTextureFilename_),
-                cereal::make_nvp("AABB", bumpMapFilename_),
-                cereal::make_nvp("material", bumpMultiplier_));
+            ar(cereal::make_nvp("ambientColor", ambient_),
+                cereal::make_nvp("diffuseColor", diffuse_),
+                cereal::make_nvp("specularColor", specular_),
+                cereal::make_nvp("alpha", alpha_),
+                cereal::make_nvp("specularExponent", specularExponent_),
+                cereal::make_nvp("refractionIndex", refraction_),
+                cereal::make_nvp("diffuseTextureFilename", diffuseTextureFilename_),
+                cereal::make_nvp("bumpMapFilename", bumpMapFilename_),
+                cereal::make_nvp("bumpMultiplier", bumpMultiplier_));
         }
+    };
+
+    struct Material final
+    {
+        Material();
+        Material(const MaterialInfo* materialInfo, const LogicalDevice* device, MemoryGroup& memoryGroup,
+            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
+        Material(const Material&);
+        Material& operator=(const Material&);
+        Material(Material&&) noexcept;
+        Material& operator=(Material&&) noexcept;
+        ~Material();
+
+        /** Holds the material information. */
+        const MaterialInfo* materialInfo_;
+        /** Holds the materials diffuse texture. */
+        std::shared_ptr<Texture2D> diffuseTexture_;
+        /** Holds the materials bump map. */
+        std::shared_ptr<Texture2D> bumpMap_;
     };
 }
 

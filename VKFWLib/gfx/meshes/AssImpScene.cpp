@@ -52,7 +52,7 @@ namespace vku::gfx {
     }
 
     /** Default copy constructor. */
-    AssimpScene::AssimpScene(const AssimpScene& rhs) : Resource(rhs), Mesh(rhs) {}
+    AssimpScene::AssimpScene(const AssimpScene& rhs) : Resource(rhs), MeshInfo(rhs) {}
 
     /** Default copy assignment operator. */
     AssimpScene& AssimpScene::operator=(const AssimpScene& rhs)
@@ -65,7 +65,7 @@ namespace vku::gfx {
     }
 
     /** Default move constructor. */
-    AssimpScene::AssimpScene(AssimpScene&& rhs) noexcept : Resource(std::move(rhs)), Mesh(std::move(rhs)) {}
+    AssimpScene::AssimpScene(AssimpScene&& rhs) noexcept : Resource(std::move(rhs)), MeshInfo(std::move(rhs)) {}
 
     /** Default move assignment operator. */
     AssimpScene& AssimpScene::operator=(AssimpScene&& rhs) noexcept
@@ -74,8 +74,8 @@ namespace vku::gfx {
             this->~AssimpScene();
             Resource* tRes = this;
             *tRes = static_cast<Resource&&>(std::move(rhs));
-            Mesh* tMesh = this;
-            *tMesh = static_cast<Mesh&&>(std::move(rhs));
+            MeshInfo* tMesh = this;
+            *tMesh = static_cast<MeshInfo&&>(std::move(rhs));
         }
         return *this;
     }

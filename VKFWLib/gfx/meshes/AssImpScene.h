@@ -10,7 +10,7 @@
 
 #include "main.h"
 #include "gfx/Material.h"
-#include "Mesh.h"
+#include "MeshInfo.h"
 #include <core/serialization_helper.h>
 #include <core/enum_flags.h>
 #include <cereal/cereal.hpp>
@@ -40,7 +40,7 @@ namespace vku::gfx {
      * @author Sebastian Maisch <sebastian.maisch@googlemail.com>
      * @date   2014.01.08
      */
-    class AssimpScene : public Resource, public Mesh
+    class AssimpScene : public Resource, public MeshInfo
     {
     public:
         AssimpScene(const std::string& resourceId, const LogicalDevice* device, const std::string& meshFilename, MeshCreateFlags flags = MeshCreateFlags());

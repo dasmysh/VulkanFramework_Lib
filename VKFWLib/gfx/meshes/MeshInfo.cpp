@@ -1,14 +1,14 @@
 /**
- * @file   Mesh.cpp
+ * @file   MeshInfo.cpp
  * @author Sebastian Maisch <sebastian.maisch@googlemail.com>
  * @date   2014.01.13
  *
- * @brief  Contains the implementation of the Mesh class.
+ * @brief  Contains the implementation of the MeshInfo class.
  */
 
 #define GLM_FORCE_SWIZZLE
 
-#include "Mesh.h"
+#include "MeshInfo.h"
 #include "SubMesh.h"
 #include "gfx/Material.h"
 #include "core/serialization_helper.h"
@@ -23,10 +23,10 @@
 namespace vku::gfx {
 
     /** Default constructor. */
-    Mesh::Mesh() {}
+    MeshInfo::MeshInfo() {}
 
     /** Copy constructor. */
-    Mesh::Mesh(const Mesh& rhs) :
+    MeshInfo::MeshInfo(const MeshInfo& rhs) :
         vertices_(rhs.vertices_),
         normals_(rhs.normals_),
         texCoords_(rhs.texCoords_),
@@ -36,13 +36,9 @@ namespace vku::gfx {
         ids_(rhs.ids_),
         indices_(rhs.indices_),
         rootTransform_(rhs.rootTransform_),
-        rootNode_(std::make_unique<SceneMeshNode>(*rhs.rootNode_))
+        rootNode_(std::make_unique<SceneMeshNode>(*rhs.rootNode_)),
+        materials_(rhs.materials_)
     {
-        for (const auto& material : rhs.materials_) {
-            auto newMat = std::make_unique<MaterialInfo>(*material);
-            materials_.push_back(std::move(newMat));
-        }
-
         std::unordered_map<const SubMesh*, const SubMesh*> submeshUpdates;
         for (const auto& submesh : rhs.subMeshes_) {
             auto newSubMesh = std::make_unique<SubMesh>(*submesh);
@@ -54,17 +50,17 @@ namespace vku::gfx {
     }
 
     /** Copy assignment operator. */
-    Mesh& Mesh::operator=(const Mesh& rhs)
+    MeshInfo& MeshInfo::operator=(const MeshInfo& rhs)
     {
         if (this != &rhs) {
-            Mesh tmp{ rhs };
+            MeshInfo tmp{ rhs };
             std::swap(*this, tmp);
         }
         return *this;
     }
 
     /** Default move constructor. */
-    Mesh::Mesh(Mesh&& rhs) noexcept :
+    MeshInfo::MeshInfo(MeshInfo&& rhs) noexcept :
         vertices_(std::move(rhs.vertices_)),
         normals_(std::move(rhs.normals_)),
         texCoords_(std::move(rhs.texCoords_)),
@@ -81,10 +77,10 @@ namespace vku::gfx {
     }
 
     /** Default move assignment operator. */
-    Mesh& Mesh::operator=(Mesh&& rhs) noexcept
+    MeshInfo& MeshInfo::operator=(MeshInfo&& rhs) noexcept
     {
         if (this != &rhs) {
-            this->~Mesh();
+            this->~MeshInfo();
             vertices_ = std::move(rhs.vertices_);
             normals_ = std::move(rhs.normals_);
             texCoords_ = std::move(rhs.texCoords_);
@@ -102,7 +98,7 @@ namespace vku::gfx {
     }
 
     /** Default destructor. */
-    Mesh::~Mesh() = default;
+    MeshInfo::~MeshInfo() = default;
 
     /**
      *  Reserves memory to create the mesh.
@@ -111,7 +107,7 @@ namespace vku::gfx {
      *  @param numVertices the number of vertices in the mesh.
      *  @param numIndices the number of indices in the mesh.
      */
-    void Mesh::ReserveMesh(unsigned int maxUVChannels, unsigned int maxColorChannels,
+    void MeshInfo::ReserveMesh(unsigned int maxUVChannels, unsigned int maxColorChannels,
         unsigned int numVertices, unsigned int numIndices, unsigned int numMaterials)
     {
         vertices_.resize(numVertices);
@@ -124,10 +120,9 @@ namespace vku::gfx {
         for (auto& colors : colors_) colors.resize(numVertices);
         indices_.resize(numIndices);
         materials_.resize(numMaterials);
-        for (auto& mat : materials_) mat = std::make_unique<MaterialInfo>();
     }
 
-    void Mesh::AddSubMesh(const std::string& name, unsigned int idxOffset, unsigned int numIndices, unsigned int materialID)
+    void MeshInfo::AddSubMesh(const std::string& name, unsigned int idxOffset, unsigned int numIndices, unsigned int materialID)
     {
         subMeshes_.push_back(std::make_unique<SubMesh>(this, name, idxOffset, numIndices, materialID));
     }
@@ -140,7 +135,7 @@ namespace vku::gfx {
         OGL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, 0);
     }*/
 
-    void Mesh::CreateSceneNodes(aiNode* rootNode)
+    void MeshInfo::CreateSceneNodes(aiNode* rootNode)
     {
         rootNode_ = std::make_unique<SceneMeshNode>(rootNode, nullptr, subMeshes_);
     }

@@ -1,9 +1,9 @@
 /**
- * @file   Mesh.h
+ * @file   MeshInfo.h
  * @author Sebastian Maisch <sebastian.maisch@googlemail.com>
  * @date   2014.01.13
  *
- * @brief  Contains the definition of the Mesh class.
+ * @brief  Contains the definition of the MeshInfo class.
  */
 
 #pragma once
@@ -28,38 +28,46 @@ namespace vku::gfx {
      * @author Sebastian Maisch <sebastian.maisch@googlemail.com>
      * @date   2014.01.13
      */
-    class Mesh
+    class MeshInfo
     {
     public:
-        Mesh();
-        Mesh(const Mesh&);
-        Mesh& operator=(const Mesh&);
-        Mesh(Mesh&&) noexcept;
-        Mesh& operator=(Mesh&&) noexcept;
-        virtual ~Mesh();
+        MeshInfo();
+        MeshInfo(const MeshInfo&);
+        MeshInfo& operator=(const MeshInfo&);
+        MeshInfo(MeshInfo&&) noexcept;
+        MeshInfo& operator=(MeshInfo&&) noexcept;
+        virtual ~MeshInfo();
 
         unsigned int GetNumSubmeshes() const { return static_cast<unsigned int>(subMeshes_.size()); }
         const SubMesh* GetSubMesh(unsigned int id) const { return subMeshes_[id].get(); }
-        const std::vector<glm::vec3>& GetVertices() const { return vertices_; }
-        const std::vector<std::vector<glm::vec3>>& GetTexCoords() const { return texCoords_; }
-        const std::vector<unsigned int>& GetIndices() const { return indices_; }
-        const glm::mat4& GetRootTransform() const { return rootTransform_; }
-        const SceneMeshNode* GetRootNode() const { return rootNode_.get(); }
-        // const DeviceBuffer* GetIndexBuffer() const { return iBuffer_.get(); }
 
+        const std::vector<glm::vec3>& GetVertices() const { return vertices_; }
         const std::vector<glm::vec3>& GetNormals() const { return normals_; }
+        const std::vector<std::vector<glm::vec3>>& GetTexCoords() const { return texCoords_; }
+        const std::vector<glm::vec3>& GetTangents() const { return tangents_; }
+        const std::vector<glm::vec3>& GetBinormals() const { return binormals_; }
+        const std::vector<std::vector<glm::vec4>>& GetColors() const { return colors_; }
         const std::vector<std::vector<unsigned int>>& GetIds() const { return ids_; }
 
-        template<class VTX>
-        void GetVertices(std::vector<VTX>& vertices) const;
+        const std::vector<std::uint32_t>& GetIndices() const { return indices_; }
+
+        const glm::mat4& GetRootTransform() const { return rootTransform_; }
+        const SceneMeshNode* GetRootNode() const { return rootNode_.get(); }
+
+        const std::vector<MaterialInfo>& GetMaterials() const { return materials_; }
+        const MaterialInfo* GetMaterial(unsigned int id) const { return &materials_[id]; }
+        // const DeviceBuffer* GetIndexBuffer() const { return iBuffer_.get(); }
+
+        template<class VertexType>
+        void GetVertices(std::vector<VertexType>& vertices) const;
         /*template<class VTX>
         void CreateVertexBuffer();
         template<class VTX>
         void CreateVertexBuffer(const std::vector<VTX>& vertices);*/
 
-        template<class VTX> DeviceBuffer* GetVertexBuffer() { return vBuffers_.at(typeid(VTX)).get(); }
-        template<class VTX> const DeviceBuffer* GetVertexBuffer() const { return vBuffers_.at(typeid(VTX)).get(); }
-        virtual std::string GetFullFilename() const { return ""; };
+        // template<class VTX> DeviceBuffer* GetVertexBuffer() { return vBuffers_.at(typeid(VTX)).get(); }
+        // template<class VTX> const DeviceBuffer* GetVertexBuffer() const { return vBuffers_.at(typeid(VTX)).get(); }
+        // virtual std::string GetFullFilename() const { return ""; };
 
         // TODO: add serialization. [3/22/2017 Sebastian Maisch]
         /*void write(std::ofstream& ofs) const;
@@ -71,17 +79,14 @@ namespace vku::gfx {
         std::vector<glm::vec3>& GetNormals() { return normals_; }
         std::vector<std::vector<glm::vec3>>& GetTexCoords() { return texCoords_; }
         std::vector<glm::vec3>& GetTangents() { return tangents_; }
-        const std::vector<glm::vec3>& GetTangents() const { return tangents_; }
         std::vector<glm::vec3>& GetBinormals() { return binormals_; }
-        const std::vector<glm::vec3>& GetBinormals() const { return binormals_; }
         std::vector<std::vector<glm::vec4>>& GetColors() { return colors_; }
-        const std::vector<std::vector<glm::vec4>>& GetColors() const { return colors_; }
         std::vector<std::vector<unsigned int>>& GetIds() { return ids_; }
-        std::vector<unsigned int>& GetIndices() { return indices_; }
+        std::vector<std::uint32_t>& GetIndices() { return indices_; }
 
         void ReserveMesh(unsigned int maxUVChannels, unsigned int maxColorChannels,
             unsigned int numVertices, unsigned int numIndices, unsigned int numMaterials);
-        MaterialInfo* GetMaterial(unsigned int id) { return materials_[id].get(); }
+        MaterialInfo* GetMaterial(unsigned int id) { return &materials_[id]; }
         void AddSubMesh(const std::string& name, unsigned int idxOffset, unsigned int numIndices, unsigned int materialID);
         // void CreateIndexBuffer();
 
@@ -140,32 +145,18 @@ namespace vku::gfx {
         std::unique_ptr<SceneMeshNode> rootNode_;
 
         /** The meshes materials. */
-        std::vector<std::unique_ptr<MaterialInfo>> materials_;
+        std::vector<MaterialInfo> materials_;
 
         /** Holds all the meshes sub-meshes (as an array for fast iteration during rendering). */
         std::vector<std::unique_ptr<SubMesh>> subMeshes_;
     };
 
-    template <class VTX>
-    void Mesh::GetVertices(std::vector<VTX>& vertices) const
+    template <class VertexType>
+    void MeshInfo::GetVertices(std::vector<VertexType>& vertices) const
     {
-        assert(!VTX::HAS_NORMAL || normals_.size() == vertices_.size());
-        assert(!VTX::HAS_TANGENTSPACE || (tangents_.size() == vertices_.size() && binormals_.size() == vertices_.size()));
-        assert(VTX::NUM_TEXTURECOORDS <= texCoords_.size());
-        assert(VTX::NUM_COLORS <= colors_.size());
-        assert(VTX::NUM_INDICES <= ids_.size());
-        vertices.resize(vertices_.size());
-        for (size_t i = 0; i < vertices_.size(); ++i) {
-            for (auto pd = 0; pd < glm::min(VTX::POSITION_DIMENSION, 3); ++pd) vertices[i].SetPosition(vertices_[i][pd], pd);
-            vertices[i].SetNormal(normals_[i]);
-            for (auto ti = 0; ti < VTX::NUM_TEXTURECOORDS; ++ti) {
-                for (auto td = 0; td < glm::min(VTX::TEXCOORD_DIMENSION, 3); ++td) vertices[i].SetTexCoord(texCoords_[ti][i][td], ti, td);
-            }
-            vertices[i].SetTangent(tangents_[i]);
-            vertices[i].SetBinormal(binormals_[i]);
-            for (auto ci = 0; ci < VTX::NUM_COLORS; ++ci) vertices[i].SetColor(colors_[ci][i], ci);
-            for (auto ii = 0; ii < VTX::NUM_INDICES; ++ii) vertices[i].SetIndex(ids_[ii][i], ii);
-        }
+        assert(vertices.empty());
+        vertices.reserve(vertices_.size());
+        for (size_t i = 0; i < vertices_.size(); ++i) vertices.emplace_back(this, i);
     }
 
     /*template <class VTX>
@@ -201,4 +192,4 @@ namespace vku::gfx {
     }*/
 }
 
-CEREAL_CLASS_VERSION(vku::gfx::Mesh, 1)
+CEREAL_CLASS_VERSION(vku::gfx::MeshInfo, 1)
