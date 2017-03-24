@@ -7,6 +7,7 @@
  */
 
 #include "Material.h"
+#include "Texture2D.h"
 #include "gfx/vk/LogicalDevice.h"
 
 namespace vku::gfx {
@@ -19,12 +20,15 @@ namespace vku::gfx {
 
     Material::Material(const MaterialInfo* materialInfo, const LogicalDevice* device,
         MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices) :
-        materialInfo_{ materialInfo },
-        diffuseTexture_{ device->GetTextureManager()->GetResource(materialInfo->diffuseTextureFilename_,
-            true, memoryGroup, queueFamilyIndices) },
-        bumpMap_{ device->GetTextureManager()->GetResource(materialInfo->bumpMapFilename_,
-            true, memoryGroup, queueFamilyIndices) }
+        materialInfo_{ materialInfo }
     {
+        assert(materialInfo != nullptr);
+        if (!materialInfo_->diffuseTextureFilename_.empty())
+            diffuseTexture_ = device->GetTextureManager()->GetResource(
+                materialInfo->diffuseTextureFilename_, true, memoryGroup, queueFamilyIndices);
+        if (!materialInfo_->bumpMapFilename_.empty())
+            bumpMap_ = device->GetTextureManager()->GetResource(
+            materialInfo->bumpMapFilename_, true, memoryGroup, queueFamilyIndices);
     }
 
     Material::Material(const Material& rhs) :

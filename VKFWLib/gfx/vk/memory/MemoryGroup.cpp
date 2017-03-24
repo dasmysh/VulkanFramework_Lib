@@ -25,6 +25,7 @@ namespace vku::gfx {
         hostMemory_{ std::move(rhs.hostMemory_) },
         hostBuffers_{ std::move(rhs.hostBuffers_) },
         hostImages_{ std::move(rhs.hostImages_) },
+        hostOffsets_{ std::move(rhs.hostOffsets_) },
         bufferContents_{ std::move(rhs.bufferContents_) },
         imageContents_{ std::move(rhs.imageContents_) }
     {
@@ -38,6 +39,7 @@ namespace vku::gfx {
         hostMemory_ = std::move(rhs.hostMemory_);
         hostBuffers_ = std::move(rhs.hostBuffers_);
         hostImages_ = std::move(rhs.hostImages_);
+        hostOffsets_ = std::move(rhs.hostOffsets_);
         bufferContents_ = std::move(rhs.bufferContents_);
         imageContents_ = std::move(rhs.imageContents_);
         return *this;

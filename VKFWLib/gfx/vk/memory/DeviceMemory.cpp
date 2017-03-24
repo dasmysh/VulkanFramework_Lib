@@ -27,7 +27,7 @@ namespace vku::gfx {
     }
 
     DeviceMemory::DeviceMemory(DeviceMemory&& rhs) noexcept :
-    device_{ rhs.device_ },
+        device_{ rhs.device_ },
         vkDeviceMemory_{ rhs.vkDeviceMemory_ },
         size_{ rhs.size_ },
         memoryProperties_{ rhs.memoryProperties_ }

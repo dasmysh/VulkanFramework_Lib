@@ -12,6 +12,7 @@
 #include <typeindex>
 #include "SubMesh.h"
 #include "SceneMeshNode.h"
+#include "gfx/Material.h"
 #include <core/serialization_helper.h>
 #include <cereal/cereal.hpp>
 
@@ -20,7 +21,6 @@ struct aiNode;
 namespace vku::gfx {
 
     class DeviceBuffer;
-    struct MaterialInfo;
 
     /**
      * @brief  Base class for all meshes.
@@ -156,7 +156,7 @@ namespace vku::gfx {
     {
         assert(vertices.empty());
         vertices.reserve(vertices_.size());
-        for (size_t i = 0; i < vertices_.size(); ++i) vertices.emplace_back(this, i);
+        for (std::size_t i = 0; i < vertices_.size(); ++i) vertices.emplace_back(this, i);
     }
 
     /*template <class VTX>

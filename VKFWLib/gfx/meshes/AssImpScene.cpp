@@ -22,7 +22,7 @@
 
 namespace vku::gfx {
 
-    AssimpScene::AssimpScene(const std::string& resourceId, const LogicalDevice* device,
+    AssImpScene::AssImpScene(const std::string& resourceId, const LogicalDevice* device,
         const std::string& meshFilename, MeshCreateFlags flags) :
         Resource{ resourceId, device },
         meshFilename_{ meshFilename }
@@ -46,32 +46,32 @@ namespace vku::gfx {
      * @param meshFilename the mesh files file name.
      * @param mtlLibManager the material library manager to use
      */
-    AssimpScene::AssimpScene(const std::string& meshFilename, const LogicalDevice* device, MeshCreateFlags flags) :
-        AssimpScene(meshFilename, device, meshFilename, flags)
+    AssImpScene::AssImpScene(const std::string& meshFilename, const LogicalDevice* device, MeshCreateFlags flags) :
+        AssImpScene(meshFilename, device, meshFilename, flags)
     {
     }
 
     /** Default copy constructor. */
-    AssimpScene::AssimpScene(const AssimpScene& rhs) : Resource(rhs), MeshInfo(rhs) {}
+    AssImpScene::AssImpScene(const AssImpScene& rhs) : Resource(rhs), MeshInfo(rhs) {}
 
     /** Default copy assignment operator. */
-    AssimpScene& AssimpScene::operator=(const AssimpScene& rhs)
+    AssImpScene& AssImpScene::operator=(const AssImpScene& rhs)
     {
         if (this != &rhs) {
-            AssimpScene tmp{ rhs };
+            AssImpScene tmp{ rhs };
             std::swap(*this, tmp);
         }
         return *this;
     }
 
     /** Default move constructor. */
-    AssimpScene::AssimpScene(AssimpScene&& rhs) noexcept : Resource(std::move(rhs)), MeshInfo(std::move(rhs)) {}
+    AssImpScene::AssImpScene(AssImpScene&& rhs) noexcept : Resource(std::move(rhs)), MeshInfo(std::move(rhs)) {}
 
     /** Default move assignment operator. */
-    AssimpScene& AssimpScene::operator=(AssimpScene&& rhs) noexcept
+    AssImpScene& AssImpScene::operator=(AssImpScene&& rhs) noexcept
     {
         if (this != &rhs) {
-            this->~AssimpScene();
+            this->~AssImpScene();
             Resource* tRes = this;
             *tRes = static_cast<Resource&&>(std::move(rhs));
             MeshInfo* tMesh = this;
@@ -81,9 +81,9 @@ namespace vku::gfx {
     }
 
     /** Destructor. */
-    AssimpScene::~AssimpScene() = default;
+    AssImpScene::~AssImpScene() = default;
 
-    void AssimpScene::createNewMesh(const std::string& filename, const std::string& binFilename, MeshCreateFlags flags)
+    void AssImpScene::createNewMesh(const std::string& filename, const std::string& binFilename, MeshCreateFlags flags)
     {
         unsigned int assimpFlags = aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_LimitBoneWeights
             | aiProcess_ImproveCacheLocality | aiProcess_RemoveRedundantMaterials | aiProcess_OptimizeMeshes
@@ -186,14 +186,14 @@ namespace vku::gfx {
         return std::move(app->GetTextureManager()->GetResource(texFilename));
     }*/
 
-    void AssimpScene::save(const std::string& filename) const
+    void AssImpScene::save(const std::string& filename) const
     {
         std::ofstream ofs(filename, std::ios::out | std::ios::binary);
         cereal::BinaryOutputArchive oa(ofs);
         oa(cereal::make_nvp("assimpMesh", *this));
     }
 
-    bool AssimpScene::load(const std::string& filename)
+    bool AssImpScene::load(const std::string& filename)
     {
         if (std::experimental::filesystem::exists(filename)) {
             std::ifstream inBinFile(filename, std::ios::binary);

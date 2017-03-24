@@ -12,7 +12,7 @@
 #include "gfx/Texture2D.h"
 
 namespace vku::gfx {
-    Mesh::Mesh(const std::shared_ptr<MeshInfo>& meshInfo, const LogicalDevice* device,
+    Mesh::Mesh(std::shared_ptr<const MeshInfo> meshInfo, const LogicalDevice* device,
         vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices) :
         meshInfo_{ meshInfo },
         memoryGroup_{ std::make_unique<MemoryGroup>(device, memoryFlags) },
@@ -22,7 +22,7 @@ namespace vku::gfx {
         CreateMaterials(device, *memoryGroup_.get(), queueFamilyIndices);
     }
 
-    Mesh::Mesh(const std::shared_ptr<MeshInfo>& meshInfo, const LogicalDevice* device,
+    Mesh::Mesh(std::shared_ptr<const MeshInfo> meshInfo, const LogicalDevice* device,
         MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices) :
         meshInfo_{ meshInfo },
         vertexBuffer_{ nullptr, 0 },
@@ -35,8 +35,9 @@ namespace vku::gfx {
         meshInfo_{ std::move(rhs.meshInfo_) },
         memoryGroup_{ std::move(rhs.memoryGroup_) },
         vertexBuffer_{ std::move(rhs.vertexBuffer_) },
-        indexBuffer_{ std::move(indexBuffer_) },
-        materials_{ std::move(materials_) }
+        indexBuffer_{ std::move(rhs.indexBuffer_) },
+        materials_{ std::move(rhs.materials_) },
+        vertexData_{ std::move(rhs.vertexData_) }
     {
     }
 
@@ -46,8 +47,9 @@ namespace vku::gfx {
         meshInfo_ = std::move(rhs.meshInfo_);
         memoryGroup_ = std::move(rhs.memoryGroup_);
         vertexBuffer_ = std::move(rhs.vertexBuffer_);
-        indexBuffer_ = std::move(indexBuffer_);
-        materials_ = std::move(materials_);
+        indexBuffer_ = std::move(rhs.indexBuffer_);
+        materials_ = std::move(rhs.materials_);
+        vertexData_ = std::move(rhs.vertexData_);
         return *this;
     }
 
@@ -58,18 +60,30 @@ namespace vku::gfx {
         materials_.reserve(meshInfo_->GetMaterials().size());
         for (const auto& mat : meshInfo_->GetMaterials()) {
             materials_.push_back(Material(&mat, device, memoryGroup, queueFamilyIndices));
-            /*materials_.back().materialInfo_ = &mat;
-            materials_.back().diffuseTexture_ = device->GetTextureManager()->GetResource(mat.diffuseTextureFilename_,
-                true, memoryGroup, queueFamilyIndices);
-            materials_.back().bumpMap_ = device->GetTextureManager()->GetResource(mat.bumpMapFilename_,
-                true, memoryGroup, queueFamilyIndices);*/
         }
+    }
+
+    void Mesh::UploadMeshData(QueuedDeviceTransfer& transfer)
+    {
+        assert(memoryGroup_);
+        memoryGroup_->FinalizeGroup();
+        memoryGroup_->TransferData(transfer);
+        vertexData_.clear();
     }
 
     void Mesh::BindBuffersToCommandBuffer(vk::CommandBuffer cmdBuffer) const
     {
         cmdBuffer.bindVertexBuffers(0, 1, vertexBuffer_.first->GetBufferPtr(), &vertexBuffer_.second);
         cmdBuffer.bindIndexBuffer(indexBuffer_.first->GetBuffer(), indexBuffer_.second, vk::IndexType::eUint32);
+    }
+
+    void Mesh::DrawMesh(vk::CommandBuffer cmdBuffer) const
+    {
+        // TODO: use submeshes and materials and the scene nodes...
+        // need:
+        // - for each submesh: 2 texture descriptors
+        // - for each scene mesh node: uniform buffer?
+        cmdBuffer.drawIndexed(static_cast<std::uint32_t>(meshInfo_->GetIndices().size()), 1, 0, 0, 0);
     }
 
     void Mesh::SetVertexBuffer(const DeviceBuffer* vtxBuffer, std::size_t offset)

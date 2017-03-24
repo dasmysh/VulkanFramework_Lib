@@ -1,5 +1,5 @@
 /**
- * @file   AssimpScene.h
+ * @file   AssImpScene.h
  * @author Sebastian Maisch <sebastian.maisch@googlemail.com>
  * @date   2016.02.16
  *
@@ -40,16 +40,16 @@ namespace vku::gfx {
      * @author Sebastian Maisch <sebastian.maisch@googlemail.com>
      * @date   2014.01.08
      */
-    class AssimpScene : public Resource, public MeshInfo
+    class AssImpScene : public Resource, public MeshInfo
     {
     public:
-        AssimpScene(const std::string& resourceId, const LogicalDevice* device, const std::string& meshFilename, MeshCreateFlags flags = MeshCreateFlags());
-        AssimpScene(const std::string& meshFilename, const LogicalDevice* device, MeshCreateFlags flags = MeshCreateFlags());
-        AssimpScene(const AssimpScene&);
-        AssimpScene& operator=(const AssimpScene&);
-        AssimpScene(AssimpScene&&) noexcept;
-        AssimpScene& operator=(AssimpScene&&) noexcept;
-        virtual ~AssimpScene();
+        AssImpScene(const std::string& resourceId, const LogicalDevice* device, const std::string& meshFilename, MeshCreateFlags flags = MeshCreateFlags());
+        AssImpScene(const std::string& meshFilename, const LogicalDevice* device, MeshCreateFlags flags = MeshCreateFlags());
+        AssImpScene(const AssImpScene&);
+        AssImpScene& operator=(const AssImpScene&);
+        AssImpScene(AssImpScene&&) noexcept;
+        AssImpScene& operator=(AssImpScene&&) noexcept;
+        virtual ~AssImpScene();
 
     private:
         /** Needed for serialization */
@@ -58,7 +58,7 @@ namespace vku::gfx {
         template <class Archive>
         void serialize(Archive& ar, const std::uint32_t)
         {
-            ar(cereal::base_class<Mesh>(this),
+            ar(cereal::base_class<MeshInfo>(this),
                 cereal::make_nvp("meshFilename", meshFilename_));
         }
 
@@ -71,4 +71,4 @@ namespace vku::gfx {
     };
 }
 
-CEREAL_CLASS_VERSION(vku::gfx::AssimpScene, 1)
+CEREAL_CLASS_VERSION(vku::gfx::AssImpScene, 1)

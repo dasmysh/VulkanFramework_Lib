@@ -23,19 +23,19 @@ namespace cereal {
     template<class Archive>
     void serialize(Archive & ar, glm::vec3& g)
     {
-        ar(make_nvp("x", g.x), make_nvp("y", g.y), make_nvp("z", g.y));
+        ar(make_nvp("x", g.x), make_nvp("y", g.y), make_nvp("z", g.z));
     }
 
     template<class Archive>
     void serialize(Archive & ar, glm::vec4& g)
     {
-        ar(make_nvp("x", g.x), make_nvp("y", g.y), make_nvp("z", g.y), make_nvp("w", g.w));
+        ar(make_nvp("x", g.x), make_nvp("y", g.y), make_nvp("z", g.z), make_nvp("w", g.w));
     }
 
     template<class Archive>
     void serialize(Archive & ar, glm::quat& g)
     {
-        ar(make_nvp("x", g.x), make_nvp("y", g.y), make_nvp("z", g.y), make_nvp("w", g.w));
+        ar(make_nvp("x", g.x), make_nvp("y", g.y), make_nvp("z", g.z), make_nvp("w", g.w));
     }
 
     template<class Archive>
