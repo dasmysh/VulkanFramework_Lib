@@ -84,7 +84,7 @@ namespace vku::gfx {
         std::vector<std::vector<unsigned int>>& GetIds() { return ids_; }
         std::vector<std::uint32_t>& GetIndices() { return indices_; }
 
-        void ReserveMesh(unsigned int maxUVChannels, unsigned int maxColorChannels,
+        void ReserveMesh(unsigned int maxUVChannels, unsigned int maxColorChannels, bool hasTangentSpace,
             unsigned int numVertices, unsigned int numIndices, unsigned int numMaterials);
         MaterialInfo* GetMaterial(unsigned int id) { return &materials_[id]; }
         void AddSubMesh(const std::string& name, unsigned int idxOffset, unsigned int numIndices, unsigned int materialID);

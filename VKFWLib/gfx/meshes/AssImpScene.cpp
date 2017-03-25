@@ -96,11 +96,13 @@ namespace vku::gfx {
         auto scene = importer.ReadFile(filename, assimpFlags);
 
         unsigned int maxUVChannels = 0, maxColorChannels = 0, numVertices = 0, numIndices = 0;
+        bool hasTangentSpace = false;
         std::vector<std::vector<unsigned int>> indices;
         indices.resize(scene->mNumMeshes);
         for (unsigned int i = 0; i < scene->mNumMeshes; ++i) {
             maxUVChannels = glm::max(maxUVChannels, scene->mMeshes[i]->GetNumUVChannels());
-            maxColorChannels = glm::max(maxColorChannels, scene->mMeshes[i]->GetNumUVChannels());
+            if (scene->mMeshes[i]->HasTangentsAndBitangents()) hasTangentSpace = true;
+            maxColorChannels = glm::max(maxColorChannels, scene->mMeshes[i]->GetNumColorChannels());
             numVertices += scene->mMeshes[i]->mNumVertices;
             for (unsigned int fi = 0; fi < scene->mMeshes[i]->mNumFaces; ++fi) {
                 auto faceIndices = scene->mMeshes[i]->mFaces[fi].mNumIndices;
@@ -117,7 +119,7 @@ namespace vku::gfx {
 
         std::experimental::filesystem::path sceneFilePath{ meshFilename_ };
 
-        ReserveMesh(maxUVChannels, maxColorChannels, numVertices, numIndices, scene->mNumMaterials);
+        ReserveMesh(maxUVChannels, maxColorChannels, hasTangentSpace, numVertices, numIndices, scene->mNumMaterials);
         for (unsigned int i = 0; i < scene->mNumMaterials; ++i) {
             auto material = scene->mMaterials[i];
             auto mat = GetMaterial(i);

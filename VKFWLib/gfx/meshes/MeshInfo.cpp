@@ -107,15 +107,17 @@ namespace vku::gfx {
      *  @param numVertices the number of vertices in the mesh.
      *  @param numIndices the number of indices in the mesh.
      */
-    void MeshInfo::ReserveMesh(unsigned int maxUVChannels, unsigned int maxColorChannels,
+    void MeshInfo::ReserveMesh(unsigned int maxUVChannels, unsigned int maxColorChannels, bool hasTangentSpace,
         unsigned int numVertices, unsigned int numIndices, unsigned int numMaterials)
     {
         vertices_.resize(numVertices);
         normals_.resize(numVertices);
         texCoords_.resize(maxUVChannels);
         for (auto& texCoords : texCoords_) texCoords.resize(numVertices);
-        tangents_.resize(numVertices);
-        binormals_.resize(numVertices);
+        if (hasTangentSpace) {
+            tangents_.resize(numVertices);
+            binormals_.resize(numVertices);
+        }
         colors_.resize(maxColorChannels);
         for (auto& colors : colors_) colors.resize(numVertices);
         indices_.resize(numIndices);
