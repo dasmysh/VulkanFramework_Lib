@@ -56,10 +56,10 @@ namespace vku::gfx {
 
         const std::vector<MaterialInfo>& GetMaterials() const { return materials_; }
         const MaterialInfo* GetMaterial(unsigned int id) const { return &materials_[id]; }
-        // const DeviceBuffer* GetIndexBuffer() const { return iBuffer_.get(); }
 
         template<class VertexType>
         void GetVertices(std::vector<VertexType>& vertices) const;
+
         /*template<class VTX>
         void CreateVertexBuffer();
         template<class VTX>

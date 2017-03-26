@@ -10,6 +10,7 @@
 #include "gfx/vk/LogicalDevice.h"
 #include "gfx/vk/memory/MemoryGroup.h"
 #include "gfx/Texture2D.h"
+#include <glm/gtc/type_ptr.hpp>
 
 namespace vku::gfx {
     Mesh::Mesh(std::shared_ptr<const MeshInfo> meshInfo, const LogicalDevice* device,
@@ -37,7 +38,7 @@ namespace vku::gfx {
         vertexBuffer_{ std::move(rhs.vertexBuffer_) },
         indexBuffer_{ std::move(rhs.indexBuffer_) },
         materials_{ std::move(rhs.materials_) },
-        vertexData_{ std::move(rhs.vertexData_) }
+        vertexMaterialData_{ std::move(rhs.vertexMaterialData_) }
     {
     }
 
@@ -49,7 +50,7 @@ namespace vku::gfx {
         vertexBuffer_ = std::move(rhs.vertexBuffer_);
         indexBuffer_ = std::move(rhs.indexBuffer_);
         materials_ = std::move(rhs.materials_);
-        vertexData_ = std::move(rhs.vertexData_);
+        vertexMaterialData_ = std::move(rhs.vertexMaterialData_);
         return *this;
     }
 
@@ -68,7 +69,7 @@ namespace vku::gfx {
         assert(memoryGroup_);
         memoryGroup_->FinalizeGroup();
         memoryGroup_->TransferData(transfer);
-        vertexData_.clear();
+        vertexMaterialData_.clear();
     }
 
     void Mesh::BindBuffersToCommandBuffer(vk::CommandBuffer cmdBuffer) const
@@ -77,13 +78,35 @@ namespace vku::gfx {
         cmdBuffer.bindIndexBuffer(indexBuffer_.first->GetBuffer(), indexBuffer_.second, vk::IndexType::eUint32);
     }
 
-    void Mesh::DrawMesh(vk::CommandBuffer cmdBuffer) const
+    void Mesh::DrawMesh(vk::CommandBuffer cmdBuffer, const glm::mat4& worldMatrix) const
     {
+        auto meshWorld = meshInfo_->GetRootTransform() * worldMatrix;
+
         // TODO: use submeshes and materials and the scene nodes...
         // need:
         // - for each submesh: 2 texture descriptors
         // - for each scene mesh node: uniform buffer?
+        // - uniform buffer for all materials[array] (via template)
+        // - push constant for world matrix
+        // - push constant for material index .. or "VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC"
         cmdBuffer.drawIndexed(static_cast<std::uint32_t>(meshInfo_->GetIndices().size()), 1, 0, 0, 0);
+    }
+
+    void Mesh::DrawMeshNode(vk::CommandBuffer cmdBuffer, const SceneMeshNode* node, const glm::mat4& worldMatrix) const
+    {
+        auto nodeWorld = node->GetLocalTransform() * worldMatrix;
+        for (unsigned int i = 0; i < node->GetNumMeshes(); ++i) DrawSubMesh(cmdBuffer, node->GetMesh(i), nodeWorld);
+        for (unsigned int i = 0; i < node->GetNumNodes(); ++i) DrawMeshNode(cmdBuffer, node->GetChild(i), nodeWorld);
+    }
+
+    void Mesh::DrawSubMesh(vk::CommandBuffer cmdBuffer, const SubMesh* subMesh, const glm::mat4& worldMatrix) const
+    {
+        auto worldMat = worldMatrix;
+        // TODO: Set material, set texture(s). [3/26/2017 Sebastian Maisch]
+        // use a single descriptor set with dynamic offsets for the material
+        // actually push constants do not work if the command buffer stays constant for multiple frames.
+        cmdBuffer.pushConstants(, vk::ShaderStageFlagBits::eVertex, 0, vk::ArrayProxy<float>(16, glm::value_ptr(worldMat)));
+        cmdBuffer.drawIndexed(static_cast<std::uint32_t>(subMesh->GetNumberOfIndices()), 1, static_cast<std::uint32_t>(subMesh->GetIndexOffset()), 0, 0);
     }
 
     void Mesh::SetVertexBuffer(const DeviceBuffer* vtxBuffer, std::size_t offset)

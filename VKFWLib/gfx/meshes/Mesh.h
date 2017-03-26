@@ -42,13 +42,15 @@ namespace vku::gfx {
             const LogicalDevice* device, MemoryGroup& memoryGroup, unsigned int bufferIdx, std::size_t offset,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
 
-        template<class VertexType>
+        template<class VertexType, class MaterialType>
         static std::size_t CalculateBufferSize(const MeshInfo* meshInfo);
 
         void UploadMeshData(QueuedDeviceTransfer& transfer);
 
         void BindBuffersToCommandBuffer(vk::CommandBuffer cmdBuffer) const;
-        void DrawMesh(vk::CommandBuffer cmdBuffer) const;
+        void DrawMesh(vk::CommandBuffer cmdBuffer, const glm::mat4& worldMatrix) const;
+        void DrawMeshNode(vk::CommandBuffer cmdBuffer, const SceneMeshNode* node, const glm::mat4& worldMatrix) const;
+        void DrawSubMesh(vk::CommandBuffer cmdBuffer, const SubMesh* subMesh, const glm::mat4& worldMatrix) const;
 
     private:
         Mesh(std::shared_ptr<const MeshInfo> meshInfo, const LogicalDevice* device,
@@ -56,13 +58,14 @@ namespace vku::gfx {
         Mesh(std::shared_ptr<const MeshInfo> meshInfo, const LogicalDevice* device,
             MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices);
 
-        template<class VertexType>
+        template<class VertexType, class MaterialType>
         void CreateBuffersInMemoryGroup(MemoryGroup* memoryGroup, unsigned int bufferIdx, std::size_t offset,
             const std::vector<std::uint32_t>& queueFamilyIndices);
         void CreateMaterials(const LogicalDevice* device, MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices);
 
         void SetVertexBuffer(const DeviceBuffer* vtxBuffer, std::size_t offset);
         void SetIndexBuffer(const DeviceBuffer* idxBuffer, std::size_t offset);
+        void SetMaterialBuffer(const DeviceBuffer* idxBuffer, std::size_t offset);
 
         /** Holds the mesh info object containing vertex/index data. */
         std::shared_ptr<const MeshInfo> meshInfo_;
@@ -72,11 +75,14 @@ namespace vku::gfx {
         std::pair<const DeviceBuffer*, std::size_t> vertexBuffer_;
         /** Holds a pointer to the vertex buffer and an offset to the index data. */
         std::pair<const DeviceBuffer*, std::size_t> indexBuffer_;
+        /** Holds a pointer to the vertex buffer and an offset to the index data. */
+        std::pair<const DeviceBuffer*, std::size_t> materialBuffer_;
         /** Holds the meshes materials. */
         std::vector<Material> materials_;
-        /** Holds the vertex data while the mesh is constructed. */
-        std::vector<uint8_t> vertexData_;
+        /** Holds the size of a single material in the buffer. */
 
+        /** Holds the vertex and material data while the mesh is constructed. */
+        std::vector<uint8_t> vertexMaterialData_;
     };
     template<class VertexType>
     inline Mesh Mesh::CreateWithInternalMemoryGroup(std::shared_ptr<const MeshInfo> meshInfo, const LogicalDevice* device,
@@ -106,34 +112,50 @@ namespace vku::gfx {
         return result;
     }
 
-    template<class VertexType>
-    inline void Mesh::CreateBuffersInMemoryGroup(MemoryGroup* memoryGroup, unsigned int bufferIdx, std::size_t offset,
-        const std::vector<std::uint32_t>& queueFamilyIndices)
+    template<class VertexType, class MaterialType>
+    inline void Mesh::CreateBuffersInMemoryGroup(const LogicalDevice* device, MemoryGroup* memoryGroup,
+        unsigned int bufferIdx, std::size_t offset, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         std::vector<VertexType> vertices;
         meshInfo_->GetVertices(vertices);
+
+        std::vector<MaterialType> materials; materials.reserve(materials_.size());
+        for (auto i = 0U; i < materials_.size(); ++i) materials.emplace_back(materials_[i]);
+
         auto vertexBufferSize = vku::byteSizeOf(vertices);
         auto indexBufferSize = vku::byteSizeOf(meshInfo_->GetIndices());
-        vertexData_.resize(vertexBufferSize);
-        memcpy(vertexData_.data(), vertices.data(), vertexBufferSize);
+        auto materialBufferSize = device.CalculateUniformBufferAlignment(byteSizeOf(materials));
+
+        // for uniform buffer containing local matrix:
+        // need layout (2x mat4?)
+        // needed for each mesh node -> count nodes
+        // also needed times the number of backbuffers ... -> new parameter
+
+        vertexMaterialData_.resize(vertexBufferSize + materialBufferSize);
+        memcpy(vertexMaterialData_.data(), vertices.data(), vertexBufferSize);
+        memcpy(vertexMaterialData_.data() + vertexBufferSize, materials.data(), materialBufferSize);
 
         if (bufferIdx == DeviceMemoryGroup::INVALID_INDEX) bufferIdx = memoryGroup->AddBufferToGroup(
             vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer,
             vertexBufferSize + indexBufferSize, queueFamilyIndices);
 
-        memoryGroup->AddDataToBufferInGroup(bufferIdx, offset, vertexData_);
+        memoryGroup->AddDataToBufferInGroup(bufferIdx, offset, vertexBufferSize, vertexMaterialData_.data());
         memoryGroup->AddDataToBufferInGroup(bufferIdx, offset + vertexBufferSize, meshInfo_->GetIndices());
+        memoryGroup->AddDataToBufferInGroup(bufferIdx, offset + vertexBufferSize + indexBufferSize,
+            materialBufferSize, vertexMaterialData_.data() + vertexBufferSize);
         // TODO: any kind of uniform data to add here? [3/23/2017 Sebastian Maisch]
 
         auto buffer = memoryGroup_->GetBuffer(bufferIdx);
         SetVertexBuffer(buffer, offset);
         SetIndexBuffer(buffer, offset + vertexBufferSize);
+        SetMaterialBuffer(buffer, device.CalculateUniformBufferAlignment(offset + vertexBufferSize + indexBufferSize));
     }
 
-    template<class VertexType>
+    template<class VertexType, class MaterialType>
     inline std::size_t Mesh::CalculateBufferSize(const MeshInfo* meshInfo)
     {
         return static_cast<std::size_t>(sizeof(VertexType) * meshInfo->GetVertices().size()
-            + sizeof(std::uint32_t) * meshInfo->GetIndices().size());
+            + sizeof(std::uint32_t) * meshInfo->GetIndices().size()
+            + sizeof(MaterialType) * meshInfo->GetMaterials().size());
     }
 }
