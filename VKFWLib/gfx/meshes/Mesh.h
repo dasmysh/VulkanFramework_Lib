@@ -59,13 +59,13 @@ namespace vku::gfx {
             MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices);
 
         template<class VertexType, class MaterialType>
-        void CreateBuffersInMemoryGroup(MemoryGroup* memoryGroup, unsigned int bufferIdx, std::size_t offset,
-            const std::vector<std::uint32_t>& queueFamilyIndices);
+        void CreateBuffersInMemoryGroup(const LogicalDevice* device, MemoryGroup* memoryGroup,
+            unsigned int bufferIdx, std::size_t offset, const std::vector<std::uint32_t>& queueFamilyIndices);
         void CreateMaterials(const LogicalDevice* device, MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices);
 
         void SetVertexBuffer(const DeviceBuffer* vtxBuffer, std::size_t offset);
         void SetIndexBuffer(const DeviceBuffer* idxBuffer, std::size_t offset);
-        void SetMaterialBuffer(const DeviceBuffer* idxBuffer, std::size_t offset);
+        void SetMaterialBuffer(const DeviceBuffer* matBuffer, std::size_t offset);
 
         /** Holds the mesh info object containing vertex/index data. */
         std::shared_ptr<const MeshInfo> meshInfo_;
@@ -73,9 +73,9 @@ namespace vku::gfx {
         std::unique_ptr<MemoryGroup> memoryGroup_;
         /** Holds a pointer to the vertex buffer and an offset to the vertex data. */
         std::pair<const DeviceBuffer*, std::size_t> vertexBuffer_;
-        /** Holds a pointer to the vertex buffer and an offset to the index data. */
+        /** Holds a pointer to the index buffer and an offset to the index data. */
         std::pair<const DeviceBuffer*, std::size_t> indexBuffer_;
-        /** Holds a pointer to the vertex buffer and an offset to the index data. */
+        /** Holds a pointer to the material buffer and an offset to the material data. */
         std::pair<const DeviceBuffer*, std::size_t> materialBuffer_;
         /** Holds the meshes materials. */
         std::vector<Material> materials_;
@@ -84,6 +84,7 @@ namespace vku::gfx {
         /** Holds the vertex and material data while the mesh is constructed. */
         std::vector<uint8_t> vertexMaterialData_;
     };
+
     template<class VertexType>
     inline Mesh Mesh::CreateWithInternalMemoryGroup(std::shared_ptr<const MeshInfo> meshInfo, const LogicalDevice* device,
         vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices)
@@ -120,7 +121,7 @@ namespace vku::gfx {
         meshInfo_->GetVertices(vertices);
 
         std::vector<MaterialType> materials; materials.reserve(materials_.size());
-        for (auto i = 0U; i < materials_.size(); ++i) materials.emplace_back(materials_[i]);
+        for (const auto& material : materials_) materials.emplace_back(material);
 
         auto vertexBufferSize = vku::byteSizeOf(vertices);
         auto indexBufferSize = vku::byteSizeOf(meshInfo_->GetIndices());
@@ -128,8 +129,10 @@ namespace vku::gfx {
 
         // for uniform buffer containing local matrix:
         // need layout (2x mat4?)
-        // needed for each mesh node -> count nodes
-        // also needed times the number of backbuffers ... -> new parameter
+        // needed for each mesh node -> count nodes (nn)
+        // also needed times the number of backbuffers ... -> new parameter (nb)
+        // aaand times the number of objects to be rendered (no)
+        // => 2*nn*nb*no mat4s
 
         vertexMaterialData_.resize(vertexBufferSize + materialBufferSize);
         memcpy(vertexMaterialData_.data(), vertices.data(), vertexBufferSize);

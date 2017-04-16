@@ -32,10 +32,11 @@ namespace vku::gfx {
     {
         aabb_.minmax[0] = glm::vec3(std::numeric_limits<float>::infinity()); aabb_.minmax[1] = glm::vec3(-std::numeric_limits<float>::infinity());
         CopyAiMatrixToGLM(node->mTransformation, localTransform_);
-        for (unsigned int i = 0; i < node->mNumMeshes; ++i) meshes_.push_back(meshes[i].get());
+        for (unsigned int i = 0; i < node->mNumMeshes; ++i) subMeshIDs_.push_back(node->mMeshes[i]);
         for (unsigned int i = 0; i < node->mNumChildren; ++i) children_.push_back(std::make_unique<SceneMeshNode>(node->mChildren[i], this, meshes));
 
-        for (const auto& mesh : meshes_) {
+        for (auto meshID : subMeshIDs_) {
+            const auto mesh = meshes[meshID].get();
             auto meshAABB = math::transformAABB(mesh->GetLocalAABB(), localTransform_);
             aabb_.minmax[0] = glm::min(aabb_.minmax[0], meshAABB.minmax[0]);
             aabb_.minmax[1] = glm::max(aabb_.minmax[1], meshAABB.minmax[1]);
@@ -51,7 +52,7 @@ namespace vku::gfx {
 
     SceneMeshNode::SceneMeshNode(const SceneMeshNode& rhs) :
         nodeName_(rhs.nodeName_),
-        meshes_(rhs.meshes_),
+        subMeshIDs_(rhs.subMeshIDs_),
         localTransform_(rhs.localTransform_),
         aabb_(rhs.aabb_),
         parent_(rhs.parent_)
@@ -63,7 +64,7 @@ namespace vku::gfx {
     SceneMeshNode::SceneMeshNode(SceneMeshNode&& rhs) noexcept :
         nodeName_(std::move(rhs.nodeName_)),
         children_(std::move(rhs.children_)),
-        meshes_(std::move(rhs.meshes_)),
+        subMeshIDs_(std::move(rhs.subMeshIDs_)),
         localTransform_(std::move(rhs.localTransform_)),
         aabb_(std::move(rhs.aabb_)),
         parent_(std::move(rhs.parent_))
@@ -86,7 +87,7 @@ namespace vku::gfx {
             this->~SceneMeshNode();
             nodeName_ = std::move(rhs.nodeName_);
             children_ = std::move(rhs.children_);
-            meshes_ = std::move(rhs.meshes_);
+            subMeshIDs_ = std::move(rhs.subMeshIDs_);
             localTransform_ = std::move(rhs.localTransform_);
             aabb_ = std::move(rhs.aabb_);
             parent_ = std::move(rhs.parent_);
@@ -101,9 +102,9 @@ namespace vku::gfx {
         aabb = math::transformAABB(aabb_, transform);
     }
 
-    void SceneMeshNode::UpdateMeshes(const std::unordered_map<const SubMesh*, const SubMesh*>& meshUpdates)
+    void SceneMeshNode::FlattenNodeTree(std::vector<const SceneMeshNode*>& nodes) const
     {
-        for (auto& mesh : meshes_) mesh = meshUpdates.at(mesh);
-        for (auto& child : children_) child->UpdateMeshes(meshUpdates);
+        nodes.push_back(this);
+        for (const auto& child : children_) child->FlattenNodeTree(nodes);
     }
 }

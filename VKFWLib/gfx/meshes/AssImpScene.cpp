@@ -129,7 +129,9 @@ namespace vku::gfx {
             material->Get(AI_MATKEY_OPACITY, mat->alpha_);
             material->Get(AI_MATKEY_SHININESS, mat->specularExponent_);
             material->Get(AI_MATKEY_REFRACTI, mat->refraction_);
-            aiString diffuseTexPath, bumpTexPath;
+            aiString materialName, diffuseTexPath, bumpTexPath;
+            if (AI_SUCCESS == material->Get(AI_MATKEY_NAME, materialName)) mat->materialName_ = materialName.C_Str();
+
             if (AI_SUCCESS == material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), diffuseTexPath)) {
                 mat->diffuseTextureFilename_ = sceneFilePath.parent_path().string() + "/" + diffuseTexPath.C_Str();
             }

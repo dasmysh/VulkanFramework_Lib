@@ -33,10 +33,10 @@ namespace vku::gfx {
         glm::mat4 GetLocalTransform() const { return localTransform_; }
         unsigned int GetNumNodes() const { return static_cast<unsigned int>(children_.size()); }
         const SceneMeshNode* GetChild(unsigned int idx) const { return children_[idx].get(); }
-        unsigned int GetNumMeshes() const { return static_cast<unsigned int>(meshes_.size()); }
-        const SubMesh* GetMesh(unsigned int idx) const { return meshes_[idx]; }
+        unsigned int GetNumMeshes() const { return static_cast<unsigned int>(subMeshIDs_.size()); }
+        std::size_t GetMeshID(unsigned int idx) const { return subMeshIDs_[idx]; }
 
-        void UpdateMeshes(const std::unordered_map<const SubMesh*, const SubMesh*>& meshUpdates);
+        void FlattenNodeTree(std::vector<const SceneMeshNode*>& nodes) const;
 
     private:
         /** Needed for serialization */
@@ -63,7 +63,7 @@ namespace vku::gfx {
         /** The nodes children. */
         std::vector<std::unique_ptr<SceneMeshNode>> children_;
         /** The meshes in this node. */
-        std::vector<const SubMesh*> meshes_;
+        std::vector<std::size_t> subMeshIDs_;
         /** The local transformation matrix. */
         glm::mat4 localTransform_;
         /** The nodes local AABB. */

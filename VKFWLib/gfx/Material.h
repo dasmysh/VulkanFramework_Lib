@@ -18,6 +18,8 @@ namespace vku::gfx {
 
     struct MaterialInfo final
     {
+        /** Holds the materials name. */
+        std::string materialName_;
         /** Holds the materials ambient color. */
         glm::vec3 ambient_;
         /** Holds the materials diffuse albedo. */

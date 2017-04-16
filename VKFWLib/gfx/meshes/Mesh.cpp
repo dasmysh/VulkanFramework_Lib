@@ -60,7 +60,7 @@ namespace vku::gfx {
     {
         materials_.reserve(meshInfo_->GetMaterials().size());
         for (const auto& mat : meshInfo_->GetMaterials()) {
-            materials_.push_back(Material(&mat, device, memoryGroup, queueFamilyIndices));
+            materials_.emplace_back(&mat, device, memoryGroup, queueFamilyIndices);
         }
     }
 
@@ -119,5 +119,11 @@ namespace vku::gfx {
     {
         indexBuffer_.first = idxBuffer;
         indexBuffer_.second = offset;
+    }
+
+    void Mesh::SetMaterialBuffer(const DeviceBuffer* matBuffer, std::size_t offset)
+    {
+        materialBuffer_.first = matBuffer;
+        materialBuffer_.second = offset;
     }
 }
