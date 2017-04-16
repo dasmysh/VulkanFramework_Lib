@@ -90,7 +90,7 @@ foreach(f ${LIB_RES_OBJ_FILES})
 endforeach()
 
 
-file(GLOB LIB_CONFIGS CMakeLists.txt Readme.md .gitattributes .gitignore .gitmodules)
+file(GLOB LIB_CONFIGS CMakeLists.txt Readme.md .gitattributes .gitignore .gitmodules .clang-format)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME} ${VULKAN_INCLUDE_DIR} extern/glfw/include extern/glm extern/g3log/src extern/stb extern/cereal/include extern/assimp/include)
 add_library(${FWLIB_LIBNAME} SHARED ${LIB_COMPILED_SHADERS} ${LIB_TMP_FILES} ${LIB_TOP_FILES} ${LIB_RES_FILES} ${LIB_CONFIGS} ${EXTERN_SOURCES})
