@@ -9,6 +9,7 @@
 #pragma once
 
 #include "main.h"
+#include "core/sceneobject/SceneObjectManager.h"
 
 namespace vku::cfg {
     class Configuration;
@@ -51,6 +52,7 @@ namespace vku {
         bool IsGUIMode() const { return guiMode_; }
         VKUDllExport VKWindow* GetFocusedWindow();
         VKUDllExport VKWindow* GetWindow(unsigned int idx);
+        VKUDllExport const SceneObjectManager& GetSceneObjectManager() const { return sceneObjectManager_; }
 
         void SetPause(bool pause);
 
@@ -86,6 +88,7 @@ namespace vku {
         cfg::Configuration config_;
         /** Holds the windows. */
         std::vector<VKWindow> windows_;
+
         // application status
         /** <c>true</c> if application is paused. */
         bool pause_;
@@ -97,6 +100,9 @@ namespace vku {
         double elapsedTime_;
         /** Hold whether GUI mode is switched on. */
         bool guiMode_ = true;
+
+        /** Holds the scene object manager. */
+        SceneObjectManager sceneObjectManager_;
 
     protected:
         /**

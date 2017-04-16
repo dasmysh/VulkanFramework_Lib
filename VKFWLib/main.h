@@ -19,6 +19,7 @@
 // ReSharper disable CppUnusedIncludeDirective
 #include <cassert>
 #include <cmath>
+#include <cstdint>
 #include <deque>
 #include <exception>
 #include <iterator>
