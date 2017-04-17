@@ -95,7 +95,7 @@ namespace vku::gfx {
         for (auto i = extImages_.size(); i < desc_.tex_.size(); ++i) {
             memoryGroup_.AddTextureToGroup(desc_.tex_[i], glm::u32vec4(size_, 1, 1), 1, queueFamilyIndices_);
         }
-        memoryGroup_.FinalizeGroup();
+        memoryGroup_.FinalizeDeviceGroup();
 
         bool handleCmdBuffer = false;
         if (!cmdBuffer) {

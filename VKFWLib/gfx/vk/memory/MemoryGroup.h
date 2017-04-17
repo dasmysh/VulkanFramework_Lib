@@ -22,7 +22,7 @@ namespace vku::gfx {
     {
     public:
         explicit MemoryGroup(const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags = vk::MemoryPropertyFlags());
-        virtual ~MemoryGroup();
+        virtual ~MemoryGroup() override;
         MemoryGroup(const MemoryGroup&) = delete;
         MemoryGroup& operator=(const MemoryGroup&) = delete;
         MemoryGroup(MemoryGroup&&) noexcept;
@@ -42,8 +42,9 @@ namespace vku::gfx {
         void AddDataToTextureInGroup(unsigned int textureIdx, vk::ImageAspectFlags aspectFlags,
             std::uint32_t mipLevel, std::uint32_t arrayLayer, const glm::u32vec3& size,
             const void* data, const std::function<void(void*)>& deleter = nullptr);
-        void FinalizeGroup() override;
+        void FinalizeDeviceGroup() override;
         void TransferData(QueuedDeviceTransfer& transfer);
+        void RemoveHostMemory();
 
         void FillUploadBufferCmdBuffer(unsigned int bufferIdx, vk::CommandBuffer cmdBuffer,
             std::size_t offset, std::size_t dataSize);

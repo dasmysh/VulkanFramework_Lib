@@ -36,7 +36,7 @@ namespace vku::gfx {
             MemoryGroup& memGroup, const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         Texture2D(const std::string& textureFilename, const LogicalDevice* device, bool useSRGB,
             MemoryGroup& memGroup, const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
-        ~Texture2D();
+        virtual ~Texture2D() override;
 
         const DeviceTexture& GetTexture() const { return *texture_; }
 

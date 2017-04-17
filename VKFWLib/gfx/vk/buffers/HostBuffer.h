@@ -21,7 +21,7 @@ namespace vku::gfx {
     public:
         HostBuffer(const LogicalDevice* device, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags memoryFlags = vk::MemoryPropertyFlags(),
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
-        ~HostBuffer();
+        virtual ~HostBuffer() override;
         HostBuffer(const HostBuffer&);
         HostBuffer& operator=(const HostBuffer&);
         HostBuffer(HostBuffer&&) noexcept;

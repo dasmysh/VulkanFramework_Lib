@@ -49,7 +49,7 @@ namespace vku::gfx {
         AssImpScene& operator=(const AssImpScene&);
         AssImpScene(AssImpScene&&) noexcept;
         AssImpScene& operator=(AssImpScene&&) noexcept;
-        virtual ~AssImpScene();
+        virtual ~AssImpScene() override;
 
     private:
         /** Needed for serialization */

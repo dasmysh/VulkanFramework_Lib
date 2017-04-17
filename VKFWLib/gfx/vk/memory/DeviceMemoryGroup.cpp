@@ -59,7 +59,7 @@ namespace vku::gfx {
         return static_cast<unsigned int>(deviceImages_.size() - 1);
     }
 
-    void DeviceMemoryGroup::FinalizeGroup()
+    void DeviceMemoryGroup::FinalizeDeviceGroup()
     {
         InitializeDeviceMemory(device_, deviceOffsets_, deviceBuffers_, deviceImages_, deviceMemory_);
         BindDeviceObjects(deviceOffsets_, deviceBuffers_, deviceImages_, deviceMemory_);

@@ -67,7 +67,7 @@ namespace vku::gfx {
         Texture(Texture&&) noexcept;
         Texture& operator=(const Texture&) = delete;
         Texture& operator=(Texture&&) noexcept;
-        ~Texture();
+        virtual ~Texture();
 
         void InitializeImage(const glm::u32vec4& size, std::uint32_t mipLevels, bool initMemory = true);
         void InitializeImageView();

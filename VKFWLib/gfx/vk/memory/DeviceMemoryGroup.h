@@ -36,7 +36,7 @@ namespace vku::gfx {
             const glm::u32vec4& size, std::uint32_t mipLevels,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
 
-        virtual void FinalizeGroup();
+        virtual void FinalizeDeviceGroup();
 
         DeviceBuffer* GetBuffer(unsigned int bufferIdx) { return &deviceBuffers_[bufferIdx]; }
         DeviceTexture* GetTexture(unsigned int textureIdx) { return &deviceImages_[textureIdx]; }

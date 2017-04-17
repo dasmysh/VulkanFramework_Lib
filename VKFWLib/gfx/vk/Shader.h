@@ -21,7 +21,7 @@ namespace vku::gfx {
         Shader& operator=(const Shader&);
         Shader(Shader&&) noexcept;
         Shader& operator=(Shader&&) noexcept;
-        ~Shader();
+        virtual ~Shader() override;
 
         void FillShaderStageInfo(vk::PipelineShaderStageCreateInfo& shaderStageCreateInfo) const;
 

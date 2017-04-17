@@ -103,11 +103,11 @@ namespace vku::gfx {
         imageContents_.push_back(imgContDesc);
     }
 
-    void MemoryGroup::FinalizeGroup()
+    void MemoryGroup::FinalizeDeviceGroup()
     {
         InitializeHostMemory(GetDevice(), hostOffsets_, hostBuffers_, hostImages_, hostMemory_);
         BindHostObjects(hostOffsets_, hostBuffers_, hostImages_, hostMemory_);
-        DeviceMemoryGroup::FinalizeGroup();
+        DeviceMemoryGroup::FinalizeDeviceGroup();
     }
 
     void MemoryGroup::TransferData(QueuedDeviceTransfer& transfer)
@@ -130,6 +130,14 @@ namespace vku::gfx {
 
         bufferContents_.clear();
         imageContents_.clear();
+    }
+
+    void MemoryGroup::RemoveHostMemory()
+    {
+        hostBuffers_.clear();
+        hostImages_.clear();
+        hostMemory_.~DeviceMemory();
+        hostOffsets_.clear();
     }
 
     void MemoryGroup::FillUploadBufferCmdBuffer(unsigned int bufferIdx, vk::CommandBuffer cmdBuffer,

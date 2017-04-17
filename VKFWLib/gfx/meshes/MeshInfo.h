@@ -110,11 +110,8 @@ namespace vku::gfx {
                 cereal::make_nvp("rootTransform", rootTransform_),
                 cereal::make_nvp("rootNode", rootNode_),
                 cereal::make_nvp("materials", materials_),
-                cereal::make_nvp("subMeshes", subMeshes_));
-
-            std::unordered_map<const SubMesh*, const SubMesh*> meshUpdates;
-            for (const auto& m : subMeshes_) meshUpdates[reinterpret_cast<const SubMesh*>(m->GetSerializationID())] = m.get();
-            rootNode_->UpdateMeshes(meshUpdates);
+                cereal::make_nvp("subMeshes", subMeshes_),
+                cereal::make_nvp("nodes", nodes_));
         }
 
         /** Holds all the single points used by the mesh (and its sub-meshes) as points or in vertices. */
@@ -146,9 +143,10 @@ namespace vku::gfx {
 
         /** The meshes materials. */
         std::vector<MaterialInfo> materials_;
-
-        /** Holds all the meshes sub-meshes (as an array for fast iteration during rendering). */
+        /** Holds all the meshes sub-meshes. */
         std::vector<std::unique_ptr<SubMesh>> subMeshes_;
+        /** Holds all the meshes nodes. */
+        std::vector<const SceneMeshNode*> nodes_;
     };
 
     template <class VertexType>

@@ -67,7 +67,7 @@ namespace vku::gfx {
     void Mesh::UploadMeshData(QueuedDeviceTransfer& transfer)
     {
         assert(memoryGroup_);
-        memoryGroup_->FinalizeGroup();
+        memoryGroup_->FinalizeDeviceGroup();
         memoryGroup_->TransferData(transfer);
         vertexMaterialData_.clear();
     }

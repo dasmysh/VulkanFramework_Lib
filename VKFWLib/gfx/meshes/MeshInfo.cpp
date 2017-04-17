@@ -39,14 +39,11 @@ namespace vku::gfx {
         rootNode_(std::make_unique<SceneMeshNode>(*rhs.rootNode_)),
         materials_(rhs.materials_)
     {
-        std::unordered_map<const SubMesh*, const SubMesh*> submeshUpdates;
         for (const auto& submesh : rhs.subMeshes_) {
             auto newSubMesh = std::make_unique<SubMesh>(*submesh);
-            submeshUpdates[submesh.get()] = newSubMesh.get();
             subMeshes_.push_back(std::move(newSubMesh));
         }
-
-        rootNode_->UpdateMeshes(submeshUpdates);
+        rootNode_->FlattenNodeTree(nodes_);
     }
 
     /** Copy assignment operator. */
@@ -72,28 +69,28 @@ namespace vku::gfx {
         rootTransform_(std::move(rhs.rootTransform_)),
         rootNode_(std::move(rhs.rootNode_)),
         materials_(std::move(rhs.materials_)),
-        subMeshes_(std::move(rhs.subMeshes_))
+        subMeshes_(std::move(rhs.subMeshes_)),
+        nodes_(std::move(rhs.nodes_))
     {
     }
 
     /** Default move assignment operator. */
     MeshInfo& MeshInfo::operator=(MeshInfo&& rhs) noexcept
     {
-        if (this != &rhs) {
-            this->~MeshInfo();
-            vertices_ = std::move(rhs.vertices_);
-            normals_ = std::move(rhs.normals_);
-            texCoords_ = std::move(rhs.texCoords_);
-            tangents_ = std::move(rhs.tangents_);
-            binormals_ = std::move(rhs.binormals_);
-            colors_ = std::move(rhs.colors_);
-            ids_ = std::move(rhs.ids_);
-            indices_ = std::move(rhs.indices_);
-            rootTransform_ = std::move(rhs.rootTransform_);
-            rootNode_ = std::move(rhs.rootNode_);
-            materials_ = std::move(rhs.materials_);
-            subMeshes_ = std::move(rhs.subMeshes_);
-        }
+        this->~MeshInfo();
+        vertices_ = std::move(rhs.vertices_);
+        normals_ = std::move(rhs.normals_);
+        texCoords_ = std::move(rhs.texCoords_);
+        tangents_ = std::move(rhs.tangents_);
+        binormals_ = std::move(rhs.binormals_);
+        colors_ = std::move(rhs.colors_);
+        ids_ = std::move(rhs.ids_);
+        indices_ = std::move(rhs.indices_);
+        rootTransform_ = std::move(rhs.rootTransform_);
+        rootNode_ = std::move(rhs.rootNode_);
+        materials_ = std::move(rhs.materials_);
+        subMeshes_ = std::move(rhs.subMeshes_);
+        nodes_ = std::move(rhs.nodes_);
         return *this;
     }
 
@@ -140,6 +137,7 @@ namespace vku::gfx {
     void MeshInfo::CreateSceneNodes(aiNode* rootNode)
     {
         rootNode_ = std::make_unique<SceneMeshNode>(rootNode, nullptr, subMeshes_);
+        rootNode_->FlattenNodeTree(nodes_);
     }
 
     /*void Mesh::write(std::ofstream& ofs) const
