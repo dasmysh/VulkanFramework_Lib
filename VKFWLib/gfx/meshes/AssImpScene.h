@@ -63,8 +63,8 @@ namespace vku::gfx {
         }
 
         void createNewMesh(const std::string& filename, const std::string& binFilename, MeshCreateFlags flags);
-        void save(const std::string& filename) const;
-        bool load(const std::string& filename);
+        void saveBinary(const std::string& filename) const;
+        bool loadBinary(const std::string& filename, const std::string& binFilename);
 
         /** Holds the meshes filename */
         std::string meshFilename_;

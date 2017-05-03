@@ -30,7 +30,7 @@ namespace vku::gfx {
         auto filename = FindResourceLocation(meshFilename_);
         auto binFilename = filename + ".myshbin";
 
-        if (!load(binFilename)) createNewMesh(filename, binFilename, flags);
+        if (!loadBinary(filename, binFilename)) createNewMesh(filename, binFilename, flags);
 
         /*CreateIndexBuffer();
         auto rootScale = GetNamedParameterValue("scale", 1.0f);
@@ -175,7 +175,7 @@ namespace vku::gfx {
         }
 
         CreateSceneNodes(scene->mRootNode);
-        save(binFilename);
+        saveBinary(binFilename);
     }
 
     /*std::string AssimpScene::GetFullFilename() const
@@ -190,27 +190,41 @@ namespace vku::gfx {
         return std::move(app->GetTextureManager()->GetResource(texFilename));
     }*/
 
-    void AssImpScene::save(const std::string& filename) const
+    void AssImpScene::saveBinary(const std::string& filename) const
     {
         std::ofstream ofs(filename, std::ios::out | std::ios::binary);
         cereal::BinaryOutputArchive oa(ofs);
+        auto lastModTime = std::experimental::filesystem::last_write_time(filename);
+        auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(lastModTime.time_since_epoch()).count();
+        oa(cereal::make_nvp("timestamp", timestamp));
         oa(cereal::make_nvp("assimpMesh", *this));
     }
 
-    bool AssImpScene::load(const std::string& filename)
+    bool AssImpScene::loadBinary(const std::string& filename, const std::string& binFilename)
     {
-        if (std::experimental::filesystem::exists(filename)) {
-            std::ifstream inBinFile(filename, std::ios::binary);
+        if (std::experimental::filesystem::exists(binFilename)) {
+            std::ifstream inBinFile(binFilename, std::ios::binary);
             if (inBinFile.is_open()) {
                 try {
+                    auto lastModTime = std::experimental::filesystem::last_write_time(filename);
+                    auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(lastModTime.time_since_epoch()).count();
+                    decltype(timestamp) binTimestamp;
                     cereal::BinaryInputArchive ia(inBinFile);
+                    ia(cereal::make_nvp("timestamp", binTimestamp));
+                    if (binTimestamp < timestamp) {
+                        LOG(WARNING) << "Will not load binary file. Falling back to Assimp." << std::endl
+                            << "ResourceID: " << getId() << std::endl
+                            << "Filename: " << binFilename << std::endl
+                            << "Description: Timestamp older than original file.";
+                        return false;
+                    }
                     ia(cereal::make_nvp("assimpMesh", *this));
                     return true;
                 }
                 catch (cereal::Exception e) {
                     LOG(ERROR) << "Could not load binary file. Falling back to Assimp." << std::endl
                         << "ResourceID: " << getId() << std::endl
-                        << "Filename: " << filename << std::endl
+                        << "Filename: " << binFilename << std::endl
                         << "Description: Cereal Error." << std::endl
                         << "Error Message: " << e.what();
                     return false;
@@ -218,17 +232,17 @@ namespace vku::gfx {
                 catch (...) {
                     LOG(ERROR) << "Could not load binary file. Falling back to AssImp." << std::endl
                         << "ResourceID: " << getId() << std::endl
-                        << "Filename: " << filename << std::endl
+                        << "Filename: " << binFilename << std::endl
                         << "Description: Reason unknown.";
                     return false;
                 }
             } else LOG(ERROR) << "Could not load binary file. Falling back to AssImp." << std::endl
                 << "ResourceID: " << getId() << std::endl
-                << "Filename: " << filename << std::endl
+                << "Filename: " << binFilename << std::endl
                 << "Description: Could not open file.";
         } else LOG(ERROR) << "Could not load binary file. Falling back to AssImp." << std::endl
             << "ResourceID: " << getId() << std::endl
-            << "Filename: " << filename << std::endl
+            << "Filename: " << binFilename << std::endl
             << "Description: File does not exist.";
         return false;
     }
