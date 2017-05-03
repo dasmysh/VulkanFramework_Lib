@@ -11,6 +11,8 @@
 #include "math.h"
 #include "primitives.h"
 #include "gte/GteDistSegmentSegment.h"
+#include <glm/gtx/exterior_product.hpp>
+#include <glm/gtc/constants.hpp>
 
 namespace vku::math {
 
@@ -28,13 +30,13 @@ namespace vku::math {
         glm::tvec2<real, glm::highp> r = seg0[1] - seg0[0];
         glm::tvec2<real, glm::highp> s = seg1[1] - seg1[0];
 
-        real rxs = crossz(r, s);
+        real rxs = glm::cross(r, s);
         glm::tvec2<real, glm::highp> diff0 = seg1[0] - seg0[0];
-        if (glm::abs(rxs) < epsilon) {
+        if (glm::abs(rxs) < glm::epsilon<real>()) {
             return false;
         }
-        real t = crossz(diff0, s) / rxs;
-        real u = crossz(diff0, r) / rxs;
+        real t = glm::cross(diff0, s) / rxs;
+        real u = glm::cross(diff0, r) / rxs;
         if (t >= 0.0f && t <= 1.0f && u >= 0.0f && u <= 1.0f) return true;
         return false;
     }

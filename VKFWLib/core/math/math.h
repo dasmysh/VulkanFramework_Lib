@@ -14,18 +14,6 @@
 namespace vku::math {
 
     /**
-     *  2D cross product.
-     *  @param real the floating point type used.
-     *  @param v0 first vector
-     *  @param v1 second vector
-     *  @return the 2D cross product.
-     */
-    template<typename real>
-    real crossz(const glm::tvec2<real, glm::highp>& v0, const glm::tvec2<real, glm::highp>& v1) {
-        return (v0.x * v1.y) - (v0.y * v1.x);
-    }
-
-    /**
      *  Modulo operator that correctly simulates a ring.
      *  @param i the value to modulo
      *  @param N the modulo
