@@ -97,7 +97,7 @@ namespace vku::gfx {
         friend class cereal::access;
 
         template <class Archive>
-        void save(Archive& ar, const std::uint32_t version) const
+        void serialize(Archive& ar, const std::uint32_t)
         {
             ar(cereal::make_nvp("vertices", vertices_),
                 cereal::make_nvp("normals", normals_),
@@ -110,25 +110,8 @@ namespace vku::gfx {
                 cereal::make_nvp("rootTransform", rootTransform_),
                 cereal::make_nvp("rootNode", rootNode_),
                 cereal::make_nvp("materials", materials_),
-                cereal::make_nvp("subMeshes", subMeshes_));
-        }
-
-        template <class Archive>
-        void load(Archive& ar, const std::uint32_t version)
-        {
-            ar(cereal::make_nvp("vertices", vertices_),
-                cereal::make_nvp("normals", normals_),
-                cereal::make_nvp("texCoords", texCoords_),
-                cereal::make_nvp("tangents", tangents_),
-                cereal::make_nvp("binormals", binormals_),
-                cereal::make_nvp("colors", colors_),
-                cereal::make_nvp("ids", ids_),
-                cereal::make_nvp("indices", indices_),
-                cereal::make_nvp("rootTransform", rootTransform_),
-                cereal::make_nvp("rootNode", rootNode_),
-                cereal::make_nvp("materials", materials_),
-                cereal::make_nvp("subMeshes", subMeshes_));
-            rootNode_->FlattenNodeTree(nodes_);
+                cereal::make_nvp("subMeshes", subMeshes_),
+                cereal::make_nvp("nodes", nodes_));
         }
 
         /** Holds all the single points used by the mesh (and its sub-meshes) as points or in vertices. */

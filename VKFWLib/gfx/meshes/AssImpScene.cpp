@@ -28,9 +28,8 @@ namespace vku::gfx {
         meshFilename_{ meshFilename }
     {
         auto filename = FindResourceLocation(meshFilename_);
-        auto binFilename = filename + ".myshbin";
 
-        if (!load(binFilename)) createNewMesh(filename, binFilename, flags);
+        if (!loadBinary(filename)) createNewMesh(filename, flags);
 
         /*CreateIndexBuffer();
         auto rootScale = GetNamedParameterValue("scale", 1.0f);
@@ -83,7 +82,7 @@ namespace vku::gfx {
     /** Destructor. */
     AssImpScene::~AssImpScene() = default;
 
-    void AssImpScene::createNewMesh(const std::string& filename, const std::string& binFilename, MeshCreateFlags flags)
+    void AssImpScene::createNewMesh(const std::string& filename, MeshCreateFlags flags)
     {
         unsigned int assimpFlags = aiProcess_JoinIdenticalVertices | aiProcess_Triangulate | aiProcess_LimitBoneWeights
             | aiProcess_ImproveCacheLocality | aiProcess_RemoveRedundantMaterials | aiProcess_OptimizeMeshes
@@ -175,7 +174,7 @@ namespace vku::gfx {
         }
 
         CreateSceneNodes(scene->mRootNode);
-        save(binFilename);
+        saveBinary(filename);
     }
 
     /*std::string AssimpScene::GetFullFilename() const
@@ -190,46 +189,34 @@ namespace vku::gfx {
         return std::move(app->GetTextureManager()->GetResource(texFilename));
     }*/
 
-    void AssImpScene::save(const std::string& filename) const
+    void AssImpScene::saveBinary(const std::string& filename) const
     {
-        std::ofstream ofs(filename, std::ios::out | std::ios::binary);
-        cereal::BinaryOutputArchive oa(ofs);
+        BinaryOAWrapper oa{ filename };
         oa(cereal::make_nvp("assimpMesh", *this));
     }
 
-    bool AssImpScene::load(const std::string& filename)
+    bool AssImpScene::loadBinary(const std::string& filename)
     {
-        if (std::experimental::filesystem::exists(filename)) {
-            std::ifstream inBinFile(filename, std::ios::binary);
-            if (inBinFile.is_open()) {
-                try {
-                    cereal::BinaryInputArchive ia(inBinFile);
-                    ia(cereal::make_nvp("assimpMesh", *this));
-                    return true;
-                }
-                catch (cereal::Exception e) {
-                    LOG(ERROR) << "Could not load binary file. Falling back to Assimp." << std::endl
-                        << "ResourceID: " << getId() << std::endl
-                        << "Filename: " << filename << std::endl
-                        << "Description: Cereal Error." << std::endl
-                        << "Error Message: " << e.what();
-                    return false;
-                }
-                catch (...) {
-                    LOG(ERROR) << "Could not load binary file. Falling back to AssImp." << std::endl
-                        << "ResourceID: " << getId() << std::endl
-                        << "Filename: " << filename << std::endl
-                        << "Description: Reason unknown.";
-                    return false;
-                }
-            } else LOG(ERROR) << "Could not load binary file. Falling back to AssImp." << std::endl
+        try {
+            BinaryIAWrapper ia{ filename };
+            if (ia.IsValid()) {
+                ia(cereal::make_nvp("assimpMesh", *this));
+                return true;
+            }
+        } catch (cereal::Exception e) {
+            LOG(ERROR) << "Could not load binary file. Falling back to Assimp." << std::endl
                 << "ResourceID: " << getId() << std::endl
-                << "Filename: " << filename << std::endl
-                << "Description: Could not open file.";
-        } else LOG(ERROR) << "Could not load binary file. Falling back to AssImp." << std::endl
-            << "ResourceID: " << getId() << std::endl
-            << "Filename: " << filename << std::endl
-            << "Description: File does not exist.";
+                << "Filename: " << BinaryIAWrapper::GetBinFilename(filename) << std::endl
+                << "Description: Cereal Error." << std::endl
+                << "Error Message: " << e.what();
+            return false;
+        } catch (...) {
+            LOG(ERROR) << "Could not load binary file. Falling back to AssImp." << std::endl
+                << "ResourceID: " << getId() << std::endl
+                << "Filename: " << BinaryIAWrapper::GetBinFilename(filename) << std::endl
+                << "Description: Reason unknown.";
+            return false;
+        }
         return false;
     }
 }

@@ -45,16 +45,12 @@ namespace vku::gfx {
         template <class Archive>
         void serialize(Archive& ar, const std::uint32_t)
         {
-            std::vector<std::uint64_t> meshes; meshes.reserve(meshes_.size());
-            for (auto m : meshes_) meshes.push_back(reinterpret_cast<std::uint64_t>(m));
             ar(cereal::make_nvp("nodeName", nodeName_),
                 cereal::make_nvp("children", children_),
-                cereal::make_nvp("meshes", meshes),
+                cereal::make_nvp("subMeshIDs", subMeshIDs_),
                 cereal::make_nvp("localTransform", localTransform_),
                 cereal::make_nvp("AABB", aabb_));
 
-            meshes_.clear(); meshes_.reserve(meshes.size());
-            for (auto m : meshes) meshes_.push_back(reinterpret_cast<const SubMesh*>(m));
             for (auto& c : children_) c->parent_ = this;
         }
 
