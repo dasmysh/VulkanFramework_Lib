@@ -16,6 +16,7 @@
 #include <cereal/cereal.hpp>
 #include <cereal/types/polymorphic.hpp>
 #include <cereal/types/base_class.hpp>
+#include <cereal/access.hpp>
 
 namespace vku::gfx {
 
@@ -62,9 +63,9 @@ namespace vku::gfx {
                 cereal::make_nvp("meshFilename", meshFilename_));
         }
 
-        void createNewMesh(const std::string& filename, const std::string& binFilename, MeshCreateFlags flags);
+        void createNewMesh(const std::string& filename, MeshCreateFlags flags);
         void saveBinary(const std::string& filename) const;
-        bool loadBinary(const std::string& filename, const std::string& binFilename);
+        bool loadBinary(const std::string& filename);
 
         /** Holds the meshes filename */
         std::string meshFilename_;
@@ -72,3 +73,4 @@ namespace vku::gfx {
 }
 
 CEREAL_CLASS_VERSION(vku::gfx::AssImpScene, 1)
+CEREAL_SPECIALIZE_FOR_ALL_ARCHIVES(vku::gfx::AssImpScene, cereal::specialization::member_serialize)

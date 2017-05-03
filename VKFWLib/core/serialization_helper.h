@@ -11,6 +11,46 @@
 #include "main.h"
 #include "core/math/primitives.h"
 #include <cereal/cereal.hpp>
+#include <fstream>
+#include <cereal/archives/binary.hpp>
+
+namespace vku {
+
+    template<class Stream, class Archive> class ArchiveWrapper
+    {
+    public:
+        ArchiveWrapper(const std::string& filename) : fstream_{ GetBinFilename(filename), std::ios::binary }, archive_{ fstream_ } {}
+        bool IsValid() const { return fstream_ ? true : false; }
+        static std::string GetBinFilename(const std::string& filename) { return filename + ".vkbin"; }
+
+        template <class... Types> Archive& operator()(Types&&... args) {
+            archive_(std::forward<Types>(args)...);
+            return archive_;
+        }
+
+    protected:
+        ~ArchiveWrapper() = default;
+        void Close() { fstream_.close(); }
+
+    private:
+        /** Holds the STL stream. */
+        Stream fstream_;
+        /** Holds the cereal archive. */
+        Archive archive_;
+    };
+
+    class BinaryIAWrapper final : public ArchiveWrapper<std::ifstream, cereal::BinaryInputArchive>
+    {
+    public:
+        BinaryIAWrapper(const std::string& filename);
+    };
+
+    class BinaryOAWrapper final : public ArchiveWrapper<std::ofstream, cereal::BinaryOutputArchive>
+    {
+    public:
+        BinaryOAWrapper(const std::string& filename);
+    };
+}
 
 namespace cereal {
 
