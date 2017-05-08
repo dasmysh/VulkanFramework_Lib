@@ -14,6 +14,7 @@
 #include <glm/mat3x4.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <typeindex>
+#include "core/aligned_vector.h"
 
 namespace vku::gfx {
 
@@ -48,8 +49,8 @@ namespace vku::gfx {
         virtual std::size_t GetIndices(std::vector<std::uint32_t>& indices) const;
         virtual std::size_t GetTotalVertexCount() const;
 
-        virtual std::size_t FillLocalTransforms(std::vector<std::uint8_t>& localTransforms, const glm::mat4& modelMatrix, std::size_t alignment) const;
-        virtual std::size_t UpdateLocalTransforms(std::vector<std::uint8_t>& localTransforms, const glm::mat4& modelMatrix, std::size_t alignment) const;
+        virtual std::size_t FillLocalTransforms(aligned_vector<LocalTransform>& localTransforms, const glm::mat4& modelMatrix) const;
+        virtual std::size_t UpdateLocalTransforms(aligned_vector<LocalTransform>& localTransforms, const glm::mat4& modelMatrix) const;
         virtual glm::mat4 GetLocalTransform(std::size_t node_id) const;
 
         virtual std::size_t GetObjectPartID(std::size_t nodeID, std::size_t partID) const = 0;

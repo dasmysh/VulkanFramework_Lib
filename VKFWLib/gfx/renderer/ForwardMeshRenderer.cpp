@@ -14,9 +14,11 @@
 #include "app/ApplicationBase.h"
 #include "core/components/RenderComponent.h"
 #include "core/components/TransformComponent.h"
+#include "core/aligned_vector.h"
 #include "Renderable.h"
 #include "MeshMaterialVertex.h"
 #include "gfx/Material.h"
+#include "gfx/Texture2D.h"
 
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -28,6 +30,7 @@ namespace vku::gfx {
         unsigned int numSwapchainImages, const std::vector<std::uint32_t>& queueFamilyIndices) :
         device_{ device },
         application_{ app },
+        numSwapchainImages_{ numSwapchainImages },
         queueFamilyIndices_{ queueFamilyIndices }
     {
         vk::DescriptorSetLayout vkPerFrameDescriptorSetLayout;
@@ -66,38 +69,6 @@ namespace vku::gfx {
                 static_cast<std::uint32_t>(vkDescriptorSetLayouts.size()), vkDescriptorSetLayouts.data(), 0, nullptr };
             vkPipelineLayout_ = device_->GetDevice().createPipelineLayout(pipelineLayoutInfo);
         }
-
-
-        {
-            std::array<vk::DescriptorPoolSize, 2> descSetPoolSizes;
-            descSetPoolSizes[0] = vk::DescriptorPoolSize{ vk::DescriptorType::eCombinedImageSampler, 1 };
-            descSetPoolSizes[1] = vk::DescriptorPoolSize{ vk::DescriptorType::eUniformBuffer, static_cast<std::uint32_t>(numUBOBuffers) };
-            vk::DescriptorPoolCreateInfo descSetPoolInfo{ vk::DescriptorPoolCreateFlags(), static_cast<std::uint32_t>(numUBOBuffers) + 1,
-                static_cast<std::uint32_t>(descSetPoolSizes.size()), descSetPoolSizes.data() };
-            vkUBODescriptorPool_ = device_->GetDevice().createDescriptorPool(descSetPoolInfo);
-        }
-
-        {
-            std::vector<vk::DescriptorSetLayout> descSetLayouts; descSetLayouts.resize(numUBOBuffers + 1);
-            descSetLayouts[0] = vkDescriptorSetLayouts_[0];
-            for (auto i = 0U; i < numUBOBuffers; ++i) descSetLayouts[i + 1] = vkDescriptorSetLayouts_[1];
-            vk::DescriptorSetAllocateInfo descSetAllocInfo{ vkUBODescriptorPool_, static_cast<std::uint32_t>(descSetLayouts.size()), descSetLayouts.data() };
-            vkUBOSamplerDescritorSets_ = device_->GetDevice().allocateDescriptorSets(descSetAllocInfo);
-        }
-
-        {
-            std::vector<vk::WriteDescriptorSet> descSetWrites; descSetWrites.reserve(numUBOBuffers + 1);
-            vk::DescriptorImageInfo descImageInfo{ vkDemoSampler_, demoTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal };
-            descSetWrites.emplace_back(vkSamplerDescritorSets_[0], 1, 0, 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfo);
-
-            std::vector<vk::DescriptorBufferInfo> descBufferInfos; descBufferInfos.reserve(numUBOBuffers);
-            for (auto i = 0U; i < numUBOBuffers; ++i) {
-                auto bufferOffset = uniformDataOffset_ + (i * singleUBOSize);
-                descBufferInfos.emplace_back(memGroup_.GetBuffer(completeBufferIdx_)->GetBuffer(), bufferOffset, singleUBOSize);
-                descSetWrites.emplace_back(vkUBOSamplerDescritorSets_[i + 1], 0, 0, 1, vk::DescriptorType::eUniformBuffer, nullptr, &descBufferInfos[i], nullptr);
-            }
-            device_->GetDevice().updateDescriptorSets(descSetWrites, nullptr);
-        }
     }
 
     ForwardMeshRenderer::ForwardMeshRenderer(ForwardMeshRenderer&&)
@@ -131,6 +102,12 @@ namespace vku::gfx {
             std::size_t renderableIndex_;
         };
 
+        struct CameraContent {
+            glm::mat4 projMatrix_;
+            glm::mat4 viewMatrix_;
+            glm::vec3 cameraPosition_;
+        };
+
         // vbo/ibo -> renderer
         // material -> renderer [map with material name as a key + buffer]
         // transform -> renderer
@@ -141,15 +118,16 @@ namespace vku::gfx {
         std::vector<Material> materials;
         std::unordered_map<std::string, std::size_t> materialIndices;
 
-        std::vector<std::uint8_t> transformUBOs; // TODO: differentiate between static and dynamic later. [4/17/2017 Sebastian Maisch]
+        auto localTransformAlignment = device_->CalculateUniformBufferAlignment(sizeof(LocalTransform));
+        auto materialAlignment = device_->CalculateUniformBufferAlignment(sizeof(MeshMaterial));
+
+        aligned_vector<LocalTransform> transformUBOs{ localTransformAlignment }; // TODO: differentiate between static and dynamic later. [4/17/2017 Sebastian Maisch]
         std::vector<PartDescriptor> renderableParts;
         std::vector<RenderingQueueObject> renderingQueue;
 
         std::vector<Renderable*> registeredRenderables;
 
         std::size_t numIndices = 0, numVertices = 0;
-        auto localTransformAlignment = device_->CalculateUniformBufferAlignment(sizeof(LocalTransform));
-        auto materialAlignment = device_->CalculateUniformBufferAlignment(sizeof(MeshMaterial));
 
         for (auto soHandle : sceneObjects) {
             auto& sceneObject = application_->GetSceneObjectManager().FromHandle(soHandle);
@@ -187,7 +165,7 @@ namespace vku::gfx {
                     modelMatrix = sceneObject.GetComponent<TransformComponent>()->Matrix();
                 }
 
-                auto transformIndex = renderable->FillLocalTransforms(transformUBOs, modelMatrix, localTransformAlignment);
+                auto transformIndex = renderable->FillLocalTransforms(transformUBOs, modelMatrix);
                 auto numNodes = renderable->GetNumberOfNodes();
                 for (std::size_t nodeID = 0; nodeID < numNodes; ++nodeID) {
                     auto numParts = renderable->GetNumberOfPartsInNode(nodeID);
@@ -208,28 +186,83 @@ namespace vku::gfx {
 
         GatherMeshInfo(sceneObjects, indices, vertices);
 
-        std::vector<MeshMaterial> materialUBOContent;
+        aligned_vector<MeshMaterial> materialUBOContent{ materialAlignment };
         materialUBOContent.reserve(materials.size());
         for (const auto& material : materials) materialUBOContent.emplace_back(material);
 
-        auto bufferSize = numSwapchainImages * byteSizeOf(transformUBOs)
-            + byteSizeOf(materialUBOContent)
-            + byteSizeOf(indices) + byteSizeOf(vertices);
+        const auto transformUBOsSize = byteSizeOf(transformUBOs);
+        const auto cameraUBOSize = device_->CalculateUniformBufferAlignment(sizeof(CameraContent));
+        const auto materialUBOsSize = byteSizeOf(materialUBOContent);
+        const auto indicesSize = byteSizeOf(indices);
+        const auto verticesSize = byteSizeOf(vertices);
+        const auto cameraOffset = 0;
+        const auto transformOffset = cameraOffset + numSwapchainImages_ * cameraUBOSize;
+        const auto materialOffset = transformOffset + numSwapchainImages_ * transformUBOsSize;
+
+        const auto bufferSize = materialOffset + materialUBOsSize + indicesSize + verticesSize;
+
+        CameraContent camera;
+
         auto bufferIndex = memoryGroup.AddBufferToGroup(vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer
             | vk::BufferUsageFlagBits::eUniformBuffer, bufferSize, queueFamilyIndices_);
-        for (auto i = 0U; i < numSwapchainImages; ++i) memoryGroup.AddDataToBufferInGroup(bufferIndex, i * byteSizeOf(transformUBOs), transformUBOs);
-        auto currentOffset = numSwapchainImages * byteSizeOf(transformUBOs);
+        for (auto i = 0U; i < numSwapchainImages_; ++i) memoryGroup.AddDataToBufferInGroup(bufferIndex, i * cameraUBOSize, cameraUBOSize, &camera);
+        auto currentOffset = numSwapchainImages_ * cameraUBOSize;
+        for (auto i = 0U; i < numSwapchainImages_; ++i) memoryGroup.AddDataToBufferInGroup(bufferIndex, currentOffset + i * transformUBOsSize, transformUBOs);
+        currentOffset += numSwapchainImages_ * transformUBOsSize;
 
         memoryGroup.AddDataToBufferInGroup(bufferIndex, currentOffset, materialUBOContent);
-        currentOffset += byteSizeOf(materialUBOContent);
+        currentOffset += materialUBOsSize;
         memoryGroup.AddDataToBufferInGroup(bufferIndex, currentOffset, indices);
-        currentOffset += byteSizeOf(indices);
+        currentOffset += indicesSize;
         memoryGroup.AddDataToBufferInGroup(bufferIndex, currentOffset, vertices);
 
-        constexpr std::size_t numTextures = 2 * numMaterials;
-        constexpr std::size_t numModelMatrixUBOs = numSwapchainImages * numNodes;
-        constexpr std::size_t numMaterialUBOs = numMaterials;
-        constexpr std::size_t numCameraMatrixUBOs = ;
+
+
+
+        {
+            std::array<vk::DescriptorPoolSize, 2> descSetPoolSizes;
+            descSetPoolSizes[0] = vk::DescriptorPoolSize{ vk::DescriptorType::eSampler, 1 };
+            descSetPoolSizes[1] = vk::DescriptorPoolSize{ vk::DescriptorType::eUniformBufferDynamic, 3 }; // ubos (camera + material + transforms)
+            descSetPoolSizes[2] = vk::DescriptorPoolSize{ vk::DescriptorType::eSampledImage, 2 * materials.size() }; // 2*materials
+            vk::DescriptorPoolCreateInfo descSetPoolInfo{ vk::DescriptorPoolCreateFlags(), 2 * static_cast<std::uint32_t>(materials.size()) + 4,
+                static_cast<std::uint32_t>(descSetPoolSizes.size()), descSetPoolSizes.data() };
+            vkUBODescriptorPool_ = device_->GetDevice().createDescriptorPool(descSetPoolInfo);
+        }
+
+        {
+            std::vector<vk::DescriptorSetLayout> descSetLayouts; descSetLayouts.resize(3);
+            descSetLayouts[0] = vkPerFrameDescriptorSetLayout;
+            descSetLayouts[1] = vkPerFrameDescriptorSetLayout;
+            descSetLayouts[2] = vkPerFrameDescriptorSetLayout;
+            // for (auto i = 0U; i < numUBOBuffers; ++i) descSetLayouts[i + 1] = vkDescriptorSetLayouts_[1];
+
+            vk::DescriptorSetAllocateInfo descSetAllocInfo{ vkUBODescriptorPool_, static_cast<std::uint32_t>(descSetLayouts.size()), descSetLayouts.data() };
+            vkPerFrameDescriptorSets_ = device_->GetDevice().allocateDescriptorSets(descSetAllocInfo);
+            vkPerMaterialDescriptorSets_ = device_->GetDevice().allocateDescriptorSets(descSetAllocInfo);
+            vkPerNodeDescriptorSets_ = device_->GetDevice().allocateDescriptorSets(descSetAllocInfo);
+        }
+
+        {
+            std::vector<vk::WriteDescriptorSet> descSetWrites; descSetWrites.reserve(2 * materials.size() + 4);
+            vk::DescriptorImageInfo descSamplerInfo{ vkLinearSampler_ };
+            descSetWrites.emplace_back(vkPerFrameDescriptorSets_[0], 0, 0, 1, vk::DescriptorType::eSampler, &descSamplerInfo);
+            vk::DescriptorBufferInfo descCamBufferInfo{ memoryGroup.GetBuffer(bufferIndex)->GetBuffer(), cameraOffset, cameraUBOSize };
+            descSetWrites.emplace_back(vkPerFrameDescriptorSets_[1], 1, 0, 1, vk::DescriptorType::eUniformBufferDynamic, nullptr, &descCamBufferInfo);
+
+            vk::DescriptorBufferInfo descMaterialInfo{ memoryGroup.GetBuffer(bufferIndex)->GetBuffer(), materialOffset, materialAlignment };
+            descSetWrites.emplace_back(vkPerMaterialDescriptorSets_[0], 0, 0, 1, vk::DescriptorType::eUniformBufferDynamic, nullptr, &descMaterialInfo);
+            for (std::size_t i = 0; i < materials.size(); ++i) {
+                vk::DescriptorImageInfo descDiffuseTexture{ vk::Sampler(), materials[i].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal };
+                descSetWrites.emplace_back(vkPerMaterialDescriptorSets_[2*i + 1], 1, 0, 1, vk::DescriptorType::eSampledImage, &descDiffuseTexture);
+                vk::DescriptorImageInfo descBumpTexture{ vk::Sampler(), materials[i].bumpMap_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal };
+                descSetWrites.emplace_back(vkPerMaterialDescriptorSets_[2*i + 2], 2, 0, 1, vk::DescriptorType::eSampledImage, &descBumpTexture);
+            }
+
+            vk::DescriptorBufferInfo descTransformInfo{ memoryGroup.GetBuffer(bufferIndex)->GetBuffer(), transformOffset, localTransformAlignment };
+            descSetWrites.emplace_back(vkPerNodeDescriptorSets_[0], 0, 0, 1, vk::DescriptorType::eUniformBufferDynamic, nullptr, &descTransformInfo);
+
+            device_->GetDevice().updateDescriptorSets(descSetWrites, nullptr);
+        }
     }
 
     void ForwardMeshRenderer::GatherMeshInfo(const Scene& sceneObjects,

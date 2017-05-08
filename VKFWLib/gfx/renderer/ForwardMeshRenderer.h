@@ -47,6 +47,8 @@ namespace vku::gfx {
         const gfx::LogicalDevice* device_;
         /** Holds the application. */
         const ApplicationBase* application_;
+        /** Holds the number of swapchain images. */
+        const unsigned int numSwapchainImages_;
         /** Holds the queue family indices used for buffers and textures. */
         std::vector<std::uint32_t> queueFamilyIndices_;
         /** Holds the pipeline layout for demo rendering. */

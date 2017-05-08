@@ -85,6 +85,8 @@ namespace vku {
         void resize(size_type count, const value_type& value);
         void swap(aligned_vector& other) noexcept;
 
+        std::size_t GetAlignedSize() const { return alignedSize_; }
+
     private:
         /** Holds the vectors alignment. */
         std::size_t alignedSize_;
