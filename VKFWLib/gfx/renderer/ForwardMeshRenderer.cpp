@@ -33,10 +33,6 @@ namespace vku::gfx {
         numSwapchainImages_{ numSwapchainImages },
         queueFamilyIndices_{ queueFamilyIndices }
     {
-        vk::DescriptorSetLayout vkPerFrameDescriptorSetLayout;
-        vk::DescriptorSetLayout vkPerMaterialDescriptorSetLayout;
-        vk::DescriptorSetLayout vkPerNodeDescriptorSetLayout;
-
         {
             std::vector<vk::DescriptorSetLayoutBinding> perFrameLayoutBindings; perFrameLayoutBindings.reserve(2);
             perFrameLayoutBindings.emplace_back(0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex); // camera matrices
@@ -52,22 +48,27 @@ namespace vku::gfx {
 
             vk::DescriptorSetLayoutCreateInfo perFrameLayoutCreateInfo{ vk::DescriptorSetLayoutCreateFlags(),
                 static_cast<std::uint32_t>(perFrameLayoutBindings.size()), perFrameLayoutBindings.data() };
-            vkPerFrameDescriptorSetLayout = device_->GetDevice().createDescriptorSetLayout(perFrameLayoutCreateInfo);
+            vkDescriptorSetLayouts_[DESCSET_FRAME] = device_->GetDevice().createDescriptorSetLayout(perFrameLayoutCreateInfo);
 
             vk::DescriptorSetLayoutCreateInfo perMaterialLayoutCreateInfo{ vk::DescriptorSetLayoutCreateFlags(),
                 static_cast<std::uint32_t>(perMaterialLayoutBindings.size()), perMaterialLayoutBindings.data() };
-            vkPerMaterialDescriptorSetLayout = device_->GetDevice().createDescriptorSetLayout(perMaterialLayoutCreateInfo);
+            vkDescriptorSetLayouts_[DESCSET_MATERIAL] = device_->GetDevice().createDescriptorSetLayout(perMaterialLayoutCreateInfo);
 
             vk::DescriptorSetLayoutCreateInfo perNodeLayoutCreateInfo{ vk::DescriptorSetLayoutCreateFlags(),
                 static_cast<std::uint32_t>(perNodeLayoutBindings.size()), perNodeLayoutBindings.data() };
-            vkPerNodeDescriptorSetLayout = device_->GetDevice().createDescriptorSetLayout(perNodeLayoutCreateInfo);
+            vkDescriptorSetLayouts_[DESCSET_NODE] = device_->GetDevice().createDescriptorSetLayout(perNodeLayoutCreateInfo);
         }
 
         {
-            std::array<vk::DescriptorSetLayout, 3> vkDescriptorSetLayouts{ vkPerFrameDescriptorSetLayout, vkPerMaterialDescriptorSetLayout, vkPerNodeDescriptorSetLayout };
             vk::PipelineLayoutCreateInfo pipelineLayoutInfo{ vk::PipelineLayoutCreateFlags(),
-                static_cast<std::uint32_t>(vkDescriptorSetLayouts.size()), vkDescriptorSetLayouts.data(), 0, nullptr };
+                static_cast<std::uint32_t>(vkDescriptorSetLayouts_.size()), vkDescriptorSetLayouts_.data(), 0, nullptr };
             vkPipelineLayout_ = device_->GetDevice().createPipelineLayout(pipelineLayoutInfo);
+        }
+        
+        {
+            vk::SamplerCreateInfo samplerCreateInfo{ vk::SamplerCreateFlags(), vk::Filter::eLinear, vk::Filter::eLinear,
+                vk::SamplerMipmapMode::eNearest, vk::SamplerAddressMode::eRepeat, vk::SamplerAddressMode::eRepeat, vk::SamplerAddressMode::eRepeat };
+            vkLinearSampler_ = device_->GetDevice().createSampler(samplerCreateInfo);
         }
     }
 
@@ -230,27 +231,25 @@ namespace vku::gfx {
         }
 
         {
-            std::vector<vk::DescriptorSetLayout> descSetLayouts; descSetLayouts.resize(3);
+            // std::vector<vk::DescriptorSetLayout> descSetLayouts; descSetLayouts.resize(3);
             descSetLayouts[0] = vkPerFrameDescriptorSetLayout;
             descSetLayouts[1] = vkPerFrameDescriptorSetLayout;
             descSetLayouts[2] = vkPerFrameDescriptorSetLayout;
             // for (auto i = 0U; i < numUBOBuffers; ++i) descSetLayouts[i + 1] = vkDescriptorSetLayouts_[1];
 
-            vk::DescriptorSetAllocateInfo descSetAllocInfo{ vkUBODescriptorPool_, static_cast<std::uint32_t>(descSetLayouts.size()), descSetLayouts.data() };
-            vkPerFrameDescriptorSets_ = device_->GetDevice().allocateDescriptorSets(descSetAllocInfo);
-            vkPerMaterialDescriptorSets_ = device_->GetDevice().allocateDescriptorSets(descSetAllocInfo);
-            vkPerNodeDescriptorSets_ = device_->GetDevice().allocateDescriptorSets(descSetAllocInfo);
+            vk::DescriptorSetAllocateInfo descSetAllocInfo{ vkUBODescriptorPool_, static_cast<std::uint32_t>(vkDescriptorSetLayouts_.size()), vkDescriptorSetLayouts_.data() };
+            vkDescritorSets_ = device_->GetDevice().allocateDescriptorSets(descSetAllocInfo);
         }
 
         {
             std::vector<vk::WriteDescriptorSet> descSetWrites; descSetWrites.reserve(2 * materials.size() + 4);
             vk::DescriptorImageInfo descSamplerInfo{ vkLinearSampler_ };
-            descSetWrites.emplace_back(vkPerFrameDescriptorSets_[0], 0, 0, 1, vk::DescriptorType::eSampler, &descSamplerInfo);
+            descSetWrites.emplace_back(vkDescritorSets_[DESCSET_FRAME], 0, 0, 1, vk::DescriptorType::eSampler, &descSamplerInfo);
             vk::DescriptorBufferInfo descCamBufferInfo{ memoryGroup.GetBuffer(bufferIndex)->GetBuffer(), cameraOffset, cameraUBOSize };
-            descSetWrites.emplace_back(vkPerFrameDescriptorSets_[1], 1, 0, 1, vk::DescriptorType::eUniformBufferDynamic, nullptr, &descCamBufferInfo);
+            descSetWrites.emplace_back(vkDescritorSets_[DESCSET_FRAME], 1, 0, 1, vk::DescriptorType::eUniformBufferDynamic, nullptr, &descCamBufferInfo);
 
             vk::DescriptorBufferInfo descMaterialInfo{ memoryGroup.GetBuffer(bufferIndex)->GetBuffer(), materialOffset, materialAlignment };
-            descSetWrites.emplace_back(vkPerMaterialDescriptorSets_[0], 0, 0, 1, vk::DescriptorType::eUniformBufferDynamic, nullptr, &descMaterialInfo);
+            descSetWrites.emplace_back(vkDescritorSets_[DESCSET_MATERIAL], 0, 0, 1, vk::DescriptorType::eUniformBufferDynamic, nullptr, &descMaterialInfo);
             for (std::size_t i = 0; i < materials.size(); ++i) {
                 vk::DescriptorImageInfo descDiffuseTexture{ vk::Sampler(), materials[i].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal };
                 descSetWrites.emplace_back(vkPerMaterialDescriptorSets_[2*i + 1], 1, 0, 1, vk::DescriptorType::eSampledImage, &descDiffuseTexture);
@@ -259,7 +258,7 @@ namespace vku::gfx {
             }
 
             vk::DescriptorBufferInfo descTransformInfo{ memoryGroup.GetBuffer(bufferIndex)->GetBuffer(), transformOffset, localTransformAlignment };
-            descSetWrites.emplace_back(vkPerNodeDescriptorSets_[0], 0, 0, 1, vk::DescriptorType::eUniformBufferDynamic, nullptr, &descTransformInfo);
+            descSetWrites.emplace_back(vkDescritorSets_[DESCSET_NODE], 0, 0, 1, vk::DescriptorType::eUniformBufferDynamic, nullptr, &descTransformInfo);
 
             device_->GetDevice().updateDescriptorSets(descSetWrites, nullptr);
         }

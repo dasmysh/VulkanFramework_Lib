@@ -43,6 +43,10 @@ namespace vku::gfx {
     protected:
 
     private:
+        static constexpr int DESCSET_FRAME = 0;
+        static constexpr int DESCSET_MATERIAL = 1;
+        static constexpr int DESCSET_NODE = 2;
+
         /** Holds the device. */
         const gfx::LogicalDevice* device_;
         /** Holds the application. */
@@ -54,15 +58,22 @@ namespace vku::gfx {
         /** Holds the pipeline layout for demo rendering. */
         vk::PipelineLayout vkPipelineLayout_;
         /** Holds the descriptor pool for the UBO binding. */
-        vk::DescriptorPool vkUBODescriptorPool_;
-        /** Holds the descriptor sets for the UBO binding. */
-        std::vector<vk::DescriptorSet> vkUBODescritorSets_;
+        // vk::DescriptorPool vkUBODescriptorPool_;
+
+        /** Holds the descriptor set layouts for the rendering pipeline. */
+        std::array<vk::DescriptorSetLayout, 3> vkDescriptorSetLayouts_;
+        /** Holds the descriptor sets used for rendering. */
+        std::vector<vk::DescriptorSet> vkDescritorSets_;
         /** Holds the descriptor sets for the sampler binding. */
-        std::vector<vk::DescriptorSet> vkSamplerDescritorSets_;
+        // std::vector<vk::DescriptorSet> vkSamplerDescritorSets_;
         /** Holds the descriptor sets for the image binding. */
-        std::vector<vk::DescriptorSet> vkImageDescritorSets_;
+        // std::vector<vk::DescriptorSet> vkImageDescritorSets_;
         /** Holds the graphics pipeline for demo rendering. */
-        std::unique_ptr<vku::gfx::GraphicsPipeline> demoPipeline_;
+        // std::unique_ptr<vku::gfx::GraphicsPipeline> demoPipeline_;
+
+
+        /** Holds the texture sampler. */
+        vk::Sampler vkLinearSampler_;
     };
 
 }
