@@ -1,4 +1,3 @@
-#include "serialization_helper.h"
 /**
  * @file   serialization_helper.cpp
  * @author Sebastian Maisch <sebastian.maisch@googlemail.com>
