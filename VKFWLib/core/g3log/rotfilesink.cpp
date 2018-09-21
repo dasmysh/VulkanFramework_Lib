@@ -87,7 +87,8 @@ namespace vku {
 
     RotationFileSink::~RotationFileSink() {
         std::string exit_msg{ "\ng3log g3FileSink shutdown at: " };
-        exit_msg.append(g3::localtime_formatted(g3::systemtime_now(), g3::internal::time_formatted));
+        auto now = std::chrono::system_clock::now();
+        exit_msg.append(g3::localtime_formatted(now, g3::internal::time_formatted));
         filestream() << exit_msg << std::flush;
 
         exit_msg.append({ "\nLog file at: [" }).append(_log_file_with_path).append({ "]\n\n" });
@@ -103,7 +104,7 @@ namespace vku {
 
     std::string RotationFileSink::changeLogFile(const std::string &directory, const std::string &logger_id) {
 
-        auto now = g3::systemtime_now();
+        auto now = std::chrono::system_clock::now();
         auto now_formatted = g3::localtime_formatted(now, { g3::internal::date_formatted + " " + g3::internal::time_formatted });
 
         auto file_name = createLogFileName(_log_prefix_backup, logger_id, rotationSize_);

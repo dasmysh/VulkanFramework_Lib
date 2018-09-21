@@ -22,14 +22,13 @@ namespace vku::gfx {
         numIndices_(numIndices),
         materialID_(materialID)
     {
-        aabb_.minmax[0] = glm::vec3(std::numeric_limits<float>::infinity()); aabb_.minmax[1] = glm::vec3(-std::numeric_limits<float>::infinity());
         if (numIndices_ == 0) return;
         auto& vertices = mesh->GetVertices();
         auto& indices = mesh->GetIndices();
-        aabb_.minmax[0] = aabb_.minmax[1] = vertices[indices[indexOffset_]];
+        aabb_.minmax_[0] = aabb_.minmax_[1] = vertices[indices[indexOffset_]];
         for (auto i = indexOffset_; i < indexOffset_ + numIndices_; ++i) {
-            aabb_.minmax[0] = glm::min(aabb_.minmax[0], vertices[indices[i]]);
-            aabb_.minmax[1] = glm::max(aabb_.minmax[1], vertices[indices[i]]);
+            aabb_.minmax_[0] = glm::min(aabb_.minmax_[0], vertices[indices[i]]);
+            aabb_.minmax_[1] = glm::max(aabb_.minmax_[1], vertices[indices[i]]);
         }
     }
 

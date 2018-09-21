@@ -47,7 +47,7 @@ namespace vku::gfx {
         virtual std::size_t GetTotalElementCount() const;
         virtual std::size_t GetTotalVertexCount() const;
         virtual std::size_t GetIndices(std::vector<std::uint32_t>& indices) const;
-        virtual std::size_t GetTotalVertexCount() const;
+        // virtual std::size_t GetTotalVertexCount() const;
 
         virtual std::size_t FillLocalTransforms(aligned_vector<LocalTransform>& localTransforms, const glm::mat4& modelMatrix) const;
         virtual std::size_t UpdateLocalTransforms(aligned_vector<LocalTransform>& localTransforms, const glm::mat4& modelMatrix) const;

@@ -95,8 +95,8 @@ namespace vku::gfx {
     void Mesh::DrawMeshNode(vk::CommandBuffer cmdBuffer, const SceneMeshNode* node, const glm::mat4& worldMatrix) const
     {
         auto nodeWorld = node->GetLocalTransform() * worldMatrix;
-        for (unsigned int i = 0; i < node->GetNumMeshes(); ++i) DrawSubMesh(cmdBuffer, node->GetMesh(i), nodeWorld);
-        for (unsigned int i = 0; i < node->GetNumNodes(); ++i) DrawMeshNode(cmdBuffer, node->GetChild(i), nodeWorld);
+        for (unsigned int i = 0; i < node->GetNumberOfSubMeshes(); ++i) DrawSubMesh(cmdBuffer, meshInfo_->GetSubMesh(node->GetSubMeshID(i)), nodeWorld);
+        for (unsigned int i = 0; i < node->GetNumberOfNodes(); ++i) DrawMeshNode(cmdBuffer, node->GetChild(i), nodeWorld);
     }
 
     void Mesh::DrawSubMesh(vk::CommandBuffer cmdBuffer, const SubMesh* subMesh, const glm::mat4& worldMatrix) const

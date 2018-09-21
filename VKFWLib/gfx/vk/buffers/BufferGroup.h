@@ -3,7 +3,7 @@
  * @author Sebastian Maisch <sebastian.maisch@googlemail.com>
  * @date   2016.11.27
  *
- * @brief  Declaration of a class managing multiple vulkan buffers for simultaneous memory usage.
+ * @brief  Declaration of a class managing multiple Vulkan buffers for simultaneous memory usage.
  */
 
 #pragma once

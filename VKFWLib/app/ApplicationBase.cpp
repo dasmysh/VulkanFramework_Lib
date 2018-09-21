@@ -9,13 +9,9 @@
 #include "ApplicationBase.h"
 #include "app/VKWindow.h"
 
-#define WIN32_LEAN_AND_MEAN
-#define WIN32_EXTRA_LEAN
 #pragma warning(push, 3)
 #include <Windows.h>
 #pragma warning(pop)
-#undef min
-#undef max
 
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
@@ -428,7 +424,7 @@ namespace vku {
         CheckVKInstanceLayers();
 
         {
-            vk::ApplicationInfo appInfo{ applicationName.c_str(), applicationVersion, engineName, engineVersion, VK_API_VERSION_1_0 };
+            vk::ApplicationInfo appInfo{ applicationName.c_str(), applicationVersion, engineName, engineVersion, VK_API_VERSION_1_1 };
             vk::InstanceCreateInfo createInfo{ vk::InstanceCreateFlags(), &appInfo, static_cast<std::uint32_t>(vkValidationLayers_.size()), vkValidationLayers_.data(),
                 static_cast<std::uint32_t>(enabledExtensions.size()), enabledExtensions.data() };
 

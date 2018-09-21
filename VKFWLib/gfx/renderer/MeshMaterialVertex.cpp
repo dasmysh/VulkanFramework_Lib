@@ -6,7 +6,7 @@
  * @brief  Implementations for the vertex format for meshes.
  */
 
-#include "MeshVertex.h"
+#include "MeshMaterialVertex.h"
 #include "gfx/meshes/MeshInfo.h"
 
 namespace vku::gfx {

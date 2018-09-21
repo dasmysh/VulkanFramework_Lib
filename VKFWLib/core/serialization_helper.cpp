@@ -15,7 +15,7 @@ namespace vku {
         ArchiveWrapper{ filename }
     {
         if (IsValid()) {
-            auto lastModTime = std::experimental::filesystem::last_write_time(filename);
+            auto lastModTime = std::filesystem::last_write_time(filename);
             auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(lastModTime.time_since_epoch()).count();
             decltype(timestamp) binTimestamp;
             (*this)(cereal::make_nvp("timestamp", binTimestamp));
@@ -35,7 +35,7 @@ namespace vku {
     BinaryOAWrapper::BinaryOAWrapper(const std::string& filename) :
         ArchiveWrapper{ filename }
     {
-        auto lastModTime = std::experimental::filesystem::last_write_time(filename);
+        auto lastModTime = std::filesystem::last_write_time(filename);
         auto timestamp = std::chrono::duration_cast<std::chrono::seconds>(lastModTime.time_since_epoch()).count();
         (*this)(cereal::make_nvp("timestamp", timestamp));
     }

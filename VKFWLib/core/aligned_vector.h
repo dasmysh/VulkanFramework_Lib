@@ -115,7 +115,7 @@ namespace vku {
     }
 
     template<typename T>
-    inline aligned_vector& aligned_vector<T>::operator=(const aligned_vector& rhs)
+    inline aligned_vector<T>& aligned_vector<T>::operator=(const aligned_vector<T>& rhs)
     {
         if (this != &rhs) {
             alignedSize_ = rhs.alignedSize_;
@@ -125,7 +125,7 @@ namespace vku {
     }
 
     template<typename T>
-    inline aligned_vector& aligned_vector<T>::operator=(aligned_vector&& rhs) noexcept
+    inline aligned_vector<T>& aligned_vector<T>::operator=(aligned_vector<T>&& rhs) noexcept
     {
         alignedSize_ = rhs.alignedSize_;
         cont_ = std::move(rhs.cont_);
@@ -156,7 +156,7 @@ namespace vku {
 
     template<typename T>
     template<class ...Args>
-    inline reference aligned_vector<T>::emplace_back(Args&&... args)
+    inline typename aligned_vector<T>::reference aligned_vector<T>::emplace_back(Args&&... args)
     {
         auto oldSize = cont_.size();
         resize(oldSize + alignedSize_);

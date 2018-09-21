@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.7)
+cmake_minimum_required(VERSION 3.9)
 
 set(FWLIB_LIBNAME VKFWLib)
 set(FWLIB_LIBNAME ${FWLIB_LIBNAME} PARENT_SCOPE)
@@ -6,7 +6,7 @@ project(${FWLIB_LIBNAME})
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompileSpirvShader.cmake")
 
-find_package(Vulkan 1.0.30.0 REQUIRED)
+find_package(Vulkan 1.1.82.0 REQUIRED)
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "Build the GLFW documentation" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "Build the GLFW example programs" FORCE)
@@ -75,9 +75,9 @@ set(FW_DEBUG_PIPELINE ON CACHE BOOL "Checks if application is started from Rende
 SET(CMAKE_DEBUG_POSTFIX "")
 
 if(MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /WX /EHsc /std:c++latest")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /WX /EHsc")
 else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unused-function -Wno-unused-parameter -Wextra -Wpedantic -std=c++14")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unused-function -Wno-unused-parameter -Wextra -Wpedantic")
     if(NOT WIN32)
         set(GLAD_LIBRARIES dl)
     endif()
@@ -138,11 +138,21 @@ endforeach()
 
 file(GLOB LIB_CONFIGS CMakeLists.txt Readme.md .gitattributes .gitignore .gitmodules .clang-format)
 
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME} ${VULKAN_INCLUDE_DIR} extern/glfw/include extern/glm extern/g3log/src extern/stb extern/cereal/include extern/assimp/include)
 add_library(${FWLIB_LIBNAME} SHARED ${LIB_COMPILED_SHADERS} ${LIB_TMP_FILES} ${LIB_TOP_FILES} ${LIB_RES_FILES} ${LIB_CONFIGS} ${EXTERN_SOURCES})
-target_include_directories(${FWLIB_LIBNAME} PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME} ${VULKAN_INCLUDE_DIR} extern/glfw/include extern/glm extern/g3log/src extern/cereal/include extern/assimp/include)
-target_compile_definitions(${FWLIB_LIBNAME} PUBLIC VULKAN_HPP_TYPESAFE_CONVERSION)
+target_include_directories(${FWLIB_LIBNAME} PUBLIC
+    ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}
+    ${VULKAN_INCLUDE_DIR}
+    extern/glfw/include
+    extern/glm
+    extern/g3log/src
+    ${CMAKE_CURRENT_BINARY_DIR}/extern/g3log/include
+    extern/stb
+    extern/cereal/include
+    extern/assimp/include
+    ${CMAKE_CURRENT_BINARY_DIR}/extern/assimp/include)
+target_compile_definitions(${FWLIB_LIBNAME} PUBLIC VULKAN_HPP_TYPESAFE_CONVERSION _CRT_SECURE_NO_WARNINGS _SCL_SECURE_NO_WARNINGS WIN32_LEAN_AND_MEAN WIN32_EXTRA_LEAN NOMINMAX)
 target_compile_definitions(${FWLIB_LIBNAME} PRIVATE VKUFW_EXPORT)
+set_property(TARGET ${FWLIB_LIBNAME} PROPERTY CXX_STANDARD 17)
 
 if (${FW_DEBUG_PIPELINE})
     target_compile_definitions(${FWLIB_LIBNAME} PUBLIC FW_DEBUG_PIPELINE)
