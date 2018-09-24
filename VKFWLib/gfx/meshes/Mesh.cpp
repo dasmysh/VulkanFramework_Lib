@@ -56,10 +56,18 @@ namespace vku::gfx {
         return *this;
     }
 
-    Mesh::~Mesh() = default;
+    Mesh::~Mesh()
+    {
+        if (textureSampler_);// todo: need device here?
+    }
 
     void Mesh::CreateMaterials(const LogicalDevice* device, MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
+        vk::SamplerCreateInfo samplerCreateInfo{ vk::SamplerCreateFlags(), vk::Filter::eLinear, vk::Filter::eLinear,
+            vk::SamplerMipmapMode::eNearest, vk::SamplerAddressMode::eRepeat, vk::SamplerAddressMode::eRepeat,
+            vk::SamplerAddressMode::eRepeat };
+        textureSampler_ = device->GetDevice().createSampler(samplerCreateInfo);
+
         auto numMaterials = meshInfo_->GetMaterials().size();
         std::vector<vk::DescriptorPoolSize> poolSizes;
         poolSizes.emplace_back(vk::DescriptorType::eUniformBuffer, numMaterials);
@@ -94,22 +102,24 @@ namespace vku::gfx {
             const auto& mat = meshInfo_->GetMaterials()[i];
             materials_.emplace_back(&mat, device, memoryGroup, queueFamilyIndices);
             descSetLayouts[i] = descSetLayout;
+
+
         }
 
         vk::DescriptorSetAllocateInfo descSetAllocInfo{ vkUBODescriptorPool_, static_cast<std::uint32_t>(descSetLayouts.size()), descSetLayouts.data() };
         auto vkUBOSamplerDescritorSets_ = device->GetDevice().allocateDescriptorSets(descSetAllocInfo);
 
         for (std::size_t i = 0; i < numMaterials; ++i) {
-            descSetWrites.emplace_back(memGroup_.GetBuffer(completeBufferIdx_)->GetBuffer(), bufferOffset, singleUBOSize);
-            descSetWrites.emplace_back(vkUBOSamplerDescritorSets_[i], 0, i, 1, vk::DescriptorType::eUniformBuffer, nullptr, &descBufferInfos[i], nullptr);
+            descWriteInfos.emplace_back(std::get<0>(materialBuffer_)->GetBuffer(), std::get<1>(materialBuffer_), std::get<2>(materialBuffer_));
+            descSetWrites.emplace_back(vkUBOSamplerDescritorSets_[i], 0, i, 1, vk::DescriptorType::eUniformBuffer, nullptr, &descWriteInfos[3 * i + 0]);
 
-            vk::DescriptorImageInfo descImageInfo{ vkDemoSampler_, materials_[i].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal };
-            descSetWrites.emplace_back(vkUBOSamplerDescritorSets_[i], 1, i, 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfo);
-            vk::DescriptorImageInfo descImageInfo{ vkDemoSampler_, materials_[i].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal };
-            descSetWrites.emplace_back(vkUBOSamplerDescritorSets_[i], 2, i, 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfo);
+            descWriteInfos.emplace_back(textureSampler_, materials_[i].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+            descSetWrites.emplace_back(vkUBOSamplerDescritorSets_[i], 1, i, 1, vk::DescriptorType::eCombinedImageSampler, &descWriteInfos[3 * i + 1]);
+            vk::DescriptorImageInfo descImageInfo{ textureSampler_, materials_[i].bumpMap_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal };
+            descSetWrites.emplace_back(vkUBOSamplerDescritorSets_[i], 2, i, 1, vk::DescriptorType::eCombinedImageSampler, &descWriteInfos[3 * i + 2]);
         }
 
-        device.GetDevice().updateDescriptorSets(descSetWrites, nullptr);
+        device->GetDevice().updateDescriptorSets(descSetWrites, nullptr);
 
 
         // {
@@ -118,13 +128,13 @@ namespace vku::gfx {
         //     vkPipelineLayout_ = device.GetDevice().createPipelineLayout(pipelineLayoutInfo);
         // }
 
-        {
-            std::vector<vk::DescriptorSetLayout> descSetLayouts; descSetLayouts.resize(numUBOBuffers + 1);
-            descSetLayouts[0] = descSetLayout;
-            for (auto i = 0U; i < numUBOBuffers; ++i) descSetLayouts[i + 1] = vkDescriptorSetLayouts_[1];
-            vk::DescriptorSetAllocateInfo descSetAllocInfo{ vkUBODescriptorPool_, static_cast<std::uint32_t>(descSetLayouts.size()), descSetLayouts.data() };
-            vkUBOSamplerDescritorSets_ = device.GetDevice().allocateDescriptorSets(descSetAllocInfo);
-        }
+        // {
+        //     std::vector<vk::DescriptorSetLayout> descSetLayouts; descSetLayouts.resize(numUBOBuffers + 1);
+        //     descSetLayouts[0] = descSetLayout;
+        //     for (auto i = 0U; i < numUBOBuffers; ++i) descSetLayouts[i + 1] = vkDescriptorSetLayouts_[1];
+        //     vk::DescriptorSetAllocateInfo descSetAllocInfo{ vkUBODescriptorPool_, static_cast<std::uint32_t>(descSetLayouts.size()), descSetLayouts.data() };
+        //     vkUBOSamplerDescritorSets_ = device.GetDevice().allocateDescriptorSets(descSetAllocInfo);
+        // }
     }
 
     void Mesh::UploadMeshData(QueuedDeviceTransfer& transfer)
@@ -224,9 +234,8 @@ namespace vku::gfx {
         indexBuffer_.second = offset;
     }
 
-    void Mesh::SetMaterialBuffer(const DeviceBuffer* matBuffer, std::size_t offset)
+    void Mesh::SetMaterialBuffer(const DeviceBuffer* matBuffer, std::size_t offset, std::size_t elementSize)
     {
-        materialBuffer_.first = matBuffer;
-        materialBuffer_.second = offset;
+        materialBuffer_ = std::make_tuple(matBuffer, offset, elementSize);
     }
 }

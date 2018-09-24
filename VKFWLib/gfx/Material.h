@@ -66,7 +66,7 @@ namespace vku::gfx {
         ~Material();
 
         /** Holds the material information. */
-        const MaterialInfo* materialInfo_;
+        const MaterialInfo* materialInfo_ = nullptr;
         /** Holds the materials diffuse texture. */
         std::shared_ptr<Texture2D> diffuseTexture_;
         /** Holds the materials bump map. */

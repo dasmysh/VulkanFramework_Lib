@@ -12,6 +12,7 @@
 #include "core/type_traits.h"
 #include "gfx/Material.h"
 #include "MeshInfo.h"
+#include <tuple>
 
 namespace vku::gfx {
 
@@ -65,7 +66,7 @@ namespace vku::gfx {
 
         void SetVertexBuffer(const DeviceBuffer* vtxBuffer, std::size_t offset);
         void SetIndexBuffer(const DeviceBuffer* idxBuffer, std::size_t offset);
-        void SetMaterialBuffer(const DeviceBuffer* matBuffer, std::size_t offset);
+        void SetMaterialBuffer(const DeviceBuffer* matBuffer, std::size_t offset, std::size_t elementSize);
 
 
         struct MaterialDescriptorSet
@@ -84,9 +85,11 @@ namespace vku::gfx {
         /** Holds a pointer to the index buffer and an offset to the index data. */
         std::pair<const DeviceBuffer*, std::size_t> indexBuffer_;
         /** Holds a pointer to the material buffer and an offset to the material data. */
-        std::pair<const DeviceBuffer*, std::size_t> materialBuffer_;
+        std::tuple<const DeviceBuffer*, std::size_t, std::size_t> materialBuffer_;
         /** Holds the meshes materials. */
         std::vector<Material> materials_;
+        /** The sampler for the materials textures. */
+        vk::Sampler textureSampler_;
         /** The descriptor set for the material UBO. */
         // 
         /** Holds the material descriptor sets. */
