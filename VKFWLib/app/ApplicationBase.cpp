@@ -190,14 +190,14 @@ namespace vku {
         currentTime_(0.0),
         elapsedTime_(0.0)
     {
-        LOG(DEBUG) << "Trying to load configuration.";
+        LOG(G3LOG_DEBUG) << "Trying to load configuration.";
         std::ifstream configFile(configFileName, std::ios::in);
         if (configFile.is_open()) {
             cereal::XMLInputArchive ia(configFile);
             ia >> cereal::make_nvp("configuration", config_);
         }
         else {
-            LOG(DEBUG) << "Configuration file not found. Using standard config.";
+            LOG(G3LOG_DEBUG) << "Configuration file not found. Using standard config.";
         }
 
         {
@@ -222,7 +222,7 @@ namespace vku {
         if (vkDebugReportCB_) vk::DestroyDebugReportCallbackEXT(vkInstance_, vkDebugReportCB_, nullptr);
         if (vkInstance_) vkInstance_.destroy();
 
-        LOG(DEBUG) << "Exiting application. Saving configuration to file.";
+        LOG(G3LOG_DEBUG) << "Exiting application. Saving configuration to file.";
         std::ofstream ofs(configFileName_, std::ios::out);
         cereal::XMLOutputArchive oa(ofs);
         oa << cereal::make_nvp("configuration", config_);

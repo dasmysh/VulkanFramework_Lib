@@ -45,7 +45,7 @@
 
 const LEVELS ERROR{ WARNING.value + 200,{ "Vulkan" } };
 const LEVELS VK_GEN{ INFO.value + 2,{ "Vulkan" } };
-const LEVELS VK_DEBUG{ DEBUG.value + 1,{ "Vulkan DEBUG" } };
+const LEVELS VK_DEBUG{ G3LOG_DEBUG.value + 1,{ "Vulkan DEBUG" } };
 const LEVELS VK_INFO{ INFO.value + 1,{ "Vulkan DEBUG" } };
 const LEVELS VK_WARNING{ WARNING.value + 1,{ "Vulkan WARNING" } };
 const LEVELS VK_PERF_WARNING{ WARNING.value + 2,{ "Vulkan PERFORMANCE WARNING" } };

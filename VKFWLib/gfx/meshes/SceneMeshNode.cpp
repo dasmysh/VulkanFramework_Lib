@@ -53,7 +53,7 @@ namespace vku::gfx {
         boundingBoxValid_(rhs.boundingBoxValid_)
     {
         children_.resize(rhs.children_.size());
-        for (auto i = 0; i < children_.size(); ++i) children_[i] = std::make_unique<SceneMeshNode>(*rhs.children_[i]);
+        for (std::size_t i = 0; i < children_.size(); ++i) children_[i] = std::make_unique<SceneMeshNode>(*rhs.children_[i]);
     }
 
     SceneMeshNode::SceneMeshNode(SceneMeshNode&& rhs) noexcept :

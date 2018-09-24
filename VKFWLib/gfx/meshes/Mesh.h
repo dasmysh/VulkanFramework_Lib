@@ -67,6 +67,14 @@ namespace vku::gfx {
         void SetIndexBuffer(const DeviceBuffer* idxBuffer, std::size_t offset);
         void SetMaterialBuffer(const DeviceBuffer* matBuffer, std::size_t offset);
 
+
+        struct MaterialDescriptorSet
+        {
+            vk::DescriptorSet materialUBODescriptorSet_;
+            vk::DescriptorSet diffuseTexDescriptorSet_;
+            vk::DescriptorSet bumpTexDescriptorSet_;
+        };
+
         /** Holds the mesh info object containing vertex/index data. */
         std::shared_ptr<const MeshInfo> meshInfo_;
         /** Holds the internal memory group. */
@@ -79,6 +87,11 @@ namespace vku::gfx {
         std::pair<const DeviceBuffer*, std::size_t> materialBuffer_;
         /** Holds the meshes materials. */
         std::vector<Material> materials_;
+        /** The descriptor set for the material UBO. */
+        // 
+        /** Holds the material descriptor sets. */
+        std::vector<MaterialDescriptorSet> materialDescriptorSets_;
+
         /** Holds the size of a single material in the buffer. */
 
         /** Holds the vertex and material data while the mesh is constructed. */
@@ -127,13 +140,6 @@ namespace vku::gfx {
         auto indexBufferSize = vku::byteSizeOf(meshInfo_->GetIndices());
         auto materialBufferSize = device.CalculateUniformBufferAlignment(byteSizeOf(materials));
 
-        // for uniform buffer containing local matrix:
-        // need layout (2x mat4?)
-        // needed for each mesh node -> count nodes (nn)
-        // also needed times the number of backbuffers ... -> new parameter (nb)
-        // aaand times the number of objects to be rendered (no)
-        // => 2*nn*nb*no mat4s
-
         vertexMaterialData_.resize(vertexBufferSize + materialBufferSize);
         memcpy(vertexMaterialData_.data(), vertices.data(), vertexBufferSize);
         memcpy(vertexMaterialData_.data() + vertexBufferSize, materials.data(), materialBufferSize);
@@ -146,7 +152,6 @@ namespace vku::gfx {
         memoryGroup->AddDataToBufferInGroup(bufferIdx, offset + vertexBufferSize, meshInfo_->GetIndices());
         memoryGroup->AddDataToBufferInGroup(bufferIdx, offset + vertexBufferSize + indexBufferSize,
             materialBufferSize, vertexMaterialData_.data() + vertexBufferSize);
-        // TODO: any kind of uniform data to add here? [3/23/2017 Sebastian Maisch]
 
         auto buffer = memoryGroup_->GetBuffer(bufferIdx);
         SetVertexBuffer(buffer, offset);

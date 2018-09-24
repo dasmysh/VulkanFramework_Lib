@@ -513,7 +513,7 @@ namespace vku {
         LOG(INFO) << "Got window resize event (" << width << ", " << height << ") ...";
         if (width == 0 || height == 0) return;
 
-        LOG(DEBUG) << "Begin HandleResize()";
+        LOG(G3LOG_DEBUG) << "Begin HandleResize()";
 
         config_->windowWidth_ = width;
         config_->windowHeight_ = height;
