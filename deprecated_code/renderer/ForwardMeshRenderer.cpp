@@ -48,28 +48,28 @@ namespace vku::gfx {
 
             vk::DescriptorSetLayoutCreateInfo perFrameLayoutCreateInfo{ vk::DescriptorSetLayoutCreateFlags(),
                 static_cast<std::uint32_t>(perFrameLayoutBindings.size()), perFrameLayoutBindings.data() };
-            vkDescSetFrameLayout_ = device_->GetDevice().createDescriptorSetLayoutUnique(perFrameLayoutCreateInfo);
+            // vkDescSetFrameLayout_ = device_->GetDevice().createDescriptorSetLayoutUnique(perFrameLayoutCreateInfo);
 
             vk::DescriptorSetLayoutCreateInfo perMaterialLayoutCreateInfo{ vk::DescriptorSetLayoutCreateFlags(),
                 static_cast<std::uint32_t>(perMaterialLayoutBindings.size()), perMaterialLayoutBindings.data() };
-            vkDescSetMaterialLayout_ = device_->GetDevice().createDescriptorSetLayoutUnique(perMaterialLayoutCreateInfo);
+            // vkDescSetMaterialLayout_ = device_->GetDevice().createDescriptorSetLayoutUnique(perMaterialLayoutCreateInfo);
 
             vk::DescriptorSetLayoutCreateInfo perNodeLayoutCreateInfo{ vk::DescriptorSetLayoutCreateFlags(),
                 static_cast<std::uint32_t>(perNodeLayoutBindings.size()), perNodeLayoutBindings.data() };
-            vkDescSetNodeLayout_ = device_->GetDevice().createDescriptorSetLayoutUnique(perNodeLayoutCreateInfo);
+            // vkDescSetNodeLayout_ = device_->GetDevice().createDescriptorSetLayoutUnique(perNodeLayoutCreateInfo);
         }
 
         {
             std::vector<vk::DescriptorSetLayout> descriptorSets{ vkDescSetFrameLayout_.get(), vkDescSetMaterialLayout_.get(), vkDescSetNodeLayout_.get() };
             vk::PipelineLayoutCreateInfo pipelineLayoutInfo{ vk::PipelineLayoutCreateFlags(),
                 static_cast<std::uint32_t>(descriptorSets.size()), descriptorSets.data(), 0, nullptr };
-            vkPipelineLayout_ = device_->GetDevice().createPipelineLayoutUnique(pipelineLayoutInfo);
+            // vkPipelineLayout_ = device_->GetDevice().createPipelineLayoutUnique(pipelineLayoutInfo);
         }
         
         {
             vk::SamplerCreateInfo samplerCreateInfo{ vk::SamplerCreateFlags(), vk::Filter::eLinear, vk::Filter::eLinear,
                 vk::SamplerMipmapMode::eNearest, vk::SamplerAddressMode::eRepeat, vk::SamplerAddressMode::eRepeat, vk::SamplerAddressMode::eRepeat };
-            vkLinearSampler_ = device_->GetDevice().createSamplerUnique(samplerCreateInfo);
+            // vkLinearSampler_ = device_->GetDevice().createSamplerUnique(samplerCreateInfo);
         }
     }
 
@@ -149,42 +149,42 @@ namespace vku::gfx {
 
                 auto iboOffset = numIndices * sizeof(std::uint32_t);
                 auto vboOffset = numVertices * sizeof(MeshVertex);
-                numIndices += renderable->GetTotalElementCount();
-                numVertices += renderable->GetTotalVertexCount();
+                // numIndices += renderable->GetTotalElementCount();
+                // numVertices += renderable->GetTotalVertexCount();
 
                 auto basePartIndex = renderableParts.size();
 
-                auto numMaterials = renderable->GetNumberOfMaterials();
-                for (std::size_t materialID = 0; materialID < numMaterials; ++materialID) {
-                    auto& materialInfo = renderable->GetMaterial(materialID);
-                    auto matIt = materialIndices.find(materialInfo.materialName_);
-                    std::size_t matIndex = 0;
-                    if (matIt == materialIndices.end()) {
-                        auto materialIndex = materials.size();
-                        materialIndices[materialInfo.materialName_] = materialIndex;
-                        materials.emplace_back(&materialInfo, device_, memoryGroup, queueFamilyIndices_);
-                    } else {
-                        matIndex = matIt->second;
-                    }
-                    renderableParts.emplace_back(vboOffset, iboOffset, renderable->GetFirstElement(materialID), renderable->GetElementCount(materialID));
-                }
-
-                auto modelMatrix = glm::mat4();
-                if (sceneObject.HasComponent<TransformComponent>()) {
-                    modelMatrix = sceneObject.GetComponent<TransformComponent>()->Matrix();
-                }
-
-                auto transformIndex = renderable->FillLocalTransforms(transformUBOs, modelMatrix);
-                auto numNodes = renderable->GetNumberOfNodes();
-                for (std::size_t nodeID = 0; nodeID < numNodes; ++nodeID) {
-                    auto numParts = renderable->GetNumberOfPartsInNode(nodeID);
-
-                    for (std::size_t partID = 0; partID < numParts; ++partID) {
-                        auto materialIndex = materialIndices[renderable->GetMaterial(nodeID, partID).materialName_];
-                        auto objectPartID = renderable->GetObjectPartID(nodeID, partID);
-                        renderingQueue.emplace_back(materialIndex, transformIndex++, basePartIndex + objectPartID, renderableIndex);
-                    }
-                }
+                // auto numMaterials = renderable->GetNumberOfMaterials();
+                // for (std::size_t materialID = 0; materialID < numMaterials; ++materialID) {
+                //     auto& materialInfo = renderable->GetMaterial(materialID);
+                //     auto matIt = materialIndices.find(materialInfo.materialName_);
+                //     std::size_t matIndex = 0;
+                //     if (matIt == materialIndices.end()) {
+                //         auto materialIndex = materials.size();
+                //         materialIndices[materialInfo.materialName_] = materialIndex;
+                //         materials.emplace_back(&materialInfo, device_, memoryGroup, queueFamilyIndices_);
+                //     } else {
+                //         matIndex = matIt->second;
+                //     }
+                //     renderableParts.emplace_back(vboOffset, iboOffset, renderable->GetFirstElement(materialID), renderable->GetElementCount(materialID));
+                // }
+                // 
+                // auto modelMatrix = glm::mat4();
+                // if (sceneObject.HasComponent<TransformComponent>()) {
+                //     modelMatrix = sceneObject.GetComponent<TransformComponent>()->Matrix();
+                // }
+                // 
+                // auto transformIndex = renderable->FillLocalTransforms(transformUBOs, modelMatrix);
+                // auto numNodes = renderable->GetNumberOfNodes();
+                // for (std::size_t nodeID = 0; nodeID < numNodes; ++nodeID) {
+                //     auto numParts = renderable->GetNumberOfPartsInNode(nodeID);
+                // 
+                //     for (std::size_t partID = 0; partID < numParts; ++partID) {
+                //         auto materialIndex = materialIndices[renderable->GetMaterial(nodeID, partID).materialName_];
+                //         auto objectPartID = renderable->GetObjectPartID(nodeID, partID);
+                //         renderingQueue.emplace_back(materialIndex, transformIndex++, basePartIndex + objectPartID, renderableIndex);
+                //     }
+                // }
             }
         }
 
@@ -231,45 +231,45 @@ namespace vku::gfx {
         {
             std::array<vk::DescriptorPoolSize, 2> descSetPoolSizes;
             descSetPoolSizes[0] = vk::DescriptorPoolSize{ vk::DescriptorType::eSampler, 1 };
-            descSetPoolSizes[1] = vk::DescriptorPoolSize{ vk::DescriptorType::eUniformBufferDynamic, 2 + materials.size() }; // UBOs materials + (camera + transforms)
-            descSetPoolSizes[2] = vk::DescriptorPoolSize{ vk::DescriptorType::eSampledImage, 2 * materials.size() }; // 2*materials
+            // descSetPoolSizes[1] = vk::DescriptorPoolSize{ vk::DescriptorType::eUniformBufferDynamic, 2 + materials.size() }; // UBOs materials + (camera + transforms)
+            // descSetPoolSizes[2] = vk::DescriptorPoolSize{ vk::DescriptorType::eSampledImage, 2 * materials.size() }; // 2*materials
             vk::DescriptorPoolCreateInfo descSetPoolInfo{ vk::DescriptorPoolCreateFlags(), 2 * static_cast<std::uint32_t>(materials.size()) + 4,
                 static_cast<std::uint32_t>(descSetPoolSizes.size()), descSetPoolSizes.data() };
-            vkDescriptorPool_ = device_->GetDevice().createDescriptorPoolUnique(descSetPoolInfo);
+            // vkDescriptorPool_ = device_->GetDevice().createDescriptorPoolUnique(descSetPoolInfo);
         }
 
         {
             std::vector<vk::DescriptorSetLayout> frameLayouts(1, vkDescSetFrameLayout_.get());
             vk::DescriptorSetAllocateInfo descSetAllocInfoFrame{ vkDescriptorPool_.get(), static_cast<std::uint32_t>(frameLayouts.size()), frameLayouts.data() };
-            vkDescSetFrame_ = std::move(device_->GetDevice().allocateDescriptorSetsUnique(descSetAllocInfoFrame)[0]);
+            // vkDescSetFrame_ = std::move(device_->GetDevice().allocateDescriptorSetsUnique(descSetAllocInfoFrame)[0]);
 
             std::vector<vk::DescriptorSetLayout> materialLayouts(materials.size(), vkDescSetMaterialLayout_.get());
             vk::DescriptorSetAllocateInfo descSetAllocInfoMaterials{ vkDescriptorPool_.get(), static_cast<std::uint32_t>(materialLayouts.size()), materialLayouts.data() };
-            vkDescSetsMaterials_ = device_->GetDevice().allocateDescriptorSetsUnique(descSetAllocInfoMaterials);
+            // vkDescSetsMaterials_ = device_->GetDevice().allocateDescriptorSetsUnique(descSetAllocInfoMaterials);
 
             std::vector<vk::DescriptorSetLayout> nodeLayouts(1, vkDescSetNodeLayout_.get());
             vk::DescriptorSetAllocateInfo descSetAllocInfoNode{ vkDescriptorPool_.get(), static_cast<std::uint32_t>(nodeLayouts.size()), nodeLayouts.data() };
-            vkDescSetNode_ = std::move(device_->GetDevice().allocateDescriptorSetsUnique(descSetAllocInfoNode)[0]);
+            // vkDescSetNode_ = std::move(device_->GetDevice().allocateDescriptorSetsUnique(descSetAllocInfoNode)[0]);
         }
 
         {
             std::vector<vk::WriteDescriptorSet> descSetWrites; descSetWrites.reserve(2 * materials.size() + 4);
             vk::DescriptorImageInfo descSamplerInfo{ vkLinearSampler_.get() };
-            descSetWrites.emplace_back(vkDescSetFrame_, 0, 0, 1, vk::DescriptorType::eSampler, &descSamplerInfo);
-            vk::DescriptorBufferInfo descCamBufferInfo{ memoryGroup.GetBuffer(bufferIndex)->GetBuffer(), cameraOffset, cameraUBOSize };
-            descSetWrites.emplace_back(vkDescSetFrame_, 1, 0, 1, vk::DescriptorType::eUniformBufferDynamic, nullptr, &descCamBufferInfo);
+            descSetWrites.emplace_back(*vkDescSetFrame_, 0, 0, 1, vk::DescriptorType::eSampler, &descSamplerInfo);
+            // vk::DescriptorBufferInfo descCamBufferInfo{ memoryGroup.GetBuffer(bufferIndex)->GetBuffer(), cameraOffset, cameraUBOSize };
+            // descSetWrites.emplace_back(vkDescSetFrame_, 1, 0, 1, vk::DescriptorType::eUniformBufferDynamic, nullptr, &descCamBufferInfo);
 
             for (std::size_t i = 0; i < materials.size(); ++i) {
                 vk::DescriptorBufferInfo descMaterialInfo{ memoryGroup.GetBuffer(bufferIndex)->GetBuffer(), materialOffset + i * materialAlignment, materialAlignment };
-                descSetWrites.emplace_back(vkDescSetsMaterials_[i], 0, 0, 1, vk::DescriptorType::eUniformBuffer, nullptr, &descMaterialInfo);
+                descSetWrites.emplace_back(*vkDescSetsMaterials_[i], 0, 0, 1, vk::DescriptorType::eUniformBuffer, nullptr, &descMaterialInfo);
                 vk::DescriptorImageInfo descDiffuseTexture{ vk::Sampler(), materials[i].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal };
-                descSetWrites.emplace_back(vkDescSetsMaterials_[i], 1, 0, 1, vk::DescriptorType::eSampledImage, &descDiffuseTexture);
+                descSetWrites.emplace_back(*vkDescSetsMaterials_[i], 1, 0, 1, vk::DescriptorType::eSampledImage, &descDiffuseTexture);
                 vk::DescriptorImageInfo descBumpTexture{ vk::Sampler(), materials[i].bumpMap_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal };
-                descSetWrites.emplace_back(vkDescSetsMaterials_[i], 2, 0, 1, vk::DescriptorType::eSampledImage, &descBumpTexture);
+                descSetWrites.emplace_back(*vkDescSetsMaterials_[i], 2, 0, 1, vk::DescriptorType::eSampledImage, &descBumpTexture);
             }
 
             vk::DescriptorBufferInfo descTransformInfo{ memoryGroup.GetBuffer(bufferIndex)->GetBuffer(), transformOffset, localTransformAlignment };
-            descSetWrites.emplace_back(vkDescSetNode_, 0, 0, 1, vk::DescriptorType::eUniformBufferDynamic, nullptr, &descTransformInfo);
+            descSetWrites.emplace_back(*vkDescSetNode_, 0, 0, 1, vk::DescriptorType::eUniformBufferDynamic, nullptr, &descTransformInfo);
 
             device_->GetDevice().updateDescriptorSets(descSetWrites, nullptr);
         }
@@ -278,70 +278,70 @@ namespace vku::gfx {
     void ForwardMeshRenderer::GatherMeshInfo(const Scene& sceneObjects,
         std::vector<std::uint32_t>& indices, std::vector<MeshVertex>& vertices)
     {
-        for (auto soHandle : sceneObjects) {
-            auto& sceneObject = application_->GetSceneObjectManager().FromHandle(soHandle);
-
-            if (sceneObject.HasComponent<RenderComponent>()) {
-                auto renderComponent = sceneObject.GetComponent<RenderComponent>();
-                auto renderable = renderComponent->GetRenderable();
-
-                renderable->GetIndices(indices);
-                auto meshInfo = renderable->GetMeshInfo();
-
-                auto numMeshVertices = renderable->GetTotalVertexCount();
-                for (std::size_t i = 0; i < numMeshVertices; ++i) vertices.emplace_back(meshInfo, i);
-            }
-        }
+        // for (auto soHandle : sceneObjects) {
+        //     auto& sceneObject = application_->GetSceneObjectManager().FromHandle(soHandle);
+        // 
+        //     if (sceneObject.HasComponent<RenderComponent>()) {
+        //         auto renderComponent = sceneObject.GetComponent<RenderComponent>();
+        //         auto renderable = renderComponent->GetRenderable();
+        // 
+        //         renderable->GetIndices(indices);
+        //         auto meshInfo = renderable->GetMeshInfo();
+        // 
+        //         auto numMeshVertices = renderable->GetTotalVertexCount();
+        //         for (std::size_t i = 0; i < numMeshVertices; ++i) vertices.emplace_back(meshInfo, i);
+        //     }
+        // }
     }
 
-    void ForwardMeshRenderer::UpdateUniformLocations()
-    {
-        uniform_locations_ = program_->GetUniformLocations(
-        { "modelMatrix", "normalMatrix", "viewProjectionMatrix", "diffuseTexture",
-            "bumpTexture" });
-    }
+    // void ForwardMeshRenderer::UpdateUniformLocations()
+    // {
+    //     uniform_locations_ = program_->GetUniformLocations(
+    //     { "modelMatrix", "normalMatrix", "viewProjectionMatrix", "diffuseTexture",
+    //         "bumpTexture" });
+    // }
 
     void ForwardMeshRenderer::Draw(const Framebuffer& framebuffer,
         const Camera& camera, const Scene& scene)
     {
 
-        framebuffer.DrawToFBO([&camera, &scene, this] {
-
-            glUseProgram(program_->GetProgramId());
-
-            glm::mat4 vp_matrix = camera.getProjMatrix() * camera.getViewMatrix();
-            glUniformMatrix4fv(uniform_locations_[2], 1, GL_FALSE,
-                reinterpret_cast<GLfloat*> (&vp_matrix));
-
-            for (const auto game_object_handle : scene) {
-
-                const auto& game_object =
-                    engine_->game_object_manager_->FromHandle(game_object_handle);
-
-                if (game_object.HasComponent<RenderComponent>()) {
-                    auto render_component = game_object.GetComponent<RenderComponent>();
-                    auto renderable = render_component->GetRenderable();
-
-                    glm::mat4 model_matrix{ 1.0 };
-                    if (game_object.HasComponent<TransformComponent>()) {
-                        model_matrix =
-                            game_object.GetComponent<TransformComponent>()->Matrix();
-                    }
-
-                    renderable->Bind(typeid(SimpleMeshVertex));
-
-                    std::size_t number_of_nodes = renderable->GetNumberOfNodes();
-
-                    for (std::size_t node_id = 0;
-                        node_id < number_of_nodes; ++node_id) {
-                        DrawNode(*renderable, model_matrix, node_id);
-                    }
-
-                    glBindVertexArray(0);
-                    glBindBuffer(GL_ARRAY_BUFFER, 0);
-                }
-            }
-        });
+        // framebuffer.DrawToFBO([&camera, &scene, this] {
+        // 
+        //     glUseProgram(program_->GetProgramId());
+        // 
+        //     glm::mat4 vp_matrix = camera.getProjMatrix() * camera.getViewMatrix();
+        //     glUniformMatrix4fv(uniform_locations_[2], 1, GL_FALSE,
+        //         reinterpret_cast<GLfloat*> (&vp_matrix));
+        // 
+        //     for (const auto game_object_handle : scene) {
+        // 
+        //         const auto& game_object =
+        //             engine_->game_object_manager_->FromHandle(game_object_handle);
+        // 
+        //         if (game_object.HasComponent<RenderComponent>()) {
+        //             auto render_component = game_object.GetComponent<RenderComponent>();
+        //             auto renderable = render_component->GetRenderable();
+        // 
+        //             glm::mat4 model_matrix{ 1.0 };
+        //             if (game_object.HasComponent<TransformComponent>()) {
+        //                 model_matrix =
+        //                     game_object.GetComponent<TransformComponent>()->Matrix();
+        //             }
+        // 
+        //             renderable->Bind(typeid(SimpleMeshVertex));
+        // 
+        //             std::size_t number_of_nodes = renderable->GetNumberOfNodes();
+        // 
+        //             for (std::size_t node_id = 0;
+        //                 node_id < number_of_nodes; ++node_id) {
+        //                 DrawNode(*renderable, model_matrix, node_id);
+        //             }
+        // 
+        //             glBindVertexArray(0);
+        //             glBindBuffer(GL_ARRAY_BUFFER, 0);
+        //         }
+        //     }
+        // });
     }
 
     /*void ForwardRenderer::DrawNode(const Renderable& render_component,

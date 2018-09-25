@@ -14,9 +14,8 @@ set(GLFW_BUILD_TESTS OFF CACHE BOOL "Build the GLFW test programs" FORCE)
 set(GLFW_INSTALL OFF CACHE BOOL "Generate installation target" FORCE)
 add_subdirectory(extern/glfw)
 
-set(ADD_FATAL_EXAMPLE OFF CACHE BOOL "Fatal (fatal-crashes/contract) examples " FORCE)
-set(ADD_BUILD_WIN_SHARED ON CACHE BOOL "Build shared library on Windows" FORCE)
-set(USE_DYNAMIC_LOGGING_LEVELS ON CACHE BOOL "Turn ON/OFF log levels. An disabled level will not push logs of that level to the sink. By default dynamic logging is disabled" FORCE)
+option(ADD_FATAL_EXAMPLE OFF)
+option(G3_SHARED_LIB OFF)
 add_subdirectory(extern/g3log)
 
 option(ASSIMP_BUILD_ASSIMP_TOOLS OFF)
@@ -158,5 +157,5 @@ if (${FW_DEBUG_PIPELINE})
     target_compile_definitions(${FWLIB_LIBNAME} PUBLIC FW_DEBUG_PIPELINE)
 endif()
 
-target_link_libraries(${FWLIB_LIBNAME} ${VULKAN_LIBRARY} glfw ${GLFW_LIBRARIES} g3logger_shared assimp)
+target_link_libraries(${FWLIB_LIBNAME} ${VULKAN_LIBRARY} glfw ${GLFW_LIBRARIES} g3logger assimp)
 set_property(TARGET ${FWLIB_LIBNAME} APPEND PROPERTY COMPILE_DEFINITIONS $<$<CONFIG:DebugOpenGLCalls>:_OGL_DEBUG_MSGS> _CRT_SECURE_NO_WARNINGS _SCL_SECURE_NO_WARNINGS)

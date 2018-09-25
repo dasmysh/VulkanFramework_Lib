@@ -150,6 +150,10 @@ namespace vku::gfx {
                 mat->bumpMapFilename_ = sceneFilePath.parent_path().string() + "/" + bumpTexPath.C_Str();
                 material->Get(AI_MATKEY_TEXBLEND(aiTextureType_NORMALS, 0), mat->bumpMultiplier_);
             }
+
+            if (material->GetTextureCount(aiTextureType_OPACITY) > 0) {
+                mat->hasAlpha_ = true;
+            }
         }
 
         unsigned int currentMeshIndexOffset = 0;

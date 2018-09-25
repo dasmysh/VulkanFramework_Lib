@@ -9,7 +9,7 @@
 #pragma once
 
 #include "main.h"
-#include "core/sceneobject/SceneObjectManager.h"
+// #include "core/sceneobject/SceneObjectManager.h"
 
 namespace vku::cfg {
     class Configuration;
@@ -52,7 +52,7 @@ namespace vku {
         bool IsGUIMode() const { return guiMode_; }
         VKUDllExport VKWindow* GetFocusedWindow();
         VKUDllExport VKWindow* GetWindow(unsigned int idx);
-        VKUDllExport const SceneObjectManager& GetSceneObjectManager() const { return sceneObjectManager_; }
+        // VKUDllExport const SceneObjectManager& GetSceneObjectManager() const { return sceneObjectManager_; }
 
         void SetPause(bool pause);
 
@@ -102,7 +102,7 @@ namespace vku {
         bool guiMode_ = true;
 
         /** Holds the scene object manager. */
-        SceneObjectManager sceneObjectManager_;
+        // SceneObjectManager sceneObjectManager_;
 
     protected:
         /**

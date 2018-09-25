@@ -49,9 +49,9 @@ namespace vku::gfx {
         void UploadMeshData(QueuedDeviceTransfer& transfer);
 
         void BindBuffersToCommandBuffer(vk::CommandBuffer cmdBuffer) const;
-        void DrawMesh(vk::CommandBuffer cmdBuffer, const glm::mat4& worldMatrix) const;
-        void DrawMeshNode(vk::CommandBuffer cmdBuffer, const SceneMeshNode* node, const glm::mat4& worldMatrix) const;
-        void DrawSubMesh(vk::CommandBuffer cmdBuffer, const SubMesh* subMesh, const glm::mat4& worldMatrix) const;
+        void DrawMesh(vk::CommandBuffer cmdBuffer, vk::PipelineLayout pipelineLayout, const glm::mat4& worldMatrix) const;
+        void DrawMeshNode(vk::CommandBuffer cmdBuffer, vk::PipelineLayout pipelineLayout, const SceneMeshNode* node, const glm::mat4& worldMatrix) const;
+        void DrawSubMesh(vk::CommandBuffer cmdBuffer, vk::PipelineLayout pipelineLayout, const SubMesh* subMesh, const glm::mat4& worldMatrix) const;
 
     private:
         Mesh(std::shared_ptr<const MeshInfo> meshInfo, const LogicalDevice* device,
@@ -76,6 +76,8 @@ namespace vku::gfx {
             vk::DescriptorSet bumpTexDescriptorSet_;
         };
 
+        /** Holds the device. */
+        const LogicalDevice* device_;
         /** Holds the mesh info object containing vertex/index data. */
         std::shared_ptr<const MeshInfo> meshInfo_;
         /** Holds the internal memory group. */
@@ -90,10 +92,12 @@ namespace vku::gfx {
         std::vector<Material> materials_;
         /** The sampler for the materials textures. */
         vk::Sampler textureSampler_;
-        /** The descriptor set for the material UBO. */
-        // 
+        /** The descriptor pool for mesh rendering. */
+        vk::DescriptorPool descriptorPool_;
+        /** The descriptor set layout for mesh rendering. */
+        vk::DescriptorSetLayout descriptorSetLayout_;
         /** Holds the material descriptor sets. */
-        std::vector<MaterialDescriptorSet> materialDescriptorSets_;
+        std::vector<vk::DescriptorSet> materialDescriptorSets_;
 
         /** Holds the size of a single material in the buffer. */
 
@@ -136,7 +140,8 @@ namespace vku::gfx {
         std::vector<VertexType> vertices;
         meshInfo_->GetVertices(vertices);
 
-        std::vector<MaterialType> materials; materials.reserve(materials_.size());
+        auto materialAlignment = device_->CalculateUniformBufferAlignment(sizeof(MeshMaterial));
+        aligned_vector<MaterialType> materialUBOContent{ materialAlignment }; materials.reserve(materials_.size());
         for (const auto& material : materials_) materials.emplace_back(material);
 
         auto vertexBufferSize = vku::byteSizeOf(vertices);

@@ -22,7 +22,7 @@ namespace vku {
         using const_reference = const value_type&;
 
         aligned_vector(size_type alignedSize, size_type count, const T& value);
-        aligned_vector(size_type alignedSize, size_type count = 0) : alignedSize_{ alignedSize }, cont_{ count * alignedSize } {}
+        aligned_vector(size_type alignedSize, size_type count = 0) : alignedSize_{ alignedSize } { cont_.resize(count * alignedSize); }
         // template<class InputIt> aligned_vector(size_type alignedSize, InputIt first, InputIt last);
         aligned_vector(size_type alignedSize, std::initializer_list<T> init);
         aligned_vector(const aligned_vector& rhs) : alignedSize_{ rhs.alignedSize_ }, cont_{ rhs.cont_ } {}
@@ -109,7 +109,7 @@ namespace vku {
     {
         size_type i = 0U;
         for (const auto& elem : init) {
-            new(reinterpret_cast<T*>(cont_[i * alignedSize_])) T(init[i]);
+            new(reinterpret_cast<T*>(cont_[i * alignedSize_])) T(elem);
             i += 1;
         }
     }
@@ -160,7 +160,7 @@ namespace vku {
     {
         auto oldSize = cont_.size();
         resize(oldSize + alignedSize_);
-        new(reinterpret_cast<T*>(cont_.data() + oldSize)) T(std::forward<Args>(args));
+        new(reinterpret_cast<T*>(cont_.data() + oldSize)) T(std::forward<Args>(args)...);
     }
 
     template<typename T>

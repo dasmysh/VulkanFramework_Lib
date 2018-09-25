@@ -17,48 +17,75 @@ namespace vku::gfx {
 
     Mesh::Mesh(std::shared_ptr<const MeshInfo> meshInfo, const LogicalDevice* device,
         vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices) :
+        device_{ device },
         meshInfo_{ meshInfo },
         memoryGroup_{ std::make_unique<MemoryGroup>(device, memoryFlags) },
         vertexBuffer_{ nullptr, 0 },
-        indexBuffer_{ nullptr, 0 }
+        indexBuffer_{ nullptr, 0 },
+        materialBuffer_{ nullptr, 0, 0 }
     {
         CreateMaterials(device, *memoryGroup_.get(), queueFamilyIndices);
     }
 
     Mesh::Mesh(std::shared_ptr<const MeshInfo> meshInfo, const LogicalDevice* device,
         MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices) :
+        device_{ device },
         meshInfo_{ meshInfo },
         vertexBuffer_{ nullptr, 0 },
-        indexBuffer_{ nullptr, 0 }
+        indexBuffer_{ nullptr, 0 },
+        materialBuffer_{ nullptr, 0, 0 }
     {
         CreateMaterials(device, memoryGroup, queueFamilyIndices);
     }
 
     Mesh::Mesh(Mesh&& rhs) noexcept :
+        device_{ std::move(rhs.device_) },
         meshInfo_{ std::move(rhs.meshInfo_) },
         memoryGroup_{ std::move(rhs.memoryGroup_) },
         vertexBuffer_{ std::move(rhs.vertexBuffer_) },
         indexBuffer_{ std::move(rhs.indexBuffer_) },
+        materialBuffer_{ std::move(rhs.materialBuffer_) },
         materials_{ std::move(rhs.materials_) },
+        textureSampler_{ std::move(rhs.textureSampler_) },
+        descriptorPool_{ std::move(rhs.descriptorPool_) },
+        descriptorSetLayout_{ std::move(rhs.descriptorSetLayout_) },
+        materialDescriptorSets_{ std::move(rhs.materialDescriptorSets_) },
         vertexMaterialData_{ std::move(rhs.vertexMaterialData_) }
     {
+        rhs.textureSampler_ = vk::Sampler();
+        rhs.descriptorPool_ = vk::DescriptorPool();
+        rhs.descriptorSetLayout_ = vk::DescriptorSetLayout();
     }
 
     Mesh& Mesh::operator=(Mesh&& rhs) noexcept
     {
         this->~Mesh();
+        device_ = std::move(rhs.device_);
         meshInfo_ = std::move(rhs.meshInfo_);
         memoryGroup_ = std::move(rhs.memoryGroup_);
         vertexBuffer_ = std::move(rhs.vertexBuffer_);
         indexBuffer_ = std::move(rhs.indexBuffer_);
+        materialBuffer_ = std::move(rhs.materialBuffer_);
         materials_ = std::move(rhs.materials_);
+        textureSampler_ = std::move(rhs.textureSampler_);
+        descriptorPool_ = std::move(rhs.descriptorPool_);
+        descriptorSetLayout_ = std::move(rhs.descriptorSetLayout_);
+        materialDescriptorSets_ = std::move(rhs.materialDescriptorSets_);
         vertexMaterialData_ = std::move(rhs.vertexMaterialData_);
+        rhs.textureSampler_ = vk::Sampler();
+        rhs.descriptorPool_ = vk::DescriptorPool();
+        rhs.descriptorSetLayout_ = vk::DescriptorSetLayout();
         return *this;
     }
 
     Mesh::~Mesh()
     {
-        if (textureSampler_);// todo: need device here?
+        if (descriptorPool_) device_->GetDevice().destroyDescriptorPool(descriptorPool_);
+        descriptorPool_ = vk::DescriptorPool();
+        if (descriptorSetLayout_) device_->GetDevice().destroyDescriptorSetLayout(descriptorSetLayout_);
+        descriptorSetLayout_ = vk::DescriptorSetLayout();
+        if (textureSampler_) device_->GetDevice().destroySampler(textureSampler_);
+        textureSampler_ = vk::Sampler();
     }
 
     void Mesh::CreateMaterials(const LogicalDevice* device, MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices)
@@ -70,13 +97,13 @@ namespace vku::gfx {
 
         auto numMaterials = meshInfo_->GetMaterials().size();
         std::vector<vk::DescriptorPoolSize> poolSizes;
-        poolSizes.emplace_back(vk::DescriptorType::eUniformBuffer, numMaterials);
-        poolSizes.emplace_back(vk::DescriptorType::eCombinedImageSampler, numMaterials * 2);
+        poolSizes.emplace_back(vk::DescriptorType::eUniformBuffer, static_cast<std::uint32_t>(numMaterials));
+        poolSizes.emplace_back(vk::DescriptorType::eCombinedImageSampler, static_cast<std::uint32_t>(numMaterials * 2));
 
-        vk::DescriptorPoolCreateInfo descriptorPoolInfo{ vk::DescriptorPoolCreateFlags(), numMaterials * 3,
+        vk::DescriptorPoolCreateInfo descriptorPoolInfo{ vk::DescriptorPoolCreateFlags(), static_cast<std::uint32_t>(numMaterials * 3),
             static_cast<std::uint32_t>(poolSizes.size()), poolSizes.data() };
 
-        auto vkUBODescriptorPool_ = device->GetDevice().createDescriptorPool(descriptorPoolInfo);
+        descriptorPool_ = device->GetDevice().createDescriptorPool(descriptorPoolInfo);
 
 
         // Shared descriptor set layout
@@ -88,35 +115,48 @@ namespace vku::gfx {
         // Binding 1: Bump map
         setLayoutBindings.emplace_back(2, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment);
 
-        vk::DescriptorSetLayoutCreateInfo descriptorLayoutCreateInfo{ vk::DescriptorSetLayoutCreateFlags(), setLayoutBindings.size(), setLayoutBindings.data() };
+        vk::DescriptorSetLayoutCreateInfo descriptorLayoutCreateInfo{ vk::DescriptorSetLayoutCreateFlags(),
+            static_cast<std::uint32_t>(setLayoutBindings.size()), setLayoutBindings.data() };
 
-        auto descSetLayout = device->GetDevice().createDescriptorSetLayout(descriptorLayoutCreateInfo);
-
+        descriptorSetLayout_ = device->GetDevice().createDescriptorSetLayout(descriptorLayoutCreateInfo);
 
         std::vector<vk::DescriptorSetLayout> descSetLayouts; descSetLayouts.resize(numMaterials);
         std::vector<vk::WriteDescriptorSet> descSetWrites; descSetWrites.reserve(numMaterials);
-        std::vector<vk::DescriptorBufferInfo> descWriteInfos; descWriteInfos.reserve(numMaterials * 2);
+        std::vector<vk::DescriptorBufferInfo> descBufferInfos; descBufferInfos.reserve(numMaterials);
+        std::vector<vk::DescriptorImageInfo> descImageInfos; descImageInfos.reserve(numMaterials * 2);
 
         materials_.reserve(numMaterials);
         for (std::size_t i = 0; i < numMaterials; ++i) {
             const auto& mat = meshInfo_->GetMaterials()[i];
             materials_.emplace_back(&mat, device, memoryGroup, queueFamilyIndices);
-            descSetLayouts[i] = descSetLayout;
+            descSetLayouts[i] = descriptorSetLayout_;
 
 
         }
 
-        vk::DescriptorSetAllocateInfo descSetAllocInfo{ vkUBODescriptorPool_, static_cast<std::uint32_t>(descSetLayouts.size()), descSetLayouts.data() };
-        auto vkUBOSamplerDescritorSets_ = device->GetDevice().allocateDescriptorSets(descSetAllocInfo);
+        vk::DescriptorSetAllocateInfo descSetAllocInfo{ descriptorPool_, static_cast<std::uint32_t>(descSetLayouts.size()), descSetLayouts.data() };
+        materialDescriptorSets_ = device->GetDevice().allocateDescriptorSets(descSetAllocInfo);
 
         for (std::size_t i = 0; i < numMaterials; ++i) {
-            descWriteInfos.emplace_back(std::get<0>(materialBuffer_)->GetBuffer(), std::get<1>(materialBuffer_), std::get<2>(materialBuffer_));
-            descSetWrites.emplace_back(vkUBOSamplerDescritorSets_[i], 0, i, 1, vk::DescriptorType::eUniformBuffer, nullptr, &descWriteInfos[3 * i + 0]);
+            descBufferInfos.emplace_back(std::get<0>(materialBuffer_)->GetBuffer(), static_cast<std::uint32_t>(std::get<1>(materialBuffer_)),
+                static_cast<std::uint32_t>(std::get<2>(materialBuffer_)));
+            descSetWrites.emplace_back(materialDescriptorSets_[i], 0, static_cast<std::uint32_t>(i), 1,
+                vk::DescriptorType::eUniformBuffer, nullptr, &descBufferInfos[i]);
 
-            descWriteInfos.emplace_back(textureSampler_, materials_[i].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
-            descSetWrites.emplace_back(vkUBOSamplerDescritorSets_[i], 1, i, 1, vk::DescriptorType::eCombinedImageSampler, &descWriteInfos[3 * i + 1]);
-            vk::DescriptorImageInfo descImageInfo{ textureSampler_, materials_[i].bumpMap_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal };
-            descSetWrites.emplace_back(vkUBOSamplerDescritorSets_[i], 2, i, 1, vk::DescriptorType::eCombinedImageSampler, &descWriteInfos[3 * i + 2]);
+            if (materials_[i].diffuseTexture_) {
+                descImageInfos.emplace_back(textureSampler_, materials_[i].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+                descSetWrites.emplace_back(materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 0]);
+            }
+            else {
+                descSetWrites.emplace_back(materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 0, vk::DescriptorType::eCombinedImageSampler, nullptr);
+            }
+
+            if (materials_[i].bumpMap_) {
+                vk::DescriptorImageInfo descImageInfo{ textureSampler_, materials_[i].bumpMap_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal };
+                descSetWrites.emplace_back(materialDescriptorSets_[i], 2, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 1]);
+            } else {
+                descSetWrites.emplace_back(materialDescriptorSets_[i], 2, static_cast<std::uint32_t>(i), 0, vk::DescriptorType::eCombinedImageSampler, nullptr);
+            }
         }
 
         device->GetDevice().updateDescriptorSets(descSetWrites, nullptr);
@@ -151,10 +191,11 @@ namespace vku::gfx {
         cmdBuffer.bindIndexBuffer(indexBuffer_.first->GetBuffer(), indexBuffer_.second, vk::IndexType::eUint32);
     }
 
-    void Mesh::DrawMesh(vk::CommandBuffer cmdBuffer, const glm::mat4& worldMatrix) const
+    void Mesh::DrawMesh(vk::CommandBuffer cmdBuffer, vk::PipelineLayout pipelineLayout, const glm::mat4& worldMatrix) const
     {
         auto meshWorld = meshInfo_->GetRootTransform() * worldMatrix;
-        DrawMeshNode(cmdBuffer, meshInfo_->GetRootNode(), meshWorld);
+        // TODO: add depth sorting here...
+        DrawMeshNode(cmdBuffer, pipelineLayout, meshInfo_->GetRootNode(), meshWorld);
 
         // TODO: use submeshes and materials and the scene nodes...
         // need:
@@ -163,62 +204,28 @@ namespace vku::gfx {
         // - uniform buffer for all materials[array] (via template)
         // - push constant for world matrix
         // - push constant for material index .. or "VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC"
-        cmdBuffer.drawIndexed(static_cast<std::uint32_t>(meshInfo_->GetIndices().size()), 1, 0, 0, 0);
+        // cmdBuffer.drawIndexed(static_cast<std::uint32_t>(meshInfo_->GetIndices().size()), 1, 0, 0, 0);
     }
 
-    void Mesh::DrawMeshNode(vk::CommandBuffer cmdBuffer, const SceneMeshNode* node, const glm::mat4& worldMatrix) const
+    void Mesh::DrawMeshNode(vk::CommandBuffer cmdBuffer, vk::PipelineLayout pipelineLayout,
+        const SceneMeshNode* node, const glm::mat4& worldMatrix) const
     {
         auto nodeWorld = node->GetLocalTransform() * worldMatrix;
-        for (unsigned int i = 0; i < node->GetNumberOfSubMeshes(); ++i) DrawSubMesh(cmdBuffer, meshInfo_->GetSubMesh(node->GetSubMeshID(i)), nodeWorld);
-        for (unsigned int i = 0; i < node->GetNumberOfNodes(); ++i) DrawMeshNode(cmdBuffer, node->GetChild(i), nodeWorld);
+        for (unsigned int i = 0; i < node->GetNumberOfSubMeshes(); ++i) DrawSubMesh(cmdBuffer, pipelineLayout, meshInfo_->GetSubMesh(node->GetSubMeshID(i)), nodeWorld);
+        for (unsigned int i = 0; i < node->GetNumberOfNodes(); ++i) DrawMeshNode(cmdBuffer, pipelineLayout, node->GetChild(i), nodeWorld);
     }
 
-    void Mesh::DrawSubMesh(vk::CommandBuffer cmdBuffer, const SubMesh* subMesh, const glm::mat4& worldMatrix) const
+    void Mesh::DrawSubMesh(vk::CommandBuffer cmdBuffer, vk::PipelineLayout pipelineLayout, const SubMesh* subMesh, const glm::mat4& worldMatrix) const
     {
-        glUniformMatrix4fv(uniformLocations_[0], 1, GL_FALSE, glm::value_ptr(modelMatrix));
-        glUniformMatrix3fv(uniformLocations_[1], 1, GL_FALSE, glm::value_ptr(glm::inverseTranspose(glm::mat3(modelMatrix))));
-
-        auto mat = mesh_->GetMaterial(subMesh->GetMaterialIndex());
-        auto matTex = mesh_->GetMaterialTexture(subMesh->GetMaterialIndex());
-        if (matTex->diffuseTex && uniformLocations_.size() > 2) {
-            glActiveTexture(GL_TEXTURE0);
-            glBindTexture(GL_TEXTURE_2D, matTex->diffuseTex->getTextureId());
-            glUniform1i(uniformLocations_[2], 0);
-        }
-        if (matTex->bumpTex && uniformLocations_.size() > 3) {
-            glActiveTexture(GL_TEXTURE1);
-            glBindTexture(GL_TEXTURE_2D, matTex->bumpTex->getTextureId());
-            glUniform1i(uniformLocations_[3], 1);
-            if (!overrideBump) glUniform1f(uniformLocations_[4], mat->bumpMultiplier);
-        }
-
-        glDrawElements(GL_TRIANGLES, subMesh->GetNumberOfIndices(), GL_UNSIGNED_INT,
-            (static_cast<char*> (nullptr)) + (static_cast<std::size_t>(subMesh->GetIndexOffset()) * sizeof(unsigned int)));
-
-
-
         auto worldMat = worldMatrix;
         auto normalMat = glm::inverseTranspose(glm::mat3(worldMatrix));
         auto& mat = materials_[subMesh->GetMaterialID()];
         auto& matDescSets = materialDescriptorSets_[subMesh->GetMaterialID()];
 
         // bind material ubo.
-        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, vkPipelineLayout_, 0, matDescSets.materialUBODescriptorSet_, nullptr);
-        if (mat.diffuseTexture_) {
-            // bind sampler for diffuse texture.
-            cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, vkPipelineLayout_, 0, matDescSets.diffuseTexDescriptorSet_, nullptr);
-        }
-
-        if (mat.bumpMap_) {
-            // bind sampler for bump texture.
-            cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, vkPipelineLayout_, 0, matDescSets.bumpTexDescriptorSet_, nullptr);
-        }
-
-        // TODO: Set material, set texture(s). [3/26/2017 Sebastian Maisch]
-        // use a single descriptor set with dynamic offsets for the material
-        // actually push constants do not work if the command buffer stays constant for multiple frames.
-        cmdBuffer.pushConstants(vkPipelineLayout_, vk::ShaderStageFlagBits::eVertex, 0, vk::ArrayProxy<float>(16, glm::value_ptr(worldMat)));
-        cmdBuffer.pushConstants(vkPipelineLayout_, vk::ShaderStageFlagBits::eVertex, 16, vk::ArrayProxy<float>(9, glm::value_ptr(normalMat)));
+        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, materialDescriptorSets_, nullptr);
+        cmdBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, vk::ArrayProxy<const float>(16, glm::value_ptr(worldMat)));
+        cmdBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eVertex, 16, vk::ArrayProxy<const float>(9, glm::value_ptr(normalMat)));
         cmdBuffer.drawIndexed(static_cast<std::uint32_t>(subMesh->GetNumberOfIndices()), 1, static_cast<std::uint32_t>(subMesh->GetIndexOffset()), 0, 0);
     }
 
