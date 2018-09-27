@@ -30,15 +30,15 @@ namespace vku::gfx {
         Mesh& operator=(Mesh&&) noexcept;
         ~Mesh();
 
-        template<class VertexType>
+        template<class VertexTypev, class MaterialType>
         static Mesh CreateWithInternalMemoryGroup(std::shared_ptr<const MeshInfo> meshInfo,
             const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags = vk::MemoryPropertyFlags(),
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
-        template<class VertexType>
+        template<class VertexType, class MaterialType>
         static Mesh CreateWithMemoryGroup(std::shared_ptr<const MeshInfo> meshInfo,
             const LogicalDevice* device, MemoryGroup& memoryGroup,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
-        template<class VertexType>
+        template<class VertexType, class MaterialType>
         static Mesh CreateInExternalBuffer(std::shared_ptr<const MeshInfo> meshInfo,
             const LogicalDevice* device, MemoryGroup& memoryGroup, unsigned int bufferIdx, std::size_t offset,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
@@ -47,6 +47,7 @@ namespace vku::gfx {
         static std::size_t CalculateBufferSize(const MeshInfo* meshInfo);
 
         void UploadMeshData(QueuedDeviceTransfer& transfer);
+        vk::DescriptorSetLayout GetMeshDescriptorLayout() const { return descriptorSetLayout_; }
 
         void BindBuffersToCommandBuffer(vk::CommandBuffer cmdBuffer) const;
         void DrawMesh(vk::CommandBuffer cmdBuffer, vk::PipelineLayout pipelineLayout, const glm::mat4& worldMatrix) const;
@@ -60,9 +61,10 @@ namespace vku::gfx {
             MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices);
 
         template<class VertexType, class MaterialType>
-        void CreateBuffersInMemoryGroup(const LogicalDevice* device, MemoryGroup* memoryGroup,
+        void CreateBuffersInMemoryGroup(MemoryGroup* memoryGroup,
             unsigned int bufferIdx, std::size_t offset, const std::vector<std::uint32_t>& queueFamilyIndices);
-        void CreateMaterials(const LogicalDevice* device, MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices);
+        void CreateMaterials(const std::vector<std::uint32_t>& queueFamilyIndices);
+        void CreateDescriptorSets();
 
         void SetVertexBuffer(const DeviceBuffer* vtxBuffer, std::size_t offset);
         void SetIndexBuffer(const DeviceBuffer* idxBuffer, std::size_t offset);
@@ -105,52 +107,55 @@ namespace vku::gfx {
         std::vector<uint8_t> vertexMaterialData_;
     };
 
-    template<class VertexType>
+    template<class VertexType, class MaterialType>
     inline Mesh Mesh::CreateWithInternalMemoryGroup(std::shared_ptr<const MeshInfo> meshInfo, const LogicalDevice* device,
         vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         Mesh result{ meshInfo, device, memoryFlags, queueFamilyIndices };
-        result.CreateBuffersInMemoryGroup<VertexType>(result.memoryGroup_.get(), DeviceMemoryGroup::INVALID_INDEX, 0, queueFamilyIndices);
+        result.CreateBuffersInMemoryGroup<VertexType, MaterialType>(result.memoryGroup_.get(), DeviceMemoryGroup::INVALID_INDEX, 0, queueFamilyIndices);
+        result.CreateDescriptorSets();
         return result;
     }
 
-    template<class VertexType>
+    template<class VertexType, class MaterialType>
     inline Mesh Mesh::CreateWithMemoryGroup(std::shared_ptr<const MeshInfo> meshInfo, const LogicalDevice* device,
         MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         Mesh result{ meshInfo, device, queueFamilyIndices };
-        result.CreateBuffersInMemoryGroup<VertexType>(memoryGroup, DeviceMemoryGroup::INVALID_INDEX, 0, queueFamilyIndices);
+        result.CreateBuffersInMemoryGroup<VertexType, MaterialType>(memoryGroup, DeviceMemoryGroup::INVALID_INDEX, 0, queueFamilyIndices);
+        result.CreateDescriptorSets();
         return result;
     }
 
-    template<class VertexType>
+    template<class VertexType, class MaterialType>
     inline Mesh Mesh::CreateInExternalBuffer(std::shared_ptr<const MeshInfo> meshInfo, const LogicalDevice* device,
         MemoryGroup& memoryGroup, unsigned int bufferIdx, std::size_t offset,
         const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         Mesh result{ meshInfo, device, queueFamilyIndices };
-        result.CreateBuffersInMemoryGroup<VertexType>(memoryGroup, bufferIdx, offset, queueFamilyIndices);
+        result.CreateBuffersInMemoryGroup<VertexType, MaterialType>(memoryGroup, bufferIdx, offset, queueFamilyIndices);
+        result.CreateDescriptorSets();
         return result;
     }
 
     template<class VertexType, class MaterialType>
-    inline void Mesh::CreateBuffersInMemoryGroup(const LogicalDevice* device, MemoryGroup* memoryGroup,
+    inline void Mesh::CreateBuffersInMemoryGroup(MemoryGroup* memoryGroup,
         unsigned int bufferIdx, std::size_t offset, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         std::vector<VertexType> vertices;
         meshInfo_->GetVertices(vertices);
 
-        auto materialAlignment = device_->CalculateUniformBufferAlignment(sizeof(MeshMaterial));
-        aligned_vector<MaterialType> materialUBOContent{ materialAlignment }; materials.reserve(materials_.size());
-        for (const auto& material : materials_) materials.emplace_back(material);
+        auto materialAlignment = device_->CalculateUniformBufferAlignment(sizeof(MaterialType));
+        aligned_vector<MaterialType> materialUBOContent{ materialAlignment }; materialUBOContent.reserve(materials_.size());
+        for (const auto& material : materials_) materialUBOContent.emplace_back(material);
 
         auto vertexBufferSize = vku::byteSizeOf(vertices);
         auto indexBufferSize = vku::byteSizeOf(meshInfo_->GetIndices());
-        auto materialBufferSize = device.CalculateUniformBufferAlignment(byteSizeOf(materials));
+        auto materialBufferSize = device_->CalculateUniformBufferAlignment(byteSizeOf(materialUBOContent));
 
         vertexMaterialData_.resize(vertexBufferSize + materialBufferSize);
         memcpy(vertexMaterialData_.data(), vertices.data(), vertexBufferSize);
-        memcpy(vertexMaterialData_.data() + vertexBufferSize, materials.data(), materialBufferSize);
+        memcpy(vertexMaterialData_.data() + vertexBufferSize, materialUBOContent.data(), materialBufferSize);
 
         if (bufferIdx == DeviceMemoryGroup::INVALID_INDEX) bufferIdx = memoryGroup->AddBufferToGroup(
             vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer,
@@ -164,7 +169,7 @@ namespace vku::gfx {
         auto buffer = memoryGroup_->GetBuffer(bufferIdx);
         SetVertexBuffer(buffer, offset);
         SetIndexBuffer(buffer, offset + vertexBufferSize);
-        SetMaterialBuffer(buffer, device.CalculateUniformBufferAlignment(offset + vertexBufferSize + indexBufferSize));
+        SetMaterialBuffer(buffer, device_->CalculateUniformBufferAlignment(offset + vertexBufferSize + indexBufferSize), materialAlignment);
     }
 
     template<class VertexType, class MaterialType>

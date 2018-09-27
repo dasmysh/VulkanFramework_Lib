@@ -24,7 +24,7 @@ namespace vku::gfx {
         indexBuffer_{ nullptr, 0 },
         materialBuffer_{ nullptr, 0, 0 }
     {
-        CreateMaterials(device, *memoryGroup_.get(), queueFamilyIndices);
+        CreateMaterials(queueFamilyIndices);
     }
 
     Mesh::Mesh(std::shared_ptr<const MeshInfo> meshInfo, const LogicalDevice* device,
@@ -35,7 +35,7 @@ namespace vku::gfx {
         indexBuffer_{ nullptr, 0 },
         materialBuffer_{ nullptr, 0, 0 }
     {
-        CreateMaterials(device, memoryGroup, queueFamilyIndices);
+        CreateMaterials(queueFamilyIndices);
     }
 
     Mesh::Mesh(Mesh&& rhs) noexcept :
@@ -88,12 +88,12 @@ namespace vku::gfx {
         textureSampler_ = vk::Sampler();
     }
 
-    void Mesh::CreateMaterials(const LogicalDevice* device, MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices)
+    void Mesh::CreateMaterials(const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         vk::SamplerCreateInfo samplerCreateInfo{ vk::SamplerCreateFlags(), vk::Filter::eLinear, vk::Filter::eLinear,
             vk::SamplerMipmapMode::eNearest, vk::SamplerAddressMode::eRepeat, vk::SamplerAddressMode::eRepeat,
             vk::SamplerAddressMode::eRepeat };
-        textureSampler_ = device->GetDevice().createSampler(samplerCreateInfo);
+        textureSampler_ = device_->GetDevice().createSampler(samplerCreateInfo);
 
         auto numMaterials = meshInfo_->GetMaterials().size();
         std::vector<vk::DescriptorPoolSize> poolSizes;
@@ -103,8 +103,7 @@ namespace vku::gfx {
         vk::DescriptorPoolCreateInfo descriptorPoolInfo{ vk::DescriptorPoolCreateFlags(), static_cast<std::uint32_t>(numMaterials * 3),
             static_cast<std::uint32_t>(poolSizes.size()), poolSizes.data() };
 
-        descriptorPool_ = device->GetDevice().createDescriptorPool(descriptorPoolInfo);
-
+        descriptorPool_ = device_->GetDevice().createDescriptorPool(descriptorPoolInfo);
 
         // Shared descriptor set layout
         std::vector<vk::DescriptorSetLayoutBinding> setLayoutBindings;
@@ -118,49 +117,14 @@ namespace vku::gfx {
         vk::DescriptorSetLayoutCreateInfo descriptorLayoutCreateInfo{ vk::DescriptorSetLayoutCreateFlags(),
             static_cast<std::uint32_t>(setLayoutBindings.size()), setLayoutBindings.data() };
 
-        descriptorSetLayout_ = device->GetDevice().createDescriptorSetLayout(descriptorLayoutCreateInfo);
+        descriptorSetLayout_ = device_->GetDevice().createDescriptorSetLayout(descriptorLayoutCreateInfo);
 
-        std::vector<vk::DescriptorSetLayout> descSetLayouts; descSetLayouts.resize(numMaterials);
-        std::vector<vk::WriteDescriptorSet> descSetWrites; descSetWrites.reserve(numMaterials);
-        std::vector<vk::DescriptorBufferInfo> descBufferInfos; descBufferInfos.reserve(numMaterials);
-        std::vector<vk::DescriptorImageInfo> descImageInfos; descImageInfos.reserve(numMaterials * 2);
 
         materials_.reserve(numMaterials);
         for (std::size_t i = 0; i < numMaterials; ++i) {
             const auto& mat = meshInfo_->GetMaterials()[i];
-            materials_.emplace_back(&mat, device, memoryGroup, queueFamilyIndices);
-            descSetLayouts[i] = descriptorSetLayout_;
-
-
+            materials_.emplace_back(&mat, device_, *memoryGroup_, queueFamilyIndices);
         }
-
-        vk::DescriptorSetAllocateInfo descSetAllocInfo{ descriptorPool_, static_cast<std::uint32_t>(descSetLayouts.size()), descSetLayouts.data() };
-        materialDescriptorSets_ = device->GetDevice().allocateDescriptorSets(descSetAllocInfo);
-
-        for (std::size_t i = 0; i < numMaterials; ++i) {
-            descBufferInfos.emplace_back(std::get<0>(materialBuffer_)->GetBuffer(), static_cast<std::uint32_t>(std::get<1>(materialBuffer_)),
-                static_cast<std::uint32_t>(std::get<2>(materialBuffer_)));
-            descSetWrites.emplace_back(materialDescriptorSets_[i], 0, static_cast<std::uint32_t>(i), 1,
-                vk::DescriptorType::eUniformBuffer, nullptr, &descBufferInfos[i]);
-
-            if (materials_[i].diffuseTexture_) {
-                descImageInfos.emplace_back(textureSampler_, materials_[i].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
-                descSetWrites.emplace_back(materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 0]);
-            }
-            else {
-                descSetWrites.emplace_back(materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 0, vk::DescriptorType::eCombinedImageSampler, nullptr);
-            }
-
-            if (materials_[i].bumpMap_) {
-                vk::DescriptorImageInfo descImageInfo{ textureSampler_, materials_[i].bumpMap_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal };
-                descSetWrites.emplace_back(materialDescriptorSets_[i], 2, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 1]);
-            } else {
-                descSetWrites.emplace_back(materialDescriptorSets_[i], 2, static_cast<std::uint32_t>(i), 0, vk::DescriptorType::eCombinedImageSampler, nullptr);
-            }
-        }
-
-        device->GetDevice().updateDescriptorSets(descSetWrites, nullptr);
-
 
         // {
         //     vk::PipelineLayoutCreateInfo pipelineLayoutInfo{ vk::PipelineLayoutCreateFlags(),
@@ -175,6 +139,48 @@ namespace vku::gfx {
         //     vk::DescriptorSetAllocateInfo descSetAllocInfo{ vkUBODescriptorPool_, static_cast<std::uint32_t>(descSetLayouts.size()), descSetLayouts.data() };
         //     vkUBOSamplerDescritorSets_ = device.GetDevice().allocateDescriptorSets(descSetAllocInfo);
         // }
+    }
+
+    void Mesh::CreateDescriptorSets()
+    {
+        std::vector<vk::DescriptorSetLayout> descSetLayouts; descSetLayouts.resize(materials_.size());
+        std::vector<vk::WriteDescriptorSet> descSetWrites; descSetWrites.reserve(materials_.size());
+        std::vector<vk::DescriptorBufferInfo> descBufferInfos; descBufferInfos.reserve(materials_.size());
+        std::vector<vk::DescriptorImageInfo> descImageInfos; descImageInfos.reserve(materials_.size() * 2);
+
+        for (std::size_t i = 0; i < materials_.size(); ++i) {
+            descSetLayouts[i] = descriptorSetLayout_;
+        }
+
+        vk::DescriptorSetAllocateInfo descSetAllocInfo{ descriptorPool_, static_cast<std::uint32_t>(descSetLayouts.size()), descSetLayouts.data() };
+        materialDescriptorSets_ = device_->GetDevice().allocateDescriptorSets(descSetAllocInfo);
+
+        auto uboOffset = static_cast<std::uint32_t>(std::get<1>(materialBuffer_));
+        auto materialBufferSize = static_cast<std::uint32_t>(std::get<2>(materialBuffer_));
+        for (std::size_t i = 0; i < materials_.size(); ++i) {
+            auto materialBufferOffset = uboOffset + materialBufferSize * i;
+            descBufferInfos.emplace_back(std::get<0>(materialBuffer_)->GetBuffer(), materialBufferOffset, materialBufferSize);
+            descSetWrites.emplace_back(materialDescriptorSets_[i], 0, static_cast<std::uint32_t>(i), 1,
+                vk::DescriptorType::eUniformBuffer, nullptr, &descBufferInfos[i]);
+
+            if (materials_[i].diffuseTexture_) {
+                descImageInfos.emplace_back(textureSampler_, materials_[i].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+                descSetWrites.emplace_back(materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 0]);
+            }
+            else {
+                descSetWrites.emplace_back(materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 0, vk::DescriptorType::eCombinedImageSampler, nullptr);
+            }
+
+            if (materials_[i].bumpMap_) {
+                vk::DescriptorImageInfo descImageInfo{ textureSampler_, materials_[i].bumpMap_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal };
+                descSetWrites.emplace_back(materialDescriptorSets_[i], 2, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 1]);
+            }
+            else {
+                descSetWrites.emplace_back(materialDescriptorSets_[i], 2, static_cast<std::uint32_t>(i), 0, vk::DescriptorType::eCombinedImageSampler, nullptr);
+            }
+        }
+
+        device_->GetDevice().updateDescriptorSets(descSetWrites, nullptr);
     }
 
     void Mesh::UploadMeshData(QueuedDeviceTransfer& transfer)

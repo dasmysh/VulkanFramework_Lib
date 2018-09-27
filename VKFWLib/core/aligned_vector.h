@@ -161,6 +161,8 @@ namespace vku {
         auto oldSize = cont_.size();
         resize(oldSize + alignedSize_);
         new(reinterpret_cast<T*>(cont_.data() + oldSize)) T(std::forward<Args>(args)...);
+
+        return back();
     }
 
     template<typename T>
