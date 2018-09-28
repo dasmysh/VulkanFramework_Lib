@@ -165,19 +165,21 @@ namespace vku::gfx {
 
             if (materials_[i].diffuseTexture_) {
                 descImageInfos.emplace_back(textureSampler_, materials_[i].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
-                descSetWrites.emplace_back(materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 0]);
             }
             else {
-                descSetWrites.emplace_back(materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 0, vk::DescriptorType::eCombinedImageSampler, nullptr);
+                descImageInfos.emplace_back(vk::Sampler(), vk::ImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+                // descSetWrites.emplace_back(materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 0, vk::DescriptorType::eCombinedImageSampler, nullptr);
             }
+            descSetWrites.emplace_back(materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 0]);
 
             if (materials_[i].bumpMap_) {
-                vk::DescriptorImageInfo descImageInfo{ textureSampler_, materials_[i].bumpMap_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal };
-                descSetWrites.emplace_back(materialDescriptorSets_[i], 2, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 1]);
+                descImageInfos.emplace_back(textureSampler_, materials_[i].bumpMap_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
             }
             else {
-                descSetWrites.emplace_back(materialDescriptorSets_[i], 2, static_cast<std::uint32_t>(i), 0, vk::DescriptorType::eCombinedImageSampler, nullptr);
+                descImageInfos.emplace_back(vk::Sampler(), vk::ImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+                // descSetWrites.emplace_back(materialDescriptorSets_[i], 2, static_cast<std::uint32_t>(i), 0, vk::DescriptorType::eCombinedImageSampler, nullptr);
             }
+            descSetWrites.emplace_back(materialDescriptorSets_[i], 2, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 1]);
         }
 
         device_->GetDevice().updateDescriptorSets(descSetWrites, nullptr);
