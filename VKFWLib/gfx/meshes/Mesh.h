@@ -47,6 +47,7 @@ namespace vku::gfx {
         static std::size_t CalculateBufferSize(const MeshInfo* meshInfo);
 
         void UploadMeshData(QueuedDeviceTransfer& transfer);
+        void CreateDescriptorSets();
         vk::DescriptorSetLayout GetMeshDescriptorLayout() const { return descriptorSetLayout_; }
 
         void BindBuffersToCommandBuffer(vk::CommandBuffer cmdBuffer) const;
@@ -64,7 +65,6 @@ namespace vku::gfx {
         void CreateBuffersInMemoryGroup(MemoryGroup* memoryGroup,
             unsigned int bufferIdx, std::size_t offset, const std::vector<std::uint32_t>& queueFamilyIndices);
         void CreateMaterials(const std::vector<std::uint32_t>& queueFamilyIndices);
-        void CreateDescriptorSets();
 
         void SetVertexBuffer(const DeviceBuffer* vtxBuffer, std::size_t offset);
         void SetIndexBuffer(const DeviceBuffer* idxBuffer, std::size_t offset);
@@ -113,7 +113,6 @@ namespace vku::gfx {
     {
         Mesh result{ meshInfo, device, memoryFlags, queueFamilyIndices };
         result.CreateBuffersInMemoryGroup<VertexType, MaterialType>(result.memoryGroup_.get(), DeviceMemoryGroup::INVALID_INDEX, 0, queueFamilyIndices);
-        result.CreateDescriptorSets();
         return result;
     }
 
@@ -123,7 +122,6 @@ namespace vku::gfx {
     {
         Mesh result{ meshInfo, device, queueFamilyIndices };
         result.CreateBuffersInMemoryGroup<VertexType, MaterialType>(memoryGroup, DeviceMemoryGroup::INVALID_INDEX, 0, queueFamilyIndices);
-        result.CreateDescriptorSets();
         return result;
     }
 
@@ -134,7 +132,6 @@ namespace vku::gfx {
     {
         Mesh result{ meshInfo, device, queueFamilyIndices };
         result.CreateBuffersInMemoryGroup<VertexType, MaterialType>(memoryGroup, bufferIdx, offset, queueFamilyIndices);
-        result.CreateDescriptorSets();
         return result;
     }
 
