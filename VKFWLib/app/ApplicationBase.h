@@ -64,7 +64,7 @@ namespace vku {
 
         const cfg::Configuration& GetConfig() const { return config_; };
         const std::vector<const char*>& GetVKValidationLayers() const { return vkValidationLayers_; }
-        const vk::Instance& GetVKInstance() const { return vkInstance_; }
+        const vk::Instance& GetVKInstance() const { return *vkInstance_; }
         std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const cfg::WindowCfg& windowCfg,
             const vk::SurfaceKHR& surface = vk::SurfaceKHR()) const;
         // std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const vk::SurfaceKHR& surface) const;
@@ -130,9 +130,9 @@ namespace vku {
         /** Holds the Vulkan validation layers. */
         std::vector<const char*> vkValidationLayers_;
         /** Holds the Vulkan instance. */
-        vk::Instance vkInstance_;
+        vk::UniqueInstance vkInstance_;
         /** Holds the debug report callback. */
-        vk::DebugReportCallbackEXT vkDebugReportCB_;
+        vk::UniqueDebugReportCallbackEXT vkDebugReportCB_;
         /** Holds the physical devices. */
         std::map<unsigned int, vk::PhysicalDevice> vkPhysicalDevices_;
         /** Holds the physical device. */
