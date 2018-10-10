@@ -131,8 +131,10 @@ namespace vku {
         std::vector<const char*> vkValidationLayers_;
         /** Holds the Vulkan instance. */
         vk::UniqueInstance vkInstance_;
+        /** Holds the dispatch loader for the instance. */
+        vk::DispatchLoaderDynamic vkDispatchLoaderInst_;
         /** Holds the debug report callback. */
-        vk::UniqueDebugReportCallbackEXT vkDebugReportCB_;
+        vk::UniqueHandle<vk::DebugReportCallbackEXT, vk::DispatchLoaderDynamic> vkDebugReportCB_;
         /** Holds the physical devices. */
         std::map<unsigned int, vk::PhysicalDevice> vkPhysicalDevices_;
         /** Holds the physical device. */

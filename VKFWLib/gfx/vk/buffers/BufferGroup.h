@@ -45,9 +45,9 @@ namespace vku::gfx {
         /** Holds the device. */
         const LogicalDevice* device_;
         /** Holds the Vulkan device memory for the device buffers. */
-        vk::DeviceMemory deviceBufferMemory_;
+        vk::UniqueDeviceMemory deviceBufferMemory_;
         /** Holds the Vulkan device memory for the host buffers. */
-        vk::DeviceMemory hostBufferMemory_;
+        vk::UniqueDeviceMemory hostBufferMemory_;
         /** Holds the device buffers. */
         std::vector<DeviceBuffer> deviceBuffers_;
         /** Holds the host buffers. */

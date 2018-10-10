@@ -75,7 +75,7 @@ namespace vku::gfx {
         /** Holds all staging textures. */
         std::vector<HostTexture> stagingTextures_;
         /** Holds all command buffers for transfer. */
-        std::vector<vk::CommandBuffer> transferCmdBuffers_;
+        std::vector<vk::UniqueCommandBuffer> transferCmdBuffers_;
     };
 
     template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> QueuedDeviceTransfer::CreateDeviceBufferWithData(

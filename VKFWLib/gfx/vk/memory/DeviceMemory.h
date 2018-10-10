@@ -57,7 +57,7 @@ namespace vku::gfx {
         /** Holds the device. */
         const LogicalDevice* device_;
         /** Holds the Vulkan device memory. */
-        vk::DeviceMemory vkDeviceMemory_;
+        vk::UniqueDeviceMemory vkDeviceMemory_;
         /** Holds the current size of the memory in bytes. */
         std::size_t size_;
         /** Holds the memory properties. */

@@ -26,38 +26,32 @@ namespace vku::gfx {
     BufferGroup::~BufferGroup()
     {
         hostBuffers_.clear();
-        if (hostBufferMemory_) device_->GetDevice().freeMemory(hostBufferMemory_);
-        hostBufferMemory_ = vk::DeviceMemory();
+        hostBufferMemory_.reset();
         deviceBuffers_.clear();
-        if (deviceBufferMemory_) device_->GetDevice().freeMemory(deviceBufferMemory_);
-        deviceBufferMemory_ = vk::DeviceMemory();
+        deviceBufferMemory_.reset();
     }
 
     BufferGroup::BufferGroup(BufferGroup&& rhs) noexcept :
     device_{ rhs.device_ },
-        deviceBufferMemory_{ rhs.deviceBufferMemory_ },
-        hostBufferMemory_{ rhs.hostBufferMemory_ },
+        deviceBufferMemory_{ std::move(rhs.deviceBufferMemory_) },
+        hostBufferMemory_{ std::move(rhs.hostBufferMemory_) },
         deviceBuffers_{ std::move(rhs.deviceBuffers_) },
         hostBuffers_{ std::move(rhs.hostBuffers_) },
         memoryProperties_{ rhs.memoryProperties_ },
         bufferContents_{ std::move(rhs.bufferContents_) }
     {
-        rhs.deviceBufferMemory_ = vk::DeviceMemory();
-        rhs.hostBufferMemory_ = vk::DeviceMemory();
     }
 
     BufferGroup& BufferGroup::operator=(BufferGroup&& rhs) noexcept
     {
         this->~BufferGroup();
         device_ = rhs.device_;
-        deviceBufferMemory_ = rhs.deviceBufferMemory_;
-        hostBufferMemory_ = rhs.hostBufferMemory_;
+        deviceBufferMemory_ = std::move(rhs.deviceBufferMemory_);
+        hostBufferMemory_ = std::move(rhs.hostBufferMemory_);
         deviceBuffers_ = std::move(rhs.deviceBuffers_);
         hostBuffers_ = std::move(rhs.hostBuffers_);
         memoryProperties_ = rhs.memoryProperties_;
         bufferContents_ = std::move(rhs.bufferContents_);
-        rhs.deviceBufferMemory_ = vk::DeviceMemory();
-        rhs.hostBufferMemory_ = vk::DeviceMemory();
         return *this;
     }
 
@@ -89,17 +83,17 @@ namespace vku::gfx {
             FillAllocationInfo(&hostBuffers_[i], hostAllocInfo, hostSizes);
             FillAllocationInfo(&deviceBuffers_[i], deviceAllocInfo, deviceSizes);
         }
-        hostBufferMemory_ = device_->GetDevice().allocateMemory(hostAllocInfo);
-        deviceBufferMemory_ = device_->GetDevice().allocateMemory(deviceAllocInfo);
+        hostBufferMemory_ = device_->GetDevice().allocateMemoryUnique(hostAllocInfo);
+        deviceBufferMemory_ = device_->GetDevice().allocateMemoryUnique(deviceAllocInfo);
 
         auto deviceOffset = 0U, hostOffset = 0U;
         for (auto i = 0U; i < deviceBuffers_.size(); ++i) {
-            device_->GetDevice().bindBufferMemory(hostBuffers_[i].GetBuffer(), hostBufferMemory_, hostOffset);
-            device_->GetDevice().bindBufferMemory(deviceBuffers_[i].GetBuffer(), deviceBufferMemory_, deviceOffset);
+            device_->GetDevice().bindBufferMemory(hostBuffers_[i].GetBuffer(), *hostBufferMemory_, hostOffset);
+            device_->GetDevice().bindBufferMemory(deviceBuffers_[i].GetBuffer(), *deviceBufferMemory_, deviceOffset);
             if (transfer) {
-                auto deviceMem = device_->GetDevice().mapMemory(hostBufferMemory_, hostOffset, bufferContents_[i].first, vk::MemoryMapFlags());
+                auto deviceMem = device_->GetDevice().mapMemory(*hostBufferMemory_, hostOffset, bufferContents_[i].first, vk::MemoryMapFlags());
                 memcpy(deviceMem, bufferContents_[i].second, bufferContents_[i].first);
-                device_->GetDevice().unmapMemory(hostBufferMemory_);
+                device_->GetDevice().unmapMemory(*hostBufferMemory_);
 
                 // hostBuffers_[i].UploadData(0, bufferContents_[i].first, bufferContents_[i].second);
                 transfer->AddTransferToQueue(hostBuffers_[i], deviceBuffers_[i]);

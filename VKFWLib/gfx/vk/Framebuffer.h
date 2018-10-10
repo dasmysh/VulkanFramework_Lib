@@ -43,7 +43,7 @@ namespace vku::gfx {
         glm::uvec2 GetSize() const { return size_; }
         unsigned int GetWidth() const { return size_.x; }
         unsigned int GetHeight() const { return size_.y; }
-        const vk::Framebuffer& GetFramebuffer() const { return vkFramebuffer_; }
+        const vk::Framebuffer& GetFramebuffer() const { return *vkFramebuffer_; }
 
     private:
         void CreateImages(vk::CommandBuffer cmdBuffer);
@@ -62,9 +62,9 @@ namespace vku::gfx {
         /** Holds the externally owned images in this framebuffer. */
         std::vector<vk::Image> extImages_;
         /** Holds the image view for the external attachments. */
-        std::vector<vk::ImageView> vkExternalAttachmentsImageView_;
+        std::vector<vk::UniqueImageView> vkExternalAttachmentsImageView_;
         /** Holds the Vulkan framebuffer object. */
-        vk::Framebuffer vkFramebuffer_;
+        vk::UniqueFramebuffer vkFramebuffer_;
         /** Holds the queue family indices. */
         std::vector<std::uint32_t> queueFamilyIndices_;
     };

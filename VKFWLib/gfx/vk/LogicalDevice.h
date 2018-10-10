@@ -53,7 +53,7 @@ namespace vku::gfx {
 
 
         const vk::PhysicalDevice& GetPhysicalDevice() const { return vkPhysicalDevice_; }
-        const vk::Device& GetDevice() const { return vkDevice_; }
+        const vk::Device& GetDevice() const { return *vkDevice_; }
         const vk::Queue& GetQueue(unsigned int familyIndex, unsigned int queueIndex) const { return vkQueuesByRequestedFamily_[familyIndex][queueIndex]; }
         const DeviceQueueDesc& GetQueueInfo(unsigned int familyIndex) const { return queueDescriptions_[familyIndex]; }
         const vk::CommandPool& GetCommandPool(unsigned int familyIndex) const { return vkCmdPoolsByRequestedQFamily_[familyIndex]; }
@@ -88,11 +88,11 @@ namespace vku::gfx {
         /** Holds the physical device limits. */
         vk::PhysicalDeviceLimits vkPhysicalDeviceLimits_;
         /** Holds the actual device. */
-        vk::Device vkDevice_;
+        vk::UniqueDevice vkDevice_;
         /** Holds the queues by device queue family. */
         std::map<std::uint32_t, std::vector<vk::Queue>> vkQueuesByDeviceFamily_;
         /** Holds a command pool for each device queue family. */
-        std::map<std::uint32_t, vk::CommandPool> vkCmdPoolsByDeviceQFamily_;
+        std::map<std::uint32_t, vk::UniqueCommandPool> vkCmdPoolsByDeviceQFamily_;
 
         /** Holds the queue descriptions. */
         std::vector<DeviceQueueDesc> queueDescriptions_;

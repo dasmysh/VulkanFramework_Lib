@@ -29,7 +29,7 @@ namespace vku::gfx {
         template<class Vertex> void ResetVertexInput() const;
         void ResetFramebuffer(const glm::uvec2& size, unsigned int numViewports, unsigned int numScissors) const;
         void CreatePipeline(bool keepState, vk::RenderPass renderPass, unsigned int subpass, vk::PipelineLayout pipelineLayout);
-        vk::Pipeline GetPipeline() const { return vkPipeline_; }
+        vk::Pipeline GetPipeline() const { return *vkPipeline_; }
 
         vk::Viewport& GetViewport(unsigned int idx) const { assert(state_); return state_->viewports_[idx]; }
         vk::Rect2D& GetScissor(unsigned int idx) const { assert(state_); return state_->scissors_[idx]; }
@@ -80,7 +80,7 @@ namespace vku::gfx {
         /** Holds the state. */
         std::unique_ptr<State> state_;
         /** Holds the pipeline. */
-        vk::Pipeline vkPipeline_;
+        vk::UniquePipeline vkPipeline_;
     };
 
     template <class Vertex>

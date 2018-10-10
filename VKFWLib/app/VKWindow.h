@@ -40,7 +40,7 @@ namespace vku {
         cfg::WindowCfg& GetConfig() const { return *config_; };
         gfx::LogicalDevice& GetDevice() const { return *logicalDevice_; }
         const std::vector<gfx::Framebuffer>& GetFramebuffers() const { return swapchainFramebuffers_; }
-        vk::RenderPass GetRenderPass() const { return vkSwapchainRenderPass_; }
+        vk::RenderPass GetRenderPass() const { return *vkSwapchainRenderPass_; }
 
         bool IsMouseButtonPressed(int button) const;
         bool IsKeyPressed(int key) const;
@@ -63,7 +63,7 @@ namespace vku {
         void UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer, std::uint32_t cmdBufferIndex)>& fillFunc) const;
 
         std::uint32_t GetCurrentlyRenderedImageIndex() const { return currentlyRenderedImage_; }
-        vk::Semaphore GetDataAvailableSemaphore() const { return vkDataAvailableSemaphore_; }
+        vk::Semaphore GetDataAvailableSemaphore() const { return *vkDataAvailableSemaphore_; }
 
     private:
         void WindowPosCallback(int xpos, int ypos) const;
@@ -88,7 +88,7 @@ namespace vku {
         cfg::WindowCfg* config_;
 
         /** Holds the Vulkan surface. */
-        vk::SurfaceKHR vkSurface_;
+        vk::UniqueSurfaceKHR vkSurface_;
         /** Holds the size of the surface. */
         vk::Extent2D vkSurfaceExtend_;
         /** Holds the logical device. */
@@ -96,21 +96,22 @@ namespace vku {
         /** Holds the queue number used for graphics output. */
         unsigned int graphicsQueue_ = 0;
         /** Holds the swap chain. */
-        vk::SwapchainKHR vkSwapchain_;
+        vk::UniqueSwapchainKHR vkSwapchain_;
         /** Holds the swap chain render pass. */
-        vk::RenderPass vkSwapchainRenderPass_;
+        vk::UniqueRenderPass vkSwapchainRenderPass_;
         /** Holds the swap chain frame buffers. */
         std::vector<gfx::Framebuffer> swapchainFramebuffers_;
         /** Holds the swap chain command buffers. */
-        std::vector<vk::CommandBuffer> vkCommandBuffers_;
+        std::vector<vk::UniqueCommandBuffer> vkCommandBuffers_;
         /** Hold a fence for each command buffer to signal it is processed. */
+        std::vector<vk::UniqueFence> vkCmdBufferUFences_;
         std::vector<vk::Fence> vkCmdBufferFences_;
         /** Holds the semaphore to notify when a new swap image is available. */
-        vk::Semaphore vkImageAvailableSemaphore_;
+        vk::UniqueSemaphore vkImageAvailableSemaphore_;
         /** Holds the semaphore to notify when the data for that frame is uploaded to the GPU. */
-        vk::Semaphore vkDataAvailableSemaphore_;
+        vk::UniqueSemaphore vkDataAvailableSemaphore_;
         /** Holds the semaphore to notify when rendering is finished. */
-        vk::Semaphore vkRenderingFinishedSemaphore_;
+        vk::UniqueSemaphore vkRenderingFinishedSemaphore_;
         /** Holds the currently rendered image. */
         std::uint32_t currentlyRenderedImage_ = 0;
 

@@ -18,7 +18,7 @@ namespace vku::gfx {
     public:
         CommandBuffers(const LogicalDevice* device, unsigned int queueFamily, vk::CommandBufferLevel level, std::uint32_t numBuffers);
 
-        static vk::CommandBuffer beginSingleTimeSubmit(const LogicalDevice* device, unsigned int queueFamily);
+        static vk::UniqueCommandBuffer beginSingleTimeSubmit(const LogicalDevice* device, unsigned int queueFamily);
         static void endSingleTimeSubmit(const LogicalDevice* device, vk::CommandBuffer cmdBuffer,
             unsigned int queueFamily, unsigned int queueIndex,
             const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
@@ -31,6 +31,6 @@ namespace vku::gfx {
         /** Holds the queue family for this buffers. */
         unsigned int queueFamily_;
         /** Holds the vulkan command buffer objects. */
-        std::vector<vk::CommandBuffer> vkCmdBuffers_;
+        std::vector<vk::UniqueCommandBuffer> vkCmdBuffers_;
     };
 }

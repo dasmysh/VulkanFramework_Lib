@@ -31,7 +31,7 @@ namespace vku::gfx {
         /** Holds the shader filename. */
         std::string shaderFilename_;
         /** Holds the compiled shader. */
-        vk::ShaderModule shaderModule_;
+        vk::UniqueShaderModule shaderModule_;
         /** Holds the shaders type. */
         vk::ShaderStageFlagBits type_;
         /** Holds the shaders type as a string. */

@@ -6,7 +6,7 @@ project(${FWLIB_LIBNAME})
 
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompileSpirvShader.cmake")
 
-find_package(Vulkan 1.1.82.0 REQUIRED)
+find_package(Vulkan 1.1.85.0 REQUIRED)
 
 set(GLFW_BUILD_DOCS OFF CACHE BOOL "Build the GLFW documentation" FORCE)
 set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "Build the GLFW example programs" FORCE)

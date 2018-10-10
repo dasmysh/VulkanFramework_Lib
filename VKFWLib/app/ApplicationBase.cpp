@@ -21,13 +21,6 @@
 
 #include "gfx/vk/LogicalDevice.h"
 
-namespace vk {
-    // VK_EXT_debug_report
-    PFN_vkCreateDebugReportCallbackEXT CreateDebugReportCallbackEXT = nullptr;
-    PFN_vkDestroyDebugReportCallbackEXT DestroyDebugReportCallbackEXT = nullptr;
-    PFN_vkDebugReportMessageEXT DebugReportMessageEXT = nullptr;
-}
-
 namespace vku {
 
     /**
@@ -220,7 +213,7 @@ namespace vku {
     {
         windows_.clear();
         vkDebugReportCB_.reset();
-        if (vkDebugReportCB_) vk::DestroyDebugReportCallbackEXT(*vkInstance_, vkDebugReportCB_, nullptr);
+        // if (vkDebugReportCB_) vk::DestroyDebugReportCallbackEXT(*vkInstance_, vkDebugReportCB_, nullptr);
         vkInstance_.reset();
 
         LOG(G3LOG_DEBUG) << "Exiting application. Saving configuration to file.";
@@ -430,10 +423,7 @@ namespace vku {
                 static_cast<std::uint32_t>(enabledExtensions.size()), enabledExtensions.data() };
 
             vkInstance_ = vk::createInstanceUnique(createInfo);
-
-            vk::CreateDebugReportCallbackEXT = reinterpret_cast<PFN_vkCreateDebugReportCallbackEXT>(LoadVKInstanceFunction("vkCreateDebugReportCallbackEXT", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, true));
-            vk::DestroyDebugReportCallbackEXT = reinterpret_cast<PFN_vkDestroyDebugReportCallbackEXT>(LoadVKInstanceFunction("vkDestroyDebugReportCallbackEXT", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, true));
-            vk::DebugReportMessageEXT = reinterpret_cast<PFN_vkDebugReportMessageEXT>(LoadVKInstanceFunction("vkDebugReportMessageEXT", VK_EXT_DEBUG_REPORT_EXTENSION_NAME, true));
+            vkDispatchLoaderInst_ = vk::DispatchLoaderDynamic{ vkInstance_.get() };
         }
 
         vk::DebugReportFlagsEXT drFlags(vk::DebugReportFlagBitsEXT::eError);
@@ -445,14 +435,14 @@ namespace vku {
 #endif
         vk::DebugReportCallbackCreateInfoEXT drCreateInfo{ drFlags, DebugOutputCallback, this };
 
-        // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
-        VkDebugReportCallbackEXT dbgReportCB = VK_NULL_HANDLE;
-        auto result = vk::CreateDebugReportCallbackEXT(*vkInstance_, &static_cast<const VkDebugReportCallbackCreateInfoEXT&>(drCreateInfo), nullptr, &dbgReportCB);
-        if (result != VK_SUCCESS) {
-            LOG(FATAL) << "Could not create DebugReportCallback (" << vk::to_string(vk::Result(result)) << ").";
+        try {
+            vkDebugReportCB_ = vkInstance_->createDebugReportCallbackEXTUnique(drCreateInfo, nullptr, vkDispatchLoaderInst_);
+        }
+        catch (vk::SystemError& e) {
+            // LOG(FATAL) << "Could not create DebugReportCallback (" << vk::to_string(vk::Result(result)) << ").";
+            LOG(FATAL) << "Could not create DebugReportCallback (" << e.what() << ").";
             throw std::runtime_error("Could not create DebugReportCallback.");
         }
-        vkDebugReportCB_ = ;// vk::UniqueDebugReportCallbackEXT(dbgReportCB);
         LOG(INFO) << "Vulkan instance created.";
 
         {

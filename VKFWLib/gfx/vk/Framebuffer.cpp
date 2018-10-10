@@ -60,7 +60,6 @@ namespace vku::gfx {
         vkFramebuffer_{ std::move(rhs.vkFramebuffer_) },
         queueFamilyIndices_{ std::move(rhs.queueFamilyIndices_) }
     {
-        rhs.vkFramebuffer_ = vk::Framebuffer();
     }
 
     Framebuffer& Framebuffer::operator=(Framebuffer&& rhs) noexcept
@@ -75,20 +74,10 @@ namespace vku::gfx {
         vkExternalAttachmentsImageView_ = std::move(rhs.vkExternalAttachmentsImageView_);
         vkFramebuffer_ = std::move(rhs.vkFramebuffer_);
         queueFamilyIndices_ = std::move(rhs.queueFamilyIndices_);
-        rhs.vkFramebuffer_ = vk::Framebuffer();
         return *this;
     }
 
-    Framebuffer::~Framebuffer()
-    {
-        if (vkFramebuffer_) device_->GetDevice().destroyFramebuffer(vkFramebuffer_);
-        vkFramebuffer_ = vk::Framebuffer();
-
-        for (auto& imgView : vkExternalAttachmentsImageView_) {
-            if (imgView) device_->GetDevice().destroyImageView(imgView);
-            imgView = vk::ImageView();
-        }
-    }
+    Framebuffer::~Framebuffer() = default;
 
     void Framebuffer::CreateImages(vk::CommandBuffer cmdBuffer)
     {
@@ -97,17 +86,15 @@ namespace vku::gfx {
         }
         memoryGroup_.FinalizeDeviceGroup();
 
-        bool handleCmdBuffer = false;
+        vk::UniqueCommandBuffer ucmdBuffer;
         if (!cmdBuffer) {
-            cmdBuffer = CommandBuffers::beginSingleTimeSubmit(device_, 0);
-            handleCmdBuffer = true;
+            ucmdBuffer = CommandBuffers::beginSingleTimeSubmit(device_, 0);
         }
         for (auto i = 0U; i < memoryGroup_.GetImagesInGroup(); ++i)
-            memoryGroup_.GetTexture(i)->TransitionLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal, cmdBuffer);
-        if (handleCmdBuffer) {
-            CommandBuffers::endSingleTimeSubmit(device_, cmdBuffer, 0, 0);
+            memoryGroup_.GetTexture(i)->TransitionLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal, cmdBuffer ? cmdBuffer : *ucmdBuffer);
+        if (!cmdBuffer) {
+            CommandBuffers::endSingleTimeSubmit(device_, *ucmdBuffer, 0, 0);
             device_->GetQueue(0, 0).waitIdle();
-            device_->GetDevice().freeCommandBuffers(device_->GetCommandPool(0), cmdBuffer);
         }
 
     }
@@ -126,14 +113,14 @@ namespace vku::gfx {
             vk::ComponentMapping componentMapping{};
             vk::ImageViewCreateInfo imgViewCreateInfo{ vk::ImageViewCreateFlags(), extImages_[i],
                 desc_.type_, desc_.tex_[i].format_, vk::ComponentMapping(), subresourceRange };
-            vkExternalAttachmentsImageView_[i] = device_->GetDevice().createImageView(imgViewCreateInfo);
-            attachments.push_back(vkExternalAttachmentsImageView_[i]);
+            vkExternalAttachmentsImageView_[i] = device_->GetDevice().createImageViewUnique(imgViewCreateInfo);
+            attachments.push_back(*vkExternalAttachmentsImageView_[i]);
         }
 
         for (auto i = 0U; i < memoryGroup_.GetImagesInGroup(); ++i) attachments.push_back(memoryGroup_.GetTexture(i)->GetImageView());
 
         vk::FramebufferCreateInfo fbCreateInfo{ vk::FramebufferCreateFlags(), renderPass_,
             static_cast<std::uint32_t>(desc_.tex_.size()), attachments.data(), size_.x, size_.y, layerCount };
-        vkFramebuffer_ = device_->GetDevice().createFramebuffer(fbCreateInfo);
+        vkFramebuffer_ = device_->GetDevice().createFramebufferUnique(fbCreateInfo);
     }
 }
