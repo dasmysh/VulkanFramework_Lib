@@ -96,7 +96,7 @@ namespace vku::gfx {
         // Binding 0: UBO
         setLayoutBindings.emplace_back(0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eFragment);
         // Binding 1: Diffuse map
-        // setLayoutBindings.emplace_back(1, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment);
+        setLayoutBindings.emplace_back(1, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment);
         // Binding 1: Bump map
         // setLayoutBindings.emplace_back(2, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment);
 
@@ -150,20 +150,20 @@ namespace vku::gfx {
             descSetWrites.emplace_back(*materialDescriptorSets_[i], 0, 0, 1,
                 vk::DescriptorType::eUniformBuffer, nullptr, &descBufferInfos[i]);
 
-            // if (materials_[i].diffuseTexture_) {
-            //     descImageInfos.emplace_back(*textureSampler_, materials_[i].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
-            //     // descSetWrites.emplace_back(*materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 0]);
-            // 
-            //     descSetWrites.emplace_back(*materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[i + 0]); // no bump map ...
-            // }
-            // else {
-            //     descImageInfos.emplace_back(*textureSampler_, materials_[0].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
-            //     // descSetWrites.emplace_back(*materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 0]);
-            // 
-            //     descSetWrites.emplace_back(*materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[i + 0]); // no bump map ...
-            //     // descImageInfos.emplace_back(vk::Sampler(), vk::ImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
-            //     // descSetWrites.emplace_back(materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 0, vk::DescriptorType::eCombinedImageSampler, nullptr);
-            // }
+            if (materials_[i].diffuseTexture_) {
+                descImageInfos.emplace_back(*textureSampler_, materials_[i].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+                // descSetWrites.emplace_back(*materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 0]);
+            
+                descSetWrites.emplace_back(*materialDescriptorSets_[i], 1, 0, 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[i + 0]); // no bump map ...
+            }
+            else {
+                descImageInfos.emplace_back(*textureSampler_, materials_[0].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+                // descSetWrites.emplace_back(*materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 0]);
+            
+                descSetWrites.emplace_back(*materialDescriptorSets_[i], 1, 0, 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[i + 0]); // no bump map ...
+                // descImageInfos.emplace_back(vk::Sampler(), vk::ImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+                // descSetWrites.emplace_back(materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 0, vk::DescriptorType::eCombinedImageSampler, nullptr);
+            }
 
             // if (materials_[i].bumpMap_) {
             //     descImageInfos.emplace_back(*textureSampler_, materials_[i].bumpMap_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
