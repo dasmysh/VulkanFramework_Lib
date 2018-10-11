@@ -183,7 +183,8 @@ namespace vku {
         // ReSharper disable once CppZeroConstantCanBeReplacedWithNullptr
         VkSurfaceKHR surfaceKHR = VK_NULL_HANDLE;
         auto result = glfwCreateWindowSurface(ApplicationBase::instance().GetVKInstance(), window_, nullptr, &surfaceKHR);
-        vkSurface_.reset(vk::SurfaceKHR(surfaceKHR));
+        vk::ObjectDestroy<vk::Instance, vk::DispatchLoaderStatic> deleter(ApplicationBase::instance().GetVKInstance(), nullptr, vk::DispatchLoaderStatic());
+        vkSurface_ = vk::UniqueSurfaceKHR(vk::SurfaceKHR(surfaceKHR), deleter);
         if (result != VK_SUCCESS) {
             LOG(FATAL) << "Could not create window surface (" << vk::to_string(vk::Result(result)) << ").";
             throw std::runtime_error("Could not create window surface.");
@@ -328,6 +329,7 @@ namespace vku {
         vkImageAvailableSemaphore_.reset();
         vkDataAvailableSemaphore_.reset();
         vkRenderingFinishedSemaphore_.reset();
+        vkCommandBuffers_.clear();
 
         DestroySwapchainImages();
         vkSwapchain_.reset();

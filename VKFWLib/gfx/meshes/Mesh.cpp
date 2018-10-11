@@ -52,9 +52,6 @@ namespace vku::gfx {
         materialDescriptorSets_{ std::move(rhs.materialDescriptorSets_) },
         vertexMaterialData_{ std::move(rhs.vertexMaterialData_) }
     {
-        rhs.textureSampler_ = vk::Sampler();
-        rhs.descriptorPool_ = vk::DescriptorPool();
-        rhs.descriptorSetLayout_ = vk::DescriptorSetLayout();
     }
 
     Mesh& Mesh::operator=(Mesh&& rhs) noexcept
@@ -72,28 +69,17 @@ namespace vku::gfx {
         descriptorSetLayout_ = std::move(rhs.descriptorSetLayout_);
         materialDescriptorSets_ = std::move(rhs.materialDescriptorSets_);
         vertexMaterialData_ = std::move(rhs.vertexMaterialData_);
-        rhs.textureSampler_ = vk::Sampler();
-        rhs.descriptorPool_ = vk::DescriptorPool();
-        rhs.descriptorSetLayout_ = vk::DescriptorSetLayout();
         return *this;
     }
 
-    Mesh::~Mesh()
-    {
-        if (descriptorPool_) device_->GetDevice().destroyDescriptorPool(descriptorPool_);
-        descriptorPool_ = vk::DescriptorPool();
-        if (descriptorSetLayout_) device_->GetDevice().destroyDescriptorSetLayout(descriptorSetLayout_);
-        descriptorSetLayout_ = vk::DescriptorSetLayout();
-        if (textureSampler_) device_->GetDevice().destroySampler(textureSampler_);
-        textureSampler_ = vk::Sampler();
-    }
+    Mesh::~Mesh() = default;
 
     void Mesh::CreateMaterials(const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         vk::SamplerCreateInfo samplerCreateInfo{ vk::SamplerCreateFlags(), vk::Filter::eLinear, vk::Filter::eLinear,
             vk::SamplerMipmapMode::eNearest, vk::SamplerAddressMode::eRepeat, vk::SamplerAddressMode::eRepeat,
             vk::SamplerAddressMode::eRepeat };
-        textureSampler_ = device_->GetDevice().createSampler(samplerCreateInfo);
+        textureSampler_ = device_->GetDevice().createSamplerUnique(samplerCreateInfo);
 
         auto numMaterials = meshInfo_->GetMaterials().size();
         std::vector<vk::DescriptorPoolSize> poolSizes;
@@ -103,22 +89,21 @@ namespace vku::gfx {
         vk::DescriptorPoolCreateInfo descriptorPoolInfo{ vk::DescriptorPoolCreateFlags(), static_cast<std::uint32_t>(numMaterials * 3),
             static_cast<std::uint32_t>(poolSizes.size()), poolSizes.data() };
 
-        descriptorPool_ = device_->GetDevice().createDescriptorPool(descriptorPoolInfo);
+        descriptorPool_ = device_->GetDevice().createDescriptorPoolUnique(descriptorPoolInfo);
 
         // Shared descriptor set layout
         std::vector<vk::DescriptorSetLayoutBinding> setLayoutBindings;
         // Binding 0: UBO
         setLayoutBindings.emplace_back(0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eFragment);
         // Binding 1: Diffuse map
-        setLayoutBindings.emplace_back(1, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment);
+        // setLayoutBindings.emplace_back(1, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment);
         // Binding 1: Bump map
-        setLayoutBindings.emplace_back(2, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment);
+        // setLayoutBindings.emplace_back(2, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment);
 
         vk::DescriptorSetLayoutCreateInfo descriptorLayoutCreateInfo{ vk::DescriptorSetLayoutCreateFlags(),
             static_cast<std::uint32_t>(setLayoutBindings.size()), setLayoutBindings.data() };
 
-        descriptorSetLayout_ = device_->GetDevice().createDescriptorSetLayout(descriptorLayoutCreateInfo);
-
+        descriptorSetLayout_ = device_->GetDevice().createDescriptorSetLayoutUnique(descriptorLayoutCreateInfo);
 
         materials_.reserve(numMaterials);
         for (std::size_t i = 0; i < numMaterials; ++i) {
@@ -149,37 +134,45 @@ namespace vku::gfx {
         std::vector<vk::DescriptorImageInfo> descImageInfos; descImageInfos.reserve(materials_.size() * 2);
 
         for (std::size_t i = 0; i < materials_.size(); ++i) {
-            descSetLayouts[i] = descriptorSetLayout_;
+            descSetLayouts[i] = *descriptorSetLayout_;
         }
 
-        vk::DescriptorSetAllocateInfo descSetAllocInfo{ descriptorPool_, static_cast<std::uint32_t>(descSetLayouts.size()), descSetLayouts.data() };
-        materialDescriptorSets_ = device_->GetDevice().allocateDescriptorSets(descSetAllocInfo);
+        vk::DescriptorSetAllocateInfo descSetAllocInfo{ *descriptorPool_, static_cast<std::uint32_t>(descSetLayouts.size()), descSetLayouts.data() };
+        materialDescriptorSets_ = device_->GetDevice().allocateDescriptorSetsUnique(descSetAllocInfo);
 
         auto uboOffset = static_cast<std::uint32_t>(std::get<1>(materialBuffer_));
         auto materialBufferSize = static_cast<std::uint32_t>(std::get<2>(materialBuffer_));
         for (std::size_t i = 0; i < materials_.size(); ++i) {
             auto materialBufferOffset = uboOffset + materialBufferSize * i;
             descBufferInfos.emplace_back(std::get<0>(materialBuffer_)->GetBuffer(), materialBufferOffset, materialBufferSize);
-            descSetWrites.emplace_back(materialDescriptorSets_[i], 0, static_cast<std::uint32_t>(i), 1,
+            //descSetWrites.emplace_back(*materialDescriptorSets_[i], 0, static_cast<std::uint32_t>(i), 1,
+            //    vk::DescriptorType::eUniformBuffer, nullptr, &descBufferInfos[i]);
+            descSetWrites.emplace_back(*materialDescriptorSets_[i], 0, 0, 1,
                 vk::DescriptorType::eUniformBuffer, nullptr, &descBufferInfos[i]);
 
-            if (materials_[i].diffuseTexture_) {
-                descImageInfos.emplace_back(textureSampler_, materials_[i].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
-            }
-            else {
-                descImageInfos.emplace_back(vk::Sampler(), vk::ImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
-                // descSetWrites.emplace_back(materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 0, vk::DescriptorType::eCombinedImageSampler, nullptr);
-            }
-            descSetWrites.emplace_back(materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 0]);
+            // if (materials_[i].diffuseTexture_) {
+            //     descImageInfos.emplace_back(*textureSampler_, materials_[i].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+            //     // descSetWrites.emplace_back(*materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 0]);
+            // 
+            //     descSetWrites.emplace_back(*materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[i + 0]); // no bump map ...
+            // }
+            // else {
+            //     descImageInfos.emplace_back(*textureSampler_, materials_[0].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+            //     // descSetWrites.emplace_back(*materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 0]);
+            // 
+            //     descSetWrites.emplace_back(*materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[i + 0]); // no bump map ...
+            //     // descImageInfos.emplace_back(vk::Sampler(), vk::ImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+            //     // descSetWrites.emplace_back(materialDescriptorSets_[i], 1, static_cast<std::uint32_t>(i), 0, vk::DescriptorType::eCombinedImageSampler, nullptr);
+            // }
 
-            if (materials_[i].bumpMap_) {
-                descImageInfos.emplace_back(textureSampler_, materials_[i].bumpMap_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
-            }
-            else {
-                descImageInfos.emplace_back(vk::Sampler(), vk::ImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
-                // descSetWrites.emplace_back(materialDescriptorSets_[i], 2, static_cast<std::uint32_t>(i), 0, vk::DescriptorType::eCombinedImageSampler, nullptr);
-            }
-            descSetWrites.emplace_back(materialDescriptorSets_[i], 2, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 1]);
+            // if (materials_[i].bumpMap_) {
+            //     descImageInfos.emplace_back(*textureSampler_, materials_[i].bumpMap_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+            //     descSetWrites.emplace_back(*materialDescriptorSets_[i], 2, static_cast<std::uint32_t>(i), 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos[2 * i + 1]);
+            // }
+            // else {
+            //     // descImageInfos.emplace_back(vk::Sampler(), vk::ImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
+            //     // descSetWrites.emplace_back(materialDescriptorSets_[i], 2, static_cast<std::uint32_t>(i), 0, vk::DescriptorType::eCombinedImageSampler, nullptr);
+            // }
         }
 
         device_->GetDevice().updateDescriptorSets(descSetWrites, nullptr);
@@ -231,7 +224,7 @@ namespace vku::gfx {
         auto& matDescSets = materialDescriptorSets_[subMesh->GetMaterialID()];
 
         // bind material ubo.
-        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, materialDescriptorSets_, nullptr);
+        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, *matDescSets, nullptr);
         cmdBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, vk::ArrayProxy<const float>(16, glm::value_ptr(worldMat)));
         cmdBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eVertex, 16, vk::ArrayProxy<const float>(9, glm::value_ptr(normalMat)));
         cmdBuffer.drawIndexed(static_cast<std::uint32_t>(subMesh->GetNumberOfIndices()), 1, static_cast<std::uint32_t>(subMesh->GetIndexOffset()), 0, 0);

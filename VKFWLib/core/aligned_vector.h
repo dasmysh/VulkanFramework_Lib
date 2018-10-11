@@ -142,7 +142,7 @@ namespace vku {
     inline void aligned_vector<T>::push_back(const T& value)
     {
         auto oldSize = cont_.size();
-        resize(oldSize + alignedSize_);
+        cont_.resize(oldSize + alignedSize_);
         new(reinterpret_cast<T*>(cont_.data() + oldSize)) T(value);
     }
 
@@ -150,7 +150,7 @@ namespace vku {
     inline void aligned_vector<T>::push_back(T&& value)
     {
         auto oldSize = cont_.size();
-        resize(oldSize + alignedSize_);
+        cont_.resize(oldSize + alignedSize_);
         new(reinterpret_cast<T*>(cont_.data() + oldSize)) T(std::move(value));
     }
 
@@ -159,7 +159,7 @@ namespace vku {
     inline typename aligned_vector<T>::reference aligned_vector<T>::emplace_back(Args&&... args)
     {
         auto oldSize = cont_.size();
-        resize(oldSize + alignedSize_);
+        cont_.resize(oldSize + alignedSize_);
         new(reinterpret_cast<T*>(cont_.data() + oldSize)) T(std::forward<Args>(args)...);
 
         return back();

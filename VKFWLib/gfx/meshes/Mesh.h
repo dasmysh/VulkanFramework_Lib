@@ -48,7 +48,7 @@ namespace vku::gfx {
 
         void UploadMeshData(QueuedDeviceTransfer& transfer);
         void CreateDescriptorSets();
-        vk::DescriptorSetLayout GetMeshDescriptorLayout() const { return descriptorSetLayout_; }
+        vk::DescriptorSetLayout GetMeshDescriptorLayout() const { return *descriptorSetLayout_; }
 
         void BindBuffersToCommandBuffer(vk::CommandBuffer cmdBuffer) const;
         void DrawMesh(vk::CommandBuffer cmdBuffer, vk::PipelineLayout pipelineLayout, const glm::mat4& worldMatrix) const;
@@ -93,13 +93,13 @@ namespace vku::gfx {
         /** Holds the meshes materials. */
         std::vector<Material> materials_;
         /** The sampler for the materials textures. */
-        vk::Sampler textureSampler_;
+        vk::UniqueSampler textureSampler_;
         /** The descriptor pool for mesh rendering. */
-        vk::DescriptorPool descriptorPool_;
+        vk::UniqueDescriptorPool descriptorPool_;
         /** The descriptor set layout for mesh rendering. */
-        vk::DescriptorSetLayout descriptorSetLayout_;
+        vk::UniqueDescriptorSetLayout descriptorSetLayout_;
         /** Holds the material descriptor sets. */
-        std::vector<vk::DescriptorSet> materialDescriptorSets_;
+        std::vector<vk::UniqueDescriptorSet> materialDescriptorSets_;
 
         /** Holds the size of a single material in the buffer. */
 
