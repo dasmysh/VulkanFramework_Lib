@@ -15,6 +15,7 @@ set(GLFW_INSTALL OFF CACHE BOOL "Generate installation target" FORCE)
 add_subdirectory(extern/glfw)
 
 option(ADD_FATAL_EXAMPLE OFF)
+option(USE_DYNAMIC_LOGGING_LEVELS ON)
 option(G3_SHARED_LIB OFF)
 add_subdirectory(extern/g3log)
 
