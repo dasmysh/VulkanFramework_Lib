@@ -219,14 +219,14 @@ namespace vku::gfx {
     void Mesh::DrawSubMesh(vk::CommandBuffer cmdBuffer, vk::PipelineLayout pipelineLayout, const SubMesh* subMesh, const glm::mat4& worldMatrix) const
     {
         auto worldMat = worldMatrix;
-        auto normalMat = glm::inverseTranspose(glm::mat3(worldMatrix));
+        auto normalMat = glm::mat4(glm::inverseTranspose(glm::mat3(worldMatrix)));
         auto& mat = materials_[subMesh->GetMaterialID()];
         auto& matDescSets = materialDescriptorSets_[subMesh->GetMaterialID()];
 
         // bind material ubo.
         cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, *matDescSets, nullptr);
         cmdBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eVertex, 0, vk::ArrayProxy<const float>(16, glm::value_ptr(worldMat)));
-        cmdBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eVertex, 16, vk::ArrayProxy<const float>(9, glm::value_ptr(normalMat)));
+        // cmdBuffer.pushConstants(pipelineLayout, vk::ShaderStageFlagBits::eVertex, 16, vk::ArrayProxy<const float>(16, glm::value_ptr(normalMat)));
         cmdBuffer.drawIndexed(static_cast<std::uint32_t>(subMesh->GetNumberOfIndices()), 1, static_cast<std::uint32_t>(subMesh->GetIndexOffset()), 0, 0);
     }
 
