@@ -30,33 +30,33 @@ namespace vku {
     class ApplicationBase
     {
     public:
-        VKUDllExport ApplicationBase(const std::string& applicationName, std::uint32_t applicationVersion, const std::string& configFileName);
+        ApplicationBase(const std::string& applicationName, std::uint32_t applicationVersion, const std::string& configFileName);
         ApplicationBase(const ApplicationBase&) = delete;
         ApplicationBase(ApplicationBase&&) = delete;
         ApplicationBase& operator=(const ApplicationBase&) = delete;
         ApplicationBase& operator=(ApplicationBase&&) = delete;
-        virtual VKUDllExport ~ApplicationBase();
+        virtual ~ApplicationBase();
 
         static ApplicationBase& instance() { return *instance_; };
 
         /** Starts the application. */
-        VKUDllExport void StartRun();
+        void StartRun();
         /** Checks if the application is still running. */
-        VKUDllExport bool IsRunning() const;
+        bool IsRunning() const;
         /** Make one application <em>step</em> (rendering etc.). */
-        VKUDllExport void Step();
+        void Step();
         /** Called if the application is to end running. */
-        VKUDllExport void EndRun();
+        void EndRun();
 
         bool IsPaused() const { return pause_; }
         bool IsGUIMode() const { return guiMode_; }
-        VKUDllExport VKWindow* GetFocusedWindow();
-        VKUDllExport VKWindow* GetWindow(unsigned int idx);
+        VKWindow* GetFocusedWindow();
+        VKWindow* GetWindow(unsigned int idx);
         // VKUDllExport const SceneObjectManager& GetSceneObjectManager() const { return sceneObjectManager_; }
 
         void SetPause(bool pause);
 
-        virtual VKUDllExport bool HandleKeyboard(int key, int scancode, int action, int mods, VKWindow* sender);
+        virtual bool HandleKeyboard(int key, int scancode, int action, int mods, VKWindow* sender);
         bool HandleMouse(int button, int action, int mods, float mouseWheelDelta, VKWindow* sender);
         virtual bool HandleMouseApp(int button, int action, int mods, float mouseWheelDelta, VKWindow* sender) = 0;
         void OnResize(unsigned int width, unsigned int height, const VKWindow* window);

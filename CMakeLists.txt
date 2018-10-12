@@ -138,7 +138,7 @@ endforeach()
 
 file(GLOB LIB_CONFIGS CMakeLists.txt Readme.md .gitattributes .gitignore .gitmodules .clang-format)
 
-add_library(${FWLIB_LIBNAME} SHARED ${LIB_COMPILED_SHADERS} ${LIB_TMP_FILES} ${LIB_TOP_FILES} ${LIB_RES_FILES} ${LIB_CONFIGS} ${EXTERN_SOURCES})
+add_library(${FWLIB_LIBNAME} ${LIB_COMPILED_SHADERS} ${LIB_TMP_FILES} ${LIB_TOP_FILES} ${LIB_RES_FILES} ${LIB_CONFIGS} ${EXTERN_SOURCES})
 target_include_directories(${FWLIB_LIBNAME} PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}
     ${VULKAN_INCLUDE_DIR}
