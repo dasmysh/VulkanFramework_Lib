@@ -28,6 +28,7 @@ namespace vku::gfx {
     class Framebuffer;
     class Buffer;
     class Texture;
+    class MemoryGroup;
 
     struct DeviceQueueDesc
     {
@@ -70,6 +71,7 @@ namespace vku::gfx {
         const cfg::WindowCfg& GetWindowCfg() const { return windowCfg_; }
         ShaderManager* GetShaderManager() const { return shaderManager_.get(); }
         TextureManager* GetTextureManager() const { return textureManager_.get(); }
+        Texture2D* GetDummyTexture() const { return dummyTexture_.get(); }
 
         std::size_t CalculateUniformBufferAlignment(std::size_t size) const;
         std::size_t CalculateBufferImageOffset(const Texture& second, std::size_t currentOffset) const;
@@ -115,5 +117,10 @@ namespace vku::gfx {
         std::unique_ptr<ShaderManager> shaderManager_;
         /** Holds the texture manager. */
         std::unique_ptr<TextureManager> textureManager_;
+
+        /** The memory group holding all dummy objects. */
+        std::unique_ptr<MemoryGroup> dummyMemGroup_;
+        /** Holds the dummy texture. */
+        std::shared_ptr<Texture2D> dummyTexture_;
     };
 }

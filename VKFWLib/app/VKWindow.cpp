@@ -427,7 +427,7 @@ namespace vku {
         ++frameCount_;
     }
 
-    void VKWindow::UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer, std::uint32_t cmdBufferIndex)>& fillFunc) const
+    void VKWindow::UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer, std::size_t cmdBufferIndex)>& fillFunc) const
     {
         {
             auto syncResult = vk::Result::eTimeout;
@@ -441,7 +441,7 @@ namespace vku {
         }
 
         logicalDevice_->GetDevice().resetCommandPool(logicalDevice_->GetCommandPool(graphicsQueue_), vk::CommandPoolResetFlags());
-        for (auto i = 0U; i < vkCommandBuffers_.size(); ++i) {
+        for (std::size_t i = 0U; i < vkCommandBuffers_.size(); ++i) {
             vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eSimultaneousUse };
             vkCommandBuffers_[i]->begin(cmdBufferBeginInfo);
 

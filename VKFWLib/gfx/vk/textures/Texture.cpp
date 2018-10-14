@@ -52,7 +52,7 @@ namespace vku::gfx {
         texDesc.imageTiling_ = vk::ImageTiling::eOptimal;
         texDesc.imageUsage_ = vk::ImageUsageFlagBits::eDepthStencilAttachment;
         texDesc.sharingMode_ = vk::SharingMode::eExclusive;
-        texDesc.imageLayout_ = vk::ImageLayout::ePreinitialized;
+        texDesc.imageLayout_ = vk::ImageLayout::eUndefined;
         return texDesc;
     }
 
@@ -158,7 +158,7 @@ namespace vku::gfx {
         transitionBarrier.srcAccessMask = GetAccessFlagsForLayout(desc_.imageLayout_);
         transitionBarrier.dstAccessMask = GetAccessFlagsForLayout(newLayout);
 
-        cmdBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe,
+        cmdBuffer.pipelineBarrier(GetStageFlagsForLayout(desc_.imageLayout_), GetStageFlagsForLayout(newLayout),
             vk::DependencyFlags(), nullptr, nullptr, transitionBarrier);
         desc_.imageLayout_ = newLayout;
     }
@@ -248,9 +248,23 @@ namespace vku::gfx {
         case vk::ImageLayout::eTransferSrcOptimal: return vk::AccessFlagBits::eTransferRead;
         case vk::ImageLayout::eColorAttachmentOptimal: return vk::AccessFlagBits::eColorAttachmentWrite;
         case vk::ImageLayout::eDepthStencilAttachmentOptimal:
-            return vk::AccessFlagBits::eDepthStencilAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+            return vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
         case vk::ImageLayout::eShaderReadOnlyOptimal: return vk::AccessFlagBits::eShaderRead;
         default: return vk::AccessFlags();
+        }
+    }
+
+    vk::PipelineStageFlags Texture::GetStageFlagsForLayout(vk::ImageLayout layout)
+    {
+        switch (layout) {
+        case vk::ImageLayout::eUndefined: return vk::PipelineStageFlagBits::eTopOfPipe;
+        case vk::ImageLayout::ePreinitialized: return vk::PipelineStageFlagBits::eHost;
+        case vk::ImageLayout::eTransferDstOptimal: return vk::PipelineStageFlagBits::eTransfer;
+        case vk::ImageLayout::eTransferSrcOptimal: return vk::PipelineStageFlagBits::eTransfer;
+        case vk::ImageLayout::eColorAttachmentOptimal: return vk::PipelineStageFlagBits::eColorAttachmentOutput;
+        case vk::ImageLayout::eDepthStencilAttachmentOptimal: return vk::PipelineStageFlagBits::eEarlyFragmentTests;
+        case vk::ImageLayout::eShaderReadOnlyOptimal: return vk::PipelineStageFlagBits::eFragmentShader;
+        default: return vk::PipelineStageFlagBits::eTopOfPipe;
         }
     }
 

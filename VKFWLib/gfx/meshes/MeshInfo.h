@@ -57,6 +57,7 @@ namespace vku::gfx {
 
         const std::vector<MaterialInfo>& GetMaterials() const { return materials_; }
         const MaterialInfo* GetMaterial(unsigned int id) const { return &materials_[id]; }
+        const std::vector<const SceneMeshNode*>& GetNodes() const { return nodes_; }
 
         template<class VertexType>
         void GetVertices(std::vector<VertexType>& vertices) const;

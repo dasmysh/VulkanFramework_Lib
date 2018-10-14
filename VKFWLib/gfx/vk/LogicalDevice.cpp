@@ -12,6 +12,9 @@
 #include "core/resources/ShaderManager.h"
 #include "GraphicsPipeline.h"
 #include "textures/Texture.h"
+#include "gfx/Texture2D.h"
+#include "memory/MemoryGroup.h"
+#include "QueuedDeviceTransfer.h"
 
 namespace vku::gfx {
 
@@ -111,6 +114,14 @@ namespace vku::gfx {
 
         shaderManager_ = std::make_unique<ShaderManager>(this);
         textureManager_ = std::make_unique<TextureManager>(this);
+
+        dummyMemGroup_ = std::make_unique<MemoryGroup>(this, vk::MemoryPropertyFlags());
+        dummyTexture_ = textureManager_->GetResource("dummy.png", true, *dummyMemGroup_); // , std::vector<std::uint32_t>{ {0, 1} }
+
+        QueuedDeviceTransfer transfer{ this, std::make_pair(0, 0) };
+        dummyMemGroup_->FinalizeDeviceGroup();
+        dummyMemGroup_->TransferData(transfer);
+        transfer.FinishTransfer();
     }
 
 

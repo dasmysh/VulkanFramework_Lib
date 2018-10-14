@@ -60,7 +60,7 @@ namespace vku {
         void SubmitFrame();
 
         // for primary cmd buffer: dirty bit, update if needed. (start cmd buffer, begin render pass, execute other buffers, end pass, end buffer)
-        void UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer, std::uint32_t cmdBufferIndex)>& fillFunc) const;
+        void UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer, std::size_t cmdBufferIndex)>& fillFunc) const;
 
         std::uint32_t GetCurrentlyRenderedImageIndex() const { return currentlyRenderedImage_; }
         vk::Semaphore GetDataAvailableSemaphore() const { return *vkDataAvailableSemaphore_; }

@@ -19,21 +19,21 @@ namespace vku::gfx {
         /** Holds the bytes per pixel of the format. */
         unsigned int bytesPP_;
         /** Holds the image create flags. */
-        vk::ImageCreateFlags createFlags_;
+        vk::ImageCreateFlags createFlags_ = vk::ImageCreateFlags();
         /** Holds the textures format. */
-        vk::Format format_;
+        vk::Format format_ = vk::Format();
         /** Holds the number of samples. */
         vk::SampleCountFlagBits samples_ = vk::SampleCountFlagBits::e1;
         /** Holds the image tiling. */
-        vk::ImageTiling imageTiling_;
+        vk::ImageTiling imageTiling_ = vk::ImageTiling();
         /** Holds the images usage flags. */
-        vk::ImageUsageFlags imageUsage_;
+        vk::ImageUsageFlags imageUsage_ = vk::ImageUsageFlags();
         /** Holds the images sharing mode. */
-        vk::SharingMode sharingMode_;
+        vk::SharingMode sharingMode_ = vk::SharingMode();
         /** Holds the images layout. */
-        vk::ImageLayout imageLayout_;
+        vk::ImageLayout imageLayout_ = vk::ImageLayout();
         /** Holds the memory properties. */
-        vk::MemoryPropertyFlags memoryProperties_;
+        vk::MemoryPropertyFlags memoryProperties_ = vk::MemoryPropertyFlags();
 
         TextureDescriptor(const TextureDescriptor& desc, vk::MemoryPropertyFlags memProperties) :
             bytesPP_{ desc.bytesPP_ }, createFlags_{ desc.createFlags_ },
@@ -103,6 +103,7 @@ namespace vku::gfx {
         vk::ImageAspectFlags GetValidAspects() const;
         const vk::Device& GetDevice() const { return device_->GetDevice(); }
         static vk::AccessFlags GetAccessFlagsForLayout(vk::ImageLayout layout);
+        static vk::PipelineStageFlags GetStageFlagsForLayout(vk::ImageLayout layout);
 
     private:
         /** Holds the device. */
