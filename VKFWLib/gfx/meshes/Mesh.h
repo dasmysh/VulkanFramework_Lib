@@ -107,7 +107,7 @@ namespace vku::gfx {
         /** The descriptor set layout for local matrices in mesh rendering. */
         vk::UniqueDescriptorSetLayout worldMatricesDescriptorSetLayout_;
         /** Holds the local matrices descriptor sets. */
-        std::vector<vk::DescriptorSet> worldMatricesDescriptorSets_;
+        vk::DescriptorSet worldMatricesDescriptorSet_;
 
         /** Holds the size of a single material in the buffer. */
 

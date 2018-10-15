@@ -58,7 +58,7 @@ namespace vku::gfx {
         materialDescriptorSetLayout_{ std::move(rhs.materialDescriptorSetLayout_) },
         materialDescriptorSets_{ std::move(rhs.materialDescriptorSets_) },
         worldMatricesDescriptorSetLayout_{ std::move(rhs.worldMatricesDescriptorSetLayout_) },
-        worldMatricesDescriptorSets_{ std::move(rhs.worldMatricesDescriptorSets_) },
+        worldMatricesDescriptorSet_{ std::move(rhs.worldMatricesDescriptorSet_) },
         vertexMaterialData_{ std::move(rhs.vertexMaterialData_) }
     {
     }
@@ -81,7 +81,7 @@ namespace vku::gfx {
         materialDescriptorSetLayout_ = std::move(rhs.materialDescriptorSetLayout_);
         materialDescriptorSets_ = std::move(rhs.materialDescriptorSets_);
         worldMatricesDescriptorSetLayout_ = std::move(rhs.worldMatricesDescriptorSetLayout_);
-        worldMatricesDescriptorSets_ = std::move(rhs.worldMatricesDescriptorSets_);
+        worldMatricesDescriptorSet_ = std::move(rhs.worldMatricesDescriptorSet_);
         vertexMaterialData_ = std::move(rhs.vertexMaterialData_);
         return *this;
     }
@@ -117,7 +117,7 @@ namespace vku::gfx {
             // Shared world matrices descriptor set layout
             std::vector<vk::DescriptorSetLayoutBinding> worldMatricesSetLayoutBindings;
             // Binding 1: Local Matrices UBO
-            worldMatricesSetLayoutBindings.emplace_back(0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eVertex);
+            worldMatricesSetLayoutBindings.emplace_back(0, vk::DescriptorType::eUniformBufferDynamic, 1, vk::ShaderStageFlagBits::eVertex);
 
             vk::DescriptorSetLayoutCreateInfo worldMatricesDescriptorLayoutCreateInfo{ vk::DescriptorSetLayoutCreateFlags(),
                 static_cast<std::uint32_t>(worldMatricesSetLayoutBindings.size()), worldMatricesSetLayoutBindings.data() };
@@ -137,7 +137,8 @@ namespace vku::gfx {
         auto numNodes = meshInfo_->GetNodes().size();
         {
             std::vector<vk::DescriptorPoolSize> poolSizes;
-            poolSizes.emplace_back(vk::DescriptorType::eUniformBuffer, static_cast<std::uint32_t>(numMaterials + numNodes * numBackbuffers));
+            poolSizes.emplace_back(vk::DescriptorType::eUniformBuffer, static_cast<std::uint32_t>(numMaterials));
+            poolSizes.emplace_back(vk::DescriptorType::eUniformBufferDynamic, 1);
             poolSizes.emplace_back(vk::DescriptorType::eCombinedImageSampler, static_cast<std::uint32_t>(numMaterials * 2));
 
             vk::DescriptorPoolCreateInfo descriptorPoolInfo{ vk::DescriptorPoolCreateFlags(), static_cast<std::uint32_t>(numMaterials * 3),
@@ -181,25 +182,14 @@ namespace vku::gfx {
         }
 
         {
-            std::vector<vk::DescriptorSetLayout> worldMatDescSetLayouts; worldMatDescSetLayouts.resize(numBackbuffers * numNodes);
-
-            for (auto& worldMatDescSetLayout : worldMatDescSetLayouts) {
-                worldMatDescSetLayout = *worldMatricesDescriptorSetLayout_;
-            }
-
-            vk::DescriptorSetAllocateInfo worldMatDescSetAllocInfo{ *descriptorPool_, static_cast<std::uint32_t>(worldMatDescSetLayouts.size()), worldMatDescSetLayouts.data() };
-            worldMatricesDescriptorSets_ = device_->GetDevice().allocateDescriptorSets(worldMatDescSetAllocInfo);
+            vk::DescriptorSetAllocateInfo worldMatDescSetAllocInfo{ *descriptorPool_, 1, &(*worldMatricesDescriptorSetLayout_) };
+            worldMatricesDescriptorSet_ = device_->GetDevice().allocateDescriptorSets(worldMatDescSetAllocInfo)[0];
 
             auto uboOffset = static_cast<std::uint32_t>(std::get<1>(worldMatricesBuffer_));
             auto worldMatricesBufferSize = static_cast<std::uint32_t>(std::get<3>(worldMatricesBuffer_));
-            for (std::size_t ibb = 0; ibb < numBackbuffers; ++ibb) {
-                for (std::size_t in = 0; in < numNodes; ++in) {
-                    auto i = ibb * numNodes + in;
-                    auto worldMatricesBufferOffset = uboOffset + worldMatricesBufferSize * i;
-                    descBufferInfos.emplace_back(std::get<0>(worldMatricesBuffer_)->GetBuffer(), worldMatricesBufferOffset, worldMatricesBufferSize);
-                    descSetWrites.emplace_back(worldMatricesDescriptorSets_[i], 0, 0, 1, vk::DescriptorType::eUniformBuffer, nullptr, &descBufferInfos.back());
-                }
-            }
+            auto worldMatricesBufferOffset = uboOffset;
+            descBufferInfos.emplace_back(std::get<0>(worldMatricesBuffer_)->GetBuffer(), worldMatricesBufferOffset, worldMatricesBufferSize);
+            descSetWrites.emplace_back(worldMatricesDescriptorSet_, 0, 0, 1, vk::DescriptorType::eUniformBufferDynamic, nullptr, &descBufferInfos.back());
         }
 
         device_->GetDevice().updateDescriptorSets(descSetWrites, nullptr);
@@ -248,18 +238,16 @@ namespace vku::gfx {
 
         // TODO: add depth sorting here...
         DrawNode(cmdBuffer, backbufferIdx, pipelineLayout, meshInfo_->GetRootNode());
-
-        // TODO:
-        // need:
-        // - dynamic ubos.
     }
 
     void Mesh::DrawNode(vk::CommandBuffer cmdBuffer, std::size_t backbufferIdx, vk::PipelineLayout pipelineLayout,
         const SceneMeshNode* node) const
     {
         // bind world matrices
-        auto& worldMatDescSets = worldMatricesDescriptorSets_[backbufferIdx * meshInfo_->GetNodes().size() + node->GetNodeIndex()];
-        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, worldMatDescSets, nullptr);
+        auto i = backbufferIdx * meshInfo_->GetNodes().size() + node->GetNodeIndex();
+        auto worldMatricesBufferOffset = static_cast<std::uint32_t>(std::get<3>(worldMatricesBuffer_) * i);
+
+        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, worldMatricesDescriptorSet_, worldMatricesBufferOffset);
 
         for (unsigned int i = 0; i < node->GetNumberOfSubMeshes(); ++i) DrawSubMesh(cmdBuffer, pipelineLayout, meshInfo_->GetSubMesh(node->GetSubMeshID(i)));
         for (unsigned int i = 0; i < node->GetNumberOfNodes(); ++i) DrawNode(cmdBuffer, backbufferIdx, pipelineLayout, node->GetChild(i));
