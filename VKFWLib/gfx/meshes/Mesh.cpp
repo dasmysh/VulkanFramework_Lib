@@ -212,7 +212,7 @@ namespace vku::gfx {
                     auto i = ibb * numNodes + in;
                     auto localMatricesBufferOffset = uboOffset + localMatricesBufferSize * i;
                     descBufferInfos.emplace_back(std::get<0>(worldMatricesBuffer_)->GetBuffer(), localMatricesBufferOffset, localMatricesBufferSize);
-                    descSetWrites.emplace_back(worldMatricesDescriptorSets_[i], 0, 0, 1, vk::DescriptorType::eUniformBuffer, nullptr, &descBufferInfos[i]);
+                    descSetWrites.emplace_back(worldMatricesDescriptorSets_[i], 0, 0, 1, vk::DescriptorType::eUniformBuffer, nullptr, &descBufferInfos.back());
                 }
             }
         }

@@ -180,7 +180,7 @@ namespace vku::gfx {
         std::vector<Animation> animations_;
 
         /** The root transformation for the meshes. */
-        glm::mat4 rootTransform_;
+        glm::mat4 rootTransform_ = glm::mat4{ 1.0f };
         /** The root scene node. */
         std::unique_ptr<SceneMeshNode> rootNode_;
         /** The global inverse of this mesh. */
