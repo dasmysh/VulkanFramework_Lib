@@ -30,7 +30,7 @@ namespace vku::gfx {
         Mesh& operator=(Mesh&&) noexcept;
         ~Mesh();
 
-        template<class VertexTypev, class MaterialType>
+        template<class VertexType, class MaterialType>
         static Mesh CreateWithInternalMemoryGroup(std::shared_ptr<const MeshInfo> meshInfo, std::size_t numBackbuffers,
             const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags = vk::MemoryPropertyFlags(),
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
