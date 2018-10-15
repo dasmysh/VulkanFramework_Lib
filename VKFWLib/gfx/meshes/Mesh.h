@@ -57,8 +57,8 @@ namespace vku::gfx {
         void UpdateWorldMatrices(std::size_t backbufferIndex, const glm::mat4& worldMatrix) const;
         void UpdateWorldMatricesNode(std::size_t backbufferIndex, const SceneMeshNode* node, const glm::mat4& worldMatrix) const;
 
-        void Draw(vk::CommandBuffer cmdBuffer, vk::PipelineLayout pipelineLayout) const;
-        void DrawNode(vk::CommandBuffer cmdBuffer, vk::PipelineLayout pipelineLayout, const SceneMeshNode* node) const;
+        void Draw(vk::CommandBuffer cmdBuffer, std::size_t backbufferIdx, vk::PipelineLayout pipelineLayout) const;
+        void DrawNode(vk::CommandBuffer cmdBuffer, std::size_t backbufferIdx, vk::PipelineLayout pipelineLayout, const SceneMeshNode* node) const;
         void DrawSubMesh(vk::CommandBuffer cmdBuffer, vk::PipelineLayout pipelineLayout, const SubMesh* subMesh) const;
 
     private:
@@ -163,11 +163,6 @@ namespace vku::gfx {
                 worldMatricesUBOContent[i][node->GetNodeIndex()][1] = glm::mat4{ 1.0f };
             }
         }
-        // localMatricesUBOContent.resize(numBackbuffers * meshInfo_->GetNodes().size());
-        // for (std::size_t i = 0; i < numBackbuffers; ++i)
-        //     for (const auto& node : meshInfo_->GetNodes())
-        //         localMatricesUBOContent.emplace_back({ glm::mat4{ 1.0f }, glm::mat4{ 1.0f } });
-
 
         auto vertexBufferSize = vku::byteSizeOf(vertices);
         auto indexBufferSize = vku::byteSizeOf(meshInfo_->GetIndices());
@@ -192,17 +187,6 @@ namespace vku::gfx {
         memoryGroup_->AddDataToBufferInGroup(bufferIdx_, offset + vertexBufferSize, meshInfo_->GetIndices());
         memoryGroup_->AddDataToBufferInGroup(bufferIdx_, materialBufferAlignment, materialBufferSize, vertexMaterialData_.data() + vertexBufferSize);
         memoryGroup_->AddDataToBufferInGroup(bufferIdx_, worldMatricesBufferAlignment, numBackbuffers * worldMatricesBufferSize, vertexMaterialData_.data() + vertexBufferSize + materialBufferSize);
-
-        // for (std::size_t i = 0; i < numBackbuffers; ++i) {
-        //     memoryGroup_->AddDataToBufferInGroup(bufferIdx_, worldMatricesBufferAlignment + (i * worldMatricesBufferSize),
-        //         worldMatricesUBOContent[i]);
-        // }
-
-        // memoryGroup->AddDataToBufferInGroup(bufferIdx, localMatricesBufferAlignment + (i * singleUBOSize), localMatricesBufferSize, vertexMaterialData_.data() + vertexBufferSize + materialBufferSize);
-        // 
-        // 
-        // for (auto i = 0; i < numUBOBuffers; ++i) memGroup_.AddDataToBufferInGroup(completeBufferIdx_,
-        //     uniformDataOffset_ + (i * singleUBOSize), sizeof(MVPMatrixUBO), &initialUBO);
 
         auto buffer = memoryGroup_->GetBuffer(bufferIdx_);
         SetVertexBuffer(buffer, offset);
