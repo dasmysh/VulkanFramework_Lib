@@ -71,7 +71,7 @@ namespace vku::gfx {
         descInfo_.range = singleSize_;
     }
 
-    void UniformBufferObject::FillUploadCmdBuffer(vk::CommandBuffer cmdBuffer, std::size_t instanceIdx, std::size_t size)
+    void UniformBufferObject::FillUploadCmdBuffer(vk::CommandBuffer cmdBuffer, std::size_t instanceIdx, std::size_t size) const
     {
         auto offset = bufferOffset_ + (instanceIdx * singleSize_);
         memoryGroup_->FillUploadBufferCmdBuffer(bufferIdx_, cmdBuffer, offset, size);

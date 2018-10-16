@@ -15,7 +15,7 @@
 
 namespace vku::gfx {
 
-    Mesh::Mesh(std::shared_ptr<const MeshInfo> meshInfo, const LogicalDevice* device,
+    Mesh::Mesh(std::shared_ptr<const MeshInfo> meshInfo, std::size_t numBackbuffers, const LogicalDevice* device,
         vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices) :
         device_{ device },
         meshInfo_{ meshInfo },
@@ -24,12 +24,13 @@ namespace vku::gfx {
         bufferIdx_{ DeviceMemoryGroup::INVALID_INDEX },
         vertexBuffer_{ nullptr, 0 },
         indexBuffer_{ nullptr, 0 },
+        worldMatricesUBO_{ vku::gfx::UniformBufferObject::Create<WorldMatrixUBO>(device, numBackbuffers * meshInfo->GetNodes().size()) },
         materialBuffer_{ nullptr, 0, 0 }
     {
         CreateMaterials(queueFamilyIndices);
     }
 
-    Mesh::Mesh(std::shared_ptr<const MeshInfo> meshInfo, const LogicalDevice* device,
+    Mesh::Mesh(std::shared_ptr<const MeshInfo> meshInfo, std::size_t numBackbuffers, const LogicalDevice* device,
         MemoryGroup& memoryGroup, unsigned int bufferIndex, const std::vector<std::uint32_t>& queueFamilyIndices) :
         device_{ device },
         meshInfo_{ meshInfo },
@@ -37,6 +38,7 @@ namespace vku::gfx {
         bufferIdx_{ bufferIndex },
         vertexBuffer_{ nullptr, 0 },
         indexBuffer_{ nullptr, 0 },
+        worldMatricesUBO_{ vku::gfx::UniformBufferObject::Create<WorldMatrixUBO>(device, numBackbuffers * meshInfo->GetNodes().size()) },
         materialBuffer_{ nullptr, 0, 0 }
     {
         CreateMaterials(queueFamilyIndices);
@@ -50,15 +52,13 @@ namespace vku::gfx {
         bufferIdx_{ std::move(rhs.bufferIdx_) },
         vertexBuffer_{ std::move(rhs.vertexBuffer_) },
         indexBuffer_{ std::move(rhs.indexBuffer_) },
+        worldMatricesUBO_{ std::move(rhs.worldMatricesUBO_) },
         materialBuffer_{ std::move(rhs.materialBuffer_) },
-        worldMatricesBuffer_{ std::move(rhs.worldMatricesBuffer_) },
         materials_{ std::move(rhs.materials_) },
         textureSampler_{ std::move(rhs.textureSampler_) },
         descriptorPool_{ std::move(rhs.descriptorPool_) },
         materialDescriptorSetLayout_{ std::move(rhs.materialDescriptorSetLayout_) },
         materialDescriptorSets_{ std::move(rhs.materialDescriptorSets_) },
-        worldMatricesDescriptorSetLayout_{ std::move(rhs.worldMatricesDescriptorSetLayout_) },
-        worldMatricesDescriptorSet_{ std::move(rhs.worldMatricesDescriptorSet_) },
         vertexMaterialData_{ std::move(rhs.vertexMaterialData_) }
     {
     }
@@ -73,15 +73,13 @@ namespace vku::gfx {
         bufferIdx_ = std::move(rhs.bufferIdx_);
         vertexBuffer_ = std::move(rhs.vertexBuffer_);
         indexBuffer_ = std::move(rhs.indexBuffer_);
+        worldMatricesUBO_ = std::move(rhs.worldMatricesUBO_);
         materialBuffer_ = std::move(rhs.materialBuffer_);
-        worldMatricesBuffer_ = std::move(rhs.worldMatricesBuffer_);
         materials_ = std::move(rhs.materials_);
         textureSampler_ = std::move(rhs.textureSampler_);
         descriptorPool_ = std::move(rhs.descriptorPool_);
         materialDescriptorSetLayout_ = std::move(rhs.materialDescriptorSetLayout_);
         materialDescriptorSets_ = std::move(rhs.materialDescriptorSets_);
-        worldMatricesDescriptorSetLayout_ = std::move(rhs.worldMatricesDescriptorSetLayout_);
-        worldMatricesDescriptorSet_ = std::move(rhs.worldMatricesDescriptorSet_);
         vertexMaterialData_ = std::move(rhs.vertexMaterialData_);
         return *this;
     }
@@ -113,18 +111,6 @@ namespace vku::gfx {
             materialDescriptorSetLayout_ = device_->GetDevice().createDescriptorSetLayoutUnique(materialDescriptorLayoutCreateInfo);
         }
 
-        {
-            // Shared world matrices descriptor set layout
-            std::vector<vk::DescriptorSetLayoutBinding> worldMatricesSetLayoutBindings;
-            // Binding 1: Local Matrices UBO
-            worldMatricesSetLayoutBindings.emplace_back(0, vk::DescriptorType::eUniformBufferDynamic, 1, vk::ShaderStageFlagBits::eVertex);
-
-            vk::DescriptorSetLayoutCreateInfo worldMatricesDescriptorLayoutCreateInfo{ vk::DescriptorSetLayoutCreateFlags(),
-                static_cast<std::uint32_t>(worldMatricesSetLayoutBindings.size()), worldMatricesSetLayoutBindings.data() };
-
-            worldMatricesDescriptorSetLayout_ = device_->GetDevice().createDescriptorSetLayoutUnique(worldMatricesDescriptorLayoutCreateInfo);
-        }
-
         materials_.reserve(meshInfo_->GetMaterials().size());
         for (const auto& mat : meshInfo_->GetMaterials()) {
             materials_.emplace_back(&mat, device_, *memoryGroup_, queueFamilyIndices);
@@ -146,6 +132,8 @@ namespace vku::gfx {
 
             descriptorPool_ = device_->GetDevice().createDescriptorPoolUnique(descriptorPoolInfo);
         }
+
+        worldMatricesUBO_.CreateLayout(*descriptorPool_, vk::ShaderStageFlagBits::eVertex, true, 0);
 
         std::vector<vk::WriteDescriptorSet> descSetWrites; descSetWrites.reserve(3 * numMaterials + numNodes * numBackbuffers);
         std::vector<vk::DescriptorBufferInfo> descBufferInfos; descBufferInfos.reserve(numMaterials + numNodes * numBackbuffers);
@@ -181,16 +169,7 @@ namespace vku::gfx {
             }
         }
 
-        {
-            vk::DescriptorSetAllocateInfo worldMatDescSetAllocInfo{ *descriptorPool_, 1, &(*worldMatricesDescriptorSetLayout_) };
-            worldMatricesDescriptorSet_ = device_->GetDevice().allocateDescriptorSets(worldMatDescSetAllocInfo)[0];
-
-            auto uboOffset = static_cast<std::uint32_t>(std::get<1>(worldMatricesBuffer_));
-            auto worldMatricesBufferSize = static_cast<std::uint32_t>(std::get<3>(worldMatricesBuffer_));
-            auto worldMatricesBufferOffset = uboOffset;
-            descBufferInfos.emplace_back(std::get<0>(worldMatricesBuffer_)->GetBuffer(), worldMatricesBufferOffset, worldMatricesBufferSize);
-            descSetWrites.emplace_back(worldMatricesDescriptorSet_, 0, 0, 1, vk::DescriptorType::eUniformBufferDynamic, nullptr, &descBufferInfos.back());
-        }
+        worldMatricesUBO_.FillDescriptorSetWrite(descSetWrites.emplace_back());
 
         device_->GetDevice().updateDescriptorSets(descSetWrites, nullptr);
     }
@@ -205,8 +184,10 @@ namespace vku::gfx {
 
     void Mesh::TransferWorldMatrices(vk::CommandBuffer transferCmdBuffer, std::size_t backbufferIdx) const
     {
-        auto worldUBOOffset = std::get<1>(worldMatricesBuffer_) + (backbufferIdx * std::get<2>(worldMatricesBuffer_));
-        memoryGroup_->FillUploadBufferCmdBuffer(bufferIdx_, transferCmdBuffer, worldUBOOffset, std::get<2>(worldMatricesBuffer_));
+        for (const auto& node : meshInfo_->GetNodes()) {
+            auto i = backbufferIdx * meshInfo_->GetNodes().size() + node->GetNodeIndex();
+            worldMatricesUBO_.FillUploadCmdBuffer<WorldMatrixUBO>(transferCmdBuffer, i);
+        }
     }
 
     void Mesh::UpdateWorldMatrices(std::size_t backbufferIndex, const glm::mat4& worldMatrix) const
@@ -219,14 +200,12 @@ namespace vku::gfx {
     {
         auto nodeWorld = node->GetLocalTransform() * worldMatrix;
 
-        std::array<glm::mat4, 2> worldMatrices;
-        worldMatrices[0] = nodeWorld;
-        worldMatrices[1] = glm::mat4(glm::inverseTranspose(glm::mat3(nodeWorld)));
+        WorldMatrixUBO worldMatrices;
+        worldMatrices.model_ = nodeWorld;
+        worldMatrices.normalMatrix_ = glm::mat4(glm::inverseTranspose(glm::mat3(nodeWorld)));
 
-        auto offset = memoryGroup_->GetHostBufferOffset(bufferIdx_) + std::get<1>(worldMatricesBuffer_)
-            + std::get<2>(worldMatricesBuffer_) * backbufferIndex + std::get<3>(worldMatricesBuffer_) * node->GetNodeIndex();
-        
-        memoryGroup_->GetHostMemory()->CopyToHostMemory(offset, 2 * sizeof(glm::mat4), worldMatrices.data());
+        auto i = backbufferIndex * meshInfo_->GetNodes().size() + node->GetNodeIndex();
+        worldMatricesUBO_.UpdateInstanceData(i, worldMatrices);
 
         for (unsigned int i = 0; i < node->GetNumberOfNodes(); ++i) UpdateWorldMatricesNode(backbufferIndex, node->GetChild(i), nodeWorld);
     }
@@ -245,9 +224,7 @@ namespace vku::gfx {
     {
         // bind world matrices
         auto i = backbufferIdx * meshInfo_->GetNodes().size() + node->GetNodeIndex();
-        auto worldMatricesBufferOffset = static_cast<std::uint32_t>(std::get<3>(worldMatricesBuffer_) * i);
-
-        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, worldMatricesDescriptorSet_, worldMatricesBufferOffset);
+        worldMatricesUBO_.Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, pipelineLayout, 0, i);
 
         for (unsigned int i = 0; i < node->GetNumberOfSubMeshes(); ++i) DrawSubMesh(cmdBuffer, pipelineLayout, meshInfo_->GetSubMesh(node->GetSubMeshID(i)));
         for (unsigned int i = 0; i < node->GetNumberOfNodes(); ++i) DrawNode(cmdBuffer, backbufferIdx, pipelineLayout, node->GetChild(i));
@@ -277,10 +254,5 @@ namespace vku::gfx {
     void Mesh::SetMaterialBuffer(const DeviceBuffer* matBuffer, std::size_t offset, std::size_t elementSize)
     {
         materialBuffer_ = std::make_tuple(matBuffer, offset, elementSize);
-    }
-
-    void Mesh::SetWorldMatricesBuffer(const DeviceBuffer* worldMatricesBuffer, std::size_t offset, std::size_t bufferSize, std::size_t elementSize)
-    {
-        worldMatricesBuffer_ = std::make_tuple(worldMatricesBuffer, offset, bufferSize, elementSize);
     }
 }

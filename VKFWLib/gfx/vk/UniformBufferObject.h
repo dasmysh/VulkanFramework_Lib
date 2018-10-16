@@ -27,7 +27,7 @@ namespace vku::gfx {
             std::size_t bufferOffset, std::size_t size, const void* data);
         void CreateLayout(vk::DescriptorPool descPool, vk::ShaderStageFlags shaderFlags, bool isDynamicBuffer = false, std::uint32_t binding = 0);
         void UseLayout(vk::DescriptorPool descPool, vk::DescriptorSetLayout usedLayout, bool isDynamicBuffer = false, std::uint32_t binding = 0);
-        void FillUploadCmdBuffer(vk::CommandBuffer cmdBuffer, std::size_t instanceIdx, std::size_t size);
+        void FillUploadCmdBuffer(vk::CommandBuffer cmdBuffer, std::size_t instanceIdx, std::size_t size) const;
         void FillDescriptorSetWrite(vk::WriteDescriptorSet& descWrite) const;
         void UpdateInstanceData(std::size_t instanceIdx, std::size_t size, const void* data) const;
         void Bind(vk::CommandBuffer cmdBuffer, vk::PipelineBindPoint bindingPoint, vk::PipelineLayout pipelineLayout,
@@ -47,7 +47,7 @@ namespace vku::gfx {
         void AddUBOToBuffer(MemoryGroup* memoryGroup, unsigned int bufferIndex,
             std::size_t bufferOffset, const ContentType& data);
         template<class ContentType>
-        void FillUploadCmdBuffer(vk::CommandBuffer cmdBuffer, std::size_t instanceIdx);
+        void FillUploadCmdBuffer(vk::CommandBuffer cmdBuffer, std::size_t instanceIdx) const;
         template<class ContentType>
         void UpdateInstanceData(std::size_t instanceIdx, const ContentType& data) const;
 
@@ -95,7 +95,7 @@ namespace vku::gfx {
     }
 
     template<class ContentType>
-    void vku::gfx::UniformBufferObject::FillUploadCmdBuffer(vk::CommandBuffer cmdBuffer, std::size_t instanceIdx)
+    void vku::gfx::UniformBufferObject::FillUploadCmdBuffer(vk::CommandBuffer cmdBuffer, std::size_t instanceIdx) const
     {
         FillUploadCmdBuffer(cmdBuffer, instanceIdx, sizeof(ContentType));
     }
