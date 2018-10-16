@@ -45,11 +45,11 @@ namespace vku::gfx {
         static UniformBufferObject Create(const LogicalDevice* device, std::size_t numInstances = 1);
         template<class ContentType>
         void AddUBOToBuffer(MemoryGroup* memoryGroup, unsigned int bufferIndex,
-            std::size_t bufferOffset, const ContentType* data);
+            std::size_t bufferOffset, const ContentType& data);
         template<class ContentType>
         void FillUploadCmdBuffer(vk::CommandBuffer cmdBuffer, std::size_t instanceIdx);
         template<class ContentType>
-        void UpdateInstanceData(std::size_t instanceIdx, const ContentType* data) const;
+        void UpdateInstanceData(std::size_t instanceIdx, const ContentType& data) const;
 
     private:
         void AllocateDescriptorSet(vk::DescriptorPool descPool);
@@ -89,9 +89,9 @@ namespace vku::gfx {
 
     template<class ContentType>
     void vku::gfx::UniformBufferObject::AddUBOToBuffer(MemoryGroup* memoryGroup, unsigned int bufferIndex,
-        std::size_t bufferOffset, const ContentType* data)
+        std::size_t bufferOffset, const ContentType& data)
     {
-        AddUBOToBuffer(memoryGroup, bufferIndex, bufferOffset, sizeof(ContentType), data);
+        AddUBOToBuffer(memoryGroup, bufferIndex, bufferOffset, sizeof(ContentType), &data);
     }
 
     template<class ContentType>
@@ -101,9 +101,9 @@ namespace vku::gfx {
     }
 
     template<class ContentType>
-    void vku::gfx::UniformBufferObject::UpdateInstanceData(std::size_t instanceIdx, const ContentType* data) const
+    void vku::gfx::UniformBufferObject::UpdateInstanceData(std::size_t instanceIdx, const ContentType& data) const
     {
-        UpdateInstanceData(instanceIdx, sizeof(ContentType), data);
+        UpdateInstanceData(instanceIdx, sizeof(ContentType), &data);
     }
 
 }

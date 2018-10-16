@@ -18,6 +18,43 @@ namespace vku::gfx {
 
     }
 
+    UniformBufferObject::UniformBufferObject(UniformBufferObject&& rhs) noexcept :
+        device_{ std::move(rhs.device_) },
+        memoryGroup_{ std::move(rhs.memoryGroup_) },
+        bufferIdx_{ std::move(rhs.bufferIdx_) },
+        bufferOffset_{ std::move(rhs.bufferOffset_) },
+        singleSize_{ std::move(rhs.singleSize_) },
+        numInstances_{ std::move(rhs.numInstances_) },
+        descBinding_{ std::move(rhs.descBinding_) },
+        descType_{ std::move(rhs.descType_) },
+        internalDescLayout_{ std::move(rhs.internalDescLayout_) },
+        descLayout_{ std::move(rhs.descLayout_) },
+        descSet_{ std::move(rhs.descSet_) },
+        descInfo_{ std::move(rhs.descInfo_) }
+    {
+
+    }
+
+    UniformBufferObject& UniformBufferObject::operator=(UniformBufferObject&& rhs) noexcept
+    {
+        this->~UniformBufferObject();
+        device_ = std::move(rhs.device_);
+        memoryGroup_ = std::move(rhs.memoryGroup_);
+        bufferIdx_ = std::move(rhs.bufferIdx_);
+        bufferOffset_ = std::move(rhs.bufferOffset_);
+        singleSize_ = std::move(rhs.singleSize_);
+        numInstances_ = std::move(rhs.numInstances_);
+        descBinding_ = std::move(rhs.descBinding_);
+        descType_ = std::move(rhs.descType_);
+        internalDescLayout_ = std::move(rhs.internalDescLayout_);
+        descLayout_ = std::move(rhs.descLayout_);
+        descSet_ = std::move(rhs.descSet_);
+        descInfo_ = std::move(rhs.descInfo_);
+        return *this;
+    }
+
+    UniformBufferObject::~UniformBufferObject() = default;
+
     void UniformBufferObject::AddUBOToBuffer(MemoryGroup* memoryGroup, unsigned int bufferIndex, std::size_t bufferOffset,
         std::size_t size, const void* data)
     {
