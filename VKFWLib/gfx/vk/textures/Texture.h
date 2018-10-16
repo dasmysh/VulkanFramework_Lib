@@ -19,21 +19,21 @@ namespace vku::gfx {
         /** Holds the bytes per pixel of the format. */
         unsigned int bytesPP_;
         /** Holds the image create flags. */
-        vk::ImageCreateFlags createFlags_;
+        vk::ImageCreateFlags createFlags_ = vk::ImageCreateFlags();
         /** Holds the textures format. */
-        vk::Format format_;
+        vk::Format format_ = vk::Format();
         /** Holds the number of samples. */
         vk::SampleCountFlagBits samples_ = vk::SampleCountFlagBits::e1;
         /** Holds the image tiling. */
-        vk::ImageTiling imageTiling_;
+        vk::ImageTiling imageTiling_ = vk::ImageTiling();
         /** Holds the images usage flags. */
-        vk::ImageUsageFlags imageUsage_;
+        vk::ImageUsageFlags imageUsage_ = vk::ImageUsageFlags();
         /** Holds the images sharing mode. */
-        vk::SharingMode sharingMode_;
+        vk::SharingMode sharingMode_ = vk::SharingMode();
         /** Holds the images layout. */
-        vk::ImageLayout imageLayout_;
+        vk::ImageLayout imageLayout_ = vk::ImageLayout();
         /** Holds the memory properties. */
-        vk::MemoryPropertyFlags memoryProperties_;
+        vk::MemoryPropertyFlags memoryProperties_ = vk::MemoryPropertyFlags();
 
         TextureDescriptor(const TextureDescriptor& desc, vk::MemoryPropertyFlags memProperties) :
             bytesPP_{ desc.bytesPP_ }, createFlags_{ desc.createFlags_ },
@@ -72,20 +72,20 @@ namespace vku::gfx {
         void InitializeImage(const glm::u32vec4& size, std::uint32_t mipLevels, bool initMemory = true);
         void InitializeImageView();
         void TransitionLayout(vk::ImageLayout newLayout, vk::CommandBuffer cmdBuffer);
-        vk::CommandBuffer TransitionLayout(vk::ImageLayout newLayout,
+        vk::UniqueCommandBuffer TransitionLayout(vk::ImageLayout newLayout,
             std::pair<std::uint32_t, std::uint32_t> transitionQueueIdx,
             const std::vector<vk::Semaphore>& waitSemaphores,
             const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence);
         void CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset,
             const Texture& dstImage, std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset,
             const glm::u32vec4& size, vk::CommandBuffer cmdBuffer) const;
-        vk::CommandBuffer CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset,
+        vk::UniqueCommandBuffer CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset,
             const Texture& dstImage, std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset,
             const glm::u32vec4& size, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
             const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
             const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
             vk::Fence fence = vk::Fence()) const;
-        vk::CommandBuffer CopyImageAsync(const Texture& dstImage, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
+        vk::UniqueCommandBuffer CopyImageAsync(const Texture& dstImage, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
             const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
             const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
             vk::Fence fence = vk::Fence()) const;
@@ -93,8 +93,8 @@ namespace vku::gfx {
 
         const glm::u32vec4& GetSize() const { return size_; }
         std::uint32_t GetMipLevels() const { return mipLevels_; }
-        vk::Image GetImage() const { return vkImage_; }
-        vk::ImageView GetImageView() const { return vkImageView_; }
+        vk::Image GetImage() const { return *vkImage_; }
+        vk::ImageView GetImageView() const { return *vkImageView_; }
         const DeviceMemory& GetDeviceMemory() const { return imageDeviceMemory_; }
         const TextureDescriptor& GetDescriptor() const { return desc_; }
 
@@ -103,14 +103,15 @@ namespace vku::gfx {
         vk::ImageAspectFlags GetValidAspects() const;
         const vk::Device& GetDevice() const { return device_->GetDevice(); }
         static vk::AccessFlags GetAccessFlagsForLayout(vk::ImageLayout layout);
+        static vk::PipelineStageFlags GetStageFlagsForLayout(vk::ImageLayout layout);
 
     private:
         /** Holds the device. */
         const LogicalDevice* device_;
         /** Holds the Vulkan image object. */
-        vk::Image vkImage_;
+        vk::UniqueImage vkImage_;
         /** Holds the Vulkan image view. */
-        vk::ImageView vkImageView_;
+        vk::UniqueImageView vkImageView_;
         /** Holds the Vulkan device memory for the image. */
         DeviceMemory imageDeviceMemory_;
         /** Holds the current size of the texture (x: bytes of line, y: #lines, z: #depth slices, w: #array slices). */

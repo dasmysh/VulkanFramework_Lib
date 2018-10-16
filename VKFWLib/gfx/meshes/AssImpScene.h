@@ -64,6 +64,9 @@ namespace vku::gfx {
         }
 
         void createNewMesh(const std::string& filename, MeshCreateFlags flags);
+        void ParseBoneHierarchy(const std::map<std::string, unsigned int>& bones, const aiNode* node,
+            std::size_t parent, glm::mat4 parentMatrix);
+
         void saveBinary(const std::string& filename) const;
         bool loadBinary(const std::string& filename);
 

@@ -52,7 +52,7 @@ namespace vku::gfx {
         texDesc.imageTiling_ = vk::ImageTiling::eOptimal;
         texDesc.imageUsage_ = vk::ImageUsageFlagBits::eDepthStencilAttachment;
         texDesc.sharingMode_ = vk::SharingMode::eExclusive;
-        texDesc.imageLayout_ = vk::ImageLayout::ePreinitialized;
+        texDesc.imageLayout_ = vk::ImageLayout::eUndefined;
         return texDesc;
     }
 
@@ -70,8 +70,8 @@ namespace vku::gfx {
 
     Texture::Texture(Texture&& rhs) noexcept :
         device_{ rhs.device_ },
-        vkImage_{ rhs.vkImage_ },
-        vkImageView_{ rhs.vkImageView_ },
+        vkImage_{ std::move(rhs.vkImage_) },
+        vkImageView_{ std::move(rhs.vkImageView_) },
         imageDeviceMemory_{ std::move(rhs.imageDeviceMemory_) },
         size_{ rhs.size_ },
         mipLevels_{ rhs.mipLevels_ },
@@ -80,8 +80,6 @@ namespace vku::gfx {
         type_{ rhs.type_ },
         viewType_{ rhs.viewType_ }
     {
-        rhs.vkImage_ = vk::Image();
-        rhs.vkImageView_ = vk::ImageView();
         rhs.size_ = glm::u32vec4(0);
         rhs.mipLevels_ = 0;
     }
@@ -90,8 +88,8 @@ namespace vku::gfx {
     {
         this->~Texture();
         device_ = rhs.device_;
-        vkImage_ = rhs.vkImage_;
-        vkImageView_ = rhs.vkImageView_;
+        vkImage_ = std::move(rhs.vkImage_);
+        vkImageView_ = std::move(rhs.vkImageView_);
         imageDeviceMemory_ = std::move(rhs.imageDeviceMemory_);
         size_ = rhs.size_;
         mipLevels_ = rhs.mipLevels_;
@@ -99,20 +97,12 @@ namespace vku::gfx {
         queueFamilyIndices_ = std::move(rhs.queueFamilyIndices_);
         type_ = rhs.type_;
         viewType_ = rhs.viewType_;
-        rhs.vkImage_ = vk::Image();
-        rhs.vkImageView_ = vk::ImageView();
         rhs.size_ = glm::u32vec4(0);
         rhs.mipLevels_ = 0;
         return *this;
     }
 
-    Texture::~Texture()
-    {
-        if (vkImage_) device_->GetDevice().destroyImage(vkImage_);
-        vkImage_ = vk::Image();
-        if (vkImageView_) device_->GetDevice().destroyImageView(vkImageView_);
-        vkImageView_ = vk::ImageView();
-    }
+    Texture::~Texture() = default;
 
     void Texture::InitializeImage(const glm::u32vec4& size, std::uint32_t mipLevels, bool initMemory)
     {
@@ -142,10 +132,10 @@ namespace vku::gfx {
             imgCreateInfo.setPQueueFamilyIndices(queueFamilyIndices_.data());
         }
 
-        vkImage_ = device_->GetDevice().createImage(imgCreateInfo);
+        vkImage_ = device_->GetDevice().createImageUnique(imgCreateInfo);
 
         if (initMemory) {
-            vk::MemoryRequirements memRequirements = device_->GetDevice().getImageMemoryRequirements(vkImage_);
+            vk::MemoryRequirements memRequirements = device_->GetDevice().getImageMemoryRequirements(*vkImage_);
             imageDeviceMemory_.InitializeMemory(memRequirements);
             imageDeviceMemory_.BindToTexture(*this, 0);
             InitializeImageView();
@@ -155,34 +145,34 @@ namespace vku::gfx {
     void Texture::InitializeImageView()
     {
         vk::ImageSubresourceRange imgSubresourceRange{ GetValidAspects(), 0, mipLevels_, 0, size_.w };
-        vk::ImageViewCreateInfo imgViewCreateInfo{ vk::ImageViewCreateFlags(), vkImage_, viewType_, desc_.format_, vk::ComponentMapping(), imgSubresourceRange };
-        vkImageView_ = device_->GetDevice().createImageView(imgViewCreateInfo);
+        vk::ImageViewCreateInfo imgViewCreateInfo{ vk::ImageViewCreateFlags(), *vkImage_, viewType_, desc_.format_, vk::ComponentMapping(), imgSubresourceRange };
+        vkImageView_ = device_->GetDevice().createImageViewUnique(imgViewCreateInfo);
     }
 
     void Texture::TransitionLayout(vk::ImageLayout newLayout, vk::CommandBuffer cmdBuffer)
     {
         vk::ImageSubresourceRange subresourceRange{ GetValidAspects(), 0, mipLevels_, 0, size_.w };
         vk::ImageMemoryBarrier transitionBarrier{ vk::AccessFlags(), vk::AccessFlags(), desc_.imageLayout_,
-            newLayout, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, vkImage_, subresourceRange };
+            newLayout, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, *vkImage_, subresourceRange };
 
         transitionBarrier.srcAccessMask = GetAccessFlagsForLayout(desc_.imageLayout_);
         transitionBarrier.dstAccessMask = GetAccessFlagsForLayout(newLayout);
 
-        cmdBuffer.pipelineBarrier(vk::PipelineStageFlagBits::eTopOfPipe, vk::PipelineStageFlagBits::eTopOfPipe,
+        cmdBuffer.pipelineBarrier(GetStageFlagsForLayout(desc_.imageLayout_), GetStageFlagsForLayout(newLayout),
             vk::DependencyFlags(), nullptr, nullptr, transitionBarrier);
         desc_.imageLayout_ = newLayout;
     }
 
-    vk::CommandBuffer Texture::TransitionLayout(vk::ImageLayout newLayout,
+    vk::UniqueCommandBuffer Texture::TransitionLayout(vk::ImageLayout newLayout,
         std::pair<std::uint32_t, std::uint32_t> transitionQueueIdx,
         const std::vector<vk::Semaphore>& waitSemaphores,
         const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence)
     {
-        if (desc_.imageLayout_ == newLayout) return vk::CommandBuffer();
+        if (desc_.imageLayout_ == newLayout) return vk::UniqueCommandBuffer();
 
         auto transitionCmdBuffer = CommandBuffers::beginSingleTimeSubmit(device_, transitionQueueIdx.first);
-        TransitionLayout(newLayout, transitionCmdBuffer);
-        CommandBuffers::endSingleTimeSubmit(device_, transitionCmdBuffer, transitionQueueIdx.first, transitionQueueIdx.second,
+        TransitionLayout(newLayout, *transitionCmdBuffer);
+        CommandBuffers::endSingleTimeSubmit(device_, *transitionCmdBuffer, transitionQueueIdx.first, transitionQueueIdx.second,
             waitSemaphores, signalSemaphores, fence);
         return transitionCmdBuffer;
     }
@@ -210,23 +200,23 @@ namespace vku::gfx {
             subresourceLayersDst,
             vk::Offset3D{ static_cast<std::int32_t>(dstOffset.x), static_cast<std::int32_t>(dstOffset.y), static_cast<std::int32_t>(dstOffset.z) },
             vk::Extent3D{ size.x / desc_.bytesPP_, size.y, size.z } };
-        cmdBuffer.copyImage(vkImage_, desc_.imageLayout_, dstImage.vkImage_, dstImage.desc_.imageLayout_, copyRegion);
+        cmdBuffer.copyImage(*vkImage_, desc_.imageLayout_, *dstImage.vkImage_, dstImage.desc_.imageLayout_, copyRegion);
     }
 
-    vk::CommandBuffer Texture::CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, const Texture& dstImage,
+    vk::UniqueCommandBuffer Texture::CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, const Texture& dstImage,
         std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset, const glm::u32vec4& size,
         std::pair<std::uint32_t, std::uint32_t> copyQueueIdx, const std::vector<vk::Semaphore>& waitSemaphores,
         const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
     {
         auto transferCmdBuffer = CommandBuffers::beginSingleTimeSubmit(device_, copyQueueIdx.first);
-        CopyImageAsync(srcMipLevel, srcOffset, dstImage, dstMipLevel, dstOffset, size, transferCmdBuffer);
-        CommandBuffers::endSingleTimeSubmit(device_, transferCmdBuffer, copyQueueIdx.first, copyQueueIdx.second,
+        CopyImageAsync(srcMipLevel, srcOffset, dstImage, dstMipLevel, dstOffset, size, *transferCmdBuffer);
+        CommandBuffers::endSingleTimeSubmit(device_, *transferCmdBuffer, copyQueueIdx.first, copyQueueIdx.second,
             waitSemaphores, signalSemaphores, fence);
 
         return transferCmdBuffer;
     }
 
-    vk::CommandBuffer Texture::CopyImageAsync(const Texture& dstImage, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
+    vk::UniqueCommandBuffer Texture::CopyImageAsync(const Texture& dstImage, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
         const std::vector<vk::Semaphore>& waitSemaphores, const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
     {
         return CopyImageAsync(0, glm::u32vec4(0), dstImage, 0, glm::u32vec4(0), size_, copyQueueIdx, waitSemaphores, signalSemaphores, fence);
@@ -236,8 +226,6 @@ namespace vku::gfx {
     {
         auto cmdBuffer = CopyImageAsync(dstImage, copyQueueIdx);
         device_->GetQueue(copyQueueIdx.first, copyQueueIdx.second).waitIdle();
-
-        device_->GetDevice().freeCommandBuffers(device_->GetCommandPool(copyQueueIdx.first), cmdBuffer);
     }
 
     vk::ImageAspectFlags Texture::GetValidAspects() const
@@ -260,9 +248,23 @@ namespace vku::gfx {
         case vk::ImageLayout::eTransferSrcOptimal: return vk::AccessFlagBits::eTransferRead;
         case vk::ImageLayout::eColorAttachmentOptimal: return vk::AccessFlagBits::eColorAttachmentWrite;
         case vk::ImageLayout::eDepthStencilAttachmentOptimal:
-            return vk::AccessFlagBits::eDepthStencilAttachmentWrite | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+            return vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
         case vk::ImageLayout::eShaderReadOnlyOptimal: return vk::AccessFlagBits::eShaderRead;
         default: return vk::AccessFlags();
+        }
+    }
+
+    vk::PipelineStageFlags Texture::GetStageFlagsForLayout(vk::ImageLayout layout)
+    {
+        switch (layout) {
+        case vk::ImageLayout::eUndefined: return vk::PipelineStageFlagBits::eTopOfPipe;
+        case vk::ImageLayout::ePreinitialized: return vk::PipelineStageFlagBits::eHost;
+        case vk::ImageLayout::eTransferDstOptimal: return vk::PipelineStageFlagBits::eTransfer;
+        case vk::ImageLayout::eTransferSrcOptimal: return vk::PipelineStageFlagBits::eTransfer;
+        case vk::ImageLayout::eColorAttachmentOptimal: return vk::PipelineStageFlagBits::eColorAttachmentOutput;
+        case vk::ImageLayout::eDepthStencilAttachmentOptimal: return vk::PipelineStageFlagBits::eEarlyFragmentTests;
+        case vk::ImageLayout::eShaderReadOnlyOptimal: return vk::PipelineStageFlagBits::eFragmentShader;
+        default: return vk::PipelineStageFlagBits::eTopOfPipe;
         }
     }
 

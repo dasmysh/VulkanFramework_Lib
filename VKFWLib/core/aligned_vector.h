@@ -22,7 +22,7 @@ namespace vku {
         using const_reference = const value_type&;
 
         aligned_vector(size_type alignedSize, size_type count, const T& value);
-        aligned_vector(size_type alignedSize, size_type count = 0) : alignedSize_{ alignedSize }, cont_{ count * alignedSize } {}
+        aligned_vector(size_type alignedSize, size_type count = 0) : alignedSize_{ alignedSize } { cont_.resize(count * alignedSize); }
         // template<class InputIt> aligned_vector(size_type alignedSize, InputIt first, InputIt last);
         aligned_vector(size_type alignedSize, std::initializer_list<T> init);
         aligned_vector(const aligned_vector& rhs) : alignedSize_{ rhs.alignedSize_ }, cont_{ rhs.cont_ } {}
@@ -85,6 +85,8 @@ namespace vku {
         void resize(size_type count, const value_type& value);
         void swap(aligned_vector& other) noexcept;
 
+        std::size_t GetAlignedSize() const { return alignedSize_; }
+
     private:
         /** Holds the vectors alignment. */
         std::size_t alignedSize_;
@@ -107,13 +109,13 @@ namespace vku {
     {
         size_type i = 0U;
         for (const auto& elem : init) {
-            new(reinterpret_cast<T*>(cont_[i * alignedSize_])) T(init[i]);
+            new(reinterpret_cast<T*>(cont_[i * alignedSize_])) T(elem);
             i += 1;
         }
     }
 
     template<typename T>
-    inline aligned_vector& aligned_vector<T>::operator=(const aligned_vector& rhs)
+    inline aligned_vector<T>& aligned_vector<T>::operator=(const aligned_vector<T>& rhs)
     {
         if (this != &rhs) {
             alignedSize_ = rhs.alignedSize_;
@@ -123,7 +125,7 @@ namespace vku {
     }
 
     template<typename T>
-    inline aligned_vector& aligned_vector<T>::operator=(aligned_vector&& rhs) noexcept
+    inline aligned_vector<T>& aligned_vector<T>::operator=(aligned_vector<T>&& rhs) noexcept
     {
         alignedSize_ = rhs.alignedSize_;
         cont_ = std::move(rhs.cont_);
@@ -140,7 +142,7 @@ namespace vku {
     inline void aligned_vector<T>::push_back(const T& value)
     {
         auto oldSize = cont_.size();
-        resize(oldSize + alignedSize_);
+        cont_.resize(oldSize + alignedSize_);
         new(reinterpret_cast<T*>(cont_.data() + oldSize)) T(value);
     }
 
@@ -148,17 +150,19 @@ namespace vku {
     inline void aligned_vector<T>::push_back(T&& value)
     {
         auto oldSize = cont_.size();
-        resize(oldSize + alignedSize_);
+        cont_.resize(oldSize + alignedSize_);
         new(reinterpret_cast<T*>(cont_.data() + oldSize)) T(std::move(value));
     }
 
     template<typename T>
     template<class ...Args>
-    inline reference aligned_vector<T>::emplace_back(Args&&... args)
+    inline typename aligned_vector<T>::reference aligned_vector<T>::emplace_back(Args&&... args)
     {
         auto oldSize = cont_.size();
-        resize(oldSize + alignedSize_);
-        new(reinterpret_cast<T*>(cont_.data() + oldSize)) T(std::forward<Args>(args));
+        cont_.resize(oldSize + alignedSize_);
+        new(reinterpret_cast<T*>(cont_.data() + oldSize)) T(std::forward<Args>(args)...);
+
+        return back();
     }
 
     template<typename T>

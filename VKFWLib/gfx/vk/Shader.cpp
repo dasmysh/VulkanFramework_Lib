@@ -48,16 +48,12 @@ namespace vku::gfx {
     {
     }
 
-    Shader::~Shader()
-    {
-        if (shaderModule_) GetDevice()->GetDevice().destroyShaderModule(shaderModule_);
-        shaderModule_ = vk::ShaderModule();
-    }
+    Shader::~Shader() = default;
 
     void Shader::FillShaderStageInfo(vk::PipelineShaderStageCreateInfo& shaderStageCreateInfo) const
     {
         shaderStageCreateInfo.setStage(type_);
-        shaderStageCreateInfo.setModule(shaderModule_);
+        shaderStageCreateInfo.setModule(*shaderModule_);
         shaderStageCreateInfo.setPName("main");
     }
 
@@ -78,6 +74,6 @@ namespace vku::gfx {
 
         vk::ShaderModuleCreateInfo moduleCreateInfo{ vk::ShaderModuleCreateFlags(), fileSize, reinterpret_cast<std::uint32_t*>(buffer.data()) };
 
-        shaderModule_ = GetDevice()->GetDevice().createShaderModule(moduleCreateInfo);
+        shaderModule_ = GetDevice()->GetDevice().createShaderModuleUnique(moduleCreateInfo);
     }
 }

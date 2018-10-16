@@ -32,7 +32,7 @@ namespace vku::gfx {
         ForwardMeshRenderer(const ForwardMeshRenderer&) = delete;
         ForwardMeshRenderer& operator=(const ForwardMeshRenderer&) = delete;
         ForwardMeshRenderer(ForwardMeshRenderer&&);
-        ForwardMeshRenderer& operator=(ForwardMeshRenderer&&);
+        ForwardMeshRenderer& operator=(ForwardMeshRenderer&&) = delete;
         ~ForwardMeshRenderer();
 
         void Draw(const Framebuffer&, const Camera&, const Scene&);
@@ -47,20 +47,30 @@ namespace vku::gfx {
         const gfx::LogicalDevice* device_;
         /** Holds the application. */
         const ApplicationBase* application_;
+        /** Holds the number of swapchain images. */
+        const unsigned int numSwapchainImages_;
         /** Holds the queue family indices used for buffers and textures. */
         std::vector<std::uint32_t> queueFamilyIndices_;
         /** Holds the pipeline layout for demo rendering. */
-        vk::PipelineLayout vkPipelineLayout_;
+        vk::UniquePipelineLayout vkPipelineLayout_;
         /** Holds the descriptor pool for the UBO binding. */
-        vk::DescriptorPool vkUBODescriptorPool_;
-        /** Holds the descriptor sets for the UBO binding. */
-        std::vector<vk::DescriptorSet> vkUBODescritorSets_;
-        /** Holds the descriptor sets for the sampler binding. */
-        std::vector<vk::DescriptorSet> vkSamplerDescritorSets_;
-        /** Holds the descriptor sets for the image binding. */
-        std::vector<vk::DescriptorSet> vkImageDescritorSets_;
-        /** Holds the graphics pipeline for demo rendering. */
-        std::unique_ptr<vku::gfx::GraphicsPipeline> demoPipeline_;
+        vk::UniqueDescriptorPool vkDescriptorPool_;
+
+        /** Holds the descriptor set layouts for the frame variables of the rendering pipeline. */
+        vk::UniqueDescriptorSetLayout vkDescSetFrameLayout_;
+        /** Holds the descriptor set layouts for the material variables of the rendering pipeline. */
+        vk::UniqueDescriptorSetLayout vkDescSetMaterialLayout_;
+        /** Holds the descriptor set layouts for the node variables of the rendering pipeline. */
+        vk::UniqueDescriptorSetLayout vkDescSetNodeLayout_;
+        /** Holds the descriptor set used for frame variables in rendering. */
+        vk::UniqueDescriptorSet vkDescSetFrame_;
+        /** Holds the descriptor sets used for material variables in rendering. */
+        std::vector<vk::UniqueDescriptorSet> vkDescSetsMaterials_;
+        /** Holds the descriptor set used for node variables in rendering. */
+        vk::UniqueDescriptorSet vkDescSetNode_;
+
+        /** Holds the texture sampler. */
+        vk::UniqueSampler vkLinearSampler_;
     };
 
 }

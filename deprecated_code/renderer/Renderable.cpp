@@ -37,24 +37,24 @@ namespace vku::gfx {
 
     Renderable::~Renderable() = default;
 
-    std::size_t Renderable::GetNumberOfNodes() const
-    {
-        return 1;
-    }
-
-    std::size_t Renderable::GetNumberOfMaterials() const
-    {
-        return 1;
-    }
-
-    std::size_t Renderable::GetNumberOfPartsInNode(std::size_t node_id) const
-    {
-        return 1;
-    }
-
-    glm::mat4 Renderable::GetLocalTransform(std::size_t node_id) const
-    {
-        return glm::mat4();
-    }
+    // std::size_t Renderable::GetNumberOfNodes() const
+    // {
+    //     return 1;
+    // }
+    // 
+    // std::size_t Renderable::GetNumberOfMaterials() const
+    // {
+    //     return 1;
+    // }
+    // 
+    // std::size_t Renderable::GetNumberOfPartsInNode(std::size_t node_id) const
+    // {
+    //     return 1;
+    // }
+    // 
+    // glm::mat4 Renderable::GetLocalTransform(std::size_t node_id) const
+    // {
+    //     return glm::mat4();
+    // }
 
 }

@@ -102,7 +102,7 @@ namespace vku::math {
     *  @param p the point.
     */
     template<typename real> bool pointInAABB2Test(const AABB2<real>& b, const glm::tvec2<real, glm::highp>& p) {
-        return (p.x >= b.minmax[0].x && p.y >= b.minmax[0].y && p.x <= b.minmax[1].x && p.y <= b.minmax[1].y);
+        return (p.x >= b.minmax_[0].x && p.y >= b.minmax_[0].y && p.x <= b.minmax_[1].x && p.y <= b.minmax_[1].y);
     }
 
     /**
@@ -112,8 +112,8 @@ namespace vku::math {
     *  @param p the point.
     */
     template<typename real> bool pointInAABB3Test(const AABB3<real>& b, const glm::tvec3<real, glm::highp>& p) {
-        return (p.x >= b.minmax[0].x && p.y >= b.minmax[0].y && p.z >= b.minmax[0].z
-            && p.x <= b.minmax[1].x && p.y <= b.minmax[1].y && p.z <= b.minmax[1].z);
+        return (p.x >= b.minmax_[0].x && p.y >= b.minmax_[0].y && p.z >= b.minmax_[0].z
+            && p.x <= b.minmax_[1].x && p.y <= b.minmax_[1].y && p.z <= b.minmax_[1].z);
     }
 
     /**
@@ -123,7 +123,7 @@ namespace vku::math {
     *  @param b1 the second box.
     */
     template<typename real> bool overlapAABB2Test(const AABB2<real>& b0, const AABB2<real>& b1) {
-        return (pointInAABB2Test(b0, b1.minmax[0]) || pointInAABB2Test(b0, b1.minmax[1]));
+        return (pointInAABB2Test(b0, b1.minmax_[0]) || pointInAABB2Test(b0, b1.minmax_[1]));
     }
 
     /**
@@ -133,7 +133,7 @@ namespace vku::math {
     *  @param b1 the second box.
     */
     template<typename real> bool overlapAABB3Test(const AABB3<real>& b0, const AABB3<real>& b1) {
-        return (pointInAABB3Test(b0, b1.minmax[0]) || pointInAABB3Test(b0, b1.minmax[1]));
+        return (pointInAABB3Test(b0, b1.minmax_[0]) || pointInAABB3Test(b0, b1.minmax_[1]));
     }
 
     /**
@@ -143,7 +143,7 @@ namespace vku::math {
     *  @param b1 the second box.
     */
     template<typename real> bool containAABB2Test(const AABB2<real>& b0, const AABB2<real>& b1) {
-        return (pointInAABB2Test(b0, b1.minmax[0]) && pointInAABB2Test(b0, b1.minmax[1]));
+        return (pointInAABB2Test(b0, b1.minmax_[0]) && pointInAABB2Test(b0, b1.minmax_[1]));
     }
 
     /**
@@ -153,7 +153,7 @@ namespace vku::math {
     *  @param b1 the second box.
     */
     template<typename real> bool containAABB3Test(const AABB3<real>& b0, const AABB3<real>& b1) {
-        return (pointInAABB3Test(b0, b1.minmax[0]) && pointInAABB3Test(b0, b1.minmax[1]));
+        return (pointInAABB3Test(b0, b1.minmax_[0]) && pointInAABB3Test(b0, b1.minmax_[1]));
     }
 
     /**
@@ -164,10 +164,10 @@ namespace vku::math {
     */
     template<typename real> bool AABBInFrustumTest(const Frustum<real>& f, const AABB3<real>& b) {
         for (unsigned int i = 0; i < 6; ++i) {
-            glm::vec3 p{ b.minmax[0] };
-            if (f.planes[i].x >= 0) p.x = b.minmax[1].x;
-            if (f.planes[i].y >= 0) p.y = b.minmax[1].y;
-            if (f.planes[i].z >= 0) p.z = b.minmax[1].z;
+            glm::vec3 p{ b.minmax_[0] };
+            if (f.planes[i].x >= 0) p.x = b.minmax_[1].x;
+            if (f.planes[i].y >= 0) p.y = b.minmax_[1].y;
+            if (f.planes[i].z >= 0) p.z = b.minmax_[1].z;
 
             // is the positive vertex outside?
             if ((glm::dot(glm::vec3(f.planes[i]), p) + f.planes[i].w) < 0) return false;

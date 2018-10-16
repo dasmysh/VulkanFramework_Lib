@@ -33,11 +33,18 @@ namespace vku::gfx {
         tangents_(rhs.tangents_),
         binormals_(rhs.binormals_),
         colors_(rhs.colors_),
-        ids_(rhs.ids_),
+        boneOffsetMatrixIndices_(rhs.boneOffsetMatrixIndices_),
+        boneWeights_(rhs.boneWeights_),
+        indexVectors_(rhs.indexVectors_),
+        inverseBindPoseMatrices_(rhs.inverseBindPoseMatrices_),
+        boneParent_(rhs.boneParent_),
         indices_(rhs.indices_),
+        materials_(rhs.materials_),
+        animations_(rhs.animations_),
         rootTransform_(rhs.rootTransform_),
         rootNode_(std::make_unique<SceneMeshNode>(*rhs.rootNode_)),
-        materials_(rhs.materials_)
+        globalInverse_(rhs.globalInverse_),
+        boneBoundingBoxes_(rhs.boneBoundingBoxes_)
     {
         for (const auto& submesh : rhs.subMeshes_) {
             auto newSubMesh = std::make_unique<SubMesh>(*submesh);
@@ -64,13 +71,20 @@ namespace vku::gfx {
         tangents_(std::move(rhs.tangents_)),
         binormals_(std::move(rhs.binormals_)),
         colors_(std::move(rhs.colors_)),
-        ids_(std::move(ids_)),
+        boneOffsetMatrixIndices_(std::move(boneOffsetMatrixIndices_)),
+        boneWeights_(std::move(boneWeights_)),
+        indexVectors_(std::move(indexVectors_)),
+        inverseBindPoseMatrices_(std::move(inverseBindPoseMatrices_)),
+        boneParent_(std::move(boneParent_)),
         indices_(std::move(rhs.indices_)),
+        materials_(std::move(materials_)),
+        subMeshes_(std::move(subMeshes_)),
+        nodes_(std::move(rhs.nodes_)),
+        animations_(std::move(animations_)),
         rootTransform_(std::move(rhs.rootTransform_)),
         rootNode_(std::move(rhs.rootNode_)),
-        materials_(std::move(rhs.materials_)),
-        subMeshes_(std::move(rhs.subMeshes_)),
-        nodes_(std::move(rhs.nodes_))
+        globalInverse_(std::move(rhs.globalInverse_)),
+        boneBoundingBoxes_(std::move(rhs.boneBoundingBoxes_))
     {
     }
 
@@ -84,13 +98,20 @@ namespace vku::gfx {
         tangents_ = std::move(rhs.tangents_);
         binormals_ = std::move(rhs.binormals_);
         colors_ = std::move(rhs.colors_);
-        ids_ = std::move(rhs.ids_);
+        boneOffsetMatrixIndices_ = std::move(rhs.boneOffsetMatrixIndices_);
+        boneWeights_ = std::move(rhs.boneWeights_);
+        indexVectors_ = std::move(rhs.indexVectors_);
+        inverseBindPoseMatrices_ = std::move(rhs.inverseBindPoseMatrices_);
+        boneParent_ = std::move(rhs.boneParent_);
         indices_ = std::move(rhs.indices_);
-        rootTransform_ = std::move(rhs.rootTransform_);
-        rootNode_ = std::move(rhs.rootNode_);
         materials_ = std::move(rhs.materials_);
         subMeshes_ = std::move(rhs.subMeshes_);
         nodes_ = std::move(rhs.nodes_);
+        animations_ = std::move(rhs.animations_);
+        rootTransform_ = std::move(rhs.rootTransform_);
+        rootNode_ = std::move(rhs.rootNode_);
+        globalInverse_ = std::move(rhs.globalInverse_);
+        boneBoundingBoxes_ = std::move(rhs.boneBoundingBoxes_);
         return *this;
     }
 
@@ -126,115 +147,50 @@ namespace vku::gfx {
         subMeshes_.push_back(std::make_unique<SubMesh>(this, name, idxOffset, numIndices, materialID));
     }
 
-    /*void Mesh::CreateIndexBuffer()
+    void MeshInfo::CreateSceneNodes(aiNode* rootNode, const std::map<std::string, unsigned int>& boneMap)
     {
-        iBuffer_ = std::make_unique<GLBuffer>(GL_STATIC_DRAW);
-        OGL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, iBuffer_->GetBuffer());
-        iBuffer_->InitializeData(indices_);
-        OGL_CALL(glBindBuffer, GL_ELEMENT_ARRAY_BUFFER, 0);
-    }*/
-
-    void MeshInfo::CreateSceneNodes(aiNode* rootNode)
-    {
-        rootNode_ = std::make_unique<SceneMeshNode>(rootNode, nullptr, subMeshes_);
+        rootNode_ = std::make_unique<SceneMeshNode>(rootNode, nullptr, boneMap);
+        rootNode_->GenerateBoundingBoxes(*this);
+        GenerateBoneBoundingBoxes();
         rootNode_->FlattenNodeTree(nodes_);
+        globalInverse_ = glm::inverse(rootNode_->GetLocalTransform());
     }
 
-    /*void Mesh::write(std::ofstream& ofs) const
+    ///
+    /// Generate all BoundingBoxes for the bones.
+    ///
+    void MeshInfo::GenerateBoneBoundingBoxes()
     {
-        VersionableSerializerType::writeHeader(ofs);
-        serializeHelper::writeV(ofs, vertices_);
-        serializeHelper::writeV(ofs, normals_);
-        serializeHelper::writeVV(ofs, texCoords_);
-        serializeHelper::writeV(ofs, tangents_);
-        serializeHelper::writeV(ofs, binormals_);
-        serializeHelper::writeVV(ofs, colors_);
-        serializeHelper::writeVV(ofs, ids_);
-        serializeHelper::writeV(ofs, indices_);
-
-        serializeHelper::write(ofs, static_cast<uint64_t>(materials_.size()));
-        for (const auto& mat : materials_) {
-            serializeHelper::write(ofs, reinterpret_cast<uint64_t>(mat.get()));
-            serializeHelper::write(ofs, mat->params.diffuseAlbedo);
-            serializeHelper::write(ofs, mat->params.refraction);
-            serializeHelper::write(ofs, mat->params.specularScaling);
-            serializeHelper::write(ofs, mat->params.roughness);
-            serializeHelper::write(ofs, mat->params.specularExponent);
-            serializeHelper::write(ofs, mat->ambient);
-            serializeHelper::write(ofs, mat->alpha);
-            serializeHelper::write(ofs, mat->minOrientedAlpha);
-            serializeHelper::write(ofs, mat->bumpMultiplier);
-            if (mat->diffuseTex) serializeHelper::write(ofs, mat->diffuseTex->getId());
-            else serializeHelper::write(ofs, std::string());
-
-            if (mat->bumpTex) serializeHelper::write(ofs, mat->bumpTex->getId());
-            else serializeHelper::write(ofs, std::string());
+        if (inverseBindPoseMatrices_.empty()) {
+            return;
         }
 
-        serializeHelper::write(ofs, static_cast<uint64_t>(subMeshes_.size()));
-        for (const auto& mesh : subMeshes_) mesh->write(ofs);
+        boneBoundingBoxes_.resize(inverseBindPoseMatrices_.size());
 
-        serializeHelper::write(ofs, rootTransform_);
-        rootNode_->write(ofs);
+        bool hasVertexWithoutBone = false;
+
+        for (auto i = 0U; i < boneOffsetMatrixIndices_.size(); i++) {
+
+            bool vertexHasBone = false;
+
+            for (auto b = 0; b < 4; b++) {
+                auto boneI = boneOffsetMatrixIndices_[i][b];
+                auto boneW = boneWeights_[i][b];
+                if (boneW > 0) {
+                    vertexHasBone = true;
+                    math::AABB3<float>& box = boneBoundingBoxes_[boneI];
+                    box.AddPoint(vertices_[i]);
+                }
+            }
+            if (!vertexHasBone) {
+                hasVertexWithoutBone = true;
+            }
+        }
+
+        if (hasVertexWithoutBone) {
+            LOG(WARNING) << "You are using a model where not all vertices in the "
+                "model are associated with a bone! This can lead to "
+                "errors in the collision detection!";
+        }
     }
-
-    bool Mesh::read(std::ifstream& ifs, TextureManager& texMan)
-    {
-        bool correctHeader;
-        unsigned int actualVersion;
-        std::tie(correctHeader, actualVersion) = VersionableSerializerType::checkHeader(ifs);
-        if (correctHeader) {
-            serializeHelper::readV(ifs, vertices_);
-            serializeHelper::readV(ifs, normals_);
-            serializeHelper::readVV(ifs, texCoords_);
-            serializeHelper::readV(ifs, tangents_);
-            serializeHelper::readV(ifs, binormals_);
-            serializeHelper::readVV(ifs, colors_);
-            serializeHelper::readVV(ifs, ids_);
-            serializeHelper::readV(ifs, indices_);
-
-            uint64_t numMaterials;
-            std::unordered_map<uint64_t, Material*> materialMap;
-            std::unordered_map<uint64_t, SubMesh*> meshMap;
-            std::unordered_map<uint64_t, SceneMeshNode*> nodeMap;
-            serializeHelper::read(ifs, numMaterials);
-            materials_.resize(numMaterials);
-            for (auto& mat : materials_) {
-                mat.reset(new Material());
-                uint64_t materialID;
-                serializeHelper::read(ifs, materialID);
-                serializeHelper::read(ifs, mat->params.diffuseAlbedo);
-                serializeHelper::read(ifs, mat->params.refraction);
-                serializeHelper::read(ifs, mat->params.specularScaling);
-                serializeHelper::read(ifs, mat->params.roughness);
-                serializeHelper::read(ifs, mat->params.specularExponent);
-                serializeHelper::read(ifs, mat->ambient);
-                serializeHelper::read(ifs, mat->alpha);
-                serializeHelper::read(ifs, mat->minOrientedAlpha);
-                serializeHelper::read(ifs, mat->bumpMultiplier);
-                std::string diffuseTexId, bumpTexId;
-                serializeHelper::read(ifs, diffuseTexId);
-                serializeHelper::read(ifs, bumpTexId);
-                if (diffuseTexId.size() > 0) mat->diffuseTex = texMan.GetResource(diffuseTexId);
-                if (bumpTexId.size() > 0) mat->bumpTex = texMan.GetResource(bumpTexId);
-                materialMap[materialID] = mat.get();
-            }
-
-            uint64_t numMeshes;
-
-            serializeHelper::read(ifs, numMeshes);
-            subMeshes_.resize(numMeshes);
-            for (auto& mesh : subMeshes_) {
-                mesh.reset(new SubMesh());
-                if (!mesh->read(ifs, meshMap, materialMap)) return false;
-            }
-
-            serializeHelper::read(ifs, rootTransform_);
-            rootNode_ = std::make_unique<SceneMeshNode>();
-            nodeMap[0] = nullptr;
-            if (!rootNode_->read(ifs, meshMap, nodeMap)) return false;
-            return true;
-        }
-        return false;
-    }*/
 }

@@ -28,6 +28,7 @@ namespace vku::gfx {
     class Framebuffer;
     class Buffer;
     class Texture;
+    class MemoryGroup;
 
     struct DeviceQueueDesc
     {
@@ -53,7 +54,7 @@ namespace vku::gfx {
 
 
         const vk::PhysicalDevice& GetPhysicalDevice() const { return vkPhysicalDevice_; }
-        const vk::Device& GetDevice() const { return vkDevice_; }
+        const vk::Device& GetDevice() const { return *vkDevice_; }
         const vk::Queue& GetQueue(unsigned int familyIndex, unsigned int queueIndex) const { return vkQueuesByRequestedFamily_[familyIndex][queueIndex]; }
         const DeviceQueueDesc& GetQueueInfo(unsigned int familyIndex) const { return queueDescriptions_[familyIndex]; }
         const vk::CommandPool& GetCommandPool(unsigned int familyIndex) const { return vkCmdPoolsByRequestedQFamily_[familyIndex]; }
@@ -70,6 +71,7 @@ namespace vku::gfx {
         const cfg::WindowCfg& GetWindowCfg() const { return windowCfg_; }
         ShaderManager* GetShaderManager() const { return shaderManager_.get(); }
         TextureManager* GetTextureManager() const { return textureManager_.get(); }
+        Texture2D* GetDummyTexture() const { return dummyTexture_.get(); }
 
         std::size_t CalculateUniformBufferAlignment(std::size_t size) const;
         std::size_t CalculateBufferImageOffset(const Texture& second, std::size_t currentOffset) const;
@@ -88,11 +90,11 @@ namespace vku::gfx {
         /** Holds the physical device limits. */
         vk::PhysicalDeviceLimits vkPhysicalDeviceLimits_;
         /** Holds the actual device. */
-        vk::Device vkDevice_;
+        vk::UniqueDevice vkDevice_;
         /** Holds the queues by device queue family. */
         std::map<std::uint32_t, std::vector<vk::Queue>> vkQueuesByDeviceFamily_;
         /** Holds a command pool for each device queue family. */
-        std::map<std::uint32_t, vk::CommandPool> vkCmdPoolsByDeviceQFamily_;
+        std::map<std::uint32_t, vk::UniqueCommandPool> vkCmdPoolsByDeviceQFamily_;
 
         /** Holds the queue descriptions. */
         std::vector<DeviceQueueDesc> queueDescriptions_;
@@ -115,5 +117,10 @@ namespace vku::gfx {
         std::unique_ptr<ShaderManager> shaderManager_;
         /** Holds the texture manager. */
         std::unique_ptr<TextureManager> textureManager_;
+
+        /** The memory group holding all dummy objects. */
+        std::unique_ptr<MemoryGroup> dummyMemGroup_;
+        /** Holds the dummy texture. */
+        std::shared_ptr<Texture2D> dummyTexture_;
     };
 }

@@ -28,11 +28,10 @@ namespace vku::gfx {
 
     DeviceMemory::DeviceMemory(DeviceMemory&& rhs) noexcept :
         device_{ rhs.device_ },
-        vkDeviceMemory_{ rhs.vkDeviceMemory_ },
+        vkDeviceMemory_{ std::move(rhs.vkDeviceMemory_) },
         size_{ rhs.size_ },
         memoryProperties_{ rhs.memoryProperties_ }
     {
-        rhs.vkDeviceMemory_ = vk::DeviceMemory();
         rhs.size_ = 0;
     }
 
@@ -40,19 +39,14 @@ namespace vku::gfx {
     {
         this->~DeviceMemory();
         device_ = rhs.device_;
-        vkDeviceMemory_ = rhs.vkDeviceMemory_;
+        vkDeviceMemory_ = std::move(rhs.vkDeviceMemory_);
         size_ = rhs.size_;
         memoryProperties_ = rhs.memoryProperties_;
-        rhs.vkDeviceMemory_ = vk::DeviceMemory();
         rhs.size_ = 0;
         return *this;
     }
 
-    DeviceMemory::~DeviceMemory()
-    {
-        if (vkDeviceMemory_) device_->GetDevice().freeMemory(vkDeviceMemory_);
-        vkDeviceMemory_ = vk::DeviceMemory();
-    }
+    DeviceMemory::~DeviceMemory() = default;
 
     void DeviceMemory::InitializeMemory(const vk::MemoryRequirements& memRequirements)
     {
@@ -63,17 +57,17 @@ namespace vku::gfx {
 
     void DeviceMemory::InitializeMemory(const vk::MemoryAllocateInfo& memAllocateInfo)
     {
-        vkDeviceMemory_ = device_->GetDevice().allocateMemory(memAllocateInfo);
+        vkDeviceMemory_ = device_->GetDevice().allocateMemoryUnique(memAllocateInfo);
     }
 
     void DeviceMemory::BindToBuffer(Buffer& buffer, std::size_t offset) const
     {
-        device_->GetDevice().bindBufferMemory(buffer.GetBuffer(), vkDeviceMemory_, offset);
+        device_->GetDevice().bindBufferMemory(buffer.GetBuffer(), *vkDeviceMemory_, offset);
     }
 
     void DeviceMemory::BindToTexture(Texture& texture, std::size_t offset) const
     {
-        device_->GetDevice().bindImageMemory(texture.GetImage(), vkDeviceMemory_, offset);
+        device_->GetDevice().bindImageMemory(texture.GetImage(), *vkDeviceMemory_, offset);
     }
 
     void DeviceMemory::CopyToHostMemory(std::size_t offset, std::size_t size, const void* data) const
@@ -134,9 +128,9 @@ namespace vku::gfx {
     void DeviceMemory::MapAndProcess(std::size_t offset, std::size_t size, const std::function<void(void* deviceMem, std::size_t size)>& processFunc) const
     {
         assert(memoryProperties_ & (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent));
-        auto deviceMem = device_->GetDevice().mapMemory(vkDeviceMemory_, offset, size, vk::MemoryMapFlags());
+        auto deviceMem = device_->GetDevice().mapMemory(*vkDeviceMemory_, offset, size, vk::MemoryMapFlags());
         processFunc(deviceMem, size);
-        device_->GetDevice().unmapMemory(vkDeviceMemory_);
+        device_->GetDevice().unmapMemory(*vkDeviceMemory_);
     }
 
     void DeviceMemory::MapAndProcess(std::size_t offsetToTexture, const glm::u32vec3& offset,
@@ -145,7 +139,7 @@ namespace vku::gfx {
     {
         assert(memoryProperties_ & (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent));
         auto mapOffset = offset.z * layout.depthPitch + offsetToTexture;
-        auto deviceMem = device_->GetDevice().mapMemory(vkDeviceMemory_, mapOffset + layout.offset, layout.size);
+        auto deviceMem = device_->GetDevice().mapMemory(*vkDeviceMemory_, mapOffset + layout.offset, layout.size);
         auto deviceBytes = reinterpret_cast<std::uint8_t*>(deviceMem);
 
         if (layout.rowPitch == dataSize.x && layout.depthPitch == dataSize.y
@@ -169,6 +163,6 @@ namespace vku::gfx {
             }
         }
 
-        device_->GetDevice().unmapMemory(vkDeviceMemory_);
+        device_->GetDevice().unmapMemory(*vkDeviceMemory_);
     }
 }

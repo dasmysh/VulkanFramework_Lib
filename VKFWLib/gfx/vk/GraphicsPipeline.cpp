@@ -57,9 +57,8 @@ namespace vku::gfx {
     device_{ rhs.device_ },
         shaders_{ std::move(rhs.shaders_) },
         state_{ std::move(rhs.state_) },
-        vkPipeline_{ rhs.vkPipeline_ }
+        vkPipeline_{ std::move(rhs.vkPipeline_) }
     {
-        rhs.vkPipeline_ = vk::Pipeline();
     }
 
     GraphicsPipeline& GraphicsPipeline::operator=(GraphicsPipeline&& rhs) noexcept
@@ -69,17 +68,12 @@ namespace vku::gfx {
             device_ = rhs.device_;
             shaders_ = std::move(rhs.shaders_);
             state_ = std::move(rhs.state_);
-            vkPipeline_ = rhs.vkPipeline_;
-            rhs.vkPipeline_ = vk::Pipeline();
+            vkPipeline_ = std::move(rhs.vkPipeline_);
         }
         return *this;
     }
 
-    GraphicsPipeline::~GraphicsPipeline()
-    {
-        if (vkPipeline_) device_->GetDevice().destroyPipeline(vkPipeline_);
-        vkPipeline_ = vk::Pipeline();
-    }
+    GraphicsPipeline::~GraphicsPipeline() = default;
 
     void GraphicsPipeline::ResetShaders(const std::vector<std::shared_ptr<Shader>>& shaders)
     {
@@ -113,7 +107,7 @@ namespace vku::gfx {
             &state_->viewportState_, &state_->rasterizer_, &state_->multisampling_, &state_->depthStencil_,
             &state_->colorBlending_, &dynamicState, pipelineLayout, renderPass, subpass };
 
-        vkPipeline_ = device_->GetDevice().createGraphicsPipeline(vk::PipelineCache(), pipelineInfo);
+        vkPipeline_ = device_->GetDevice().createGraphicsPipelineUnique(vk::PipelineCache(), pipelineInfo);
 
         if (!keepState) state_.reset();
     }

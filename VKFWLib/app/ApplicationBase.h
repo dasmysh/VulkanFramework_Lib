@@ -9,7 +9,7 @@
 #pragma once
 
 #include "main.h"
-#include "core/sceneobject/SceneObjectManager.h"
+// #include "core/sceneobject/SceneObjectManager.h"
 
 namespace vku::cfg {
     class Configuration;
@@ -30,33 +30,33 @@ namespace vku {
     class ApplicationBase
     {
     public:
-        VKUDllExport ApplicationBase(const std::string& applicationName, std::uint32_t applicationVersion, const std::string& configFileName);
+        ApplicationBase(const std::string& applicationName, std::uint32_t applicationVersion, const std::string& configFileName);
         ApplicationBase(const ApplicationBase&) = delete;
         ApplicationBase(ApplicationBase&&) = delete;
         ApplicationBase& operator=(const ApplicationBase&) = delete;
         ApplicationBase& operator=(ApplicationBase&&) = delete;
-        virtual VKUDllExport ~ApplicationBase();
+        virtual ~ApplicationBase();
 
         static ApplicationBase& instance() { return *instance_; };
 
         /** Starts the application. */
-        VKUDllExport void StartRun();
+        void StartRun();
         /** Checks if the application is still running. */
-        VKUDllExport bool IsRunning() const;
+        bool IsRunning() const;
         /** Make one application <em>step</em> (rendering etc.). */
-        VKUDllExport void Step();
+        void Step();
         /** Called if the application is to end running. */
-        VKUDllExport void EndRun();
+        void EndRun();
 
         bool IsPaused() const { return pause_; }
         bool IsGUIMode() const { return guiMode_; }
-        VKUDllExport VKWindow* GetFocusedWindow();
-        VKUDllExport VKWindow* GetWindow(unsigned int idx);
-        VKUDllExport const SceneObjectManager& GetSceneObjectManager() const { return sceneObjectManager_; }
+        VKWindow* GetFocusedWindow();
+        VKWindow* GetWindow(unsigned int idx);
+        // VKUDllExport const SceneObjectManager& GetSceneObjectManager() const { return sceneObjectManager_; }
 
         void SetPause(bool pause);
 
-        virtual VKUDllExport bool HandleKeyboard(int key, int scancode, int action, int mods, VKWindow* sender);
+        virtual bool HandleKeyboard(int key, int scancode, int action, int mods, VKWindow* sender);
         bool HandleMouse(int button, int action, int mods, float mouseWheelDelta, VKWindow* sender);
         virtual bool HandleMouseApp(int button, int action, int mods, float mouseWheelDelta, VKWindow* sender) = 0;
         void OnResize(unsigned int width, unsigned int height, const VKWindow* window);
@@ -64,7 +64,7 @@ namespace vku {
 
         const cfg::Configuration& GetConfig() const { return config_; };
         const std::vector<const char*>& GetVKValidationLayers() const { return vkValidationLayers_; }
-        const vk::Instance& GetVKInstance() const { return vkInstance_; }
+        const vk::Instance& GetVKInstance() const { return *vkInstance_; }
         std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const cfg::WindowCfg& windowCfg,
             const vk::SurfaceKHR& surface = vk::SurfaceKHR()) const;
         // std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const vk::SurfaceKHR& surface) const;
@@ -102,7 +102,7 @@ namespace vku {
         bool guiMode_ = true;
 
         /** Holds the scene object manager. */
-        SceneObjectManager sceneObjectManager_;
+        // SceneObjectManager sceneObjectManager_;
 
     protected:
         /**
@@ -130,9 +130,11 @@ namespace vku {
         /** Holds the Vulkan validation layers. */
         std::vector<const char*> vkValidationLayers_;
         /** Holds the Vulkan instance. */
-        vk::Instance vkInstance_;
+        vk::UniqueInstance vkInstance_;
+        /** Holds the dispatch loader for the instance. */
+        vk::DispatchLoaderDynamic vkDispatchLoaderInst_;
         /** Holds the debug report callback. */
-        vk::DebugReportCallbackEXT vkDebugReportCB_;
+        vk::UniqueHandle<vk::DebugReportCallbackEXT, vk::DispatchLoaderDynamic> vkDebugReportCB_;
         /** Holds the physical devices. */
         std::map<unsigned int, vk::PhysicalDevice> vkPhysicalDevices_;
         /** Holds the physical device. */

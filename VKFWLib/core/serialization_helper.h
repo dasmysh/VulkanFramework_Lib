@@ -11,6 +11,7 @@
 #include "main.h"
 #include "core/math/primitives.h"
 #include <cereal/cereal.hpp>
+#include <cereal/types/utility.hpp>
 #include <fstream>
 #include <cereal/archives/binary.hpp>
 
@@ -73,6 +74,12 @@ namespace cereal {
     }
 
     template<class Archive>
+    void serialize(Archive & ar, glm::uvec4& g)
+    {
+        ar(make_nvp("x", g.x), make_nvp("y", g.y), make_nvp("z", g.z), make_nvp("w", g.w));
+    }
+
+    template<class Archive>
     void serialize(Archive & ar, glm::quat& g)
     {
         ar(make_nvp("x", g.x), make_nvp("y", g.y), make_nvp("z", g.z), make_nvp("w", g.w));
@@ -87,7 +94,7 @@ namespace cereal {
     template<class Archive, typename T>
     void serialize(Archive & ar, vku::math::AABB3<T>& aabb)
     {
-        ar(make_nvp("min", aabb.minmax[0]), make_nvp("max", aabb.minmax[1]));
+        ar(make_nvp("min", aabb.minmax_[0]), make_nvp("max", aabb.minmax_[1]));
     }
 }
 

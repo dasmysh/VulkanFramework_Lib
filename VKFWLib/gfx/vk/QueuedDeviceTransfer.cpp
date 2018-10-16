@@ -112,20 +112,18 @@ namespace vku::gfx {
     void QueuedDeviceTransfer::AddTransferToQueue(Texture& src, Texture& dst)
     {
         auto imgCopyCmdBuffer = CommandBuffers::beginSingleTimeSubmit(device_, transferQueue_.first);
-        src.TransitionLayout(vk::ImageLayout::eTransferSrcOptimal, imgCopyCmdBuffer);
-        dst.TransitionLayout(vk::ImageLayout::eTransferDstOptimal, imgCopyCmdBuffer);
-        src.CopyImageAsync(0, glm::u32vec4(0), dst, 0, glm::u32vec4(0), src.GetSize(), imgCopyCmdBuffer);
-        dst.TransitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal, imgCopyCmdBuffer);
-        CommandBuffers::endSingleTimeSubmit(device_, imgCopyCmdBuffer, transferQueue_.first, transferQueue_.second);
+        src.TransitionLayout(vk::ImageLayout::eTransferSrcOptimal, *imgCopyCmdBuffer);
+        dst.TransitionLayout(vk::ImageLayout::eTransferDstOptimal, *imgCopyCmdBuffer);
+        src.CopyImageAsync(0, glm::u32vec4(0), dst, 0, glm::u32vec4(0), src.GetSize(), *imgCopyCmdBuffer);
+        dst.TransitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal, *imgCopyCmdBuffer);
+        CommandBuffers::endSingleTimeSubmit(device_, *imgCopyCmdBuffer, transferQueue_.first, transferQueue_.second);
 
-        transferCmdBuffers_.push_back(imgCopyCmdBuffer);
+        transferCmdBuffers_.push_back(std::move(imgCopyCmdBuffer));
     }
 
     void QueuedDeviceTransfer::FinishTransfer()
     {
         device_->GetQueue(transferQueue_.first, transferQueue_.second).waitIdle();
-        for (auto cmdBuffer : transferCmdBuffers_) device_->GetDevice().freeCommandBuffers(device_->GetCommandPool(transferQueue_.first), cmdBuffer);
-
         transferCmdBuffers_.clear();
         stagingBuffers_.clear();
     }

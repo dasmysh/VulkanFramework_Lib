@@ -60,23 +60,35 @@ namespace vku {
     /**
      *  Returns the actual location of the resource by looking into all search paths.
      *  @param localFilename the file name local to any resource base directory.
+     *  @param resourceId the id of the resource to look for for error logging.
      *  @return the path to the resource.
      */
-    std::string Resource::FindResourceLocation(const std::string& localFilename) const
+    std::string Resource::FindGeneralFileLocation(const std::string& localFilename, const std::string& resourceId)
     {
         auto filename = ApplicationBase::instance().GetConfig().resourceBase_ + "/" + localFilename;
-        if (std::experimental::filesystem::exists(filename)) return filename;
+        if (std::filesystem::exists(filename)) return filename;
 
         for (const auto& dir : ApplicationBase::instance().GetConfig().resourceDirs_) {
             filename = dir + "/" + localFilename;
-            if (std::experimental::filesystem::exists(filename)) return filename;
+            if (dir.empty()) filename = localFilename;
+            if (std::filesystem::exists(filename)) return filename;
         }
 
         LOG(ERROR) << "Error while loading resource." << std::endl
-            << "ResourceID: " << id_ << std::endl
+            << "ResourceID: " << resourceId << std::endl
             << "Filename: " << localFilename << std::endl
             << "Description: Cannot find local resource file.";
 
         throw file_not_found{ localFilename };
+    }
+
+    /**
+     *  Returns the actual location of the resource by looking into all search paths.
+     *  @param localFilename the file name local to any resource base directory.
+     *  @return the path to the resource.
+     */
+    std::string Resource::FindResourceLocation(const std::string& localFilename) const
+    {
+        return Resource::FindGeneralFileLocation(localFilename, id_);
     }
 }

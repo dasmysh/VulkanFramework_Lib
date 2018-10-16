@@ -38,6 +38,8 @@ namespace vku::gfx {
         std::string bumpMapFilename_;
         /** Holds the materials bump multiplier. */
         float bumpMultiplier_;
+        /** Holds whether this material has an alpha channel. */
+        bool hasAlpha_ = false;
 
         template <class Archive>
         void serialize(Archive& ar, const std::uint32_t)
@@ -50,7 +52,8 @@ namespace vku::gfx {
                 cereal::make_nvp("refractionIndex", refraction_),
                 cereal::make_nvp("diffuseTextureFilename", diffuseTextureFilename_),
                 cereal::make_nvp("bumpMapFilename", bumpMapFilename_),
-                cereal::make_nvp("bumpMultiplier", bumpMultiplier_));
+                cereal::make_nvp("bumpMultiplier", bumpMultiplier_),
+                cereal::make_nvp("hasAlpha", hasAlpha_));
         }
     };
 
@@ -66,7 +69,7 @@ namespace vku::gfx {
         ~Material();
 
         /** Holds the material information. */
-        const MaterialInfo* materialInfo_;
+        const MaterialInfo* materialInfo_ = nullptr;
         /** Holds the materials diffuse texture. */
         std::shared_ptr<Texture2D> diffuseTexture_;
         /** Holds the materials bump map. */

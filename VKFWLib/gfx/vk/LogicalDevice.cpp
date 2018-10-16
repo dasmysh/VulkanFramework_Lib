@@ -12,6 +12,9 @@
 #include "core/resources/ShaderManager.h"
 #include "GraphicsPipeline.h"
 #include "textures/Texture.h"
+#include "gfx/Texture2D.h"
+#include "memory/MemoryGroup.h"
+#include "QueuedDeviceTransfer.h"
 
 namespace vku::gfx {
 
@@ -73,7 +76,7 @@ namespace vku::gfx {
             static_cast<std::uint32_t>(enabledDeviceExtensions.size()), enabledDeviceExtensions.data(),
             &deviceFeatures };
 
-        vkDevice_ = vkPhysicalDevice_.createDevice(deviceCreateInfo);
+        vkDevice_ = vkPhysicalDevice_.createDeviceUnique(deviceCreateInfo);
         vkQueuesByRequestedFamily_.resize(queueDescriptions_.size());
         for (auto i = 0U; i < queueDescriptions_.size(); ++i) vkQueuesByRequestedFamily_[i].resize(queueDescriptions_[i].priorities_.size());
         vkCmdPoolsByRequestedQFamily_.resize(queueDescriptions_.size());
@@ -83,21 +86,21 @@ namespace vku::gfx {
             const auto& mappings = deviceQueueDesc.second;
             vkQueuesByDeviceFamily_[deviceQueueDesc.first].resize(priorities.size());
 
-            vk::CommandPoolCreateInfo poolInfo{ vk::CommandPoolCreateFlags(), deviceQueueDesc.first };
-            vkCmdPoolsByDeviceQFamily_[deviceQueueDesc.first] = vkDevice_.createCommandPool(poolInfo);
+            vk::CommandPoolCreateInfo poolInfo{ vk::CommandPoolCreateFlags(), singleQueueOnly ? 0 : deviceQueueDesc.first };
+            vkCmdPoolsByDeviceQFamily_[deviceQueueDesc.first] = vkDevice_->createCommandPoolUnique(poolInfo);
 
 #ifdef FW_DEBUG_PIPELINE
             vk::Queue vkSingleQueue;
-            if (singleQueueOnly) vkSingleQueue = vkDevice_.getQueue(0, 0);
+            if (singleQueueOnly) vkSingleQueue = vkDevice_->getQueue(0, 0);
 #endif
             for (auto j = 0U; j < priorities.size(); ++j) {
 #ifdef FW_DEBUG_PIPELINE
                 if (singleQueueOnly) vkQueuesByDeviceFamily_[deviceQueueDesc.first][j] = vkSingleQueue;
                 else // i wonder if i can make this part even more unreadable ...
 #endif
-                    vkQueuesByDeviceFamily_[deviceQueueDesc.first][j] = vkDevice_.getQueue(deviceQueueDesc.first, j);
+                    vkQueuesByDeviceFamily_[deviceQueueDesc.first][j] = vkDevice_->getQueue(deviceQueueDesc.first, j);
                 vkQueuesByRequestedFamily_[mappings[j].first][mappings[j].second] = vkQueuesByDeviceFamily_[deviceQueueDesc.first][j];
-                vkCmdPoolsByRequestedQFamily_[mappings[j].first] = vkCmdPoolsByDeviceQFamily_[deviceQueueDesc.first];
+                vkCmdPoolsByRequestedQFamily_[mappings[j].first] = *vkCmdPoolsByDeviceQFamily_[deviceQueueDesc.first];
             }
         }
 
@@ -111,25 +114,28 @@ namespace vku::gfx {
 
         shaderManager_ = std::make_unique<ShaderManager>(this);
         textureManager_ = std::make_unique<TextureManager>(this);
+
+        dummyMemGroup_ = std::make_unique<MemoryGroup>(this, vk::MemoryPropertyFlags());
+        dummyTexture_ = textureManager_->GetResource("dummy.png", true, *dummyMemGroup_); // , std::vector<std::uint32_t>{ {0, 1} }
+
+        QueuedDeviceTransfer transfer{ this, std::make_pair(0, 0) };
+        dummyMemGroup_->FinalizeDeviceGroup();
+        dummyMemGroup_->TransferData(transfer);
+        transfer.FinishTransfer();
     }
 
 
     LogicalDevice::~LogicalDevice()
     {
-        for (auto& cmdPool : vkCmdPoolsByDeviceQFamily_) {
-            if (cmdPool.second) vkDevice_.destroyCommandPool(cmdPool.second);
-        }
         vkCmdPoolsByDeviceQFamily_.clear();
         vkCmdPoolsByRequestedQFamily_.clear();
         vkQueuesByDeviceFamily_.clear();
         vkQueuesByRequestedFamily_.clear();
-
-        if (vkDevice_) vkDevice_.destroy();
     }
 
     PFN_vkVoidFunction LogicalDevice::LoadVKDeviceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory) const
     {
-        auto func = vkGetDeviceProcAddr(static_cast<vk::Device>(vkDevice_), functionName.c_str());
+        auto func = vkGetDeviceProcAddr(static_cast<vk::Device>(*vkDevice_), functionName.c_str());
         if (func == nullptr) {
             if (mandatory) {
                 LOG(FATAL) << "Could not load device function '" << functionName << "' [" << extensionName << "].";

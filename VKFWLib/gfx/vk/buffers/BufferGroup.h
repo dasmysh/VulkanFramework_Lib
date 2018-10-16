@@ -3,7 +3,7 @@
  * @author Sebastian Maisch <sebastian.maisch@googlemail.com>
  * @date   2016.11.27
  *
- * @brief  Declaration of a class managing multiple vulkan buffers for simultaneous memory usage.
+ * @brief  Declaration of a class managing multiple Vulkan buffers for simultaneous memory usage.
  */
 
 #pragma once
@@ -45,9 +45,9 @@ namespace vku::gfx {
         /** Holds the device. */
         const LogicalDevice* device_;
         /** Holds the Vulkan device memory for the device buffers. */
-        vk::DeviceMemory deviceBufferMemory_;
+        vk::UniqueDeviceMemory deviceBufferMemory_;
         /** Holds the Vulkan device memory for the host buffers. */
-        vk::DeviceMemory hostBufferMemory_;
+        vk::UniqueDeviceMemory hostBufferMemory_;
         /** Holds the device buffers. */
         std::vector<DeviceBuffer> deviceBuffers_;
         /** Holds the host buffers. */

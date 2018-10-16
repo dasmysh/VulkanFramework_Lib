@@ -24,8 +24,7 @@ namespace vku::gfx {
     class SubMesh
     {
     public:
-        SubMesh() : indexOffset_{ 0 }, numIndices_{ 0 }, materialID_{ std::numeric_limits<unsigned int>::max() }
-        { aabb_.minmax[0] = glm::vec3(std::numeric_limits<float>::infinity()); aabb_.minmax[1] = glm::vec3(-std::numeric_limits<float>::infinity()); }
+        SubMesh() = default;
         SubMesh(const MeshInfo* mesh, const std::string& objectName, unsigned int indexOffset, unsigned int numIndices, unsigned int materialID);
         SubMesh(const SubMesh&);
         SubMesh& operator=(const SubMesh&);
@@ -60,15 +59,15 @@ namespace vku::gfx {
         /** Holds the sub-meshes object name. */
         std::string objectName_;
         /** Holds a serialization id. */
-        std::uint64_t serializationID_;
+        std::uint64_t serializationID_ = 0;
         /** The index offset the sub-mesh starts. */
-        unsigned int indexOffset_;
+        unsigned int indexOffset_ = 0;
         /** The number of indices in the sub-mesh. */
-        unsigned int numIndices_;
+        unsigned int numIndices_ = 0;
         /** The sub-meshes local AABB. */
         math::AABB3<float> aabb_;
         /** The sub-meshes material id. */
-        unsigned int materialID_;
+        unsigned int materialID_ = std::numeric_limits<unsigned int>::max();
     };
 }
 

@@ -29,20 +29,20 @@ namespace vku::gfx {
 
         void CopyBufferAsync(std::size_t srcOffset, const Buffer& dstBuffer, std::size_t dstOffset,
             std::size_t size, vk::CommandBuffer cmdBuffer) const;
-        vk::CommandBuffer CopyBufferAsync(std::size_t srcOffset, const Buffer& dstBuffer, std::size_t dstOffset,
+        vk::UniqueCommandBuffer CopyBufferAsync(std::size_t srcOffset, const Buffer& dstBuffer, std::size_t dstOffset,
             std::size_t size, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
             const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
             const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
             vk::Fence fence = vk::Fence()) const;
-        vk::CommandBuffer CopyBufferAsync(const Buffer& dstBuffer, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
+        vk::UniqueCommandBuffer CopyBufferAsync(const Buffer& dstBuffer, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
             const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
             const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
             vk::Fence fence = vk::Fence()) const;
         void CopyBufferSync(const Buffer& dstBuffer, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx) const;
 
         std::size_t GetSize() const { return size_; }
-        vk::Buffer GetBuffer() const { return buffer_; }
-        const vk::Buffer* GetBufferPtr() const { return &buffer_; }
+        vk::Buffer GetBuffer() const { return *buffer_; }
+        const vk::Buffer* GetBufferPtr() const { return &(*buffer_); }
         const DeviceMemory& GetDeviceMemory() const { return bufferDeviceMemory_; }
 
     protected:
@@ -52,7 +52,7 @@ namespace vku::gfx {
         /** Holds the device. */
         const LogicalDevice* device_;
         /** Holds the Vulkan buffer object. */
-        vk::Buffer buffer_;
+        vk::UniqueBuffer buffer_;
         /** Holds the Vulkan device memory for the buffer. */
         DeviceMemory bufferDeviceMemory_;
         /** Holds the current size of the buffer in bytes. */

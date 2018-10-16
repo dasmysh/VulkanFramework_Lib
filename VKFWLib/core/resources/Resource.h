@@ -39,6 +39,8 @@ namespace vku {
 
         const std::string& getId() const;
 
+        static std::string FindGeneralFileLocation(const std::string& localFilename, const std::string& resourceId = "_no_resource_");
+
     protected:
         const gfx::LogicalDevice* GetDevice() const { return device_; }
         std::string FindResourceLocation(const std::string& localFilename) const;

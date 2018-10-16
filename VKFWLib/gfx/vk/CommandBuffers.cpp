@@ -16,17 +16,17 @@ namespace vku::gfx {
     {
         LOG(WARNING) << "Command buffers are not fully implemented at the moment.";
         vk::CommandBufferAllocateInfo cmdBufferallocInfo{ device_->GetCommandPool(queueFamily_) , level, numBuffers };
-        vkCmdBuffers_ = device_->GetDevice().allocateCommandBuffers(cmdBufferallocInfo);
+        vkCmdBuffers_ = device_->GetDevice().allocateCommandBuffersUnique(cmdBufferallocInfo);
     }
 
-    vk::CommandBuffer CommandBuffers::beginSingleTimeSubmit(const LogicalDevice* device, unsigned int queueFamily)
+    vk::UniqueCommandBuffer CommandBuffers::beginSingleTimeSubmit(const LogicalDevice* device, unsigned int queueFamily)
     {
         vk::CommandBufferAllocateInfo cmdBufferallocInfo{ device->GetCommandPool(queueFamily) , vk::CommandBufferLevel::ePrimary, 1 };
-        auto cmdBuffer = device->GetDevice().allocateCommandBuffers(cmdBufferallocInfo)[0];
+        auto cmdBuffer = device->GetDevice().allocateCommandBuffersUnique(cmdBufferallocInfo);
 
         vk::CommandBufferBeginInfo beginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
-        cmdBuffer.begin(beginInfo);
-        return cmdBuffer;
+        cmdBuffer[0]->begin(beginInfo);
+        return std::move(cmdBuffer[0]);
     }
 
     void CommandBuffers::endSingleTimeSubmit(const LogicalDevice* device, vk::CommandBuffer cmdBuffer,

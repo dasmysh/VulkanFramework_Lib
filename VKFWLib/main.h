@@ -38,14 +38,6 @@
 #include <glm/glm.hpp>
 #pragma warning(default : 4201)
 
-#define WIN32_LEAN_AND_MEAN
-#define WIN32_EXTRA_LEAN
-#pragma warning(push, 3)
-// #include <Windows.h>
-#pragma warning(pop)
-#undef min
-#undef max
-
 #include <vulkan/vulkan.hpp>
 
 #include <g3log/g3log.hpp>
@@ -53,17 +45,11 @@
 
 const LEVELS ERROR{ WARNING.value + 200,{ "Vulkan" } };
 const LEVELS VK_GEN{ INFO.value + 2,{ "Vulkan" } };
-const LEVELS VK_DEBUG{ DEBUG.value + 1,{ "Vulkan DEBUG" } };
+const LEVELS VK_DEBUG{ G3LOG_DEBUG.value + 1,{ "Vulkan DEBUG" } };
 const LEVELS VK_INFO{ INFO.value + 1,{ "Vulkan DEBUG" } };
 const LEVELS VK_WARNING{ WARNING.value + 1,{ "Vulkan WARNING" } };
 const LEVELS VK_PERF_WARNING{ WARNING.value + 2,{ "Vulkan PERFORMANCE WARNING" } };
 const LEVELS VK_ERROR{ WARNING.value + 3,{ "Vulkan ERROR" } };
-
-#ifdef VKUFW_EXPORT
-#define VKUDllExport   __declspec( dllexport )
-#else
-#define VKUDllExport   __declspec( dllimport )
-#endif
 
 #include "constants.h"
 #include "app/Configuration.h"
