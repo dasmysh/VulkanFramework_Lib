@@ -25,6 +25,8 @@ namespace vku::gfx {
 
         void AddUBOToBuffer(MemoryGroup* memoryGroup, unsigned int bufferIndex,
             std::size_t bufferOffset, std::size_t size, const void* data);
+        void AddUBOToBufferPrefill(MemoryGroup* memoryGroup, unsigned int bufferIndex,
+            std::size_t bufferOffset, std::size_t size, const void* data);
         void CreateLayout(vk::DescriptorPool descPool, vk::ShaderStageFlags shaderFlags, bool isDynamicBuffer = false, std::uint32_t binding = 0);
         void UseLayout(vk::DescriptorPool descPool, vk::DescriptorSetLayout usedLayout, bool isDynamicBuffer = false, std::uint32_t binding = 0);
         void FillUploadCmdBuffer(vk::CommandBuffer cmdBuffer, std::size_t instanceIdx, std::size_t size) const;

@@ -71,6 +71,20 @@ namespace vku::gfx {
         descInfo_.range = singleSize_;
     }
 
+    void UniformBufferObject::AddUBOToBufferPrefill(MemoryGroup* memoryGroup, unsigned int bufferIndex,
+        std::size_t bufferOffset, std::size_t size, const void* data)
+    {
+        memoryGroup_ = memoryGroup;
+        bufferIdx_ = bufferIndex;
+        bufferOffset_ = bufferOffset;
+
+        memoryGroup_->AddDataToBufferInGroup(bufferIdx_, bufferOffset_, size, data);
+
+        descInfo_.buffer = memoryGroup_->GetBuffer(bufferIdx_)->GetBuffer();
+        descInfo_.offset = bufferOffset;
+        descInfo_.range = singleSize_;
+    }
+
     void UniformBufferObject::FillUploadCmdBuffer(vk::CommandBuffer cmdBuffer, std::size_t instanceIdx, std::size_t size) const
     {
         auto offset = bufferOffset_ + (instanceIdx * singleSize_);

@@ -15,8 +15,8 @@
 
 namespace vku::gfx {
 
-    Mesh::Mesh(std::shared_ptr<const MeshInfo> meshInfo, std::size_t numBackbuffers, const LogicalDevice* device,
-        vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices) :
+    Mesh::Mesh(const LogicalDevice* device, std::shared_ptr<const MeshInfo> meshInfo, UniformBufferObject&& materialsUBO,
+        std::size_t numBackbuffers, vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices) :
         device_{ device },
         meshInfo_{ meshInfo },
         internalMemoryGroup_{ std::make_unique<MemoryGroup>(device, memoryFlags) },
@@ -25,13 +25,13 @@ namespace vku::gfx {
         vertexBuffer_{ nullptr, 0 },
         indexBuffer_{ nullptr, 0 },
         worldMatricesUBO_{ vku::gfx::UniformBufferObject::Create<WorldMatrixUBO>(device, numBackbuffers * meshInfo->GetNodes().size()) },
-        materialBuffer_{ nullptr, 0, 0 }
+        materialsUBO_{ std::move(materialsUBO) }
     {
         CreateMaterials(queueFamilyIndices);
     }
 
-    Mesh::Mesh(std::shared_ptr<const MeshInfo> meshInfo, std::size_t numBackbuffers, const LogicalDevice* device,
-        MemoryGroup& memoryGroup, unsigned int bufferIndex, const std::vector<std::uint32_t>& queueFamilyIndices) :
+    Mesh::Mesh(const LogicalDevice* device, std::shared_ptr<const MeshInfo> meshInfo, UniformBufferObject&& materialsUBO,
+        std::size_t numBackbuffers, MemoryGroup& memoryGroup, unsigned int bufferIndex, const std::vector<std::uint32_t>& queueFamilyIndices) :
         device_{ device },
         meshInfo_{ meshInfo },
         memoryGroup_{ &memoryGroup },
@@ -39,7 +39,7 @@ namespace vku::gfx {
         vertexBuffer_{ nullptr, 0 },
         indexBuffer_{ nullptr, 0 },
         worldMatricesUBO_{ vku::gfx::UniformBufferObject::Create<WorldMatrixUBO>(device, numBackbuffers * meshInfo->GetNodes().size()) },
-        materialBuffer_{ nullptr, 0, 0 }
+        materialsUBO_{ std::move(materialsUBO) }
     {
         CreateMaterials(queueFamilyIndices);
     }
@@ -53,12 +53,12 @@ namespace vku::gfx {
         vertexBuffer_{ std::move(rhs.vertexBuffer_) },
         indexBuffer_{ std::move(rhs.indexBuffer_) },
         worldMatricesUBO_{ std::move(rhs.worldMatricesUBO_) },
-        materialBuffer_{ std::move(rhs.materialBuffer_) },
+        materialsUBO_{ std::move(rhs.materialsUBO_) },
         materials_{ std::move(rhs.materials_) },
         textureSampler_{ std::move(rhs.textureSampler_) },
         descriptorPool_{ std::move(rhs.descriptorPool_) },
-        materialDescriptorSetLayout_{ std::move(rhs.materialDescriptorSetLayout_) },
-        materialDescriptorSets_{ std::move(rhs.materialDescriptorSets_) },
+        materialTexturesDescriptorSetLayout_{ std::move(rhs.materialTexturesDescriptorSetLayout_) },
+        materialTextureDescriptorSets_{ std::move(rhs.materialTextureDescriptorSets_) },
         vertexMaterialData_{ std::move(rhs.vertexMaterialData_) }
     {
     }
@@ -74,12 +74,12 @@ namespace vku::gfx {
         vertexBuffer_ = std::move(rhs.vertexBuffer_);
         indexBuffer_ = std::move(rhs.indexBuffer_);
         worldMatricesUBO_ = std::move(rhs.worldMatricesUBO_);
-        materialBuffer_ = std::move(rhs.materialBuffer_);
+        materialsUBO_ = std::move(rhs.materialsUBO_);
         materials_ = std::move(rhs.materials_);
         textureSampler_ = std::move(rhs.textureSampler_);
         descriptorPool_ = std::move(rhs.descriptorPool_);
-        materialDescriptorSetLayout_ = std::move(rhs.materialDescriptorSetLayout_);
-        materialDescriptorSets_ = std::move(rhs.materialDescriptorSets_);
+        materialTexturesDescriptorSetLayout_ = std::move(rhs.materialTexturesDescriptorSetLayout_);
+        materialTextureDescriptorSets_ = std::move(rhs.materialTextureDescriptorSets_);
         vertexMaterialData_ = std::move(rhs.vertexMaterialData_);
         return *this;
     }
@@ -88,6 +88,11 @@ namespace vku::gfx {
 
     void Mesh::CreateMaterials(const std::vector<std::uint32_t>& queueFamilyIndices)
     {
+        // sets:
+        // 0: world
+        // 1: material UBO
+        // 2: material textures
+        // 3: camera
         {
             vk::SamplerCreateInfo samplerCreateInfo{ vk::SamplerCreateFlags(), vk::Filter::eLinear, vk::Filter::eLinear,
                 vk::SamplerMipmapMode::eNearest, vk::SamplerAddressMode::eRepeat, vk::SamplerAddressMode::eRepeat,
@@ -98,17 +103,15 @@ namespace vku::gfx {
         {
             // Shared material descriptor set layout
             std::vector<vk::DescriptorSetLayoutBinding> materialSetLayoutBindings;
-            // Binding 0: Material UBO
-            materialSetLayoutBindings.emplace_back(0, vk::DescriptorType::eUniformBuffer, 1, vk::ShaderStageFlagBits::eFragment);
             // Binding 1: Diffuse map
-            materialSetLayoutBindings.emplace_back(1, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment);
+            materialSetLayoutBindings.emplace_back(0, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment);
             // Binding 2: Bump map
-            materialSetLayoutBindings.emplace_back(2, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment);
+            materialSetLayoutBindings.emplace_back(1, vk::DescriptorType::eCombinedImageSampler, 1, vk::ShaderStageFlagBits::eFragment);
 
             vk::DescriptorSetLayoutCreateInfo materialDescriptorLayoutCreateInfo{ vk::DescriptorSetLayoutCreateFlags(),
                 static_cast<std::uint32_t>(materialSetLayoutBindings.size()), materialSetLayoutBindings.data() };
 
-            materialDescriptorSetLayout_ = device_->GetDevice().createDescriptorSetLayoutUnique(materialDescriptorLayoutCreateInfo);
+            materialTexturesDescriptorSetLayout_ = device_->GetDevice().createDescriptorSetLayoutUnique(materialDescriptorLayoutCreateInfo);
         }
 
         materials_.reserve(meshInfo_->GetMaterials().size());
@@ -123,17 +126,17 @@ namespace vku::gfx {
         auto numNodes = meshInfo_->GetNodes().size();
         {
             std::vector<vk::DescriptorPoolSize> poolSizes;
-            poolSizes.emplace_back(vk::DescriptorType::eUniformBuffer, static_cast<std::uint32_t>(numMaterials));
-            poolSizes.emplace_back(vk::DescriptorType::eUniformBufferDynamic, 1);
+            poolSizes.emplace_back(vk::DescriptorType::eUniformBufferDynamic, 2);
             poolSizes.emplace_back(vk::DescriptorType::eCombinedImageSampler, static_cast<std::uint32_t>(numMaterials * 2));
 
-            vk::DescriptorPoolCreateInfo descriptorPoolInfo{ vk::DescriptorPoolCreateFlags(), static_cast<std::uint32_t>(numMaterials * 3),
+            vk::DescriptorPoolCreateInfo descriptorPoolInfo{ vk::DescriptorPoolCreateFlags(), static_cast<std::uint32_t>(numMaterials * 2 + 2),
                 static_cast<std::uint32_t>(poolSizes.size()), poolSizes.data() };
 
             descriptorPool_ = device_->GetDevice().createDescriptorPoolUnique(descriptorPoolInfo);
         }
 
         worldMatricesUBO_.CreateLayout(*descriptorPool_, vk::ShaderStageFlagBits::eVertex, true, 0);
+        materialsUBO_.CreateLayout(*descriptorPool_, vk::ShaderStageFlagBits::eFragment, true, 0);
 
         std::vector<vk::WriteDescriptorSet> descSetWrites; descSetWrites.reserve(3 * numMaterials + numNodes * numBackbuffers);
         std::vector<vk::DescriptorBufferInfo> descBufferInfos; descBufferInfos.reserve(numMaterials + numNodes * numBackbuffers);
@@ -143,29 +146,24 @@ namespace vku::gfx {
             std::vector<vk::DescriptorSetLayout> materialDescSetLayouts; materialDescSetLayouts.resize(numMaterials);
 
             for (auto& materialDescSetLayout : materialDescSetLayouts) {
-                materialDescSetLayout = *materialDescriptorSetLayout_;
+                materialDescSetLayout = *materialTexturesDescriptorSetLayout_;
             }
 
             vk::DescriptorSetAllocateInfo materialDescSetAllocInfo{ *descriptorPool_, static_cast<std::uint32_t>(materialDescSetLayouts.size()), materialDescSetLayouts.data() };
-            materialDescriptorSets_ = device_->GetDevice().allocateDescriptorSets(materialDescSetAllocInfo);
+            materialTextureDescriptorSets_ = device_->GetDevice().allocateDescriptorSets(materialDescSetAllocInfo);
 
-            auto uboOffset = static_cast<std::uint32_t>(std::get<1>(materialBuffer_));
-            auto materialBufferSize = static_cast<std::uint32_t>(std::get<2>(materialBuffer_));
+            materialsUBO_.FillDescriptorSetWrite(descSetWrites.emplace_back());
+
             for (std::size_t i = 0; i < materials_.size(); ++i) {
-                auto materialBufferOffset = uboOffset + materialBufferSize * i;
-                descBufferInfos.emplace_back(std::get<0>(materialBuffer_)->GetBuffer(), materialBufferOffset, materialBufferSize);
-                descSetWrites.emplace_back(materialDescriptorSets_[i], 0, 0, 1,
-                    vk::DescriptorType::eUniformBuffer, nullptr, &descBufferInfos[i]);
-
                 if (materials_[i].diffuseTexture_) descImageInfos.emplace_back(*textureSampler_, materials_[i].diffuseTexture_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
                 else descImageInfos.emplace_back(*textureSampler_, device_->GetDummyTexture()->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
 
-                descSetWrites.emplace_back(materialDescriptorSets_[i], 1, 0, 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos.back());
+                descSetWrites.emplace_back(materialTextureDescriptorSets_[i], 0, 0, 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos.back());
 
                 if (materials_[i].bumpMap_) descImageInfos.emplace_back(*textureSampler_, materials_[i].bumpMap_->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
                 else descImageInfos.emplace_back(*textureSampler_, device_->GetDummyTexture()->GetTexture().GetImageView(), vk::ImageLayout::eShaderReadOnlyOptimal);
 
-                descSetWrites.emplace_back(materialDescriptorSets_[i], 2, 0, 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos.back());
+                descSetWrites.emplace_back(materialTextureDescriptorSets_[i], 1, 0, 1, vk::DescriptorType::eCombinedImageSampler, &descImageInfos.back());
             }
         }
 
@@ -233,8 +231,9 @@ namespace vku::gfx {
     void Mesh::DrawSubMesh(vk::CommandBuffer cmdBuffer, vk::PipelineLayout pipelineLayout, const SubMesh* subMesh) const
     {
         // bind material.
-        auto& matDescSets = materialDescriptorSets_[subMesh->GetMaterialID()];
-        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 1, matDescSets, nullptr);
+        auto& matDescSets = materialTextureDescriptorSets_[subMesh->GetMaterialID()];
+        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout, 2, matDescSets, nullptr);
+        materialsUBO_.Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, pipelineLayout, 1, subMesh->GetMaterialID());
 
         cmdBuffer.drawIndexed(static_cast<std::uint32_t>(subMesh->GetNumberOfIndices()), 1, static_cast<std::uint32_t>(subMesh->GetIndexOffset()), 0, 0);
     }
@@ -249,10 +248,5 @@ namespace vku::gfx {
     {
         indexBuffer_.first = idxBuffer;
         indexBuffer_.second = offset;
-    }
-
-    void Mesh::SetMaterialBuffer(const DeviceBuffer* matBuffer, std::size_t offset, std::size_t elementSize)
-    {
-        materialBuffer_ = std::make_tuple(matBuffer, offset, elementSize);
     }
 }
