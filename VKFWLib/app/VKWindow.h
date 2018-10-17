@@ -24,7 +24,7 @@ namespace vku {
     class VKWindow final
     {
     public:
-        explicit VKWindow(cfg::WindowCfg& conf);
+        explicit VKWindow(cfg::WindowCfg& conf, bool useGUI);
         VKWindow(const VKWindow&) = delete;
         VKWindow(VKWindow&&) noexcept;
         VKWindow& operator=(const VKWindow&) = delete;
@@ -137,6 +137,7 @@ namespace vku {
 
         void InitWindow();
         void InitVulkan();
+        void InitGUI();
         void RecreateSwapChain();
         void DestroySwapchainImages();
         void ReleaseWindow();

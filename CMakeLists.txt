@@ -106,13 +106,23 @@ endif()
 
 file(GLOB LIB_TOP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.cpp
+    extern/glm/util/glm.natvis
+    extern/imgui/misc/natvis/imgui.natvis)
 file(GLOB_RECURSE LIB_TMP_FILES
     ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.h
     ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.inl)
 LIST(REMOVE_ITEM LIB_TMP_FILES ${LIB_RES_FILES})
 LIST(REMOVE_ITEM LIB_TMP_FILES ${LIB_TOP_FILES})
+
+file(GLOB EXTERN_SOURCES
+    extern/imgui/imgui.cpp
+    extern/imgui/imgui_draw.cpp
+    extern/imgui/imgui_demo.cpp
+    extern/imgui/misc/cpp/imgui_stdlib.cpp
+    extern/imgui/examples/imgui_impl_glfw.cpp
+    extern/imgui/examples/imgui_impl_vulkan.cpp)
 
 foreach(f ${LIB_TMP_FILES})
     file(RELATIVE_PATH SRCGR ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME} ${f})
@@ -135,6 +145,8 @@ foreach(f ${LIB_RES_OBJ_FILES})
     set_source_files_properties(${f} PROPERTIES HEADER_FILE_ONLY TRUE)
 endforeach()
 
+source_group("extern" FILES ${EXTERN_SOURCES})
+
 
 file(GLOB LIB_CONFIGS CMakeLists.txt Readme.md .gitattributes .gitignore .gitmodules .clang-format)
 
@@ -149,7 +161,10 @@ target_include_directories(${FWLIB_LIBNAME} PUBLIC
     extern/stb
     extern/cereal/include
     extern/assimp/include
-    ${CMAKE_CURRENT_BINARY_DIR}/extern/assimp/include)
+    ${CMAKE_CURRENT_BINARY_DIR}/extern/assimp/include
+    extern/imgui
+    extern/imgui/misc/cpp
+    extern/imgui/examples)
 target_compile_definitions(${FWLIB_LIBNAME} PUBLIC VULKAN_HPP_TYPESAFE_CONVERSION _CRT_SECURE_NO_WARNINGS _SCL_SECURE_NO_WARNINGS WIN32_LEAN_AND_MEAN WIN32_EXTRA_LEAN NOMINMAX)
 target_compile_definitions(${FWLIB_LIBNAME} PRIVATE VKUFW_EXPORT)
 set_property(TARGET ${FWLIB_LIBNAME} PROPERTY CXX_STANDARD 17)

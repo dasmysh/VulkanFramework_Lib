@@ -18,6 +18,9 @@
 #include <vulkan/vulkan.hpp>
 #include <gfx/vk/LogicalDevice.h>
 #include "gfx/vk/Framebuffer.h"
+#include "imgui.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_vulkan.h"
 
 namespace vku {
 
@@ -25,7 +28,7 @@ namespace vku {
      * Creates a new windows VKWindow.
      * @param conf the window configuration used
      */
-    VKWindow::VKWindow(cfg::WindowCfg& conf) :
+    VKWindow::VKWindow(cfg::WindowCfg& conf, bool useGUI) :
         window_{ nullptr },
         config_(&conf),
         currMousePosition_(0.0f),
@@ -102,7 +105,6 @@ namespace vku {
         this->ReleaseVulkan();
         this->ReleaseWindow();
         config_->fullscreen_ = maximized_;
-        // TODO: use frame buffer object [10/26/2016 Sebastian Maisch]
         config_->windowWidth_ = vkSurfaceExtend_.width;
         config_->windowHeight_ = vkSurfaceExtend_.height;
     }
@@ -203,10 +205,37 @@ namespace vku {
         vkRenderingFinishedSemaphore_ = logicalDevice_->GetDevice().createSemaphoreUnique(semaphoreInfo);
 
         LOG(INFO) << "Initializing Vulkan surface... done.";
-
-        // fbo.Resize(config_->windowWidth_, config_->windowHeight_);
-
+        
         // TODO ImGui_ImplGlfwGL3_Init(window_, false);
+
+        IMGUI_CHECKVERSION();
+        ImGui::CreateContext();
+        ImGuiIO& io = ImGui::GetIO(); (void)io;
+
+
+        // Setup GLFW binding
+        ImGui_ImplGlfw_InitForVulkan(window, true);
+
+        // Setup Vulkan binding
+        ImGui_ImplVulkan_InitInfo init_info = {};
+        init_info.Instance = g_Instance;
+        init_info.PhysicalDevice = g_PhysicalDevice;
+        init_info.Device = g_Device;
+        init_info.QueueFamily = g_QueueFamily;
+        init_info.Queue = g_Queue;
+        init_info.PipelineCache = g_PipelineCache;
+        init_info.DescriptorPool = g_DescriptorPool;
+        init_info.Allocator = g_Allocator;
+        init_info.CheckVkResultFn = check_vk_result;
+        ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
+
+        // Setup style
+        ImGui::StyleColorsDark();
+    }
+
+    void VKWindow::InitGUI()
+    {
+
     }
 
     void VKWindow::RecreateSwapChain()
@@ -288,8 +317,8 @@ namespace vku {
         fbDesc.tex_.emplace_back(config_->backbufferBits_ / 8, surfaceFormat.format, vk::SampleCountFlagBits::e1);
         fbDesc.tex_.push_back(gfx::TextureDescriptor::DepthBufferTextureDesc(dsFormat.first, dsFormat.second, vk::SampleCountFlagBits::e1));
         swapchainFramebuffers_.reserve(swapchainImages.size());
-        for (auto i = 0U; i < swapchainImages.size(); ++i) {
-            std::vector<vk::Image> attachments{ swapchainImages[i] };
+        for (auto& swapchainImage : swapchainImages) {
+            std::vector<vk::Image> attachments{ swapchainImage };
             swapchainFramebuffers_.emplace_back(logicalDevice_.get(), glm::uvec2(vkSurfaceExtend_.width, vkSurfaceExtend_.height),
                 attachments, *vkSwapchainRenderPass_, fbDesc);
         }
@@ -716,4 +745,5 @@ namespace vku {
         auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
         win->DropCallback(count, paths);
     }
+
 }
