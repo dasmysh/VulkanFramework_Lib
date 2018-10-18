@@ -115,6 +115,11 @@ namespace vku {
         /** Holds the currently rendered image. */
         std::uint32_t currentlyRenderedImage_ = 0;
 
+        /** The descriptor pool for ImGUI. */
+        vk::UniqueDescriptorPool vkImguiDescPool_;
+        /** ImGUI window data. */
+        ImGui_ImplVulkanH_WindowData windowData_;
+
 
         /** Holds the current mouse position. */
         glm::vec2 currMousePosition_;

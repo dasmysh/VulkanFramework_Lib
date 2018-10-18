@@ -24,6 +24,15 @@
 
 namespace vku {
 
+    /** Copied from ImGui example. */
+    static void check_vk_result(VkResult err)
+    {
+        if (err == 0) return;
+        printf("VkResult %d\n", err);
+        if (err < 0)
+            abort();
+    }
+
     /**
      * Creates a new windows VKWindow.
      * @param conf the window configuration used
@@ -41,6 +50,7 @@ namespace vku {
     {
         this->InitWindow();
         this->InitVulkan();
+        if (useGUI) InitGUI();
     }
 
     VKWindow::VKWindow(VKWindow&& rhs) noexcept :
@@ -205,8 +215,39 @@ namespace vku {
         vkRenderingFinishedSemaphore_ = logicalDevice_->GetDevice().createSemaphoreUnique(semaphoreInfo);
 
         LOG(INFO) << "Initializing Vulkan surface... done.";
-        
+    }
+
+    void VKWindow::InitGUI()
+    {
         // TODO ImGui_ImplGlfwGL3_Init(window_, false);
+        ImGui_ImplVulkanH_WindowData* wd = &windowData_;
+
+        {
+            wd->Surface = vkSurface_.get();
+
+            // Check for WSI support
+            auto res = logicalDevice_->GetPhysicalDevice().getSurfaceSupportKHR(graphicsQueue_, wd->Surface);
+            if (res != VK_TRUE)
+            {
+                LOG(FATAL) << "Error no WSI support on physical device.";
+                throw std::runtime_error("No WSI support on physical device.");
+            }
+
+            // Create SwapChain, RenderPass, Framebuffer, etc.
+            ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(logicalDevice_->GetPhysicalDevice(), logicalDevice_->GetDevice(), graphicsQueue_, wd, nullptr);
+            // TODO: fill
+            // VkRenderPass        RenderPass;
+            // bool                ClearEnable;
+            // VkClearValue        ClearValue;
+            // uint32_t            BackBufferCount;
+            // VkImage             BackBuffer[16];
+            // VkImageView         BackBufferView[16];
+            // VkFramebuffer       Framebuffer[16];
+            // uint32_t            FrameIndex;
+            // ImGui_ImplVulkanH_FrameData Frames[IMGUI_VK_QUEUED_FRAMES];
+
+            ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, wd, v, width, height);
+        }
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
@@ -214,28 +255,74 @@ namespace vku {
 
 
         // Setup GLFW binding
-        ImGui_ImplGlfw_InitForVulkan(window, true);
+        ImGui_ImplGlfw_InitForVulkan(window_, false);
+
+        vk::DescriptorPoolSize imguiDescPoolSize{ vk::DescriptorType::eCombinedImageSampler, 1 };
+        vk::DescriptorPoolCreateInfo imguiDescSetPoolInfo{ vk::DescriptorPoolCreateFlags(), 1, 1, &imguiDescPoolSize };
+        vkImguiDescPool_ = logicalDevice_->GetDevice().createDescriptorPoolUnique(imguiDescSetPoolInfo);
 
         // Setup Vulkan binding
         ImGui_ImplVulkan_InitInfo init_info = {};
-        init_info.Instance = g_Instance;
-        init_info.PhysicalDevice = g_PhysicalDevice;
-        init_info.Device = g_Device;
-        init_info.QueueFamily = g_QueueFamily;
-        init_info.Queue = g_Queue;
-        init_info.PipelineCache = g_PipelineCache;
-        init_info.DescriptorPool = g_DescriptorPool;
-        init_info.Allocator = g_Allocator;
+        init_info.Instance = ApplicationBase::instance().GetVKInstance();
+        init_info.PhysicalDevice = logicalDevice_->GetPhysicalDevice();
+        init_info.Device = logicalDevice_->GetDevice();
+        init_info.QueueFamily = graphicsQueue_;
+        init_info.Queue = logicalDevice_->GetQueue(graphicsQueue_, 0);
+        init_info.PipelineCache = VK_NULL_HANDLE;
+        init_info.DescriptorPool = vkImguiDescPool_.get();
+        init_info.Allocator = nullptr;
         init_info.CheckVkResultFn = check_vk_result;
         ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
 
         // Setup style
         ImGui::StyleColorsDark();
-    }
 
-    void VKWindow::InitGUI()
-    {
+        // Load Fonts
+        // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them. 
+        // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple. 
+        // - If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
+        // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
+        // - Read 'misc/fonts/README.txt' for more instructions and details.
+        // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
+        //io.Fonts->AddFontDefault();
+        //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
+        //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
+        //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
+        //io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
+        //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
+        //IM_ASSERT(font != NULL);
 
+        // Upload Fonts
+        {
+            // Use any command queue
+            VkCommandPool command_pool = wd->Frames[wd->FrameIndex].CommandPool;
+            VkCommandBuffer command_buffer = wd->Frames[wd->FrameIndex].CommandBuffer;
+
+            err = vkResetCommandPool(g_Device, command_pool, 0);
+            check_vk_result(err);
+            VkCommandBufferBeginInfo begin_info = {};
+            begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+            begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+            err = vkBeginCommandBuffer(command_buffer, &begin_info);
+            check_vk_result(err);
+
+            ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
+
+            VkSubmitInfo end_info = {};
+            end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+            end_info.commandBufferCount = 1;
+            end_info.pCommandBuffers = &command_buffer;
+            err = vkEndCommandBuffer(command_buffer);
+            check_vk_result(err);
+            err = vkQueueSubmit(g_Queue, 1, &end_info, VK_NULL_HANDLE);
+            check_vk_result(err);
+
+            err = vkDeviceWaitIdle(g_Device);
+            check_vk_result(err);
+            ImGui_ImplVulkan_InvalidateFontUploadObjects();
+        }
+
+        // TODO: go on with main.cpp line 423 [10/17/2018 Sebastian Maisch]
     }
 
     void VKWindow::RecreateSwapChain()
@@ -281,6 +368,11 @@ namespace vku {
                 vk::CompositeAlphaFlagBitsKHR::eOpaque, presentMode, true, *vkSwapchain_ };
             vkSwapchain_ = logicalDevice_->GetDevice().createSwapchainKHRUnique(swapChainCreateInfo);
         }
+        windowData_.Width = vkSurfaceExtend_.width;
+        windowData_.Height = vkSurfaceExtend_.height;
+        windowData_.Swapchain = *vkSwapchain_;
+        windowData_.PresentMode = static_cast<VkPresentModeKHR>(presentMode);
+        windowData_.SurfaceFormat = surfaceFormat;
 
         auto swapchainImages = logicalDevice_->GetDevice().getSwapchainImagesKHR(*vkSwapchain_);
 
@@ -674,22 +766,22 @@ namespace vku {
 
     void VKWindow::glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     {
-        //TODO ImGui_ImplGlfwGL3_MouseButtonCallback(window, button, action, mods);
+        ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
 
-        //auto& io = ImGui::GetIO();
-        //if (!io.WantCaptureMouse) {
+        auto& io = ImGui::GetIO();
+        if (!io.WantCaptureMouse) {
             auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->MouseButtonCallback(button, action, mods);
-        //}
+        }
     }
 
     void VKWindow::glfwCursorPosCallback(GLFWwindow* window, double xpos, double ypos)
     {
-        //TODO auto& io = ImGui::GetIO();
-        //if (!io.WantCaptureMouse) {
+        auto& io = ImGui::GetIO();
+        if (!io.WantCaptureMouse) {
             auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->CursorPosCallback(xpos, ypos);
-        //}
+        }
     }
 
     void VKWindow::glfwCursorEnterCallback(GLFWwindow* window, int entered)
@@ -700,44 +792,44 @@ namespace vku {
 
     void VKWindow::glfwScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
     {
-        //TODO ImGui_ImplGlfwGL3_ScrollCallback(window, xoffset, yoffset);
+        ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
 
-        //auto& io = ImGui::GetIO();
-        //if (!io.WantCaptureMouse) {
+        auto& io = ImGui::GetIO();
+        if (!io.WantCaptureMouse) {
             auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->ScrollCallback(xoffset, yoffset);
-        //}
+        }
     }
 
     void VKWindow::glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
     {
-        //TODO ImGui_ImplGlfwGL3_KeyCallback(window, key, scancode, action, mods);
+        ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
 
-        //auto& io = ImGui::GetIO();
-        //if (!io.WantCaptureKeyboard) {
+        auto& io = ImGui::GetIO();
+        if (!io.WantCaptureKeyboard) {
             auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->KeyCallback(key, scancode, action, mods);
-        //}
+        }
     }
 
     void VKWindow::glfwCharCallback(GLFWwindow* window, unsigned int codepoint)
     {
-        //TODO ImGui_ImplGlfwGL3_CharCallback(window, codepoint);
+        ImGui_ImplGlfw_CharCallback(window, codepoint);
 
-        //TODO auto& io = ImGui::GetIO();
-        //if (!io.WantCaptureKeyboard) {
+        auto& io = ImGui::GetIO();
+        if (!io.WantCaptureKeyboard) {
             auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->CharCallback(codepoint);
-        //}
+        }
     }
 
     void VKWindow::glfwCharModsCallback(GLFWwindow* window, unsigned int codepoint, int mods)
     {
-        //TODO auto& io = ImGui::GetIO();
-        //if (!io.WantCaptureKeyboard) {
+        auto& io = ImGui::GetIO();
+        if (!io.WantCaptureKeyboard) {
             auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->CharModsCallback(codepoint, mods);
-        //}
+        }
     }
 
     void VKWindow::glfwDropCallback(GLFWwindow* window, int count, const char** paths)
