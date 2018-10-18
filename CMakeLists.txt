@@ -120,9 +120,7 @@ file(GLOB EXTERN_SOURCES
     extern/imgui/imgui.cpp
     extern/imgui/imgui_draw.cpp
     extern/imgui/imgui_demo.cpp
-    extern/imgui/misc/cpp/imgui_stdlib.cpp
-    extern/imgui/examples/imgui_impl_glfw.cpp
-    extern/imgui/examples/imgui_impl_vulkan.cpp)
+    extern/imgui/misc/cpp/imgui_stdlib.cpp)
 
 foreach(f ${LIB_TMP_FILES})
     file(RELATIVE_PATH SRCGR ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME} ${f})
@@ -163,8 +161,7 @@ target_include_directories(${FWLIB_LIBNAME} PUBLIC
     extern/assimp/include
     ${CMAKE_CURRENT_BINARY_DIR}/extern/assimp/include
     extern/imgui
-    extern/imgui/misc/cpp
-    extern/imgui/examples)
+    extern/imgui/misc/cpp)
 target_compile_definitions(${FWLIB_LIBNAME} PUBLIC VULKAN_HPP_TYPESAFE_CONVERSION _CRT_SECURE_NO_WARNINGS _SCL_SECURE_NO_WARNINGS WIN32_LEAN_AND_MEAN WIN32_EXTRA_LEAN NOMINMAX)
 target_compile_definitions(${FWLIB_LIBNAME} PRIVATE VKUFW_EXPORT)
 set_property(TARGET ${FWLIB_LIBNAME} PROPERTY CXX_STANDARD 17)

@@ -12,26 +12,15 @@
 
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>
-#undef min
-#undef max
 
 #include <vulkan/vulkan.hpp>
 #include <gfx/vk/LogicalDevice.h>
 #include "gfx/vk/Framebuffer.h"
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
-#include "imgui_impl_vulkan.h"
+#include "core/imgui/imgui_impl_glfw.h"
+#include "core/imgui/imgui_impl_vulkan.h"
 
 namespace vku {
-
-    /** Copied from ImGui example. */
-    static void check_vk_result(VkResult err)
-    {
-        if (err == 0) return;
-        printf("VkResult %d\n", err);
-        if (err < 0)
-            abort();
-    }
 
     /**
      * Creates a new windows VKWindow.
@@ -64,9 +53,14 @@ namespace vku {
         vkSwapchainRenderPass_{ std::move(rhs.vkSwapchainRenderPass_) },
         swapchainFramebuffers_{ std::move(rhs.swapchainFramebuffers_) },
         vkCommandBuffers_{ std::move(rhs.vkCommandBuffers_) },
+        vkImGuiCommandBuffers_{ std::move(rhs.vkImGuiCommandBuffers_) },
         vkImageAvailableSemaphore_{ std::move(rhs.vkImageAvailableSemaphore_) },
         vkRenderingFinishedSemaphore_{ std::move(rhs.vkRenderingFinishedSemaphore_) },
         currentlyRenderedImage_{ std::move(rhs.currentlyRenderedImage_) },
+        vkImguiDescPool_{ std::move(rhs.vkImguiDescPool_) },
+        windowData_{ std::move(rhs.windowData_) },
+        glfwWindowData_{ std::move(rhs.glfwWindowData_) },
+        imguiVulkanData_{ std::move(rhs.imguiVulkanData_) },
         currMousePosition_{ std::move(rhs.currMousePosition_) },
         prevMousePosition_{ std::move(rhs.prevMousePosition_) },
         relativeMousePosition_{ std::move(rhs.relativeMousePosition_) },
@@ -77,6 +71,7 @@ namespace vku {
         frameCount_{ std::move(rhs.frameCount_) }
     {
         rhs.window_ = nullptr;
+        rhs.glfwWindowData_ = nullptr;
     }
 
     VKWindow& VKWindow::operator=(VKWindow&& rhs) noexcept
@@ -93,9 +88,14 @@ namespace vku {
             vkSwapchainRenderPass_ = std::move(rhs.vkSwapchainRenderPass_);
             swapchainFramebuffers_ = std::move(rhs.swapchainFramebuffers_);
             vkCommandBuffers_ = std::move(rhs.vkCommandBuffers_);
+            vkImGuiCommandBuffers_ = std::move(rhs.vkImGuiCommandBuffers_);
             vkImageAvailableSemaphore_ = std::move(rhs.vkImageAvailableSemaphore_);
             vkRenderingFinishedSemaphore_ = std::move(rhs.vkRenderingFinishedSemaphore_);
             currentlyRenderedImage_ = std::move(rhs.currentlyRenderedImage_);
+            vkImguiDescPool_ = std::move(rhs.vkImguiDescPool_);
+            windowData_ = std::move(rhs.windowData_);
+            glfwWindowData_ = std::move(rhs.glfwWindowData_);
+            imguiVulkanData_ = std::move(rhs.imguiVulkanData_);
             currMousePosition_ = std::move(rhs.currMousePosition_);
             prevMousePosition_ = std::move(rhs.prevMousePosition_);
             relativeMousePosition_ = std::move(rhs.relativeMousePosition_);
@@ -105,6 +105,7 @@ namespace vku {
             focused_ = std::move(rhs.focused_);
             frameCount_ = std::move(rhs.frameCount_);
 
+            rhs.glfwWindowData_ = nullptr;
             rhs.window_ = nullptr;
         }
         return *this;
@@ -219,8 +220,8 @@ namespace vku {
 
     void VKWindow::InitGUI()
     {
-        // TODO ImGui_ImplGlfwGL3_Init(window_, false);
-        ImGui_ImplVulkanH_WindowData* wd = &windowData_;
+        windowData_ = std::make_unique<ImGui_ImplVulkanH_WindowData>();
+        ImGui_ImplVulkanH_WindowData* wd = windowData_.get();
 
         {
             wd->Surface = vkSurface_.get();
@@ -232,21 +233,6 @@ namespace vku {
                 LOG(FATAL) << "Error no WSI support on physical device.";
                 throw std::runtime_error("No WSI support on physical device.");
             }
-
-            // Create SwapChain, RenderPass, Framebuffer, etc.
-            ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(logicalDevice_->GetPhysicalDevice(), logicalDevice_->GetDevice(), graphicsQueue_, wd, nullptr);
-            // TODO: fill
-            // VkRenderPass        RenderPass;
-            // bool                ClearEnable;
-            // VkClearValue        ClearValue;
-            // uint32_t            BackBufferCount;
-            // VkImage             BackBuffer[16];
-            // VkImageView         BackBufferView[16];
-            // VkFramebuffer       Framebuffer[16];
-            // uint32_t            FrameIndex;
-            // ImGui_ImplVulkanH_FrameData Frames[IMGUI_VK_QUEUED_FRAMES];
-
-            ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, wd, v, width, height);
         }
 
         IMGUI_CHECKVERSION();
@@ -255,24 +241,23 @@ namespace vku {
 
 
         // Setup GLFW binding
-        ImGui_ImplGlfw_InitForVulkan(window_, false);
+        ImGui_ImplGlfw_InitForVulkan(&glfwWindowData_, window_);
 
         vk::DescriptorPoolSize imguiDescPoolSize{ vk::DescriptorType::eCombinedImageSampler, 1 };
         vk::DescriptorPoolCreateInfo imguiDescSetPoolInfo{ vk::DescriptorPoolCreateFlags(), 1, 1, &imguiDescPoolSize };
         vkImguiDescPool_ = logicalDevice_->GetDevice().createDescriptorPoolUnique(imguiDescSetPoolInfo);
 
         // Setup Vulkan binding
-        ImGui_ImplVulkan_InitInfo init_info = {};
-        init_info.Instance = ApplicationBase::instance().GetVKInstance();
-        init_info.PhysicalDevice = logicalDevice_->GetPhysicalDevice();
-        init_info.Device = logicalDevice_->GetDevice();
-        init_info.QueueFamily = graphicsQueue_;
-        init_info.Queue = logicalDevice_->GetQueue(graphicsQueue_, 0);
-        init_info.PipelineCache = VK_NULL_HANDLE;
-        init_info.DescriptorPool = vkImguiDescPool_.get();
-        init_info.Allocator = nullptr;
-        init_info.CheckVkResultFn = check_vk_result;
-        ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
+        imguiVulkanData_ = std::make_unique<ImGui_ImplVulkan_InitInfo>();
+        imguiVulkanData_->Instance = ApplicationBase::instance().GetVKInstance();
+        imguiVulkanData_->PhysicalDevice = logicalDevice_->GetPhysicalDevice();
+        imguiVulkanData_->Device = logicalDevice_->GetDevice();
+        imguiVulkanData_->QueueFamily = graphicsQueue_;
+        imguiVulkanData_->Queue = logicalDevice_->GetQueue(graphicsQueue_, 0);
+        imguiVulkanData_->PipelineCache = VK_NULL_HANDLE;
+        imguiVulkanData_->DescriptorPool = vkImguiDescPool_.get();
+        imguiVulkanData_->Allocator = nullptr;
+        ImGui_ImplVulkan_Init(imguiVulkanData_.get(), wd->RenderPass);
 
         // Setup style
         ImGui::StyleColorsDark();
@@ -294,32 +279,21 @@ namespace vku {
 
         // Upload Fonts
         {
-            // Use any command queue
-            VkCommandPool command_pool = wd->Frames[wd->FrameIndex].CommandPool;
-            VkCommandBuffer command_buffer = wd->Frames[wd->FrameIndex].CommandBuffer;
+            VkCommandBuffer command_buffer = *vkImGuiCommandBuffers_[0];
 
-            err = vkResetCommandPool(g_Device, command_pool, 0);
-            check_vk_result(err);
-            VkCommandBufferBeginInfo begin_info = {};
-            begin_info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            begin_info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-            err = vkBeginCommandBuffer(command_buffer, &begin_info);
-            check_vk_result(err);
+            logicalDevice_->GetDevice().resetCommandPool(logicalDevice_->GetCommandPool(graphicsQueue_), vk::CommandPoolResetFlags());
+            vk::CommandBufferBeginInfo begin_info{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
+            vkImGuiCommandBuffers_[0]->begin(begin_info);
 
-            ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
+            ImGui_ImplVulkan_CreateFontsTexture(imguiVulkanData_.get(), command_buffer);
 
-            VkSubmitInfo end_info = {};
-            end_info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-            end_info.commandBufferCount = 1;
-            end_info.pCommandBuffers = &command_buffer;
-            err = vkEndCommandBuffer(command_buffer);
-            check_vk_result(err);
-            err = vkQueueSubmit(g_Queue, 1, &end_info, VK_NULL_HANDLE);
-            check_vk_result(err);
+            vk::SubmitInfo end_info{ 0, nullptr, nullptr, 1, &(*vkImGuiCommandBuffers_[0]) };
+            vkImGuiCommandBuffers_[0]->end();
+            logicalDevice_->GetQueue(graphicsQueue_, 0).submit(end_info, vk::Fence());
 
-            err = vkDeviceWaitIdle(g_Device);
-            check_vk_result(err);
-            ImGui_ImplVulkan_InvalidateFontUploadObjects();
+            logicalDevice_->GetDevice().waitIdle();
+
+            ImGui_ImplVulkan_InvalidateFontUploadObjects(imguiVulkanData_.get());
         }
 
         // TODO: go on with main.cpp line 423 [10/17/2018 Sebastian Maisch]
@@ -330,6 +304,7 @@ namespace vku {
         logicalDevice_->GetDevice().waitIdle();
 
         vkCommandBuffers_.clear();
+        vkImGuiCommandBuffers_.clear();
         vkCmdBufferUFences_.clear();
 
         DestroySwapchainImages();
@@ -368,11 +343,11 @@ namespace vku {
                 vk::CompositeAlphaFlagBitsKHR::eOpaque, presentMode, true, *vkSwapchain_ };
             vkSwapchain_ = logicalDevice_->GetDevice().createSwapchainKHRUnique(swapChainCreateInfo);
         }
-        windowData_.Width = vkSurfaceExtend_.width;
-        windowData_.Height = vkSurfaceExtend_.height;
-        windowData_.Swapchain = *vkSwapchain_;
-        windowData_.PresentMode = static_cast<VkPresentModeKHR>(presentMode);
-        windowData_.SurfaceFormat = surfaceFormat;
+        windowData_->Width = vkSurfaceExtend_.width;
+        windowData_->Height = vkSurfaceExtend_.height;
+        windowData_->Swapchain = *vkSwapchain_;
+        windowData_->PresentMode = static_cast<VkPresentModeKHR>(presentMode);
+        windowData_->SurfaceFormat = surfaceFormat;
 
         auto swapchainImages = logicalDevice_->GetDevice().getSwapchainImagesKHR(*vkSwapchain_);
 
@@ -403,6 +378,7 @@ namespace vku {
 
             vkSwapchainRenderPass_ = logicalDevice_->GetDevice().createRenderPassUnique(renderPassInfo);
         }
+        windowData_->RenderPass = *vkSwapchainRenderPass_;
 
         // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
         gfx::FramebufferDescriptor fbDesc;
@@ -415,14 +391,18 @@ namespace vku {
                 attachments, *vkSwapchainRenderPass_, fbDesc);
         }
 
+        vk::CommandPoolCreateInfo imgui_poolInfo{ vk::CommandPoolCreateFlags(), logicalDevice_->GetQueueInfo(graphicsQueue_).familyIndex_ };
+        vkCmdPoolsByDeviceQFamily_[deviceQueueDesc.first] = vkDevice_->createCommandPoolUnique(poolInfo);
+
         vkCommandBuffers_.resize(swapchainImages.size());
+        vkImGuiCommandBuffers_.resize(swapchainImages.size());
         vk::CommandBufferAllocateInfo allocInfo{ logicalDevice_->GetCommandPool(graphicsQueue_),
             vk::CommandBufferLevel::ePrimary, static_cast<std::uint32_t>(vkCommandBuffers_.size()) };
 
         try {
             vkCommandBuffers_ = logicalDevice_->GetDevice().allocateCommandBuffersUnique(allocInfo);
+            vkImGuiCommandBuffers_ = logicalDevice_->GetDevice().allocateCommandBuffersUnique(allocInfo);
         } catch(vk::SystemError& e) {
-            // LOG(FATAL) << "Could not allocate command buffers(" << vk::to_string(result) << ").";
             LOG(FATAL) << "Could not allocate command buffers(" << e.what() << ").";
             throw std::runtime_error("Could not allocate command buffers.");
         }
@@ -444,13 +424,16 @@ namespace vku {
     {
         logicalDevice_->GetDevice().waitIdle();
 
-        //TODO ImGui_ImplGlfwGL3_Shutdown();
+        ImGui_ImplVulkan_Shutdown(imguiVulkanData_.get());
+        ImGui_ImplGlfw_Shutdown(glfwWindowData_);
+        ImGui::DestroyContext();
 
         vkCmdBufferUFences_.clear();
         vkImageAvailableSemaphore_.reset();
         vkDataAvailableSemaphore_.reset();
         vkRenderingFinishedSemaphore_.reset();
         vkCommandBuffers_.clear();
+        vkImGuiCommandBuffers_.clear();
 
         DestroySwapchainImages();
         vkSwapchain_.reset();
@@ -507,13 +490,110 @@ namespace vku {
             LOG(FATAL) << "Could not acquire swap chain image (" << vk::to_string(result.result) << ").";
             throw std::runtime_error("Could not acquire swap chain image.");
         }
+
+        // Start the Dear ImGui frame
+        if (ApplicationBase::instance().IsGUIMode()) {
+            ImGui_ImplVulkan_NewFrame(imguiVulkanData_.get());
+            ImGui_ImplGlfw_NewFrame(glfwWindowData_);
+            ImGui::NewFrame();
+        }
     }
 
     void VKWindow::DrawCurrentCommandBuffer() const
     {
+
+        // Rendering
+        if (ApplicationBase::instance().IsGUIMode()) {
+            ImGui::Render();
+            FrameRender(wd);
+
+
+            VkResult err;
+
+            // VkSemaphore& image_acquired_semaphore = wd->Frames[wd->FrameIndex].ImageAcquiredSemaphore;
+            // err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->FrameIndex);
+            // check_vk_result(err);
+
+            // ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[wd->FrameIndex];
+            // {
+            //     err = vkWaitForFences(g_Device, 1, &fd->Fence, VK_TRUE, UINT64_MAX);	// wait indefinitely instead of periodically checking
+            //     check_vk_result(err);
+            // 
+            //     err = vkResetFences(g_Device, 1, &fd->Fence);
+            //     check_vk_result(err);
+            // }
+
+
+            logicalDevice_->GetDevice().resetCommandPool(logicalDevice_->GetCommandPool(graphicsQueue_), vk::CommandPoolResetFlags());
+            for (std::size_t i = 0U; i < vkCommandBuffers_.size(); ++i) {
+                vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eSimultaneousUse };
+                vkCommandBuffers_[i]->begin(cmdBufferBeginInfo);
+
+                std::array<vk::ClearValue, 2> clearColor;
+                clearColor[0].setColor(vk::ClearColorValue{ std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f } });
+                clearColor[1].setDepthStencil(vk::ClearDepthStencilValue{ 1.0f, 0 });
+                vk::RenderPassBeginInfo renderPassBeginInfo{ *vkSwapchainRenderPass_, swapchainFramebuffers_[i].GetFramebuffer(),
+                    vk::Rect2D(vk::Offset2D(0, 0), vkSurfaceExtend_), static_cast<std::uint32_t>(clearColor.size()), clearColor.data() };
+                vkCommandBuffers_[i]->beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+
+                fillFunc(*vkCommandBuffers_[i], i);
+
+                vkCommandBuffers_[i]->endRenderPass();
+                vkCommandBuffers_[i]->end();
+            }
+
+
+
+            {
+                err = vkResetCommandPool(g_Device, fd->CommandPool, 0);
+                check_vk_result(err);
+                VkCommandBufferBeginInfo info = {};
+                info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+                info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+                err = vkBeginCommandBuffer(fd->CommandBuffer, &info);
+                check_vk_result(err);
+            }
+            {
+                VkRenderPassBeginInfo info = {};
+                info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+                info.renderPass = wd->RenderPass;
+                info.framebuffer = wd->Framebuffer[wd->FrameIndex];
+                info.renderArea.extent.width = wd->Width;
+                info.renderArea.extent.height = wd->Height;
+                info.clearValueCount = 1;
+                info.pClearValues = &wd->ClearValue;
+                vkCmdBeginRenderPass(fd->CommandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
+            }
+
+            // Record Imgui Draw Data and draw funcs into command buffer
+            ImGui_ImplVulkan_RenderDrawData(imguiVulkanData_.get(), ImGui::GetDrawData(), fd->CommandBuffer);
+
+            // Submit command buffer
+            vkCmdEndRenderPass(fd->CommandBuffer);
+            {
+                VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+                VkSubmitInfo info = {};
+                info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+                info.waitSemaphoreCount = 1;
+                info.pWaitSemaphores = &image_acquired_semaphore;
+                info.pWaitDstStageMask = &wait_stage;
+                info.commandBufferCount = 1;
+                info.pCommandBuffers = &fd->CommandBuffer;
+                info.signalSemaphoreCount = 1;
+                info.pSignalSemaphores = &fd->RenderCompleteSemaphore;
+
+                err = vkEndCommandBuffer(fd->CommandBuffer);
+                check_vk_result(err);
+                err = vkQueueSubmit(g_Queue, 1, &info, fd->Fence);
+                check_vk_result(err);
+            }
+
+        }
+
         vk::PipelineStageFlags waitStages[]{ vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eTopOfPipe };
         vk::Semaphore waitSemaphores[]{ *vkImageAvailableSemaphore_, *vkDataAvailableSemaphore_ };
-        vk::SubmitInfo submitInfo{ 2, waitSemaphores, waitStages, 1, &(*vkCommandBuffers_[currentlyRenderedImage_]), 1, &(*vkRenderingFinishedSemaphore_) };
+        std::array<vk::CommandBuffer, 2> submitCmdBuffers{ *vkCommandBuffers_[currentlyRenderedImage_], *vkImGuiCommandBuffers_[currentlyRenderedImage_] };
+        vk::SubmitInfo submitInfo{ 2, waitSemaphores, waitStages, 2, submitCmdBuffers.data(), 1, &(*vkRenderingFinishedSemaphore_) };
 
         {
             auto syncResult = logicalDevice_->GetDevice().getFenceStatus(vkCmdBufferFences_[currentlyRenderedImage_]);
@@ -766,11 +846,11 @@ namespace vku {
 
     void VKWindow::glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     {
-        ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods);
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        ImGui_ImplGlfw_MouseButtonCallback(win->glfwWindowData_, button, action, mods);
 
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureMouse) {
-            auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->MouseButtonCallback(button, action, mods);
         }
     }
@@ -792,33 +872,33 @@ namespace vku {
 
     void VKWindow::glfwScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
     {
-        ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset);
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        ImGui_ImplGlfw_ScrollCallback(win->glfwWindowData_, xoffset, yoffset);
 
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureMouse) {
-            auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->ScrollCallback(xoffset, yoffset);
         }
     }
 
     void VKWindow::glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
     {
-        ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods);
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        ImGui_ImplGlfw_KeyCallback(win->glfwWindowData_, key, scancode, action, mods);
 
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureKeyboard) {
-            auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->KeyCallback(key, scancode, action, mods);
         }
     }
 
     void VKWindow::glfwCharCallback(GLFWwindow* window, unsigned int codepoint)
     {
-        ImGui_ImplGlfw_CharCallback(window, codepoint);
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        ImGui_ImplGlfw_CharCallback(win->glfwWindowData_, codepoint);
 
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureKeyboard) {
-            auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->CharCallback(codepoint);
         }
     }

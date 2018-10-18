@@ -17,6 +17,9 @@ namespace vku::gfx {
     class LogicalDevice;
 }
 
+struct ImGui_ImplVulkanH_WindowData;
+struct ImGui_GLFWWindow;
+
 namespace vku {
 
     class ApplicationBase;
@@ -102,7 +105,9 @@ namespace vku {
         /** Holds the swap chain frame buffers. */
         std::vector<gfx::Framebuffer> swapchainFramebuffers_;
         /** Holds the swap chain command buffers. */
-        std::vector<vk::UniqueCommandBuffer> vkCommandBuffers_;
+        // std::vector<vk::UniqueCommandBuffer> vkCommandBuffers_;
+        /** Holds the command buffers for ImGui. */
+        std::vector<vk::UniqueCommandBuffer> vkImGuiCommandBuffers_;
         /** Hold a fence for each command buffer to signal it is processed. */
         std::vector<vk::UniqueFence> vkCmdBufferUFences_;
         std::vector<vk::Fence> vkCmdBufferFences_;
@@ -117,8 +122,12 @@ namespace vku {
 
         /** The descriptor pool for ImGUI. */
         vk::UniqueDescriptorPool vkImguiDescPool_;
-        /** ImGUI window data. */
-        ImGui_ImplVulkanH_WindowData windowData_;
+        /** ImGui window data. */
+        std::unique_ptr<ImGui_ImplVulkanH_WindowData> windowData_;
+        /** ImGui GLFW window data. */
+        ImGui_GLFWWindow* glfwWindowData_;
+        /** ImGui vulkan data. */
+        std::unique_ptr<ImGui_ImplVulkan_InitInfo> imguiVulkanData_;
 
 
         /** Holds the current mouse position. */

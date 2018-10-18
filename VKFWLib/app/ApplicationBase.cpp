@@ -337,14 +337,6 @@ namespace vku {
         currentTime_ = currentTime;
         glfwPollEvents();
 
-        /*TODO ImGui_ImplGlfwGL3_NewFrame();
-        if (guiMode_) {
-            mainWin.BatchDraw([&](GLBatchRenderTarget & rt) {
-                this->RenderGUI();
-                ImGui::Render();
-            });
-        }*/
-
         for (auto& window : windows_) {
             window.PrepareFrame();
         }
