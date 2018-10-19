@@ -103,6 +103,8 @@ namespace vku {
         vk::UniqueSwapchainKHR vkSwapchain_;
         /** Holds the swap chain render pass. */
         vk::UniqueRenderPass vkSwapchainRenderPass_;
+        /** Render pass for ImGui. */
+        vk::UniqueRenderPass vkImGuiRenderPass_;
         /** Holds the swap chain frame buffers. */
         std::vector<gfx::Framebuffer> swapchainFramebuffers_;
         /** Command pools for the swap chain cmd buffers (later: not only primary). */

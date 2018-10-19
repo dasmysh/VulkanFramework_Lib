@@ -67,8 +67,8 @@ struct ImGui_ImplVulkan_InternalInfo
     VkDescriptorSet              g_DescriptorSet = VK_NULL_HANDLE;
     VkPipeline                   g_Pipeline = VK_NULL_HANDLE;
 
-    int                    g_FrameIndex = 0;
-    FrameDataForRender     g_FramesDataBuffers[IMGUI_VK_QUEUED_FRAMES] = {};
+    // int                    g_FrameIndex = 0;
+    // FrameDataForRender     g_FramesDataBuffers[IMGUI_VK_QUEUED_FRAMES] = {};
 
     // Font data
     VkSampler              g_FontSampler = VK_NULL_HANDLE;
@@ -757,15 +757,15 @@ void ImGui_ImplVulkan_NewFrame(ImGui_ImplVulkan_InitInfo* info)
 
 #include <stdlib.h> // malloc
 
-ImGui_ImplVulkanH_FrameData::ImGui_ImplVulkanH_FrameData()
-{
-    BackbufferIndex = 0;
-    CommandPool = VK_NULL_HANDLE;
-    CommandBuffer = VK_NULL_HANDLE;
-    Fence = VK_NULL_HANDLE;
-    ImageAcquiredSemaphore = VK_NULL_HANDLE;
-    RenderCompleteSemaphore = VK_NULL_HANDLE;
-}
+// ImGui_ImplVulkanH_FrameData::ImGui_ImplVulkanH_FrameData()
+// {
+//     BackbufferIndex = 0;
+//     CommandPool = VK_NULL_HANDLE;
+//     CommandBuffer = VK_NULL_HANDLE;
+//     Fence = VK_NULL_HANDLE;
+//     ImageAcquiredSemaphore = VK_NULL_HANDLE;
+//     RenderCompleteSemaphore = VK_NULL_HANDLE;
+// }
 
 ImGui_ImplVulkanH_WindowData::ImGui_ImplVulkanH_WindowData()
 {

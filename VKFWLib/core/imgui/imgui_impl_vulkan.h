@@ -13,7 +13,7 @@
 
 #include <vulkan/vulkan.h>
 
-#define IMGUI_VK_QUEUED_FRAMES      2
+// #define IMGUI_VK_QUEUED_FRAMES      2
 
 struct ImGui_ImplVulkan_InternalInfo;
 
@@ -69,21 +69,17 @@ struct ImGui_ImplVulkanH_WindowData;
 // IMGUI_IMPL_API int                  ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_mode);
 
 // Helper structure to hold the data needed by one rendering frame
-struct ImGui_ImplVulkanH_FrameData
-{
-    uint32_t            BackbufferIndex;        // Keep track of recently rendered swapchain frame indices
-    VkCommandPool       CommandPool;
-    VkCommandBuffer     CommandBuffer;
-    VkFence             Fence;
-    VkSemaphore         ImageAcquiredSemaphore;
-    VkSemaphore         RenderCompleteSemaphore;
-
-    IMGUI_IMPL_API ImGui_ImplVulkanH_FrameData();
-};
-
-struct FBOs {
-
-};
+// struct ImGui_ImplVulkanH_FrameData
+// {
+//     uint32_t            BackbufferIndex;        // Keep track of recently rendered swapchain frame indices
+//     VkCommandPool       CommandPool;
+//     VkCommandBuffer     CommandBuffer;
+//     VkFence             Fence;
+//     VkSemaphore         ImageAcquiredSemaphore;
+//     VkSemaphore         RenderCompleteSemaphore;
+// 
+//     IMGUI_IMPL_API ImGui_ImplVulkanH_FrameData();
+// };
 
 // Helper structure to hold the data needed by one rendering context into one OS window
 struct ImGui_ImplVulkanH_WindowData

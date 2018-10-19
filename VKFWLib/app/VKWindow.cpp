@@ -384,7 +384,34 @@ namespace vku {
 
             vkSwapchainRenderPass_ = logicalDevice_->GetDevice().createRenderPassUnique(renderPassInfo);
         }
-        windowData_->RenderPass = *vkSwapchainRenderPass_;
+
+        {
+            // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
+            vk::AttachmentDescription colorAttachment{ vk::AttachmentDescriptionFlags(), surfaceFormat.format, vk::SampleCountFlagBits::e1,
+                vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eStore,
+                vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
+                vk::ImageLayout::eUndefined, vk::ImageLayout::e };
+            vk::AttachmentReference colorAttachmentRef{ 0, vk::ImageLayout::eColorAttachmentOptimal };
+            // TODO: check the stencil load/store operations. [3/20/2017 Sebastian Maisch]
+            vk::AttachmentDescription depthAttachment{ vk::AttachmentDescriptionFlags(), dsFormat.second, vk::SampleCountFlagBits::e1,
+                vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare,
+                vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare,
+                vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal };
+            vk::AttachmentReference depthAttachmentRef{ 1, vk::ImageLayout::eDepthStencilAttachmentOptimal };
+
+            vk::SubpassDescription subPass{ vk::SubpassDescriptionFlags(), vk::PipelineBindPoint::eGraphics, 0, nullptr,
+                1, &colorAttachmentRef, nullptr, &depthAttachmentRef, 0, nullptr };
+
+            vk::SubpassDependency dependency{ VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput,
+                vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlags(),
+                vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite };
+            std::array<vk::AttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
+            vk::RenderPassCreateInfo renderPassInfo{ vk::RenderPassCreateFlags(),
+                static_cast<std::uint32_t>(attachments.size()), attachments.data(), 1, &subPass, 1, &dependency };
+
+            vkImGuiRenderPass_ = logicalDevice_->GetDevice().createRenderPassUnique(renderPassInfo);
+            windowData_->RenderPass = *vkImGuiRenderPass_;
+        }
 
         // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
         gfx::FramebufferDescriptor fbDesc;
@@ -574,13 +601,13 @@ namespace vku {
 
             {
                 logicalDevice_->GetDevice().resetCommandPool(vkImGuiCommandPools_[currentlyRenderedImage_], vk::CommandPoolResetFlags());
-                VkCommandBufferBeginInfo info = {};
-                info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-                info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-                err = vkBeginCommandBuffer(fd->CommandBuffer, &info);
-                check_vk_result(err);
+                vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
+                vkImGuiCommandBuffers_[currentlyRenderedImage_]->begin(cmdBufferBeginInfo);
             }
+
             {
+                vk::RenderPassBeginInfo imGuiRenderPassBeginInfo{ *vkSwapchainRenderPass_, swapchainFramebuffers_[currentlyRenderedImage_].GetFramebuffer(),
+                    vk::Rect2D(vk::Offset2D(0, 0), vkSurfaceExtend_), static_cast<std::uint32_t>(clearColor.size()), clearColor.data() };
                 VkRenderPassBeginInfo info = {};
                 info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
                 info.renderPass = wd->RenderPass;
