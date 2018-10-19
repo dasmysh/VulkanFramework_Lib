@@ -52,7 +52,9 @@ namespace vku {
         vkSwapchain_{ std::move(rhs.vkSwapchain_) },
         vkSwapchainRenderPass_{ std::move(rhs.vkSwapchainRenderPass_) },
         swapchainFramebuffers_{ std::move(rhs.swapchainFramebuffers_) },
+        vkCommandPools_{ std::move(rhs.vkCommandPools_) },
         vkCommandBuffers_{ std::move(rhs.vkCommandBuffers_) },
+        vkImGuiCommandPools_{ std::move(rhs.vkImGuiCommandPools_) },
         vkImGuiCommandBuffers_{ std::move(rhs.vkImGuiCommandBuffers_) },
         vkImageAvailableSemaphore_{ std::move(rhs.vkImageAvailableSemaphore_) },
         vkRenderingFinishedSemaphore_{ std::move(rhs.vkRenderingFinishedSemaphore_) },
@@ -87,7 +89,9 @@ namespace vku {
             vkSwapchain_ = std::move(rhs.vkSwapchain_);
             vkSwapchainRenderPass_ = std::move(rhs.vkSwapchainRenderPass_);
             swapchainFramebuffers_ = std::move(rhs.swapchainFramebuffers_);
+            vkCommandPools_ = std::move(rhs.vkCommandPools_);
             vkCommandBuffers_ = std::move(rhs.vkCommandBuffers_);
+            vkImGuiCommandPools_ = std::move(rhs.vkImGuiCommandPools_);
             vkImGuiCommandBuffers_ = std::move(rhs.vkImGuiCommandBuffers_);
             vkImageAvailableSemaphore_ = std::move(rhs.vkImageAvailableSemaphore_);
             vkRenderingFinishedSemaphore_ = std::move(rhs.vkRenderingFinishedSemaphore_);
@@ -305,6 +309,8 @@ namespace vku {
 
         vkCommandBuffers_.clear();
         vkImGuiCommandBuffers_.clear();
+        vkCommandPools_.clear();
+        vkImGuiCommandPools_.clear();
         vkCmdBufferUFences_.clear();
 
         DestroySwapchainImages();
@@ -385,27 +391,47 @@ namespace vku {
         fbDesc.tex_.emplace_back(config_->backbufferBits_ / 8, surfaceFormat.format, vk::SampleCountFlagBits::e1);
         fbDesc.tex_.push_back(gfx::TextureDescriptor::DepthBufferTextureDesc(dsFormat.first, dsFormat.second, vk::SampleCountFlagBits::e1));
         swapchainFramebuffers_.reserve(swapchainImages.size());
-        for (auto& swapchainImage : swapchainImages) {
-            std::vector<vk::Image> attachments{ swapchainImage };
-            swapchainFramebuffers_.emplace_back(logicalDevice_.get(), glm::uvec2(vkSurfaceExtend_.width, vkSurfaceExtend_.height),
-                attachments, *vkSwapchainRenderPass_, fbDesc);
-        }
 
-        vk::CommandPoolCreateInfo imgui_poolInfo{ vk::CommandPoolCreateFlags(), logicalDevice_->GetQueueInfo(graphicsQueue_).familyIndex_ };
-        vkCmdPoolsByDeviceQFamily_[deviceQueueDesc.first] = vkDevice_->createCommandPoolUnique(poolInfo);
-
+        vkCommandPools_.resize(swapchainImages.size());
+        vkImGuiCommandPools_.resize(swapchainImages.size());
         vkCommandBuffers_.resize(swapchainImages.size());
         vkImGuiCommandBuffers_.resize(swapchainImages.size());
-        vk::CommandBufferAllocateInfo allocInfo{ logicalDevice_->GetCommandPool(graphicsQueue_),
-            vk::CommandBufferLevel::ePrimary, static_cast<std::uint32_t>(vkCommandBuffers_.size()) };
 
-        try {
-            vkCommandBuffers_ = logicalDevice_->GetDevice().allocateCommandBuffersUnique(allocInfo);
-            vkImGuiCommandBuffers_ = logicalDevice_->GetDevice().allocateCommandBuffersUnique(allocInfo);
-        } catch(vk::SystemError& e) {
-            LOG(FATAL) << "Could not allocate command buffers(" << e.what() << ").";
-            throw std::runtime_error("Could not allocate command buffers.");
+        vk::CommandPoolCreateInfo poolInfo{ vk::CommandPoolCreateFlags(), logicalDevice_->GetQueueInfo(graphicsQueue_).familyIndex_ };
+
+        for (std::size_t i = 0; i < swapchainImages.size(); ++i) {
+            std::vector<vk::Image> attachments{ swapchainImages[i] };
+            swapchainFramebuffers_.emplace_back(logicalDevice_.get(), glm::uvec2(vkSurfaceExtend_.width, vkSurfaceExtend_.height),
+                attachments, *vkSwapchainRenderPass_, fbDesc);
+
+            vkCommandPools_[i] = logicalDevice_->GetDevice().createCommandPoolUnique(poolInfo);
+            vkImGuiCommandPools_[i] = logicalDevice_->GetDevice().createCommandPoolUnique(poolInfo);
+
+            vk::CommandBufferAllocateInfo allocInfo{ *vkCommandPools_[i], vk::CommandBufferLevel::ePrimary, 1 };
+            vk::CommandBufferAllocateInfo imgui_allocInfo{ *vkImGuiCommandPools_[i], vk::CommandBufferLevel::ePrimary, 1 };
+
+            try {
+                vkCommandBuffers_[i] = logicalDevice_->GetDevice().allocateCommandBuffersUnique(allocInfo)[0];
+                vkImGuiCommandBuffers_[i] = logicalDevice_->GetDevice().allocateCommandBuffersUnique(allocInfo)[0];
+            }
+            catch (vk::SystemError& e) {
+                LOG(FATAL) << "Could not allocate command buffers (" << e.what() << ").";
+                throw std::runtime_error("Could not allocate command buffers.");
+            }
         }
+
+        // vkCommandBuffers_.resize(swapchainImages.size());
+        // vkImGuiCommandBuffers_.resize(swapchainImages.size());
+        // vk::CommandBufferAllocateInfo allocInfo{ logicalDevice_->GetCommandPool(graphicsQueue_),
+        //     vk::CommandBufferLevel::ePrimary, static_cast<std::uint32_t>(vkCommandBuffers_.size()) };
+        // 
+        // try {
+        //     vkCommandBuffers_ = logicalDevice_->GetDevice().allocateCommandBuffersUnique(allocInfo);
+        //     vkImGuiCommandBuffers_ = logicalDevice_->GetDevice().allocateCommandBuffersUnique(allocInfo);
+        // } catch(vk::SystemError& e) {
+        //     LOG(FATAL) << "Could not allocate command buffers(" << e.what() << ").";
+        //     throw std::runtime_error("Could not allocate command buffers.");
+        // }
 
         vk::FenceCreateInfo fenceCreateInfo{ vk::FenceCreateFlagBits::eSignaled };
         vkCmdBufferUFences_.resize(vkCommandBuffers_.size());
@@ -434,6 +460,8 @@ namespace vku {
         vkRenderingFinishedSemaphore_.reset();
         vkCommandBuffers_.clear();
         vkImGuiCommandBuffers_.clear();
+        vkCommandPools_.clear();
+        vkImGuiCommandPools_.clear();
 
         DestroySwapchainImages();
         vkSwapchain_.reset();
@@ -545,8 +573,7 @@ namespace vku {
 
 
             {
-                err = vkResetCommandPool(g_Device, fd->CommandPool, 0);
-                check_vk_result(err);
+                logicalDevice_->GetDevice().resetCommandPool(vkImGuiCommandPools_[currentlyRenderedImage_], vk::CommandPoolResetFlags());
                 VkCommandBufferBeginInfo info = {};
                 info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
                 info.flags |= VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
@@ -630,19 +657,20 @@ namespace vku {
 
     void VKWindow::UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer, std::size_t cmdBufferIndex)>& fillFunc) const
     {
-        {
-            auto syncResult = vk::Result::eTimeout;
-            while (syncResult == vk::Result::eTimeout)
-                syncResult = logicalDevice_->GetDevice().waitForFences(vkCmdBufferFences_, VK_TRUE, defaultFenceTimeout);
-
-            if (syncResult != vk::Result::eSuccess) {
-                LOG(FATAL) << "Error synchronizing command buffers. (" << vk::to_string(syncResult) << ").";
-                throw std::runtime_error("Error synchronizing command buffers.");
-            }
-        }
-
-        logicalDevice_->GetDevice().resetCommandPool(logicalDevice_->GetCommandPool(graphicsQueue_), vk::CommandPoolResetFlags());
         for (std::size_t i = 0U; i < vkCommandBuffers_.size(); ++i) {
+            {
+                auto syncResult = vk::Result::eTimeout;
+                while (syncResult == vk::Result::eTimeout)
+                    syncResult = logicalDevice_->GetDevice().waitForFences(vkCmdBufferFences_[i], VK_TRUE, defaultFenceTimeout);
+
+                if (syncResult != vk::Result::eSuccess) {
+                    LOG(FATAL) << "Error synchronizing command buffers. (" << vk::to_string(syncResult) << ").";
+                    throw std::runtime_error("Error synchronizing command buffers.");
+                }
+            }
+
+            logicalDevice_->GetDevice().resetCommandPool(*vkCommandPools_[i], vk::CommandPoolResetFlags());
+
             vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eSimultaneousUse };
             vkCommandBuffers_[i]->begin(cmdBufferBeginInfo);
 

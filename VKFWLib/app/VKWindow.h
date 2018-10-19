@@ -19,6 +19,7 @@ namespace vku::gfx {
 
 struct ImGui_ImplVulkanH_WindowData;
 struct ImGui_GLFWWindow;
+struct ImGui_ImplVulkan_InitInfo;
 
 namespace vku {
 
@@ -104,8 +105,12 @@ namespace vku {
         vk::UniqueRenderPass vkSwapchainRenderPass_;
         /** Holds the swap chain frame buffers. */
         std::vector<gfx::Framebuffer> swapchainFramebuffers_;
+        /** Command pools for the swap chain cmd buffers (later: not only primary). */
+        std::vector<vk::UniqueCommandPool> vkCommandPools_;
         /** Holds the swap chain command buffers. */
         // std::vector<vk::UniqueCommandBuffer> vkCommandBuffers_;
+        /** Command pools for the ImGui cmd buffers. */
+        std::vector<vk::UniqueCommandPool> vkImGuiCommandPools_;
         /** Holds the command buffers for ImGui. */
         std::vector<vk::UniqueCommandBuffer> vkImGuiCommandBuffers_;
         /** Hold a fence for each command buffer to signal it is processed. */

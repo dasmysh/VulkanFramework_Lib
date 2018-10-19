@@ -203,9 +203,12 @@ namespace vku {
         InitVulkan(applicationName, applicationVersion);
         instance_ = this;
 
+        // TODO: Check if the GUI works with multiple windows. [10/19/2018 Sebastian Maisch]
+        bool first = true;
         for (auto& wc : config_.windows_) {
-            windows_.emplace_back(wc);
+            windows_.emplace_back(wc, first);
             windows_.back().ShowWindow();
+            first = false;
         }
     }
 
