@@ -32,7 +32,7 @@ struct ImGui_ImplVulkan_InitInfo
 };
 
 // Called by user code
-IMGUI_IMPL_API bool     ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass);
+IMGUI_IMPL_API bool     ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass, std::size_t numBackbuffers);
 IMGUI_IMPL_API void     ImGui_ImplVulkan_Shutdown(ImGui_ImplVulkan_InitInfo* info);
 IMGUI_IMPL_API void     ImGui_ImplVulkan_NewFrame(ImGui_ImplVulkan_InitInfo* info);
 IMGUI_IMPL_API void     ImGui_ImplVulkan_RenderDrawData(ImGui_ImplVulkan_InitInfo* info, ImDrawData* draw_data, VkCommandBuffer command_buffer);

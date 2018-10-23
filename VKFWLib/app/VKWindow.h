@@ -110,7 +110,7 @@ namespace vku {
         /** Command pools for the swap chain cmd buffers (later: not only primary). */
         std::vector<vk::UniqueCommandPool> vkCommandPools_;
         /** Holds the swap chain command buffers. */
-        // std::vector<vk::UniqueCommandBuffer> vkCommandBuffers_;
+        std::vector<vk::UniqueCommandBuffer> vkCommandBuffers_;
         /** Command pools for the ImGui cmd buffers. */
         std::vector<vk::UniqueCommandPool> vkImGuiCommandPools_;
         /** Holds the command buffers for ImGui. */

@@ -57,7 +57,7 @@ namespace vku::gfx {
         const vk::Device& GetDevice() const { return *vkDevice_; }
         const vk::Queue& GetQueue(unsigned int familyIndex, unsigned int queueIndex) const { return vkQueuesByRequestedFamily_[familyIndex][queueIndex]; }
         const DeviceQueueDesc& GetQueueInfo(unsigned int familyIndex) const { return queueDescriptions_[familyIndex]; }
-        // const vk::CommandPool& GetCommandPool(unsigned int familyIndex) const { return vkCmdPoolsByRequestedQFamily_[familyIndex]; }
+        const vk::CommandPool& GetCommandPool(unsigned int familyIndex) const { return vkCmdPoolsByRequestedQFamily_[familyIndex]; }
 
         vk::UniqueCommandPool CreateCommandPoolForQueue(unsigned int familyIndex, vk::CommandPoolCreateFlags flags = vk::CommandPoolCreateFlags()) const;
         std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline(const std::vector<std::string>& shaderNames,

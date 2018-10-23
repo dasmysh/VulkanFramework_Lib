@@ -261,7 +261,7 @@ namespace vku {
         imguiVulkanData_->PipelineCache = VK_NULL_HANDLE;
         imguiVulkanData_->DescriptorPool = vkImguiDescPool_.get();
         imguiVulkanData_->Allocator = nullptr;
-        ImGui_ImplVulkan_Init(imguiVulkanData_.get(), wd->RenderPass);
+        ImGui_ImplVulkan_Init(imguiVulkanData_.get(), wd->RenderPass, vkImGuiCommandBuffers_.size());
 
         // Setup style
         ImGui::StyleColorsDark();
@@ -363,7 +363,7 @@ namespace vku {
             vk::AttachmentDescription colorAttachment{ vk::AttachmentDescriptionFlags(), surfaceFormat.format, vk::SampleCountFlagBits::e1,
                 vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore,
                 vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
-                vk::ImageLayout::eUndefined, vk::ImageLayout::ePresentSrcKHR };
+                vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal };
             vk::AttachmentReference colorAttachmentRef{ 0, vk::ImageLayout::eColorAttachmentOptimal };
             // TODO: check the stencil load/store operations. [3/20/2017 Sebastian Maisch]
             vk::AttachmentDescription depthAttachment{ vk::AttachmentDescriptionFlags(), dsFormat.second, vk::SampleCountFlagBits::e1,
@@ -388,9 +388,9 @@ namespace vku {
         {
             // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
             vk::AttachmentDescription colorAttachment{ vk::AttachmentDescriptionFlags(), surfaceFormat.format, vk::SampleCountFlagBits::e1,
-                vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eStore,
+                vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore,
                 vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
-                vk::ImageLayout::eUndefined, vk::ImageLayout::e };
+                vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR };
             vk::AttachmentReference colorAttachmentRef{ 0, vk::ImageLayout::eColorAttachmentOptimal };
             // TODO: check the stencil load/store operations. [3/20/2017 Sebastian Maisch]
             vk::AttachmentDescription depthAttachment{ vk::AttachmentDescriptionFlags(), dsFormat.second, vk::SampleCountFlagBits::e1,
@@ -404,7 +404,7 @@ namespace vku {
 
             vk::SubpassDependency dependency{ VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput,
                 vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlags(),
-                vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite };
+                vk::AccessFlagBits::eColorAttachmentWrite };
             std::array<vk::AttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
             vk::RenderPassCreateInfo renderPassInfo{ vk::RenderPassCreateFlags(),
                 static_cast<std::uint32_t>(attachments.size()), attachments.data(), 1, &subPass, 1, &dependency };
@@ -438,8 +438,8 @@ namespace vku {
             vk::CommandBufferAllocateInfo imgui_allocInfo{ *vkImGuiCommandPools_[i], vk::CommandBufferLevel::ePrimary, 1 };
 
             try {
-                vkCommandBuffers_[i] = logicalDevice_->GetDevice().allocateCommandBuffersUnique(allocInfo)[0];
-                vkImGuiCommandBuffers_[i] = logicalDevice_->GetDevice().allocateCommandBuffersUnique(allocInfo)[0];
+                vkCommandBuffers_[i] = std::move(logicalDevice_->GetDevice().allocateCommandBuffersUnique(allocInfo)[0]);
+                vkImGuiCommandBuffers_[i] = std::move(logicalDevice_->GetDevice().allocateCommandBuffersUnique(allocInfo)[0]);
             }
             catch (vk::SystemError& e) {
                 LOG(FATAL) << "Could not allocate command buffers (" << e.what() << ").";
@@ -560,87 +560,23 @@ namespace vku {
         // Rendering
         if (ApplicationBase::instance().IsGUIMode()) {
             ImGui::Render();
-            FrameRender(wd);
-
-
-            VkResult err;
-
-            // VkSemaphore& image_acquired_semaphore = wd->Frames[wd->FrameIndex].ImageAcquiredSemaphore;
-            // err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->FrameIndex);
-            // check_vk_result(err);
-
-            // ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[wd->FrameIndex];
-            // {
-            //     err = vkWaitForFences(g_Device, 1, &fd->Fence, VK_TRUE, UINT64_MAX);	// wait indefinitely instead of periodically checking
-            //     check_vk_result(err);
-            // 
-            //     err = vkResetFences(g_Device, 1, &fd->Fence);
-            //     check_vk_result(err);
-            // }
-
-
-            logicalDevice_->GetDevice().resetCommandPool(logicalDevice_->GetCommandPool(graphicsQueue_), vk::CommandPoolResetFlags());
-            for (std::size_t i = 0U; i < vkCommandBuffers_.size(); ++i) {
-                vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eSimultaneousUse };
-                vkCommandBuffers_[i]->begin(cmdBufferBeginInfo);
-
-                std::array<vk::ClearValue, 2> clearColor;
-                clearColor[0].setColor(vk::ClearColorValue{ std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f } });
-                clearColor[1].setDepthStencil(vk::ClearDepthStencilValue{ 1.0f, 0 });
-                vk::RenderPassBeginInfo renderPassBeginInfo{ *vkSwapchainRenderPass_, swapchainFramebuffers_[i].GetFramebuffer(),
-                    vk::Rect2D(vk::Offset2D(0, 0), vkSurfaceExtend_), static_cast<std::uint32_t>(clearColor.size()), clearColor.data() };
-                vkCommandBuffers_[i]->beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-
-                fillFunc(*vkCommandBuffers_[i], i);
-
-                vkCommandBuffers_[i]->endRenderPass();
-                vkCommandBuffers_[i]->end();
-            }
-
-
 
             {
-                logicalDevice_->GetDevice().resetCommandPool(vkImGuiCommandPools_[currentlyRenderedImage_], vk::CommandPoolResetFlags());
+                logicalDevice_->GetDevice().resetCommandPool(*vkImGuiCommandPools_[currentlyRenderedImage_], vk::CommandPoolResetFlags());
                 vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
                 vkImGuiCommandBuffers_[currentlyRenderedImage_]->begin(cmdBufferBeginInfo);
             }
 
             {
                 vk::RenderPassBeginInfo imGuiRenderPassBeginInfo{ *vkSwapchainRenderPass_, swapchainFramebuffers_[currentlyRenderedImage_].GetFramebuffer(),
-                    vk::Rect2D(vk::Offset2D(0, 0), vkSurfaceExtend_), static_cast<std::uint32_t>(clearColor.size()), clearColor.data() };
-                VkRenderPassBeginInfo info = {};
-                info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-                info.renderPass = wd->RenderPass;
-                info.framebuffer = wd->Framebuffer[wd->FrameIndex];
-                info.renderArea.extent.width = wd->Width;
-                info.renderArea.extent.height = wd->Height;
-                info.clearValueCount = 1;
-                info.pClearValues = &wd->ClearValue;
-                vkCmdBeginRenderPass(fd->CommandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
+                    vk::Rect2D(vk::Offset2D(0, 0), vkSurfaceExtend_), 0, nullptr };
+                vkImGuiCommandBuffers_[currentlyRenderedImage_]->beginRenderPass(imGuiRenderPassBeginInfo, vk::SubpassContents::eInline);
             }
 
-            // Record Imgui Draw Data and draw funcs into command buffer
-            ImGui_ImplVulkan_RenderDrawData(imguiVulkanData_.get(), ImGui::GetDrawData(), fd->CommandBuffer);
+            // Record ImGui Draw Data and draw funcs into command buffer
+            ImGui_ImplVulkan_RenderDrawData(imguiVulkanData_.get(), ImGui::GetDrawData(), *vkImGuiCommandBuffers_[currentlyRenderedImage_]);
 
-            // Submit command buffer
-            vkCmdEndRenderPass(fd->CommandBuffer);
-            {
-                VkPipelineStageFlags wait_stage = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
-                VkSubmitInfo info = {};
-                info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-                info.waitSemaphoreCount = 1;
-                info.pWaitSemaphores = &image_acquired_semaphore;
-                info.pWaitDstStageMask = &wait_stage;
-                info.commandBufferCount = 1;
-                info.pCommandBuffers = &fd->CommandBuffer;
-                info.signalSemaphoreCount = 1;
-                info.pSignalSemaphores = &fd->RenderCompleteSemaphore;
-
-                err = vkEndCommandBuffer(fd->CommandBuffer);
-                check_vk_result(err);
-                err = vkQueueSubmit(g_Queue, 1, &info, fd->Fence);
-                check_vk_result(err);
-            }
+            vkImGuiCommandBuffers_[currentlyRenderedImage_]->endRenderPass();
 
         }
 

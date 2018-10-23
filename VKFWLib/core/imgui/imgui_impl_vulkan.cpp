@@ -67,8 +67,8 @@ struct ImGui_ImplVulkan_InternalInfo
     VkDescriptorSet              g_DescriptorSet = VK_NULL_HANDLE;
     VkPipeline                   g_Pipeline = VK_NULL_HANDLE;
 
-    // int                    g_FrameIndex = 0;
-    // FrameDataForRender     g_FramesDataBuffers[IMGUI_VK_QUEUED_FRAMES] = {};
+    int                    g_FrameIndex = 0;
+    std::vector<FrameDataForRender>     g_FramesDataBuffers;
 
     // Font data
     VkSampler              g_FontSampler = VK_NULL_HANDLE;
@@ -216,7 +216,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImGui_ImplVulkan_InitInfo* vkinfo, ImDrawDa
         return;
 
     FrameDataForRender* fd = &vkinfo->internal_->g_FramesDataBuffers[vkinfo->internal_->g_FrameIndex];
-    vkinfo->internal_->g_FrameIndex = (vkinfo->internal_->g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
+    vkinfo->internal_->g_FrameIndex = (vkinfo->internal_->g_FrameIndex + 1) % vkinfo->internal_->g_FramesDataBuffers.size();
 
     // Create the Vertex and Index buffers:
     size_t vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
@@ -685,13 +685,12 @@ void    ImGui_ImplVulkan_InvalidateDeviceObjects(ImGui_ImplVulkan_InitInfo* info
 {
     ImGui_ImplVulkan_InvalidateFontUploadObjects(info);
 
-    for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
+    for (auto& fd : info->internal_->g_FramesDataBuffers)
     {
-        FrameDataForRender* fd = &info->internal_->g_FramesDataBuffers[i];
-        if (fd->VertexBuffer)       { vkDestroyBuffer   (info->Device, fd->VertexBuffer,        info->Allocator); fd->VertexBuffer = VK_NULL_HANDLE; }
-        if (fd->VertexBufferMemory) { vkFreeMemory      (info->Device, fd->VertexBufferMemory,  info->Allocator); fd->VertexBufferMemory = VK_NULL_HANDLE; }
-        if (fd->IndexBuffer)        { vkDestroyBuffer   (info->Device, fd->IndexBuffer,         info->Allocator); fd->IndexBuffer = VK_NULL_HANDLE; }
-        if (fd->IndexBufferMemory)  { vkFreeMemory      (info->Device, fd->IndexBufferMemory,   info->Allocator); fd->IndexBufferMemory = VK_NULL_HANDLE; }
+        if (fd.VertexBuffer) { vkDestroyBuffer(info->Device, fd.VertexBuffer, info->Allocator); fd.VertexBuffer = VK_NULL_HANDLE; }
+        if (fd.VertexBufferMemory) { vkFreeMemory(info->Device, fd.VertexBufferMemory, info->Allocator); fd.VertexBufferMemory = VK_NULL_HANDLE; }
+        if (fd.IndexBuffer) { vkDestroyBuffer(info->Device, fd.IndexBuffer, info->Allocator); fd.IndexBuffer = VK_NULL_HANDLE; }
+        if (fd.IndexBufferMemory) { vkFreeMemory(info->Device, fd.IndexBufferMemory, info->Allocator); fd.IndexBufferMemory = VK_NULL_HANDLE; }
     }
 
     if (info->internal_->g_FontView)             { vkDestroyImageView(info->Device, info->internal_->g_FontView, info->Allocator); info->internal_->g_FontView = VK_NULL_HANDLE; }
@@ -703,7 +702,7 @@ void    ImGui_ImplVulkan_InvalidateDeviceObjects(ImGui_ImplVulkan_InitInfo* info
     if (info->internal_->g_Pipeline) { vkDestroyPipeline(info->Device, info->internal_->g_Pipeline, info->Allocator); info->internal_->g_Pipeline = VK_NULL_HANDLE; }
 }
 
-bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass)
+bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass, std::size_t numBackbuffers)
 {
     IM_ASSERT(info->Instance != VK_NULL_HANDLE);
     IM_ASSERT(info->PhysicalDevice != VK_NULL_HANDLE);
@@ -724,6 +723,7 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
     // g_CheckVkResultFn = info->CheckVkResultFn;
 
     info->internal_ = new ImGui_ImplVulkan_InternalInfo;
+    info->internal_->g_FramesDataBuffers.resize(numBackbuffers);
     info->internal_->g_RenderPass = render_pass;
     ImGui_ImplVulkan_CreateDeviceObjects(info);
 
