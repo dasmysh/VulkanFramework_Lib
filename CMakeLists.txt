@@ -119,7 +119,7 @@ LIST(REMOVE_ITEM LIB_TMP_FILES ${LIB_TOP_FILES})
 file(GLOB EXTERN_SOURCES
     extern/imgui/imgui.cpp
     extern/imgui/imgui_draw.cpp
-    extern/imgui/imgui_demo.cpp
+    extern/imgui/imgui_widgets.cpp
     extern/imgui/misc/cpp/imgui_stdlib.cpp)
 
 foreach(f ${LIB_TMP_FILES})

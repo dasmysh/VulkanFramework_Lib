@@ -85,7 +85,7 @@ namespace vku::gfx {
             const auto& mappings = deviceQueueDesc.second;
             vkQueuesByDeviceFamily_[deviceQueueDesc.first].resize(priorities.size());
 
-            vk::CommandPoolCreateInfo poolInfo{ vk::CommandPoolCreateFlags(), singleQueueOnly ? 0 : deviceQueueDesc.first };
+            vk::CommandPoolCreateInfo poolInfo{ vk::CommandPoolCreateFlags(), singleQueueOnly_ ? 0 : deviceQueueDesc.first };
             vkCmdPoolsByDeviceQFamily_[deviceQueueDesc.first] = vkDevice_->createCommandPoolUnique(poolInfo);
 
 #ifdef FW_DEBUG_PIPELINE
