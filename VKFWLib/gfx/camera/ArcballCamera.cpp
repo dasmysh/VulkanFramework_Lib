@@ -11,7 +11,6 @@
 #include <GLFW/glfw3.h>
 #include "app/VKWindow.h"
 
-#define GLM_SWIZZLE
 #include <glm/gtc/matrix_access.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/matrix_transform.hpp>
