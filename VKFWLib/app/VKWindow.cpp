@@ -744,10 +744,6 @@ namespace vku {
     void VKWindow::CursorPosCallback(double xpos, double ypos)
     {
         if (mouseInWindow_) {
-            prevMousePosition_ = currMousePosition_;
-            currMousePosition_ = glm::vec2(static_cast<float>(xpos), static_cast<float>(ypos));
-            relativeMousePosition_ = currMousePosition_ - prevMousePosition_;
-
             ApplicationBase::instance().HandleMouse(-1, 0, 0, 0.0f, this);
         }
     }
@@ -799,6 +795,18 @@ namespace vku {
         LOG(FATAL) << "An GLFW error occurred (" << error << "): " << std::endl << description;
     }
 
+    void VKWindow::SetMousePosition(double xpos, double ypos)
+    {
+        prevMousePosition_ = currMousePosition_;
+        currMousePosition_ = glm::vec2(static_cast<float>(xpos), static_cast<float>(ypos));
+        relativeMousePosition_ = currMousePosition_ - prevMousePosition_;
+
+        auto mousePos = currMousePosition_;
+        mousePos /= glm::vec2(static_cast<float>(vkSurfaceExtend_.width), static_cast<float>(vkSurfaceExtend_.height));
+        currMousePositionNormalized_.x = (2.0f * mousePos.x - 1.0f);
+        currMousePositionNormalized_.y = -(2.0f * mousePos.x - 1.0f);
+    }
+
     void VKWindow::glfwWindowPosCallback(GLFWwindow* window, int xpos, int ypos)
     {
         auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
@@ -848,9 +856,11 @@ namespace vku {
 
     void VKWindow::glfwCursorPosCallback(GLFWwindow* window, double xpos, double ypos)
     {
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        win->SetMousePosition(xpos, ypos);
+
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureMouse) {
-            auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
             win->CursorPosCallback(xpos, ypos);
         }
     }
