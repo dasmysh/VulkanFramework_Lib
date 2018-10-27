@@ -59,6 +59,7 @@ namespace vku::gfx {
         const DeviceQueueDesc& GetQueueInfo(unsigned int familyIndex) const { return queueDescriptions_[familyIndex]; }
         const vk::CommandPool& GetCommandPool(unsigned int familyIndex) const { return vkCmdPoolsByRequestedQFamily_[familyIndex]; }
 
+        vk::UniqueCommandPool CreateCommandPoolForQueue(unsigned int familyIndex, vk::CommandPoolCreateFlags flags = vk::CommandPoolCreateFlags()) const;
         std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline(const std::vector<std::string>& shaderNames,
             const glm::uvec2& size, unsigned int numBlendAttachments);
 
@@ -122,5 +123,9 @@ namespace vku::gfx {
         std::unique_ptr<MemoryGroup> dummyMemGroup_;
         /** Holds the dummy texture. */
         std::shared_ptr<Texture2D> dummyTexture_;
+
+#ifdef FW_DEBUG_PIPELINE
+        bool singleQueueOnly_ = false;
+#endif
     };
 }

@@ -17,6 +17,10 @@ namespace vku::gfx {
     class LogicalDevice;
 }
 
+struct ImGui_ImplVulkanH_WindowData;
+struct ImGui_GLFWWindow;
+struct ImGui_ImplVulkan_InitInfo;
+
 namespace vku {
 
     class ApplicationBase;
@@ -24,7 +28,7 @@ namespace vku {
     class VKWindow final
     {
     public:
-        explicit VKWindow(cfg::WindowCfg& conf);
+        explicit VKWindow(cfg::WindowCfg& conf, bool useGUI);
         VKWindow(const VKWindow&) = delete;
         VKWindow(VKWindow&&) noexcept;
         VKWindow& operator=(const VKWindow&) = delete;
@@ -99,10 +103,18 @@ namespace vku {
         vk::UniqueSwapchainKHR vkSwapchain_;
         /** Holds the swap chain render pass. */
         vk::UniqueRenderPass vkSwapchainRenderPass_;
+        /** Render pass for ImGui. */
+        vk::UniqueRenderPass vkImGuiRenderPass_;
         /** Holds the swap chain frame buffers. */
         std::vector<gfx::Framebuffer> swapchainFramebuffers_;
+        /** Command pools for the swap chain cmd buffers (later: not only primary). */
+        std::vector<vk::UniqueCommandPool> vkCommandPools_;
         /** Holds the swap chain command buffers. */
         std::vector<vk::UniqueCommandBuffer> vkCommandBuffers_;
+        /** Command pools for the ImGui cmd buffers. */
+        std::vector<vk::UniqueCommandPool> vkImGuiCommandPools_;
+        /** Holds the command buffers for ImGui. */
+        std::vector<vk::UniqueCommandBuffer> vkImGuiCommandBuffers_;
         /** Hold a fence for each command buffer to signal it is processed. */
         std::vector<vk::UniqueFence> vkCmdBufferUFences_;
         std::vector<vk::Fence> vkCmdBufferFences_;
@@ -114,6 +126,15 @@ namespace vku {
         vk::UniqueSemaphore vkRenderingFinishedSemaphore_;
         /** Holds the currently rendered image. */
         std::uint32_t currentlyRenderedImage_ = 0;
+
+        /** The descriptor pool for ImGUI. */
+        vk::UniqueDescriptorPool vkImguiDescPool_;
+        /** ImGui window data. */
+        std::unique_ptr<ImGui_ImplVulkanH_WindowData> windowData_;
+        /** ImGui GLFW window data. */
+        ImGui_GLFWWindow* glfwWindowData_;
+        /** ImGui vulkan data. */
+        std::unique_ptr<ImGui_ImplVulkan_InitInfo> imguiVulkanData_;
 
 
         /** Holds the current mouse position. */
@@ -137,6 +158,7 @@ namespace vku {
 
         void InitWindow();
         void InitVulkan();
+        void InitGUI();
         void RecreateSwapChain();
         void DestroySwapchainImages();
         void ReleaseWindow();

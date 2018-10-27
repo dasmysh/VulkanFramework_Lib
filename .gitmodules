@@ -19,3 +19,7 @@
 	path = extern/assimp
 	url = https://github.com/assimp/assimp
 	branch = master
+[submodule "extern/imgui"]
+	path = extern/imgui
+	url = https://github.com/ocornut/imgui.git
+	branch = master
