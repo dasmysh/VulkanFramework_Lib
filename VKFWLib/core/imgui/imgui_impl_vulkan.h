@@ -14,8 +14,6 @@
 #include <vulkan/vulkan.h>
 #include <cstddef>
 
-// #define IMGUI_VK_QUEUED_FRAMES      2
-
 struct ImGui_ImplVulkan_InternalInfo;
 
 // Please zero-clear before use.
@@ -62,26 +60,6 @@ IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateDeviceObjects(ImGui_ImplVulka
 struct ImGui_ImplVulkanH_FrameData;
 struct ImGui_ImplVulkanH_WindowData;
 
-// IMGUI_IMPL_API void                 ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(VkPhysicalDevice physical_device, VkDevice device, uint32_t queue_family, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator);
-// IMGUI_IMPL_API void                 ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator, int w, int h);
-// IMGUI_IMPL_API void                 ImGui_ImplVulkanH_DestroyWindowData(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator);
-// IMGUI_IMPL_API VkSurfaceFormatKHR   ImGui_ImplVulkanH_SelectSurfaceFormat(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkFormat* request_formats, int request_formats_count, VkColorSpaceKHR request_color_space);
-// IMGUI_IMPL_API VkPresentModeKHR     ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkPresentModeKHR* request_modes, int request_modes_count);
-// IMGUI_IMPL_API int                  ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_mode);
-
-// Helper structure to hold the data needed by one rendering frame
-// struct ImGui_ImplVulkanH_FrameData
-// {
-//     uint32_t            BackbufferIndex;        // Keep track of recently rendered swapchain frame indices
-//     VkCommandPool       CommandPool;
-//     VkCommandBuffer     CommandBuffer;
-//     VkFence             Fence;
-//     VkSemaphore         ImageAcquiredSemaphore;
-//     VkSemaphore         RenderCompleteSemaphore;
-// 
-//     IMGUI_IMPL_API ImGui_ImplVulkanH_FrameData();
-// };
-
 // Helper structure to hold the data needed by one rendering context into one OS window
 struct ImGui_ImplVulkanH_WindowData
 {
@@ -92,14 +70,6 @@ struct ImGui_ImplVulkanH_WindowData
     VkSurfaceFormatKHR  SurfaceFormat;
     VkPresentModeKHR    PresentMode;
     VkRenderPass        RenderPass;
-    // bool                ClearEnable;
-    // VkClearValue        ClearValue;
-    // uint32_t            BackBufferCount;
-    // VkImage             BackBuffer[16];
-    // VkImageView         BackBufferView[16];
-    // VkFramebuffer       Framebuffer[16];
-    // uint32_t            FrameIndex;
-    // ImGui_ImplVulkanH_FrameData Frames[IMGUI_VK_QUEUED_FRAMES];
 
     IMGUI_IMPL_API ImGui_ImplVulkanH_WindowData();
 };
