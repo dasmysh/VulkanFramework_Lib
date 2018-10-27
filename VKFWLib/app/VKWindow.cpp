@@ -37,6 +37,7 @@ namespace vku {
         maximized_(conf.fullscreen_),
         frameCount_(0)
     {
+        windowData_ = std::make_unique<ImGui_ImplVulkanH_WindowData>();
         this->InitWindow();
         this->InitVulkan();
         if (useGUI) InitGUI();
@@ -224,7 +225,6 @@ namespace vku {
 
     void VKWindow::InitGUI()
     {
-        windowData_ = std::make_unique<ImGui_ImplVulkanH_WindowData>();
         ImGui_ImplVulkanH_WindowData* wd = windowData_.get();
 
         {
@@ -285,7 +285,7 @@ namespace vku {
         {
             VkCommandBuffer command_buffer = *vkImGuiCommandBuffers_[0];
 
-            logicalDevice_->GetDevice().resetCommandPool(logicalDevice_->GetCommandPool(graphicsQueue_), vk::CommandPoolResetFlags());
+            logicalDevice_->GetDevice().resetCommandPool(*vkImGuiCommandPools_[0], vk::CommandPoolResetFlags());
             vk::CommandBufferBeginInfo begin_info{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
             vkImGuiCommandBuffers_[0]->begin(begin_info);
 
@@ -299,8 +299,6 @@ namespace vku {
 
             ImGui_ImplVulkan_InvalidateFontUploadObjects(imguiVulkanData_.get());
         }
-
-        // TODO: go on with main.cpp line 423 [10/17/2018 Sebastian Maisch]
     }
 
     void VKWindow::RecreateSwapChain()
@@ -394,8 +392,8 @@ namespace vku {
             vk::AttachmentReference colorAttachmentRef{ 0, vk::ImageLayout::eColorAttachmentOptimal };
             // TODO: check the stencil load/store operations. [3/20/2017 Sebastian Maisch]
             vk::AttachmentDescription depthAttachment{ vk::AttachmentDescriptionFlags(), dsFormat.second, vk::SampleCountFlagBits::e1,
-                vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare,
-                vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare,
+                vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eDontCare,
+                vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
                 vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal };
             vk::AttachmentReference depthAttachmentRef{ 1, vk::ImageLayout::eDepthStencilAttachmentOptimal };
 
@@ -439,26 +437,13 @@ namespace vku {
 
             try {
                 vkCommandBuffers_[i] = std::move(logicalDevice_->GetDevice().allocateCommandBuffersUnique(allocInfo)[0]);
-                vkImGuiCommandBuffers_[i] = std::move(logicalDevice_->GetDevice().allocateCommandBuffersUnique(allocInfo)[0]);
+                vkImGuiCommandBuffers_[i] = std::move(logicalDevice_->GetDevice().allocateCommandBuffersUnique(imgui_allocInfo)[0]);
             }
             catch (vk::SystemError& e) {
                 LOG(FATAL) << "Could not allocate command buffers (" << e.what() << ").";
                 throw std::runtime_error("Could not allocate command buffers.");
             }
         }
-
-        // vkCommandBuffers_.resize(swapchainImages.size());
-        // vkImGuiCommandBuffers_.resize(swapchainImages.size());
-        // vk::CommandBufferAllocateInfo allocInfo{ logicalDevice_->GetCommandPool(graphicsQueue_),
-        //     vk::CommandBufferLevel::ePrimary, static_cast<std::uint32_t>(vkCommandBuffers_.size()) };
-        // 
-        // try {
-        //     vkCommandBuffers_ = logicalDevice_->GetDevice().allocateCommandBuffersUnique(allocInfo);
-        //     vkImGuiCommandBuffers_ = logicalDevice_->GetDevice().allocateCommandBuffersUnique(allocInfo);
-        // } catch(vk::SystemError& e) {
-        //     LOG(FATAL) << "Could not allocate command buffers(" << e.what() << ").";
-        //     throw std::runtime_error("Could not allocate command buffers.");
-        // }
 
         vk::FenceCreateInfo fenceCreateInfo{ vk::FenceCreateFlagBits::eSignaled };
         vkCmdBufferUFences_.resize(vkCommandBuffers_.size());
@@ -488,6 +473,9 @@ namespace vku {
         vkCommandBuffers_.clear();
         vkImGuiCommandBuffers_.clear();
         vkCommandPools_.clear();
+
+        vkImGuiRenderPass_.reset();
+        vkImguiDescPool_.reset();
         vkImGuiCommandPools_.clear();
 
         DestroySwapchainImages();
@@ -556,35 +544,6 @@ namespace vku {
 
     void VKWindow::DrawCurrentCommandBuffer() const
     {
-
-        // Rendering
-        if (ApplicationBase::instance().IsGUIMode()) {
-            ImGui::Render();
-
-            {
-                logicalDevice_->GetDevice().resetCommandPool(*vkImGuiCommandPools_[currentlyRenderedImage_], vk::CommandPoolResetFlags());
-                vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
-                vkImGuiCommandBuffers_[currentlyRenderedImage_]->begin(cmdBufferBeginInfo);
-            }
-
-            {
-                vk::RenderPassBeginInfo imGuiRenderPassBeginInfo{ *vkSwapchainRenderPass_, swapchainFramebuffers_[currentlyRenderedImage_].GetFramebuffer(),
-                    vk::Rect2D(vk::Offset2D(0, 0), vkSurfaceExtend_), 0, nullptr };
-                vkImGuiCommandBuffers_[currentlyRenderedImage_]->beginRenderPass(imGuiRenderPassBeginInfo, vk::SubpassContents::eInline);
-            }
-
-            // Record ImGui Draw Data and draw funcs into command buffer
-            ImGui_ImplVulkan_RenderDrawData(imguiVulkanData_.get(), ImGui::GetDrawData(), *vkImGuiCommandBuffers_[currentlyRenderedImage_]);
-
-            vkImGuiCommandBuffers_[currentlyRenderedImage_]->endRenderPass();
-
-        }
-
-        vk::PipelineStageFlags waitStages[]{ vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eTopOfPipe };
-        vk::Semaphore waitSemaphores[]{ *vkImageAvailableSemaphore_, *vkDataAvailableSemaphore_ };
-        std::array<vk::CommandBuffer, 2> submitCmdBuffers{ *vkCommandBuffers_[currentlyRenderedImage_], *vkImGuiCommandBuffers_[currentlyRenderedImage_] };
-        vk::SubmitInfo submitInfo{ 2, waitSemaphores, waitStages, 2, submitCmdBuffers.data(), 1, &(*vkRenderingFinishedSemaphore_) };
-
         {
             auto syncResult = logicalDevice_->GetDevice().getFenceStatus(vkCmdBufferFences_[currentlyRenderedImage_]);
             while (syncResult == vk::Result::eTimeout || syncResult == vk::Result::eNotReady)
@@ -597,6 +556,34 @@ namespace vku {
 
             logicalDevice_->GetDevice().resetFences(vkCmdBufferFences_[currentlyRenderedImage_]);
         }
+
+        // Rendering
+        if (ApplicationBase::instance().IsGUIMode()) {
+            ImGui::Render();
+
+            {
+                logicalDevice_->GetDevice().resetCommandPool(*vkImGuiCommandPools_[currentlyRenderedImage_], vk::CommandPoolResetFlags());
+                vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
+                vkImGuiCommandBuffers_[currentlyRenderedImage_]->begin(cmdBufferBeginInfo);
+            }
+
+            {
+                vk::RenderPassBeginInfo imGuiRenderPassBeginInfo{ *vkImGuiRenderPass_, swapchainFramebuffers_[currentlyRenderedImage_].GetFramebuffer(),
+                    vk::Rect2D(vk::Offset2D(0, 0), vkSurfaceExtend_), 0, nullptr };
+                vkImGuiCommandBuffers_[currentlyRenderedImage_]->beginRenderPass(imGuiRenderPassBeginInfo, vk::SubpassContents::eInline);
+            }
+
+            // Record ImGui Draw Data and draw funcs into command buffer
+            ImGui_ImplVulkan_RenderDrawData(imguiVulkanData_.get(), ImGui::GetDrawData(), *vkImGuiCommandBuffers_[currentlyRenderedImage_]);
+
+            vkImGuiCommandBuffers_[currentlyRenderedImage_]->endRenderPass();
+            vkImGuiCommandBuffers_[currentlyRenderedImage_]->end();
+        }
+
+        vk::PipelineStageFlags waitStages[]{ vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eTopOfPipe };
+        vk::Semaphore waitSemaphores[]{ *vkImageAvailableSemaphore_, *vkDataAvailableSemaphore_ };
+        std::array<vk::CommandBuffer, 2> submitCmdBuffers{ *vkCommandBuffers_[currentlyRenderedImage_], *vkImGuiCommandBuffers_[currentlyRenderedImage_] };
+        vk::SubmitInfo submitInfo{ 2, waitSemaphores, waitStages, 2, submitCmdBuffers.data(), 1, &(*vkRenderingFinishedSemaphore_) };
 
         logicalDevice_->GetQueue(graphicsQueue_, 0).submit(submitInfo, vkCmdBufferFences_[currentlyRenderedImage_]);
     }
