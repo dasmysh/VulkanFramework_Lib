@@ -7,13 +7,16 @@
  */
 
 #include "Arcball.h"
-#include <glm/gtx/rotate_vector.hpp>
+
 #include <glm/gtc/quaternion.hpp>
-#include <glm/gtx/quaternion.hpp>
 #include <limits>
 #include <iostream>
 #include <GLFW/glfw3.h>
 #include "app/VKWindow.h"
+
+#define GLM_ENABLE_EXPERIMENTAL
+#include <glm/gtx/rotate_vector.hpp>
+#include <glm/gtx/quaternion.hpp>
 
 namespace vku::gfx {
 
@@ -65,7 +68,7 @@ namespace vku::gfx {
         glm::quat result(1.0f, 0.0f, 0.0f, 0.0f);
         if (currentScreen_ != lastScreen_) {
             auto angle = static_cast<float>(speed * elapsedTime * acos(glm::min(1.0f, glm::dot(lastScreen_, currentScreen_))));
-            auto camAxis = glm::normalize(glm::cross(lastScreen_, currentScreen_));
+            auto camAxis = glm::cross(lastScreen_, currentScreen_);
             auto worldAxis = glm::normalize(glm::rotate(camPosOrientation, camAxis));
             result = glm::angleAxis(-2.0f * angle, worldAxis);
             lastScreen_ = currentScreen_;

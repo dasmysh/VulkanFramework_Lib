@@ -15,7 +15,6 @@
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <glm/gtx/rotate_vector.hpp>
 
 namespace vku::gfx {
 
@@ -52,11 +51,10 @@ namespace vku::gfx {
         glm::quat camOrientStep = camArcball_.GetWorldRotation(elapsedTime, camOrient);
         camOrient = camOrientStep * camOrient;
         glm::mat3 matOrient{ glm::mat3_cast(camOrient) };
-        auto camPos = radius * (matOrient * initialCameraPosition_);
-        auto camUp = matOrient[1];
+        auto camPos = radius * (matOrient * glm::vec3(0.0f, 0.0f, 1.0f));
 
         auto aspectRatio = static_cast<float>(sender->GetClientSize().x) / static_cast<float>(sender->GetClientSize().y);
-        SetViewMatrix(glm::lookAt(camPos, glm::vec3{ 0.0f }, camUp));
+        SetPositionOrientation(camPos, glm::inverse(camOrient));
         SetProjMatrix(glm::perspective(fovY_, aspectRatio, zNear_, zFar_));
     }
 

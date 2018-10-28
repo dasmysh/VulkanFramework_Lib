@@ -788,10 +788,10 @@ namespace vku {
         currMousePosition_ = glm::vec2(static_cast<float>(xpos), static_cast<float>(ypos));
         relativeMousePosition_ = currMousePosition_ - prevMousePosition_;
 
-        auto mousePos = currMousePosition_;
-        mousePos /= glm::vec2(static_cast<float>(vkSurfaceExtend_.width), static_cast<float>(vkSurfaceExtend_.height));
-        currMousePositionNormalized_.x = (2.0f * mousePos.x - 1.0f);
-        currMousePositionNormalized_.y = -(2.0f * mousePos.x - 1.0f);
+        auto mousePos = glm::dvec2{ xpos, ypos };
+        mousePos /= glm::dvec2(static_cast<double>(vkSurfaceExtend_.width), static_cast<double>(vkSurfaceExtend_.height));
+        currMousePositionNormalized_.x = static_cast<float>(2.0 * mousePos.x - 1.0);
+        currMousePositionNormalized_.y = static_cast<float>(-2.0 * mousePos.y + 1.0);
     }
 
     void VKWindow::glfwWindowPosCallback(GLFWwindow* window, int xpos, int ypos)

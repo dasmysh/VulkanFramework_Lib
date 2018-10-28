@@ -45,6 +45,12 @@ namespace vku::gfx {
          */
         void SetPosition(const glm::vec3& position);
         /**
+         *  Sets the cameras position and orientation.
+         *  @param position new camera position.
+         *  @param orientation new camera orientation.
+         */
+        void SetPositionOrientation(const glm::vec3& position, const glm::quat& orientation);
+        /**
          *  Sets the cameras position.
          *  @param view new camera view matrix.
          */

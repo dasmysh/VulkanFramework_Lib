@@ -12,12 +12,9 @@
 #include "app/VKWindow.h"
 
 #include <glm/gtc/matrix_transform.hpp>
-#include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/matrix_access.hpp>
 #include <glm/gtc/quaternion.hpp>
-#include <glm/gtx/euler_angles.hpp>
-#include <glm/gtx/vector_angle.hpp>
 
 namespace vku::gfx {
 

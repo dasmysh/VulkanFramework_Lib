@@ -28,6 +28,7 @@ namespace vku::gfx {
         projMatrix_{ projMatrix }
     {
         UpdateView();
+        projMatrix_[1][1] *= -1.0f;
     }
 
     /**
@@ -42,6 +43,7 @@ namespace vku::gfx {
         projMatrix_{ projMatrix }
     {
         UpdatePositionOrientation();
+        projMatrix_[1][1] *= -1.0f;
     }
 
     CameraBase::~CameraBase() = default;
@@ -58,6 +60,13 @@ namespace vku::gfx {
         UpdateView();
     }
 
+    void CameraBase::SetPositionOrientation(const glm::vec3& position, const glm::quat& orientation)
+    {
+        position_ = position;
+        orientation_ = orientation;
+        UpdateView();
+    }
+
     void CameraBase::SetViewMatrix(const glm::mat4& view)
     {
         viewMatrix_ = view;
@@ -67,6 +76,7 @@ namespace vku::gfx {
     void CameraBase::SetProjMatrix(const glm::mat4& proj)
     {
         projMatrix_ = proj;
+        projMatrix_[1][1] *= -1.0f;
     }
 
     void CameraBase::UpdateView()
