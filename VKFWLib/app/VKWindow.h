@@ -49,6 +49,7 @@ namespace vku {
         bool IsMouseButtonPressed(int button) const;
         bool IsKeyPressed(int key) const;
         glm::vec2 GetMousePosition() const { return currMousePosition_; }
+        glm::vec2 GetMousePositionNormalized() const { return currMousePositionNormalized_; }
 
         /** Returns the windows width. */
         unsigned int GetWidth() const { return vkSurfaceExtend_.width; }
@@ -85,6 +86,8 @@ namespace vku {
         void CharCallback(unsigned int codepoint) const;
         void CharModsCallback(unsigned int codepoint, int mods) const;
         void DropCallback(int count, const char** paths) const;
+
+        void SetMousePosition(double xpos, double ypos);
 
         /** Holds the GLFW window. */
         GLFWwindow* window_;
@@ -139,6 +142,8 @@ namespace vku {
 
         /** Holds the current mouse position. */
         glm::vec2 currMousePosition_;
+        /** Holds the current normalized (in [-1,1]) mouse position. */
+        glm::vec2 currMousePositionNormalized_;
         /** Holds the last mouse position. */
         glm::vec2 prevMousePosition_;
         /** Holds the relative mouse position. */
