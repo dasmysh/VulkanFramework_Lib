@@ -263,7 +263,7 @@ namespace vku::gfx {
         auto i = backbufferIdx * meshInfo_->GetNodes().size() + node->GetNodeIndex();
         RenderElement::UBOBinding worldMatricesBinding(&worldMatricesUBO_, 0, i);
 
-        RenderElement subMeshTemplate{ false, templateElement }; // TODO: check transparency.
+        RenderElement subMeshTemplate{ false, templateElement };
         subMeshTemplate.BindWorldMatricesUBO(worldMatricesBinding);
         for (unsigned int i = 0; i < node->GetNumberOfSubMeshes(); ++i) GetDrawElementsSubMesh(nodeWorld, camera, subMeshTemplate, meshInfo_->GetSubMesh(node->GetSubMeshID(i)), renderList);
         for (unsigned int i = 0; i < node->GetNumberOfNodes(); ++i) GetDrawElementsNode(nodeWorld, camera, backbufferIdx, templateElement, node->GetChild(i), renderList);
@@ -277,14 +277,18 @@ namespace vku::gfx {
 
 
         // bind material.
+        const auto mat = meshInfo_->GetMaterial(subMesh->GetMaterialID());
+        auto hasTransparency = (mat->alpha_ < 1.0f) || mat->hasAlpha_;
+
         auto& matDescSets = materialTextureDescriptorSets_[subMesh->GetMaterialID()];
         RenderElement::DescSetBinding materialTextureBinding(matDescSets, 2);
         RenderElement::UBOBinding materialBinding(&materialsUBO_, 1, subMesh->GetMaterialID());
 
-        renderList.push_back(templateElement);
+        renderList.emplace_back(hasTransparency, templateElement);
         renderList.back().BindUBO(materialBinding);
         renderList.back().BindDescriptorSet(materialTextureBinding);
-        renderList.back().DrawGeometry(static_cast<std::uint32_t>(subMesh->GetNumberOfIndices()), 1, static_cast<std::uint32_t>(subMesh->GetIndexOffset()), 0, 0, aabb.NewFromTransform(camera.GetViewMatrix()));
+        renderList.back().DrawGeometry(static_cast<std::uint32_t>(subMesh->GetNumberOfIndices()), 1,
+            static_cast<std::uint32_t>(subMesh->GetIndexOffset()), 0, 0, camera.GetViewMatrix(), aabb);
     }
 
     void Mesh::SetVertexBuffer(const DeviceBuffer* vtxBuffer, std::size_t offset)

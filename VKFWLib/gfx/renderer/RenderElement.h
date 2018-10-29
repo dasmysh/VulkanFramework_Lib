@@ -35,7 +35,8 @@ namespace vku::gfx {
         inline void BindUBO(UBOBinding ubo);
         inline void BindDescriptorSet(DescSetBinding descSet);
         inline void DrawGeometry(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex,
-            std::uint32_t vertexOffset, std::uint32_t firstInstance, const math::AABB3<float>& boundingBox);
+            std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix,
+            const math::AABB3<float>& boundingBox);
 
         inline void DrawElement(vk::CommandBuffer cmdBuffer, const RenderElement* lastElement = nullptr);
 
@@ -83,7 +84,8 @@ namespace vku::gfx {
         pipeline_{ referenceElement.pipeline_ },
         pipelineLayout_{ referenceElement.pipelineLayout_ },
         vertexBuffer_{ referenceElement.vertexBuffer_ },
-        indexBuffer_{ referenceElement.indexBuffer_ }
+        indexBuffer_{ referenceElement.indexBuffer_ },
+        worldMatricesUBO_{ referenceElement.worldMatricesUBO_ }
     {
     }
 
@@ -113,7 +115,8 @@ namespace vku::gfx {
     }
 
     void RenderElement::DrawGeometry(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex,
-        std::uint32_t vertexOffset, std::uint32_t firstInstance, const math::AABB3<float>& boundingBox)
+        std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix,
+        const math::AABB3<float>& boundingBox)
     {
         indexCount_ = indexCount;
         instanceCount_ = instanceCount;
@@ -121,7 +124,30 @@ namespace vku::gfx {
         vertexOffset_ = vertexOffset;
         firstInstance_ = firstInstance;
 
-        // TODO: add camera distance [10/29/2018 Sebastian Maisch]
+        auto bbCenter = 0.5f * (boundingBox.minmax_[0] + boundingBox.minmax_[1]);
+        auto viewAxis = glm::transpose(glm::mat3(viewMatrix))[2];
+        cameraDistance_ = glm::dot(viewAxis, bbCenter);
+    }
+
+    void RenderElement::DrawElement(vk::CommandBuffer cmdBuffer, const RenderElement* lastElement /*= nullptr*/)
+    {
+        if (!lastElement || lastElement->pipeline_ == pipeline_)
+            cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline_);
+        if (!lastElement || lastElement->vertexBuffer_ == vertexBuffer_)
+            cmdBuffer.bindVertexBuffers(0, 1, vertexBuffer_.first->GetBufferPtr(), &vertexBuffer_.second);
+        if (!lastElement || lastElement->indexBuffer_ == indexBuffer_)
+            cmdBuffer.bindIndexBuffer(indexBuffer_.first->GetBuffer(), indexBuffer_.second, vk::IndexType::eUint32);
+
+        std::get<0>(worldMatricesUBO_)->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, pipelineLayout_,
+            std::get<1>(worldMatricesUBO_), std::get<2>(worldMatricesUBO_));
+
+        for (const auto& ubo : generalUBOs_)
+            std::get<0>(ubo)->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, pipelineLayout_, std::get<1>(ubo), std::get<2>(ubo));
+
+        for (const auto& ds : generalDescSets_)
+            cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout_, ds.second, ds.first, nullptr);
+
+        cmdBuffer.drawIndexed(indexCount_, instanceCount_, firstIndex_, vertexOffset_, firstInstance_);
     }
 
 }
