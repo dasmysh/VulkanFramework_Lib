@@ -21,6 +21,8 @@ namespace vku::gfx {
     class MemoryGroup;
     class DeviceBuffer;
     class QueuedDeviceTransfer;
+    class RenderElement;
+    class CameraBase;
 
     struct WorldMatrixUBO
     {
@@ -68,6 +70,14 @@ namespace vku::gfx {
         void Draw(vk::CommandBuffer cmdBuffer, std::size_t backbufferIdx, vk::PipelineLayout pipelineLayout) const;
         void DrawNode(vk::CommandBuffer cmdBuffer, std::size_t backbufferIdx, vk::PipelineLayout pipelineLayout, const SceneMeshNode* node) const;
         void DrawSubMesh(vk::CommandBuffer cmdBuffer, vk::PipelineLayout pipelineLayout, const SubMesh* subMesh) const;
+
+        void GetDrawElements(const glm::mat4& worldMatrix, const CameraBase& camera, std::size_t backbufferIdx, vk::Pipeline pipeline,
+            vk::PipelineLayout pipelineLayout, std::vector<RenderElement>& renderList) const;
+
+        void GetDrawElementsNode(const glm::mat4& worldMatrix, const CameraBase& camera, std::size_t backbufferIdx,
+            const RenderElement& templateElement, const SceneMeshNode* node, std::vector<RenderElement>& renderList) const;
+        void GetDrawElementsSubMesh(const glm::mat4& worldMatrix, const CameraBase& camera, const RenderElement& templateElement,
+            const SubMesh* subMesh, std::vector<RenderElement>& renderList) const;
 
     private:
         Mesh(const LogicalDevice* device, std::shared_ptr<const MeshInfo> meshInfo, UniformBufferObject&& materialsUBO,

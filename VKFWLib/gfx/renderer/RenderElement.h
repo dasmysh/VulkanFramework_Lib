@@ -11,6 +11,9 @@
 #include <tuple>
 #include <glm/mat4x4.hpp>
 
+#include "main.h"
+#include "core/math/primitives.h"
+
 namespace vku::gfx {
 
     class DeviceBuffer;
@@ -24,6 +27,7 @@ namespace vku::gfx {
         using DescSetBinding = std::pair<vk::DescriptorSet, std::uint32_t>;
 
         RenderElement(bool isTransparent, vk::Pipeline pipeline, vk::PipelineLayout pipelineLayout);
+        RenderElement(bool isTransparent, const RenderElement& referenceElement);
 
         inline void BindVertexBuffer(BufferReference vtxBuffer);
         inline void BindIndexBuffer(BufferReference idxBuffer);
@@ -31,7 +35,7 @@ namespace vku::gfx {
         inline void BindUBO(UBOBinding ubo);
         inline void BindDescriptorSet(DescSetBinding descSet);
         inline void DrawGeometry(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex,
-            std::uint32_t vertexOffset, std::uint32_t firstInstance, const AABB3& boundingBox);
+            std::uint32_t vertexOffset, std::uint32_t firstInstance, const math::AABB3<float>& boundingBox);
 
         inline void DrawElement(vk::CommandBuffer cmdBuffer, const RenderElement* lastElement = nullptr);
 
@@ -52,42 +56,53 @@ namespace vku::gfx {
         vk::Pipeline pipeline_;
         vk::PipelineLayout pipelineLayout_;
 
-        BufferReference vertexBuffer_;
-        BufferReference indexBuffer_;
-        UBOBinding worldMatricesUBO_;
+        BufferReference vertexBuffer_ = BufferReference(nullptr, 0);
+        BufferReference indexBuffer_ = BufferReference(nullptr, 0);
+        UBOBinding worldMatricesUBO_ = UBOBinding(nullptr, 0, 0);
         std::vector<UBOBinding> generalUBOs_;
         std::vector<DescSetBinding> generalDescSets_;
 
-        std::uint32_t indexCount_;
-        std::uint32_t instanceCount_;
-        std::uint32_t firstIndex_;
-        std::uint32_t vertexOffset_;
-        std::uint32_t firstInstance_;
-        float cameraDistance_;
+        std::uint32_t indexCount_ = 0;
+        std::uint32_t instanceCount_ = 0;
+        std::uint32_t firstIndex_ = 0;
+        std::uint32_t vertexOffset_ = 0;
+        std::uint32_t firstInstance_ = 0;
+        float cameraDistance_ = 0.0f;
 
     };
 
-    RenderElement::RenderElement(bool isTransparent, vk::Pipeline pipeline, vk::PipelineLayout pipelineLayout)
+    RenderElement::RenderElement(bool isTransparent, vk::Pipeline pipeline, vk::PipelineLayout pipelineLayout) :
+        isTransparent_{ isTransparent },
+        pipeline_{ pipeline },
+        pipelineLayout_{ pipelineLayout }
     {
-        // TODO: implmenent [10/29/2018 Sebastian Maisch]
     }
 
-    void RenderElement::BindVertexBuffer(const BufferReference& vtxBuffer)
+    RenderElement::RenderElement(bool isTransparent, const RenderElement& referenceElement) :
+        isTransparent_{ isTransparent },
+        pipeline_{ referenceElement.pipeline_ },
+        pipelineLayout_{ referenceElement.pipelineLayout_ },
+        vertexBuffer_{ referenceElement.vertexBuffer_ },
+        indexBuffer_{ referenceElement.indexBuffer_ }
+    {
+    }
+
+    void RenderElement::BindVertexBuffer(BufferReference vtxBuffer)
     {
         vertexBuffer_ = vtxBuffer;
     }
 
-    void RenderElement::BindIndexBuffer(const BufferReference& idxBuffer)
+    void RenderElement::BindIndexBuffer(BufferReference idxBuffer)
     {
         indexBuffer_ = idxBuffer;
     }
 
-    void RenderElement::BindWorldMatricesUBO(const UBOBinding& worldMatricesUBO)
+    void RenderElement::BindWorldMatricesUBO(UBOBinding worldMatricesUBO)
     {
         worldMatricesUBO_ = worldMatricesUBO;
     }
 
-    void RenderElement::BindUBO(const UBOBinding& ubo)
+    void RenderElement::BindUBO(UBOBinding ubo)
     {
         generalUBOs_.push_back(ubo);
     }
@@ -98,7 +113,7 @@ namespace vku::gfx {
     }
 
     void RenderElement::DrawGeometry(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex,
-        std::uint32_t vertexOffset, std::uint32_t firstInstance, const AABB3& boundingBox)
+        std::uint32_t vertexOffset, std::uint32_t firstInstance, const math::AABB3<float>& boundingBox)
     {
         indexCount_ = indexCount;
         instanceCount_ = instanceCount;

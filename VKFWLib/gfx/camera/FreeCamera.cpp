@@ -60,7 +60,6 @@ namespace vku::gfx {
         float moveLength = glm::length(camMove);
         if (moveLength > glm::epsilon<float>()) camMove = (camMove / moveLength) * static_cast<float>(moveSpeed_ * elapsedTime);
         auto camPos = GetPosition() + glm::inverse(GetOrientation()) * camMove;
-        SetPosition(camPos);
 
 
         const double rotSpeed = 60.0;
@@ -81,10 +80,8 @@ namespace vku::gfx {
         currentPY_.x = glm::clamp(currentPY_.x, -glm::half_pi<float>() * 0.99f, glm::half_pi<float>() * 0.99f);
         auto newOrientation = glm::quat(glm::vec3(currentPY_.x, 0.0f, 0.0f)) * glm::quat(glm::vec3(0.0f, currentPY_.y, 0.0f));
 
-        SetOrientation(newOrientation);
-
         auto aspectRatio = static_cast<float>(sender->GetClientSize().x) / static_cast<float>(sender->GetClientSize().y);
-        SetProjMatrix(glm::perspective(fovY_, aspectRatio, zNear_, zFar_));
+        SetPositionOrientationProj(camPos, newOrientation, glm::perspective(fovY_, aspectRatio, zNear_, zFar_));
     }
 
     /**
