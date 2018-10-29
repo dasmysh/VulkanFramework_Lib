@@ -213,6 +213,7 @@ namespace vku::gfx {
         cmdBuffer.bindVertexBuffers(0, 1, vertexBuffer_.first->GetBufferPtr(), &vertexBuffer_.second);
         cmdBuffer.bindIndexBuffer(indexBuffer_.first->GetBuffer(), indexBuffer_.second, vk::IndexType::eUint32);
 
+        // TODO: add culling? [10/28/2018 Sebastian Maisch]
         // TODO: add depth sorting here...
         DrawNode(cmdBuffer, backbufferIdx, pipelineLayout, meshInfo_->GetRootNode());
     }
