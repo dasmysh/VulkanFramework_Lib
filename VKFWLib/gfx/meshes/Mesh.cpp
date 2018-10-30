@@ -12,7 +12,7 @@
 #include "gfx/Texture2D.h"
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
-#include "gfx/renderer/RenderElement.h"
+#include "gfx/renderer/RenderList.h"
 #include "gfx/camera/CameraBase.h"
 #include "core/math/math.h"
 
@@ -240,19 +240,19 @@ namespace vku::gfx {
         cmdBuffer.drawIndexed(static_cast<std::uint32_t>(subMesh->GetNumberOfIndices()), 1, static_cast<std::uint32_t>(subMesh->GetIndexOffset()), 0, 0);
     }
 
-    void Mesh::GetDrawElements(const glm::mat4& worldMatrix, const CameraBase& camera, std::size_t backbufferIdx, vk::Pipeline pipeline,
-        vk::PipelineLayout pipelineLayout, std::vector<RenderElement>& renderList) const
+    void Mesh::GetDrawElements(const glm::mat4& worldMatrix, const CameraBase& camera, std::size_t backbufferIdx, RenderList& renderList) const
     {
-        RenderElement templateElement{ false, pipeline, pipelineLayout };
-        templateElement.BindVertexBuffer(vertexBuffer_);
-        templateElement.BindIndexBuffer(indexBuffer_);
+        renderList.SetCurrentGeometry(vertexBuffer_, indexBuffer_);
+        // RenderElement templateElement{ false, pipeline, pipelineLayout };
+        // templateElement.BindVertexBuffer(vertexBuffer_);
+        // templateElement.BindIndexBuffer(indexBuffer_);
 
         auto meshWorld = meshInfo_->GetRootTransform() * worldMatrix;
-        GetDrawElementsNode(meshWorld, camera, backbufferIdx, templateElement, meshInfo_->GetRootNode(), renderList);
+        GetDrawElementsNode(meshWorld, camera, backbufferIdx, meshInfo_->GetRootNode(), renderList);
     }
 
-    void Mesh::GetDrawElementsNode(const glm::mat4& worldMatrix, const CameraBase& camera, std::size_t backbufferIdx,
-        const RenderElement& templateElement, const SceneMeshNode* node, std::vector<RenderElement>& renderList) const
+    void Mesh::GetDrawElementsNode(const glm::mat4& worldMatrix, const CameraBase& camera,
+        std::size_t backbufferIdx, const SceneMeshNode* node, RenderList& renderList) const
     {
         auto nodeWorld = node->GetLocalTransform() * worldMatrix;
 
@@ -261,16 +261,17 @@ namespace vku::gfx {
 
         // bind world matrices
         auto i = backbufferIdx * meshInfo_->GetNodes().size() + node->GetNodeIndex();
-        RenderElement::UBOBinding worldMatricesBinding(&worldMatricesUBO_, 0, i);
+        renderList.SetCurrentWorldMatrices(RenderElement::UBOBinding{ &worldMatricesUBO_, 0, i });
+        // RenderElement::UBOBinding worldMatricesBinding();
 
-        RenderElement subMeshTemplate{ false, templateElement };
-        subMeshTemplate.BindWorldMatricesUBO(worldMatricesBinding);
-        for (unsigned int i = 0; i < node->GetNumberOfSubMeshes(); ++i) GetDrawElementsSubMesh(nodeWorld, camera, subMeshTemplate, meshInfo_->GetSubMesh(node->GetSubMeshID(i)), renderList);
-        for (unsigned int i = 0; i < node->GetNumberOfNodes(); ++i) GetDrawElementsNode(nodeWorld, camera, backbufferIdx, templateElement, node->GetChild(i), renderList);
+        // RenderElement subMeshTemplate{ false, templateElement };
+        // subMeshTemplate.BindWorldMatricesUBO(worldMatricesBinding);
+        for (unsigned int i = 0; i < node->GetNumberOfSubMeshes(); ++i) GetDrawElementsSubMesh(nodeWorld, camera, meshInfo_->GetSubMesh(node->GetSubMeshID(i)), renderList);
+        for (unsigned int i = 0; i < node->GetNumberOfNodes(); ++i) GetDrawElementsNode(nodeWorld, camera, backbufferIdx, node->GetChild(i), renderList);
     }
 
-    void Mesh::GetDrawElementsSubMesh(const glm::mat4& worldMatrix, const CameraBase& camera, const RenderElement& templateElement,
-        const SubMesh* subMesh, std::vector<RenderElement>& renderList) const
+    void Mesh::GetDrawElementsSubMesh(const glm::mat4& worldMatrix, const CameraBase& camera,
+        const SubMesh* subMesh, RenderList& renderList) const
     {
         auto aabb = subMesh->GetLocalAABB().NewFromTransform(worldMatrix);
         if (!math::AABBInFrustumTest(camera.GetViewFrustum(), aabb)) return;
@@ -284,11 +285,19 @@ namespace vku::gfx {
         RenderElement::DescSetBinding materialTextureBinding(matDescSets, 2);
         RenderElement::UBOBinding materialBinding(&materialsUBO_, 1, subMesh->GetMaterialID());
 
-        renderList.emplace_back(hasTransparency, templateElement);
-        renderList.back().BindUBO(materialBinding);
-        renderList.back().BindDescriptorSet(materialTextureBinding);
-        renderList.back().DrawGeometry(static_cast<std::uint32_t>(subMesh->GetNumberOfIndices()), 1,
+        RenderElement* re = nullptr;
+        if (hasTransparency) re = &renderList.AddTransparentElement(static_cast<std::uint32_t>(subMesh->GetNumberOfIndices()), 1,
             static_cast<std::uint32_t>(subMesh->GetIndexOffset()), 0, 0, camera.GetViewMatrix(), aabb);
+        else re = &renderList.AddOpaqueElement(static_cast<std::uint32_t>(subMesh->GetNumberOfIndices()), 1,
+            static_cast<std::uint32_t>(subMesh->GetIndexOffset()), 0, 0, camera.GetViewMatrix(), aabb);
+
+        re->BindUBO(materialBinding);
+        re->BindDescriptorSet(materialTextureBinding);
+        // renderList.emplace_back(hasTransparency, templateElement);
+        // renderList.back().BindUBO(materialBinding);
+        // renderList.back().BindDescriptorSet(materialTextureBinding);
+        // renderList.back().DrawGeometry(static_cast<std::uint32_t>(subMesh->GetNumberOfIndices()), 1,
+        //     static_cast<std::uint32_t>(subMesh->GetIndexOffset()), 0, 0, camera.GetViewMatrix(), aabb);
     }
 
     void Mesh::SetVertexBuffer(const DeviceBuffer* vtxBuffer, std::size_t offset)
