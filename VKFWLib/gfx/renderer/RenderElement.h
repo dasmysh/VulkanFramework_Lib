@@ -87,6 +87,7 @@ namespace vku::gfx {
         pipelineLayout_{ referenceElement.pipelineLayout_ },
         vertexBuffer_{ referenceElement.vertexBuffer_ },
         indexBuffer_{ referenceElement.indexBuffer_ },
+        cameraMatricesUBO_{ referenceElement.cameraMatricesUBO_ },
         worldMatricesUBO_{ referenceElement.worldMatricesUBO_ }
     {
     }
