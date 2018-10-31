@@ -101,6 +101,7 @@ namespace vku::gfx {
         assert(state_);
         vk::PipelineDynamicStateCreateInfo dynamicState{ vk::PipelineDynamicStateCreateFlags(), static_cast<std::uint32_t>(state_->dynamicStates_.size()), state_->dynamicStates_.data() };
 
+        // TODO: allow derivates? [10/30/2018 Sebastian Maisch]
         vk::GraphicsPipelineCreateInfo pipelineInfo{ vk::PipelineCreateFlags(),
             static_cast<std::uint32_t>(state_->shaderStageInfos_.size()), state_->shaderStageInfos_.data(),
             &state_->vertexInputCreateInfo_, &state_->inputAssemblyCreateInfo_, &state_->tesselation_,

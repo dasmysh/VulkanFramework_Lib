@@ -54,8 +54,7 @@ namespace vku::gfx {
         auto camPos = radius * (matOrient * glm::vec3(0.0f, 0.0f, 1.0f));
 
         auto aspectRatio = static_cast<float>(sender->GetClientSize().x) / static_cast<float>(sender->GetClientSize().y);
-        SetPositionOrientation(camPos, glm::inverse(camOrient));
-        SetProjMatrix(glm::perspective(fovY_, aspectRatio, zNear_, zFar_));
+        SetPositionOrientationProj(camPos, glm::inverse(camOrient), glm::perspective(fovY_, aspectRatio, zNear_, zFar_));
     }
 
     /**

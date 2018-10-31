@@ -342,16 +342,13 @@ namespace vku {
 
         for (auto& window : windows_) {
             window.PrepareFrame();
-        }
 
-        if (!this->pause_ && (!config_.pauseOnKillFocus_ || GetFocusedWindow())) {
-            for (auto& window : windows_) {
+            if (!this->pause_ && (!config_.pauseOnKillFocus_ || GetFocusedWindow())) {
                 FrameMove(static_cast<float>(currentTime_), static_cast<float>(elapsedTime_), &window);
             }
-        }
 
-        for (auto& window : windows_) {
             RenderScene(&window);
+            if (IsGUIMode()) RenderGUI(&window);
             window.DrawCurrentCommandBuffer();
             window.SubmitFrame();
         }

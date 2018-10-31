@@ -11,6 +11,7 @@
 #include <glm/vec3.hpp>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/mat4x4.hpp>
+#include "core/math/primitives.h"
 
 namespace vku::gfx {
 
@@ -32,6 +33,8 @@ namespace vku::gfx {
         const glm::vec3& GetPosition() const noexcept { return position_; }
         /** Returns the cameras orientation. */
         const glm::quat& GetOrientation() const noexcept { return orientation_; }
+        /** Returns the camera view frustum. */
+        const math::Frustum<float>& GetViewFrustum() const noexcept { return viewFrustum_; }
 
     protected:
         /**
@@ -60,6 +63,13 @@ namespace vku::gfx {
          *  @param proj new camera projection matrix.
          */
         void SetProjMatrix(const glm::mat4& proj);
+        /**
+         *  Sets the cameras position and orientation.
+         *  @param position new camera position.
+         *  @param orientation new camera orientation.
+         *  @param proj new camera projection matrix.
+         */
+        void SetPositionOrientationProj(const glm::vec3& position, const glm::quat& orientation, const glm::mat4& proj);
 
     private:
         void UpdateView();
@@ -73,5 +83,7 @@ namespace vku::gfx {
         glm::mat4 viewMatrix_;
         /** Holds the camera projection matrix. */
         glm::mat4 projMatrix_;
+        /** The camera view frustum. */
+        math::Frustum<float> viewFrustum_;
     };
 }

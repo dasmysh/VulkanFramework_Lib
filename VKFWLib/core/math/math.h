@@ -57,4 +57,26 @@ namespace vku::math {
         // ReSharper restore CppUsingResultOfAssignmentAsCondition
         return j << 1;
     }
+
+
+    /**
+     *  Tests if a AABB3 is inside or intersected by a Frustum (culling test).
+     *  @param real the floating point type used.
+     *  @param f the frustum.
+     *  @param b the box.
+     */
+    template<typename real> bool AABBInFrustumTest(const Frustum<real>& f, const AABB3<real>& b) {
+        auto& bmax = b.minmax_[1];
+        for (unsigned int i = 0; i < 6; ++i) {
+            auto& plane = f.planes_[i];
+            glm::vec3 p{ b.minmax_[0] };
+            if (plane.x >= 0) p.x = bmax.x;
+            if (plane.y >= 0) p.y = bmax.y;
+            if (plane.z >= 0) p.z = bmax.z;
+
+            // is the positive vertex outside?
+            if ((glm::dot(glm::vec3(plane), p) + plane.w) < 0) return false;
+        }
+        return true;
+    }
 }

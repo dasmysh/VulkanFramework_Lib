@@ -114,7 +114,7 @@ namespace vku {
         /** Render the scene. */
         virtual void RenderScene(const VKWindow* window) = 0;
         /** Render the scenes GUI. */
-        virtual void RenderGUI() = 0;
+        virtual void RenderGUI(const VKWindow* window) = 0;
 
     private:
         void InitVulkan(const std::string& applicationName, std::uint32_t applicationVersion);
