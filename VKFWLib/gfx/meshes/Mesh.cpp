@@ -243,9 +243,6 @@ namespace vku::gfx {
     void Mesh::GetDrawElements(const glm::mat4& worldMatrix, const CameraBase& camera, std::size_t backbufferIdx, RenderList& renderList) const
     {
         renderList.SetCurrentGeometry(vertexBuffer_, indexBuffer_);
-        // RenderElement templateElement{ false, pipeline, pipelineLayout };
-        // templateElement.BindVertexBuffer(vertexBuffer_);
-        // templateElement.BindIndexBuffer(indexBuffer_);
 
         auto meshWorld = meshInfo_->GetRootTransform() * worldMatrix;
         GetDrawElementsNode(meshWorld, camera, backbufferIdx, meshInfo_->GetRootNode(), renderList);
@@ -262,10 +259,7 @@ namespace vku::gfx {
         // bind world matrices
         auto i = backbufferIdx * meshInfo_->GetNodes().size() + node->GetNodeIndex();
         renderList.SetCurrentWorldMatrices(RenderElement::UBOBinding{ &worldMatricesUBO_, 0, i });
-        // RenderElement::UBOBinding worldMatricesBinding();
 
-        // RenderElement subMeshTemplate{ false, templateElement };
-        // subMeshTemplate.BindWorldMatricesUBO(worldMatricesBinding);
         for (unsigned int i = 0; i < node->GetNumberOfSubMeshes(); ++i) GetDrawElementsSubMesh(nodeWorld, camera, meshInfo_->GetSubMesh(node->GetSubMeshID(i)), renderList);
         for (unsigned int i = 0; i < node->GetNumberOfNodes(); ++i) GetDrawElementsNode(nodeWorld, camera, backbufferIdx, node->GetChild(i), renderList);
     }
@@ -293,11 +287,6 @@ namespace vku::gfx {
 
         re->BindUBO(materialBinding);
         re->BindDescriptorSet(materialTextureBinding);
-        // renderList.emplace_back(hasTransparency, templateElement);
-        // renderList.back().BindUBO(materialBinding);
-        // renderList.back().BindDescriptorSet(materialTextureBinding);
-        // renderList.back().DrawGeometry(static_cast<std::uint32_t>(subMesh->GetNumberOfIndices()), 1,
-        //     static_cast<std::uint32_t>(subMesh->GetIndexOffset()), 0, 0, camera.GetViewMatrix(), aabb);
     }
 
     void Mesh::SetVertexBuffer(const DeviceBuffer* vtxBuffer, std::size_t offset)
