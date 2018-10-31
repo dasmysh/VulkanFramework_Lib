@@ -3,7 +3,7 @@
  * @author Sebastian Maisch <sebastian.maisch@googlemail.com>
  * @date   2016.10.30
  *
- * @brief  Declaration of a vulkan graphics pipeline object.
+ * @brief  Declaration of a Vulkan graphics pipeline object.
  */
 
 #pragma once
@@ -51,19 +51,19 @@ namespace vku::gfx {
             vk::PipelineVertexInputStateCreateInfo vertexInputCreateInfo_;
             /** Holds the input assembly state. */
             vk::PipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo_;
-            /** Holds the viewports. */
+            /** Holds the view-ports. */
             std::vector<vk::Viewport> viewports_;
             /** Holds the scissors. */
             std::vector<vk::Rect2D> scissors_;
             /** Holds the viewport state */
             vk::PipelineViewportStateCreateInfo viewportState_;
-            /** Holds the multisampling state. */
+            /** Holds the multi-sampling state. */
             vk::PipelineMultisampleStateCreateInfo multisampling_;
             /** Holds the depth stencil state. */
             vk::PipelineDepthStencilStateCreateInfo depthStencil_;
             /** Holds the rasterizer state. */
             vk::PipelineRasterizationStateCreateInfo rasterizer_;
-            /** Holds the tesselation state. */
+            /** Holds the tessellation state. */
             vk::PipelineTessellationStateCreateInfo tesselation_;
             /** Holds the color blend attachments. */
             std::vector<vk::PipelineColorBlendAttachmentState> colorBlendAttachments_;

@@ -19,21 +19,21 @@ namespace vku::gfx {
         using BufferReference = RenderElement::BufferReference;
         using UBOBinding = RenderElement::UBOBinding;
 
-        RenderList(const CameraBase* camera, UBOBinding cameraUBO);
+        inline RenderList(const CameraBase* camera, UBOBinding cameraUBO);
 
         inline void SetCurrentPipeline(vk::PipelineLayout currentPipelineLayout,
             vk::Pipeline currentOpaquePipeline, vk::Pipeline currentTransparentPipeline);
         inline void SetCurrentGeometry(BufferReference currentVertexBuffer, BufferReference currentIndexBuffer);
         inline void SetCurrentWorldMatrices(UBOBinding currentWorldMatrices);
 
-        RenderElement& AddOpaqueElement(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex,
+        inline RenderElement& AddOpaqueElement(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex,
             std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix,
             const math::AABB3<float>& boundingBox);
-        RenderElement& AddTransparentElement(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex,
+        inline RenderElement& AddTransparentElement(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex,
             std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix,
             const math::AABB3<float>& boundingBox);
 
-        void Render(vk::CommandBuffer cmdBuffer);
+        inline void Render(vk::CommandBuffer cmdBuffer);
 
     private:
         std::vector<RenderElement> opaqueElements_;
@@ -86,6 +86,7 @@ namespace vku::gfx {
         result.BindCameraMatricesUBO(cameraMatricesUBO_);
         result.BindWorldMatricesUBO(currentWorldMatrices_);
         result.DrawGeometry(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance, viewMatrix, boundingBox);
+        return result;
     }
 
     vku::gfx::RenderElement& RenderList::AddTransparentElement(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex, std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix, const math::AABB3<float>& boundingBox)
@@ -96,6 +97,7 @@ namespace vku::gfx {
         result.BindCameraMatricesUBO(cameraMatricesUBO_);
         result.BindWorldMatricesUBO(currentWorldMatrices_);
         result.DrawGeometry(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance, viewMatrix, boundingBox);
+        return result;
     }
 
     void RenderList::Render(vk::CommandBuffer cmdBuffer)

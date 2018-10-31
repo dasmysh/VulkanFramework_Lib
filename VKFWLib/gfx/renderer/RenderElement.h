@@ -26,8 +26,8 @@ namespace vku::gfx {
         using UBOBinding = std::tuple<const UniformBufferObject*, std::uint32_t, std::size_t>;
         using DescSetBinding = std::pair<vk::DescriptorSet, std::uint32_t>;
 
-        RenderElement(bool isTransparent, vk::Pipeline pipeline, vk::PipelineLayout pipelineLayout);
-        RenderElement(bool isTransparent, const RenderElement& referenceElement);
+        inline RenderElement(bool isTransparent, vk::Pipeline pipeline, vk::PipelineLayout pipelineLayout);
+        inline RenderElement(bool isTransparent, const RenderElement& referenceElement);
 
         inline RenderElement& BindVertexBuffer(BufferReference vtxBuffer);
         inline RenderElement& BindIndexBuffer(BufferReference idxBuffer);
