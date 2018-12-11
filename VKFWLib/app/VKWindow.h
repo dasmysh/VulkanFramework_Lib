@@ -152,6 +152,8 @@ namespace vku {
         bool mouseInWindow_;
 
         // window status
+        /** <c>true</c> if the framebuffer was resized but resize was not handled. */
+        bool frameBufferResize_ = false;
         /** <c>true</c> if minimized. */
         bool minimized_;
         /** <c>true</c> if maximized. */

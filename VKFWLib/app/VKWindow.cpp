@@ -303,6 +303,12 @@ namespace vku {
 
     void VKWindow::RecreateSwapChain()
     {
+        int width = 0, height = 0;
+        while (width == 0 || height == 0) {
+            glfwGetFramebufferSize(window_, &width, &height);
+            glfwWaitEvents();
+        }
+
         logicalDevice_->GetDevice().waitIdle();
 
         vkCommandBuffers_.clear();
@@ -334,7 +340,7 @@ namespace vku {
 
         auto presentMode = cfg::GetVulkanPresentModeFromConfig(*config_);
         auto surfaceCaps = logicalDevice_->GetPhysicalDevice().getSurfaceCapabilitiesKHR(*vkSurface_);
-        glm::u32vec2 configSurfaceSize(static_cast<std::uint32_t>(config_->windowWidth_), static_cast<std::uint32_t>(config_->windowHeight_));
+        glm::u32vec2 configSurfaceSize(static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height));
         glm::u32vec2 minSurfaceSize(surfaceCaps.minImageExtent.width, surfaceCaps.minImageExtent.height);
         glm::u32vec2 maxSurfaceSize(surfaceCaps.maxImageExtent.width, surfaceCaps.maxImageExtent.height);
         auto surfaceExtend = glm::clamp(configSurfaceSize, minSurfaceSize, maxSurfaceSize);
@@ -594,8 +600,18 @@ namespace vku {
         vk::PresentInfoKHR presentInfo{ 1, &(*vkRenderingFinishedSemaphore_), 1, swapchains, &currentlyRenderedImage_ }; //<- wait on these semaphores
         auto result = logicalDevice_->GetQueue(graphicsQueue_, 0).presentKHR(presentInfo);
 
-        if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR) {
+        if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || frameBufferResize_) {
+            frameBufferResize_ = false;
             RecreateSwapChain();
+
+            try {
+                // TODO: notify all resources depending on this...
+                ApplicationBase::instance().OnResize(config_->windowWidth_, config_->windowHeight_, this);
+            }
+            catch (std::runtime_error e) {
+                LOG(FATAL) << "Could not reacquire resources after resize: " << e.what();
+                throw std::runtime_error("Could not reacquire resources after resize.");
+            }
         }
         else if (result != vk::Result::eSuccess) {
             LOG(FATAL) << "Could not present swap chain image (" << vk::to_string(result) << ").";
@@ -674,20 +690,7 @@ namespace vku {
 
         config_->windowWidth_ = width;
         config_->windowHeight_ = height;
-
-        RecreateSwapChain();
-
-        // TODO: resize external frame buffer object?
-        // this->Resize(width, height);
-
-        try {
-            // TODO: notify all resources depending on this...
-            ApplicationBase::instance().OnResize(width, height, this);
-        }
-        catch (std::runtime_error e) {
-            LOG(FATAL) << "Could not reacquire resources after resize: " << e.what();
-            throw std::runtime_error("Could not reacquire resources after resize.");
-        }
+        frameBufferResize_ = true;
     }
 
     void VKWindow::WindowFocusCallback(int focused)
