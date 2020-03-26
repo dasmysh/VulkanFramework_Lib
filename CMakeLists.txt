@@ -1,174 +1,106 @@
-cmake_minimum_required(VERSION 3.9)
+cmake_minimum_required(VERSION 3.15)
 
-set(FWLIB_LIBNAME VKFWLib)
-set(FWLIB_LIBNAME ${FWLIB_LIBNAME} PARENT_SCOPE)
-project(${FWLIB_LIBNAME})
+project(VKFWLib CXX)
 
-include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/CompileSpirvShader.cmake")
+include(cmake/StandardProjectSettings.cmake)
 
-find_package(Vulkan 1.1.85.0 REQUIRED)
+add_library(vkfw_options INTERFACE)
+target_compile_features(vkfw_options INTERFACE cxx_std_17)
 
-set(GLFW_BUILD_DOCS OFF CACHE BOOL "Build the GLFW documentation" FORCE)
-set(GLFW_BUILD_EXAMPLES OFF CACHE BOOL "Build the GLFW example programs" FORCE)
-set(GLFW_BUILD_TESTS OFF CACHE BOOL "Build the GLFW test programs" FORCE)
-set(GLFW_INSTALL OFF CACHE BOOL "Generate installation target" FORCE)
-add_subdirectory(extern/glfw)
+add_library(vkfw_warnings INTERFACE)
 
-option(ADD_FATAL_EXAMPLE OFF)
-option(USE_DYNAMIC_LOGGING_LEVELS ON)
-option(G3_SHARED_LIB OFF)
-add_subdirectory(extern/g3log)
+include(cmake/CompilerWarnings.cmake)
+set_project_warnings(vkfw_warnings)
 
-option(ASSIMP_BUILD_ASSIMP_TOOLS OFF)
-option(ASSIMP_BUILD_SAMPLES OFF)
-option(ASSIMP_BUILD_TESTS OFF)
-option(ASSIMP_NO_EXPORT ON)
+# enable doxygen
+include(cmake/Doxygen.cmake)
+enable_doxygen()
 
-# Disable all unused importers
-option(ASSIMP_BUILD_3DS_IMPORTER OFF)
-option(ASSIMP_BUILD_3D_IMPORTER OFF)
-option(ASSIMP_BUILD_3MF_IMPORTER OFF)
-option(ASSIMP_BUILD_AC_IMPORTER OFF)
-option(ASSIMP_BUILD_AMF_IMPORTER OFF)
-option(ASSIMP_BUILD_AMF_IMPORTER OFF)
-option(ASSIMP_BUILD_ASE_IMPORTER OFF)
-option(ASSIMP_BUILD_ASSBIN_IMPORTER OFF)
-option(ASSIMP_BUILD_ASSXML_IMPORTER OFF)
-option(ASSIMP_BUILD_B3D_IMPORTER OFF)
-option(ASSIMP_BUILD_BLEND_IMPORTER OFF)
-option(ASSIMP_BUILD_BVH_IMPORTER OFF)
-option(ASSIMP_BUILD_COB_IMPORTER OFF)
-option(ASSIMP_BUILD_CSM_IMPORTER OFF)
-option(ASSIMP_BUILD_DXF_IMPORTER OFF)
-option(ASSIMP_BUILD_GLTF_IMPORTER OFF)
-option(ASSIMP_BUILD_HMP_IMPORTER OFF)
-option(ASSIMP_BUILD_IFC_IMPORTER OFF)
-option(ASSIMP_BUILD_IRRMESH_IMPORTER OFF)
-option(ASSIMP_BUILD_IRR_IMPORTER OFF)
-option(ASSIMP_BUILD_LWO_IMPORTER OFF)
-option(ASSIMP_BUILD_LWS_IMPORTER OFF)
-option(ASSIMP_BUILD_MD2_IMPORTER OFF)
-option(ASSIMP_BUILD_MD3_IMPORTER OFF)
-option(ASSIMP_BUILD_MD5_IMPORTER OFF)
-option(ASSIMP_BUILD_MDC_IMPORTER OFF)
-option(ASSIMP_BUILD_MDL_IMPORTER OFF)
-option(ASSIMP_BUILD_MS3D_IMPORTER OFF)
-option(ASSIMP_BUILD_NDO_IMPORTER OFF)
-option(ASSIMP_BUILD_NFF_IMPORTER OFF)
-option(ASSIMP_BUILD_NONFREE_C4D_IMPORTER OFF)
-option(ASSIMP_BUILD_OFF_IMPORTER OFF)
-option(ASSIMP_BUILD_OGRE_IMPORTER OFF)
-option(ASSIMP_BUILD_OPENGEX_IMPORTER OFF)
-option(ASSIMP_BUILD_Q3BSP_IMPORTER OFF)
-option(ASSIMP_BUILD_Q3D_IMPORTER OFF)
-option(ASSIMP_BUILD_RAW_IMPORTER OFF)
-option(ASSIMP_BUILD_SIB_IMPORTER OFF)
-option(ASSIMP_BUILD_SMD_IMPORTER OFF)
-option(ASSIMP_BUILD_TERRAGEN_IMPORTER OFF)
-option(ASSIMP_BUILD_X3D_IMPORTER OFF)
-option(ASSIMP_BUILD_XGL_IMPORTER OFF)
-option(ASSIMP_BUILD_X_IMPORTER OFF)
-add_subdirectory(extern/assimp)
+# allow for static analysis options
+include(cmake/StaticAnalyzers.cmake)
+
+option(BUILD_SHARED_LIBS "Enable compilation of shared libraries" OFF)
+option(ENABLE_TESTING "Enable Test Builds" ON)
+
+option(ENABLE_PCH "Enable Precompiled Headers" OFF)
+if (ENABLE_PCH)
+  # This sets a global PCH parameter, each project will build its own PCH, which
+  # is a good idea if any #define's change
+  # 
+  # 
+  target_precompile_headers(vkfw_options INTERFACE <vector> <string> <map> <utility>)
+endif()
+
+set(IMGUI_VERSION "1.75")
+set(GLM_VERSION "0.9.9.7")
+
+set(CONAN_EXTRA_REQUIRES "")
+set(CONAN_EXTRA_OPTIONS "")
+
+set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
+                         cereal/1.3.0
+                         glm/${GLM_VERSION}
+                         glfw/3.3.2@bincrafters/stable
+                         imgui/${IMGUI_VERSION}
+                         stb/20200203
+                         assimp/5.0.1)
+
+include(cmake/Conan.cmake)
+run_conan()
+
+find_package(Vulkan 1.1.126.0 REQUIRED)
+target_compile_definitions(vkfw_options INTERFACE VULKAN_HPP_TYPESAFE_CONVERSION)
+
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/glm.natvis")
+  message(
+    STATUS
+      "Downloading glm.natvis from https://github.com/g-truc/glm")
+  file(DOWNLOAD "https://github.com/g-truc/glm/raw/${GLM_VERSION}/util/glm.natvis"
+       "${CMAKE_BINARY_DIR}/glm.natvis")
+endif()
+
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/imgui.natvis")
+  message(
+    STATUS
+      "Downloading imgui.natvis from https://github.com/ocornut/imgui")
+  file(DOWNLOAD "https://github.com/ocornut/imgui/raw/v${IMGUI_VERSION}/misc/natvis/imgui.natvis"
+       "${CMAKE_BINARY_DIR}/imgui.natvis")
+endif()
+
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/extern/imgui/cpp/imgui_stdlib.cpp")
+  message(
+    STATUS
+      "Downloading imgui_stdlib.cpp from https://github.com/ocornut/imgui")
+  file(DOWNLOAD "https://github.com/ocornut/imgui/raw/v${IMGUI_VERSION}/misc/cpp/imgui_stdlib.cpp"
+       "${CMAKE_BINARY_DIR}/extern/imgui/cpp/imgui_stdlib.cpp")
+endif()
+
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/extern/imgui/cpp/imgui_stdlib.h")
+  message(
+    STATUS
+      "Downloading imgui.natvis from https://github.com/ocornut/imgui")
+  file(DOWNLOAD "https://github.com/ocornut/imgui/raw/v${IMGUI_VERSION}/misc/cpp/imgui_stdlib.h"
+       "${CMAKE_BINARY_DIR}/extern/imgui/cpp/imgui_stdlib.h")
+endif()
+
+include(cmake/CompileSpirvShader.cmake)
+
 
 set(FW_DEBUG_PIPELINE ON CACHE BOOL "Checks if application is started from RenderDoc and uses only a single queue then.")
-
-SET(CMAKE_DEBUG_POSTFIX "")
-
-if(MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W3 /WX /EHsc")
-else()
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unused-function -Wno-unused-parameter -Wextra -Wpedantic")
-    if(NOT WIN32)
-        set(GLAD_LIBRARIES dl)
-    endif()
-endif()
-
-set(FWLIB_RESOURCE_BASE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/resources)
-set(FWLIB_RESOURCE_BASE_PATH ${FWLIB_RESOURCE_BASE_PATH} PARENT_SCOPE)
-
-file(GLOB_RECURSE LIB_RES_FILES ${FWLIB_RESOURCE_BASE_PATH}/*.*)
-file(GLOB_RECURSE LIB_SHADERS 
-    ${FWLIB_RESOURCE_BASE_PATH}/*.vert 
-    ${FWLIB_RESOURCE_BASE_PATH}/*.frag 
-    ${FWLIB_RESOURCE_BASE_PATH}/*.comp 
-    ${FWLIB_RESOURCE_BASE_PATH}/*.tesc 
-    ${FWLIB_RESOURCE_BASE_PATH}/*.tese
-    ${FWLIB_RESOURCE_BASE_PATH}/*.geom)
-set(LIB_COMPILED_SHADERS "")
-foreach(SHADER ${LIB_SHADERS})
-    compile_spirv_shader(${LIB_SHADERS})
-    list(APPEND LIB_COMPILED_SHADERS ${COMPILE_SPIRV_SHADER_RETURN})
-endforeach()
-if(NOT "${LIB_COMPILED_SHADERS}" STREQUAL "")
-    LIST(REMOVE_ITEM LIB_RES_FILES ${LIB_COMPILED_SHADERS})
-    source_group("Resources\\CompiledShaders" FILES ${LIB_COMPILED_SHADERS})
-endif()
-
-file(GLOB LIB_TOP_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.cpp
-    extern/glm/util/glm.natvis
-    extern/imgui/misc/natvis/imgui.natvis)
-file(GLOB_RECURSE LIB_TMP_FILES
-    ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.h
-    ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}/*.inl)
-LIST(REMOVE_ITEM LIB_TMP_FILES ${LIB_RES_FILES})
-LIST(REMOVE_ITEM LIB_TMP_FILES ${LIB_TOP_FILES})
-
-file(GLOB EXTERN_SOURCES
-    extern/imgui/imgui.cpp
-    extern/imgui/imgui_draw.cpp
-    extern/imgui/imgui_widgets.cpp
-    extern/imgui/misc/cpp/imgui_stdlib.cpp)
-
-foreach(f ${LIB_TMP_FILES})
-    file(RELATIVE_PATH SRCGR ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME} ${f})
-    string(REGEX REPLACE "(.*)(/[^/]*)$" "\\1" SRCGR ${SRCGR})
-    string(REPLACE / \\ SRCGR ${SRCGR})
-    source_group("${SRCGR}" FILES ${f})
-endforeach()
-source_group(" " FILES ${LIB_TOP_FILES})
-
-foreach(f ${LIB_RES_FILES})
-    file(RELATIVE_PATH SRCGR ${FWLIB_RESOURCE_BASE_PATH} ${f})
-    set(SRCGR "Resources/${SRCGR}")
-    string(REGEX REPLACE "(.*)(/[^/]*)$" "\\1" SRCGR ${SRCGR})
-    string(REPLACE / \\ SRCGR ${SRCGR})
-    source_group("${SRCGR}" FILES ${f})
-endforeach()
-
-file(GLOB_RECURSE LIB_RES_OBJ_FILES ${FWLIB_RESOURCE_BASE_PATH}/*.obj)
-foreach(f ${LIB_RES_OBJ_FILES})
-    set_source_files_properties(${f} PROPERTIES HEADER_FILE_ONLY TRUE)
-endforeach()
-
-source_group("extern" FILES ${EXTERN_SOURCES})
-
-
-file(GLOB LIB_CONFIGS CMakeLists.txt Readme.md .gitattributes .gitignore .gitmodules .clang-format)
-
-add_library(${FWLIB_LIBNAME} ${LIB_COMPILED_SHADERS} ${LIB_TMP_FILES} ${LIB_TOP_FILES} ${LIB_RES_FILES} ${LIB_CONFIGS} ${EXTERN_SOURCES})
-target_include_directories(${FWLIB_LIBNAME} PUBLIC
-    ${CMAKE_CURRENT_SOURCE_DIR}/${FWLIB_LIBNAME}
-    ${VULKAN_INCLUDE_DIR}
-    extern/glfw/include
-    extern/glm
-    extern/g3log/src
-    ${CMAKE_CURRENT_BINARY_DIR}/extern/g3log/include
-    extern/stb
-    extern/cereal/include
-    extern/assimp/include
-    ${CMAKE_CURRENT_BINARY_DIR}/extern/assimp/include
-    extern/imgui
-    extern/imgui/misc/cpp)
-target_compile_definitions(${FWLIB_LIBNAME} PUBLIC VULKAN_HPP_TYPESAFE_CONVERSION _CRT_SECURE_NO_WARNINGS _SCL_SECURE_NO_WARNINGS WIN32_LEAN_AND_MEAN WIN32_EXTRA_LEAN NOMINMAX)
-target_compile_definitions(${FWLIB_LIBNAME} PRIVATE VKUFW_EXPORT)
-set_property(TARGET ${FWLIB_LIBNAME} PROPERTY CXX_STANDARD 17)
-
 if (${FW_DEBUG_PIPELINE})
-    target_compile_definitions(${FWLIB_LIBNAME} PUBLIC FW_DEBUG_PIPELINE)
+    target_compile_definitions(vkfw_options INTERFACE FW_DEBUG_PIPELINE)
 endif()
 
-target_link_libraries(${FWLIB_LIBNAME} ${VULKAN_LIBRARY} glfw ${GLFW_LIBRARIES} g3logger assimp)
-set_property(TARGET ${FWLIB_LIBNAME} APPEND PROPERTY COMPILE_DEFINITIONS $<$<CONFIG:DebugOpenGLCalls>:_OGL_DEBUG_MSGS> _CRT_SECURE_NO_WARNINGS _SCL_SECURE_NO_WARNINGS)
+set(FWLIB_RESOURCE_BASE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+# set(FWLIB_RESOURCE_BASE_PATH ${FWLIB_RESOURCE_BASE_PATH} PARENT_SCOPE)
+
+
+if(ENABLE_TESTING)
+  enable_testing()
+  message(
+    "Building Tests. Be sure to check out test/constexpr_tests for constexpr testing"
+  )
+  add_subdirectory(test)
+endif()
+
+add_subdirectory(src)
