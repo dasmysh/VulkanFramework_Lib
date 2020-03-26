@@ -11,6 +11,7 @@
 #pragma warning(disable: 4514 4711 4996)
 
 #if defined ( _MSC_VER )
+// NOLINTNEXTLINE
 #define __func__ __FUNCTION__
 #endif
 

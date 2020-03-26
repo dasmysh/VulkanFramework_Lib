@@ -49,12 +49,13 @@ namespace vku {
         }
 
         /** Copy assignment operator. */
+        // NOLINTNEXTLINE
         ResourceManager& operator=(const ResourceManager& rhs)
         {
-            if (this != &rhs) {
-                ResourceManager tmp{ rhs };
-                std::swap(*this, tmp);
-            }
+            if (this == &rhs) { return *this; }
+
+            resources_ = rhs.resources_;
+            device_ = rhs.device_;
             return *this;
         }
 
@@ -106,7 +107,7 @@ namespace vku {
          * @param resId the resources id
          * @return whether the manager contains the resource or not.
          */
-        bool HasResource(const std::string& resId) const
+        [[nodiscard]] bool HasResource(const std::string& resId) const
         {
             auto rit = resources_.find(resId);
             return (rit != resources_.end()) && !rit->expired();
@@ -148,6 +149,7 @@ namespace vku {
             return resources_[resourceName].lock();
         }
 
+    private:
         /** Holds the resources managed. */
         ResourceMap resources_;
         /** Holds the device for this resource. */

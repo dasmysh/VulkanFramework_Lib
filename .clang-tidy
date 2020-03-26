@@ -1,7 +1,7 @@
 ---
 Checks: '*,-fuchsia-*,-google-*,-zircon-*,-abseil-*,-modernize-use-trailing-return-type,-llvm-*,-readability-named-parameter,-cppcoreguidelines-pro-type-union-access'
 WarningsAsErrors: '1'
-HeaderFilterRegex: '(src|include|test)(\/|\\)(vkfw_core)(\/|\\)([^\/\\]*(\/|\\))*([^\/\\]*)\.(h|hpp|hxx|cpp|cxx)$'
+HeaderFilterRegex: '(src|include|test)(\/|\\)(vkfw|vkfw_core)(\/|\\)([^\/\\]*(\/|\\))*([^\/\\]*)\.(h|hpp|hxx|cpp|cxx)$'
 FormatStyle:     none
 CheckOptions:
   - key:             hicpp-special-member-functions.AllowSoleDefaultDtor
@@ -24,5 +24,7 @@ CheckOptions:
     value:           '1'
   - key:             cppcoreguidelines-avoid-magic-numbers.IgnoredFloatingPointValues
     value:           '0.001;0.01;0.1;0.5;1.0;2.0;3.0;4.0;10.0;100.0;1000.0'
+  - key:             misc-non-private-member-variables-in-classes.IgnoreClassesWithAllMemberVariablesBeingPublic
+    value:           '1'
 
 

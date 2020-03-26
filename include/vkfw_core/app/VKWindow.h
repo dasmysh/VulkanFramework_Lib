@@ -37,28 +37,31 @@ namespace vku {
         VKWindow& operator=(VKWindow&&) noexcept;
         ~VKWindow();
 
-        bool IsFocused() const { return focused_; }
-        bool IsClosing() const;
+        [[nodiscard]] bool IsFocused() const { return focused_; }
+        [[nodiscard]] bool IsClosing() const;
         void ShowWindow() const;
         void CloseWindow() const;
-        bool MessageBoxQuestion(const std::string& title, const std::string& content) const;
+        [[nodiscard]] bool MessageBoxQuestion(const std::string& title, const std::string& content) const;
 
-        cfg::WindowCfg& GetConfig() const { return *config_; };
-        gfx::LogicalDevice& GetDevice() const { return *logicalDevice_; }
-        const std::vector<gfx::Framebuffer>& GetFramebuffers() const { return swapchainFramebuffers_; }
-        vk::RenderPass GetRenderPass() const { return *vkSwapchainRenderPass_; }
+        [[nodiscard]] cfg::WindowCfg& GetConfig() const { return *config_; };
+        [[nodiscard]] gfx::LogicalDevice& GetDevice() const { return *logicalDevice_; }
+        [[nodiscard]] const std::vector<gfx::Framebuffer>& GetFramebuffers() const { return swapchainFramebuffers_; }
+        [[nodiscard]] vk::RenderPass GetRenderPass() const { return *vkSwapchainRenderPass_; }
 
-        bool IsMouseButtonPressed(int button) const;
-        bool IsKeyPressed(int key) const;
-        glm::vec2 GetMousePosition() const { return currMousePosition_; }
-        glm::vec2 GetMousePositionNormalized() const { return currMousePositionNormalized_; }
+        [[nodiscard]] bool IsMouseButtonPressed(int button) const;
+        [[nodiscard]] bool IsKeyPressed(int key) const;
+        [[nodiscard]] glm::vec2 GetMousePosition() const { return currMousePosition_; }
+        [[nodiscard]] glm::vec2 GetMousePositionNormalized() const { return currMousePositionNormalized_; }
 
         /** Returns the windows width. */
-        unsigned int GetWidth() const { return vkSurfaceExtend_.width; }
+        [[nodiscard]] unsigned int GetWidth() const { return vkSurfaceExtend_.width; }
         /** Returns the windows height. */
-        unsigned int GetHeight() const { return vkSurfaceExtend_.height; }
+        [[nodiscard]] unsigned int GetHeight() const { return vkSurfaceExtend_.height; }
         /** Returns the windows client size. */
-        glm::vec2 GetClientSize() const { return glm::vec2(static_cast<float>(vkSurfaceExtend_.width), static_cast<float>(vkSurfaceExtend_.height)); }
+        [[nodiscard]] glm::vec2 GetClientSize() const
+        {
+            return glm::vec2(static_cast<float>(vkSurfaceExtend_.width), static_cast<float>(vkSurfaceExtend_.height));
+        }
 
 
         void PrepareFrame();
@@ -69,8 +72,8 @@ namespace vku {
         // for primary cmd buffer: dirty bit, update if needed. (start cmd buffer, begin render pass, execute other buffers, end pass, end buffer)
         void UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer, std::size_t cmdBufferIndex)>& fillFunc) const;
 
-        std::uint32_t GetCurrentlyRenderedImageIndex() const { return currentlyRenderedImage_; }
-        vk::Semaphore GetDataAvailableSemaphore() const { return *vkDataAvailableSemaphore_; }
+        [[nodiscard]] std::uint32_t GetCurrentlyRenderedImageIndex() const { return currentlyRenderedImage_; }
+        [[nodiscard]] vk::Semaphore GetDataAvailableSemaphore() const { return *vkDataAvailableSemaphore_; }
 
     private:
         void WindowPosCallback(int xpos, int ypos) const;
@@ -173,7 +176,7 @@ namespace vku {
         void ReleaseWindow();
         void ReleaseVulkan();
 
-        std::pair<unsigned int, vk::Format> FindSupportedDepthFormat() const;
+        [[nodiscard]] std::pair<unsigned int, vk::Format> FindSupportedDepthFormat() const;
 
     public:
         static void glfwErrorCallback(int error, const char* description);

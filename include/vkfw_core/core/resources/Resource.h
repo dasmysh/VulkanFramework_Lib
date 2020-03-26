@@ -17,7 +17,7 @@ namespace vku::gfx {
 namespace vku {
 
     struct file_not_found final : public std::exception {
-        file_not_found(const std::string& filename) : std::exception{ "File not found." }, filename_{ filename } {}
+        explicit file_not_found(std::string filename) : std::exception{ "File not found." }, filename_{ std::move(filename) } {}
         std::string filename_;
     };
 
@@ -37,13 +37,13 @@ namespace vku {
         Resource& operator=(Resource&&) noexcept;
         virtual ~Resource();
 
-        const std::string& getId() const;
+        [[nodiscard]] const std::string& getId() const;
 
         static std::string FindGeneralFileLocation(const std::string& localFilename, const std::string& resourceId = "_no_resource_");
 
     protected:
-        const gfx::LogicalDevice* GetDevice() const { return device_; }
-        std::string FindResourceLocation(const std::string& localFilename) const;
+        [[nodiscard]] const gfx::LogicalDevice* GetDevice() const { return device_; }
+        [[nodiscard]] std::string FindResourceLocation(const std::string& localFilename) const;
 
     private:
         /** Holds the resources id. */

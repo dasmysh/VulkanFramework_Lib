@@ -11,7 +11,6 @@
 #include "main.h"
 
 #include <glm/vec2.hpp>
-// #include "core/sceneobject/SceneObjectManager.h"
 
 namespace vku::cfg {
     class Configuration;
@@ -37,21 +36,21 @@ namespace vku {
         ApplicationBase(ApplicationBase&&) = delete;
         ApplicationBase& operator=(const ApplicationBase&) = delete;
         ApplicationBase& operator=(ApplicationBase&&) = delete;
-        virtual ~ApplicationBase();
+        virtual ~ApplicationBase() noexcept;
 
         static ApplicationBase& instance() { return *instance_; };
 
         /** Starts the application. */
         void StartRun();
         /** Checks if the application is still running. */
-        bool IsRunning() const;
+        [[nodiscard]] bool IsRunning() const;
         /** Make one application <em>step</em> (rendering etc.). */
         void Step();
         /** Called if the application is to end running. */
         void EndRun();
 
-        bool IsPaused() const { return pause_; }
-        bool IsGUIMode() const { return guiMode_; }
+        [[nodiscard]] bool IsPaused() const { return pause_; }
+        [[nodiscard]] bool IsGUIMode() const { return guiMode_; }
         VKWindow* GetFocusedWindow();
         VKWindow* GetWindow(unsigned int idx);
         // VKUDllExport const SceneObjectManager& GetSceneObjectManager() const { return sceneObjectManager_; }
@@ -64,10 +63,11 @@ namespace vku {
         void OnResize(unsigned int width, unsigned int height, const VKWindow* window);
         virtual void Resize(const glm::uvec2& screenSize, const VKWindow* window);
 
-        const cfg::Configuration& GetConfig() const { return config_; };
-        const std::vector<const char*>& GetVKValidationLayers() const { return vkValidationLayers_; }
-        const vk::Instance& GetVKInstance() const { return *vkInstance_; }
-        std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const cfg::WindowCfg& windowCfg,
+        [[nodiscard]] const cfg::Configuration& GetConfig() const { return config_; };
+        [[nodiscard]] const std::vector<const char*>& GetVKValidationLayers() const { return vkValidationLayers_; }
+        [[nodiscard]] const vk::Instance& GetVKInstance() const { return *vkInstance_; }
+        [[nodiscard]] std::unique_ptr<gfx::LogicalDevice>
+        CreateLogicalDevice(const cfg::WindowCfg& windowCfg,
             const vk::SurfaceKHR& surface = vk::SurfaceKHR()) const;
         // std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const vk::SurfaceKHR& surface) const;
 
@@ -76,6 +76,10 @@ namespace vku {
         {
         public:
             GLFWInitObject();
+            GLFWInitObject(const GLFWInitObject&) = delete;
+            GLFWInitObject(GLFWInitObject&&) = delete;
+            const GLFWInitObject& operator=(const GLFWInitObject&) = delete;
+            const GLFWInitObject& operator=(GLFWInitObject&&) = delete;
             ~GLFWInitObject();
         };
 
@@ -122,11 +126,13 @@ namespace vku {
         void InitVulkan(const std::string& applicationName, std::uint32_t applicationVersion);
         static unsigned int ScorePhysicalDevice(const vk::PhysicalDevice& device);
         static bool CheckDeviceExtensions(const vk::PhysicalDevice& device, const std::vector<std::string>& requiredExtensions);
-        std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const cfg::WindowCfg& windowCfg,
-            const vk::SurfaceKHR& surface, std::function<bool(const vk::PhysicalDevice&)> additionalDeviceChecks) const;
-        PFN_vkVoidFunction LoadVKInstanceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory = false) const;
+        std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const vk::SurfaceKHR& surface,
+                            const std::function<bool(const vk::PhysicalDevice&)>& additionalDeviceChecks) const;
+        [[nodiscard]] PFN_vkVoidFunction LoadVKInstanceFunction(const std::string& functionName,
+                                                                const std::string& extensionName,
+                                                                bool mandatory = false) const;
 
-        void CheckVKInstanceExtensions(const std::vector<const char*>& enabledExtensions);
+        static void CheckVKInstanceExtensions(const std::vector<const char*>& enabledExtensions);
         void CheckVKInstanceLayers();
 
         /** Holds the Vulkan validation layers. */

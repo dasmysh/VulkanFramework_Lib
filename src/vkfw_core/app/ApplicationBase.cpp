@@ -7,6 +7,7 @@
  */
 
 #undef VULKAN_HPP_ENABLE_DYNAMIC_LOADER_TOOL
+// NOLINTNEXTLINE
 #define VULKAN_HPP_ENABLE_DYNAMIC_LOADER_TOOL 1
 
 #pragma warning(push, 3)
@@ -45,20 +46,16 @@ namespace vku {
 
         auto vkLogLevel = spdlog::level::level_enum::trace;
         bool performanceFlag = false;
-        if (flags | VK_DEBUG_REPORT_DEBUG_BIT_EXT) {
+        if ((flags & static_cast<unsigned int>(VK_DEBUG_REPORT_DEBUG_BIT_EXT)) != 0) {
             vkLogLevel = spdlog::level::level_enum::debug;
-        }
-        else if (flags | VK_DEBUG_REPORT_INFORMATION_BIT_EXT) {
+        } else if ((flags & static_cast<unsigned int>(VK_DEBUG_REPORT_INFORMATION_BIT_EXT)) != 0) {
             vkLogLevel = spdlog::level::level_enum::info;
-        }
-        else if (flags | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT) {
+        } else if ((flags & static_cast<unsigned int>(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)) != 0) {
             vkLogLevel = spdlog::level::level_enum::warn;
             performanceFlag = true;
-        }
-        else if (flags | VK_DEBUG_REPORT_WARNING_BIT_EXT) {
+        } else if ((flags & static_cast<unsigned int>(VK_DEBUG_REPORT_WARNING_BIT_EXT)) != 0) {
             vkLogLevel = spdlog::level::level_enum::warn;
-        }
-        else if (flags | VK_DEBUG_REPORT_ERROR_BIT_EXT) {
+        } else if ((flags & static_cast<unsigned int>(VK_DEBUG_REPORT_ERROR_BIT_EXT)) != 0) {
             vkLogLevel = spdlog::level::level_enum::err;
         }
 
@@ -88,19 +85,19 @@ namespace vku::qf {
     int findQueueFamily(const vk::PhysicalDevice& device, const cfg::QueueCfg& desc, const vk::SurfaceKHR& surface = vk::SurfaceKHR())
     {
         vk::QueueFlags reqFlags;
-        if (!(desc.graphics_ || desc.compute_) && desc.transfer_) reqFlags |= vk::QueueFlagBits::eTransfer;
-        if (desc.graphics_) reqFlags |= vk::QueueFlagBits::eGraphics;
-        if (desc.compute_) reqFlags |= vk::QueueFlagBits::eCompute;
-        if (desc.sparseBinding_) reqFlags |= vk::QueueFlagBits::eSparseBinding;
+        if (!(desc.graphics_ || desc.compute_) && desc.transfer_) { reqFlags |= vk::QueueFlagBits::eTransfer; }
+        if (desc.graphics_) { reqFlags |= vk::QueueFlagBits::eGraphics; }
+        if (desc.compute_) { reqFlags |= vk::QueueFlagBits::eCompute; }
+        if (desc.sparseBinding_) { reqFlags |= vk::QueueFlagBits::eSparseBinding; }
 
         auto queueProps = device.getQueueFamilyProperties();
         auto queueCount = static_cast<std::uint32_t>(queueProps.size());
         for (std::uint32_t i = 0; i < queueCount; i++) {
-            if (queueProps[i].queueCount < desc.priorities_.size()) continue;
+            if (queueProps[i].queueCount < desc.priorities_.size()) { continue; }
 
             if ((reqFlags == vk::QueueFlagBits::eTransfer && queueProps[i].queueFlags == vk::QueueFlagBits::eTransfer)
                 || (reqFlags != vk::QueueFlagBits::eTransfer && queueProps[i].queueFlags & reqFlags)) {
-                if (surface && desc.graphics_ && !device.getSurfaceSupportKHR(i, surface)) {
+                if (surface && desc.graphics_ && (device.getSurfaceSupportKHR(i, surface) != 0U)) {
                     continue;
                 }
                 return i;
@@ -138,7 +135,8 @@ namespace vku::cfg {
             }
         }
 
-        if (cfg.backbufferBits_ == 24) {
+        constexpr std::size_t BITS_RGB8 = 24;
+        if (cfg.backbufferBits_ == BITS_RGB8) {
             if (cfg.useSRGB_) {
                 fmt.format = vk::Format::eR8G8B8Srgb;
                 result.push_back(fmt);
@@ -172,15 +170,15 @@ namespace vku::cfg {
     vk::PresentModeKHR GetVulkanPresentModeFromConfig(const WindowCfg& cfg)
     {
         vk::PresentModeKHR presentMode = {};
-        if (cfg.swapOptions_ == cfg::SwapOptions::DOUBLE_BUFFERING) presentMode = vk::PresentModeKHR::eImmediate;
-        if (cfg.swapOptions_ == cfg::SwapOptions::DOUBLE_BUFFERING_VSYNC) presentMode = vk::PresentModeKHR::eFifo;
-        if (cfg.swapOptions_ == cfg::SwapOptions::TRIPLE_BUFFERING) presentMode = vk::PresentModeKHR::eMailbox;
+        if (cfg.swapOptions_ == cfg::SwapOptions::DOUBLE_BUFFERING) { presentMode = vk::PresentModeKHR::eImmediate; }
+        if (cfg.swapOptions_ == cfg::SwapOptions::DOUBLE_BUFFERING_VSYNC) { presentMode = vk::PresentModeKHR::eFifo; }
+        if (cfg.swapOptions_ == cfg::SwapOptions::TRIPLE_BUFFERING) { presentMode = vk::PresentModeKHR::eMailbox; }
         return presentMode;
     }
 
     std::uint32_t GetVulkanAdditionalImageCountFromConfig(const WindowCfg& cfg)
     {
-        if (cfg.swapOptions_ == SwapOptions::TRIPLE_BUFFERING) return 1;
+        if (cfg.swapOptions_ == SwapOptions::TRIPLE_BUFFERING) { return 1; }
         return 0;
     }
 }
@@ -204,20 +202,21 @@ namespace vku {
         elapsedTime_(0.0)
     {
         spdlog::debug("Trying to load configuration.");
-        std::ifstream configFile(configFileName, std::ios::in);
-        if (configFile.is_open()) {
-            cereal::XMLInputArchive ia(configFile);
-            ia >> cereal::make_nvp("configuration", config_);
-        }
-        else {
-            spdlog::debug("Configuration file not found. Using standard config.");
+        {
+            std::ifstream configFile(configFileName, std::ios::in);
+            if (configFile.is_open()) {
+                auto ia = std::make_unique<cereal::XMLInputArchive>(configFile);
+                (*ia) >> cereal::make_nvp("configuration", config_);
+            } else {
+                spdlog::debug("Configuration file not found. Using standard config.");
+            }
         }
 
         {
             // always directly write configuration to update version.
             std::ofstream ofs(configFileName, std::ios::out);
-            cereal::XMLOutputArchive oa(ofs);
-            oa << cereal::make_nvp("configuration", config_);
+            auto oa = std::make_unique<cereal::XMLOutputArchive>(ofs);
+            (*oa) << cereal::make_nvp("configuration", config_);
         }
 
         InitVulkan(applicationName, applicationVersion);
@@ -232,7 +231,7 @@ namespace vku {
         }
     }
 
-    ApplicationBase::~ApplicationBase()
+    ApplicationBase::~ApplicationBase() noexcept
     {
         windows_.clear();
         vkDebugReportCB_.reset();
@@ -240,15 +239,22 @@ namespace vku {
         vkInstance_.reset();
 
         spdlog::debug("Exiting application. Saving configuration to file.");
-        std::ofstream ofs(configFileName_, std::ios::out);
-        cereal::XMLOutputArchive oa(ofs);
-        oa << cereal::make_nvp("configuration", config_);
+        try {
+            std::ofstream ofs(configFileName_, std::ios::out);
+            // NOLINTNEXTLINE
+            auto oa = std::make_unique<cereal::XMLOutputArchive>(ofs);
+            (*oa) << cereal::make_nvp("configuration", config_);
+        } catch (...) {
+            spdlog::critical("Could not write configuration. Unknown exception.");
+        }
     }
 
     VKWindow* ApplicationBase::GetFocusedWindow()
     {
         VKWindow* focusWindow = nullptr;
-        for (auto& w : windows_) if (w.IsFocused()) focusWindow = &w;
+        for (auto& w : windows_) {
+            if (w.IsFocused()) { focusWindow = &w; }
+        }
         return focusWindow;
     }
 
@@ -282,8 +288,11 @@ namespace vku {
             switch (key)
             {
             case GLFW_KEY_ESCAPE:
-                if (mods & GLFW_MOD_CONTROL) stopped_ = true;
-                else sender->CloseWindow();
+                if ((static_cast<unsigned int>(mods) & static_cast<unsigned int>(GLFW_MOD_CONTROL)) != 0) {
+                    stopped_ = true;
+                } else {
+                    sender->CloseWindow();
+                }
                 handled = true;
                 break;
             case GLFW_KEY_F2:
@@ -316,7 +325,7 @@ namespace vku {
     bool ApplicationBase::HandleMouse(int button, int action, int mods, float mouseWheelDelta, VKWindow* sender)
     {
         auto handled = false;
-        if (IsRunning() && !IsPaused()) handled = HandleMouseApp(button, action, mods, mouseWheelDelta, sender);
+        if (IsRunning() && !IsPaused()) { handled = HandleMouseApp(button, action, mods, mouseWheelDelta, sender); }
         // TODO if (!handled && IsRunning() && !IsPaused()) handled = cameraView_->HandleMouse(button, action, mods, mouseWheelDelta, sender);
         return handled;
     }
@@ -354,7 +363,8 @@ namespace vku {
     void ApplicationBase::Step()
     {
         if (stopped_) {
-            Sleep(500);
+            constexpr int HALF_SECOND = 500;
+            Sleep(HALF_SECOND);
             return;
         }
 
@@ -366,12 +376,12 @@ namespace vku {
         for (auto& window : windows_) {
             window.PrepareFrame();
 
-            if (!this->pause_ && (!config_.pauseOnKillFocus_ || GetFocusedWindow())) {
+            if (!this->pause_ && (!config_.pauseOnKillFocus_ || (GetFocusedWindow() != nullptr))) {
                 FrameMove(static_cast<float>(currentTime_), static_cast<float>(elapsedTime_), &window);
             }
 
             RenderScene(&window);
-            if (IsGUIMode()) RenderGUI(&window);
+            if (IsGUIMode()) { RenderGUI(&window); }
             window.DrawCurrentCommandBuffer();
             window.SubmitFrame();
         }
@@ -387,7 +397,7 @@ namespace vku {
 
         for (const auto& enabledExt : enabledExtensions) {
             auto found = std::find_if(extensions.begin(), extensions.end(),
-                                      [&enabledExt](const vk::ExtensionProperties& extProps) { return std::strcmp(enabledExt, extProps.extensionName) == 0; });
+                                      [&enabledExt](const vk::ExtensionProperties& extProps) { return std::strcmp(enabledExt, &extProps.extensionName[0]) == 0; });
             if (found == extensions.end()) {
                 spdlog::critical("Extension needed ({}) is not available. Quitting.", enabledExt);
                 throw std::runtime_error("Vulkan extension missing.");
@@ -406,7 +416,7 @@ namespace vku {
 
         for (const auto& enabledLayer : vkValidationLayers_) {
             auto found = std::find_if(layers.begin(), layers.end(),
-                                      [&enabledLayer](const vk::LayerProperties& layerProps) { return std::strcmp(enabledLayer, layerProps.layerName) == 0; });
+                                      [&enabledLayer](const vk::LayerProperties& layerProps) { return std::strcmp(enabledLayer, &layerProps.layerName[0]) == 0; });
             if (found == layers.end()) {
                 spdlog::critical("Layer needed ({}) is not available. Quitting.", enabledLayer);
                 throw std::runtime_error("Vulkan layer missing.");
@@ -420,9 +430,11 @@ namespace vku {
         std::vector<const char*> enabledExtensions;
         auto glfwExtensionCount = 0U;
         auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-        for (auto i = 0U; i < glfwExtensionCount; ++i) enabledExtensions.push_back(glfwExtensions[i]);
+        enabledExtensions.resize(glfwExtensionCount);
+        // NOLINTNEXTLINE
+        for (auto i = 0U; i < glfwExtensionCount; ++i) { enabledExtensions[i] = glfwExtensions[i]; }
 
-        // ReSharper disable once CppInitializedValueIsAlwaysRewritten
+        // NOLINTNEXTLINE
         auto useValidationLayers = config_.useValidationLayers_;
 #ifndef NDEBUG
         useValidationLayers = true;
@@ -436,13 +448,15 @@ namespace vku {
         CheckVKInstanceLayers();
 
         {
-            vk::ApplicationInfo appInfo{ applicationName.c_str(), applicationVersion, engineName, engineVersion, VK_API_VERSION_1_1 };
+            // NOLINTNEXTLINE
+            auto api_version = VK_API_VERSION_1_1;
+            vk::ApplicationInfo appInfo{applicationName.c_str(), applicationVersion, engineName, engineVersion,
+                                        static_cast<std::uint32_t>(api_version)};
             vk::InstanceCreateInfo createInfo{ vk::InstanceCreateFlags(), &appInfo, static_cast<std::uint32_t>(vkValidationLayers_.size()), vkValidationLayers_.data(),
                 static_cast<std::uint32_t>(enabledExtensions.size()), enabledExtensions.data() };
 
             vk::DynamicLoader dl;
-            PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr =
-                dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
+            auto vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
             VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
 
             vkInstance_ = vk::createInstanceUnique(createInfo);
@@ -479,23 +493,27 @@ namespace vku {
     }
 
     std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(const cfg::WindowCfg& windowCfg,
-        const vk::SurfaceKHR& surface, std::function<bool(const vk::PhysicalDevice&)> additionalDeviceChecks) const
+        const vk::SurfaceKHR& surface, const std::function<bool(const vk::PhysicalDevice&)>& additionalDeviceChecks) const
     {
         vk::PhysicalDevice physicalDevice;
         std::vector<gfx::DeviceQueueDesc> deviceQueueDesc;
         std::vector<std::string> requiredExtensions;
-        if (surface) requiredExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
+        if (surface) { requiredExtensions.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME); }
         auto foundDevice = false;
         for (const auto& device : vkPhysicalDevices_) {
             deviceQueueDesc.clear();
 
-            if (!CheckDeviceExtensions(device.second, requiredExtensions)) continue;
-            if (!additionalDeviceChecks(device.second)) continue;
+            if (!CheckDeviceExtensions(device.second, requiredExtensions)) { continue; }
+            if (!additionalDeviceChecks(device.second)) { continue; }
 
             for (const auto& queueDesc : windowCfg.queues_) {
                 auto queueFamilyIndex = qf::findQueueFamily(device.second, queueDesc, surface);
-                if (queueFamilyIndex != -1) deviceQueueDesc.emplace_back(queueFamilyIndex, queueDesc.priorities_);
-                else break;
+                if (queueFamilyIndex != -1) {
+                    deviceQueueDesc.emplace_back(queueFamilyIndex, queueDesc.priorities_);
+                }
+                else {
+                    break;
+                }
             }
 
             if (deviceQueueDesc.size() == windowCfg.queues_.size()) {
@@ -512,7 +530,9 @@ namespace vku {
                 devProps.pipelineCacheUUID[2] == 'o' && devProps.pipelineCacheUUID[3] == 'c') {
                 physicalDevice = (*vkPhysicalDevices_.begin()).second;
                 foundDevice = true;
-                while (deviceQueueDesc.size() < windowCfg.queues_.size()) deviceQueueDesc.emplace_back(0, windowCfg.queues_[deviceQueueDesc.size()].priorities_);
+                while (deviceQueueDesc.size() < windowCfg.queues_.size()) {
+                    deviceQueueDesc.emplace_back(0, windowCfg.queues_[deviceQueueDesc.size()].priorities_);
+                }
             }
         }
 #endif
@@ -541,40 +561,52 @@ namespace vku {
         auto requestedAdditionalImgCnt = cfg::GetVulkanAdditionalImageCountFromConfig(windowCfg);
         glm::uvec2 requestedExtend(windowCfg.windowWidth_, windowCfg.windowHeight_);
 
+        // NOLINTNEXTLINE
         return CreateLogicalDevice(windowCfg, surface, [&surface, &requestedFormats, &requestedPresentMode, &requestedAdditionalImgCnt, &requestedExtend](const vk::PhysicalDevice& device)
         {
             auto deviceSurfaceCaps = device.getSurfaceCapabilitiesKHR(surface);
             auto deviceSurfaceFormats = device.getSurfaceFormatsKHR(surface);
             auto presentModes = device.getSurfacePresentModesKHR(surface);
-            auto formatSupported = false, presentModeSupported = false, sizeSupported = false, imageCountSupported = false;
+            auto formatSupported = false;
+            auto presentModeSupported = false;
+            auto sizeSupported = false;
+            auto imageCountSupported = false;
 
-            if (deviceSurfaceFormats.size() == 1 && deviceSurfaceFormats[0].format == vk::Format::eUndefined) formatSupported = true;
+            if (deviceSurfaceFormats.size() == 1 && deviceSurfaceFormats[0].format == vk::Format::eUndefined) {
+                formatSupported = true;
+            }
             else {
                 std::sort(deviceSurfaceFormats.begin(), deviceSurfaceFormats.end(), [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0.format < f1.format; });
                 std::vector<vk::SurfaceFormatKHR> formatIntersection;
                 std::set_intersection(deviceSurfaceFormats.begin(), deviceSurfaceFormats.end(), requestedFormats.begin(), requestedFormats.end(),
                     std::back_inserter(formatIntersection), [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0 == f1; });
-                if (!formatIntersection.empty()) formatSupported = true; // no color space check here as color space does not depend on the color space flag but the actual format.
+                if (!formatIntersection.empty()) {
+                    formatSupported = true; // no color space check here as color space does not depend on the color space flag but the actual format.
+                }
             }
             /*else for (const auto& availableFormat : deviceSurfaceFormats) {
                 if (availableFormat.format == requestedFormat.format && availableFormat.colorSpace == requestedFormat.colorSpace) formatSupported = true;
             }*/
 
             for (const auto& availablePresentMode : presentModes) {
-                if (availablePresentMode == requestedPresentMode) presentModeSupported = true;
+                if (availablePresentMode == requestedPresentMode) { presentModeSupported = true; }
             }
 
             glm::uvec2 currentExtend(deviceSurfaceCaps.currentExtent.width, deviceSurfaceCaps.currentExtent.height);
-            if (currentExtend == requestedExtend) sizeSupported = true;
+            if (currentExtend == requestedExtend) {
+                sizeSupported = true;
+            }
             else {
                 glm::uvec2 minExtend(deviceSurfaceCaps.minImageExtent.width, deviceSurfaceCaps.minImageExtent.height);
                 glm::uvec2 maxExtend(deviceSurfaceCaps.maxImageExtent.width, deviceSurfaceCaps.maxImageExtent.height);
                 auto actualExtent = glm::clamp(requestedExtend, minExtend, maxExtend);
-                if (actualExtent == requestedExtend) sizeSupported = true;
+                if (actualExtent == requestedExtend) { sizeSupported = true; }
             }
 
             auto imageCount = deviceSurfaceCaps.minImageCount + requestedAdditionalImgCnt;
-            if (deviceSurfaceCaps.maxImageCount == 0 || imageCount <= deviceSurfaceCaps.maxImageCount) imageCountSupported = true;
+            if (deviceSurfaceCaps.maxImageCount == 0 || imageCount <= deviceSurfaceCaps.maxImageCount) {
+                imageCountSupported = true;
+            }
 
             return formatSupported && presentModeSupported && sizeSupported && imageCountSupported;
         });
@@ -589,11 +621,14 @@ namespace vku {
         spdlog::info("Found physical device '{}' [DriverVersion: {}].", deviceProperties.deviceName, deviceProperties.driverVersion);
         auto score = 0U;
 
-        if (deviceProperties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu) score += 1000;
+        if (deviceProperties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu) { score += 1000; }
 
-        if (!(deviceFeatures.vertexPipelineStoresAndAtomics && deviceFeatures.fragmentStoresAndAtomics
-            && deviceFeatures.geometryShader && deviceFeatures.tessellationShader && deviceFeatures.largePoints
-            && deviceFeatures.shaderUniformBufferArrayDynamicIndexing && deviceFeatures.shaderStorageBufferArrayDynamicIndexing)) score = 0U;
+        if (!((deviceFeatures.vertexPipelineStoresAndAtomics != 0) && (deviceFeatures.fragmentStoresAndAtomics != 0)
+              && (deviceFeatures.geometryShader != 0) && (deviceFeatures.tessellationShader != 0) && (deviceFeatures.largePoints != 0)
+              && (deviceFeatures.shaderUniformBufferArrayDynamicIndexing != 0)
+              && (deviceFeatures.shaderStorageBufferArrayDynamicIndexing != 0))) {
+            score = 0U;
+        }
 
         spdlog::info("Scored: {}", score);
         return score;
@@ -605,7 +640,7 @@ namespace vku {
         std::set<std::string> requiredDeviceExtensions(requiredExtensions.begin(), requiredExtensions.end());
 
         for (const auto& extension : availableExtensions) {
-            requiredDeviceExtensions.erase(extension.extensionName);
+            requiredDeviceExtensions.erase(std::string(&extension.extensionName[0]));
         }
 
         return requiredDeviceExtensions.empty();
