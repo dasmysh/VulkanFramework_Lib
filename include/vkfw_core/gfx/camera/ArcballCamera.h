@@ -19,11 +19,15 @@ namespace vku::gfx {
     class ArcballCamera final : public UserControlledCamera
     {
     public:
-        ArcballCamera(const glm::vec3& camPos, float fovY, float aspectRatio, float zNear, float zFar) noexcept;
-        virtual ~ArcballCamera() override;
+        ArcballCamera(const glm::vec3& position, float fovY, float aspectRatio, float zNear, float zFar) noexcept;
+        ArcballCamera(const ArcballCamera&) = default;
+        ArcballCamera(ArcballCamera&&) = default;
+        ArcballCamera& operator=(const ArcballCamera&) = delete;
+        ArcballCamera& operator=(ArcballCamera&&) = delete;
+        ~ArcballCamera() override;
 
-        virtual bool HandleMouse(int button, int action, float mouseWheelDelta, const VKWindow* sender) override;
-        virtual void UpdateCamera(double elapsedTime, const VKWindow* sender) override;
+        bool HandleMouse(int button, int action, float mouseWheelDelta, const VKWindow* sender) override;
+        void UpdateCamera(double elapsedTime, const VKWindow* sender) override;
 
     private:
         /** The initial camera position. */

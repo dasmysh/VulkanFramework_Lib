@@ -16,7 +16,7 @@
 
 namespace vku::gfx {
 
-    enum class MeshCreateFlagBits {
+    enum class MeshCreateFlagBits : unsigned int {
         NO_SMOOTH_NORMALS = 0x1,
         CREATE_TANGENTSPACE = 0x2
     };
@@ -40,12 +40,13 @@ namespace vku::gfx {
     class AssImpScene : public Resource, public MeshInfo
     {
     public:
-        AssImpScene(const std::string& meshFilename, const LogicalDevice* device, MeshCreateFlags flags = MeshCreateFlags());
+        AssImpScene(std::string resourceId, const LogicalDevice* device,
+                    MeshCreateFlags flags = MeshCreateFlags());
         AssImpScene(const AssImpScene&);
         AssImpScene& operator=(const AssImpScene&);
         AssImpScene(AssImpScene&&) noexcept;
         AssImpScene& operator=(AssImpScene&&) noexcept;
-        virtual ~AssImpScene() override;
+        ~AssImpScene() override;
 
     private:
         void createNewMesh(const std::string& filename, MeshCreateFlags flags);

@@ -18,7 +18,7 @@ namespace vku::gfx {
     public:
         DeviceTexture(const LogicalDevice* device, const TextureDescriptor& desc,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
-        virtual ~DeviceTexture() override;
+        ~DeviceTexture() override;
         DeviceTexture(const DeviceTexture&) = delete;
         DeviceTexture& operator=(const DeviceTexture&) = delete;
         DeviceTexture(DeviceTexture&&) noexcept;

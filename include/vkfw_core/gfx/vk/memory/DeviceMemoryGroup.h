@@ -22,7 +22,7 @@ namespace vku::gfx {
     class DeviceMemoryGroup
     {
     public:
-        DeviceMemoryGroup(const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags = vk::MemoryPropertyFlags());
+        explicit DeviceMemoryGroup(const LogicalDevice* device, const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags());
         virtual ~DeviceMemoryGroup();
         DeviceMemoryGroup(const DeviceMemoryGroup&) = delete;
         DeviceMemoryGroup& operator=(const DeviceMemoryGroup&) = delete;
@@ -30,7 +30,7 @@ namespace vku::gfx {
         DeviceMemoryGroup& operator=(DeviceMemoryGroup&&) noexcept;
 
         static constexpr unsigned int INVALID_INDEX = std::numeric_limits<unsigned int>::max();
-        virtual unsigned int AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size,
+        virtual unsigned int AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         virtual unsigned int AddTextureToGroup(const TextureDescriptor& desc,
             const glm::u32vec4& size, std::uint32_t mipLevels,
@@ -40,8 +40,8 @@ namespace vku::gfx {
 
         DeviceBuffer* GetBuffer(unsigned int bufferIdx) { return &deviceBuffers_[bufferIdx]; }
         DeviceTexture* GetTexture(unsigned int textureIdx) { return &deviceImages_[textureIdx]; }
-        std::size_t GetBuffersInGroup() const { return deviceBuffers_.size(); }
-        std::size_t GetImagesInGroup() const { return deviceImages_.size(); }
+        [[nodiscard]] std::size_t GetBuffersInGroup() const { return deviceBuffers_.size(); }
+        [[nodiscard]] std::size_t GetImagesInGroup() const { return deviceImages_.size(); }
 
     protected:
         static void InitializeDeviceMemory(const LogicalDevice* device, std::vector<std::size_t>& deviceOffsets,
@@ -59,9 +59,9 @@ namespace vku::gfx {
         static std::size_t FillImageAllocationInfo(const LogicalDevice* device, const Texture* lastImage,
             const Texture& image, std::size_t& imageOffset, vk::MemoryAllocateInfo& allocInfo);
         static std::size_t FillAllocationInfo(const LogicalDevice* device, const vk::MemoryRequirements& memRequirements,
-            vk::MemoryPropertyFlags memProperties, vk::MemoryAllocateInfo& allocInfo);
+            const vk::MemoryPropertyFlags& memProperties, vk::MemoryAllocateInfo& allocInfo);
 
-        const LogicalDevice* GetDevice() const { return device_; }
+        [[nodiscard]] const LogicalDevice* GetDevice() const { return device_; }
 
     private:
         template<class B, class T> static void InitializeMemory(const LogicalDevice* device,

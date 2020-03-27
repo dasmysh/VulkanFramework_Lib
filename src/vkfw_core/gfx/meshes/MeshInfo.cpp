@@ -18,7 +18,7 @@
 namespace vku::gfx {
 
     /** Default constructor. */
-    MeshInfo::MeshInfo() {}
+    MeshInfo::MeshInfo() = default;
 
     /** Copy constructor. */
     MeshInfo::MeshInfo(const MeshInfo& rhs) :
@@ -57,26 +57,26 @@ namespace vku::gfx {
     }
 
     /** Default move constructor. */
-    MeshInfo::MeshInfo(MeshInfo&& rhs) noexcept :
-        vertices_(std::move(rhs.vertices_)),
-        normals_(std::move(rhs.normals_)),
-        texCoords_(std::move(rhs.texCoords_)),
-        tangents_(std::move(rhs.tangents_)),
-        binormals_(std::move(rhs.binormals_)),
-        colors_(std::move(rhs.colors_)),
-        boneOffsetMatrixIndices_(std::move(boneOffsetMatrixIndices_)),
-        boneWeights_(std::move(boneWeights_)),
-        indexVectors_(std::move(indexVectors_)),
-        inverseBindPoseMatrices_(std::move(inverseBindPoseMatrices_)),
-        boneParent_(std::move(boneParent_)),
-        indices_(std::move(rhs.indices_)),
-        materials_(std::move(materials_)),
-        subMeshes_(std::move(subMeshes_)),
-        nodes_(std::move(rhs.nodes_)),
-        animations_(std::move(animations_)),
-        rootNode_(std::move(rhs.rootNode_)),
-        globalInverse_(std::move(rhs.globalInverse_)),
-        boneBoundingBoxes_(std::move(rhs.boneBoundingBoxes_))
+    MeshInfo::MeshInfo(MeshInfo&& rhs) noexcept
+        : vertices_(std::move(rhs.vertices_)),
+          normals_(std::move(rhs.normals_)),
+          texCoords_(std::move(rhs.texCoords_)),
+          tangents_(std::move(rhs.tangents_)),
+          binormals_(std::move(rhs.binormals_)),
+          colors_(std::move(rhs.colors_)),
+          boneOffsetMatrixIndices_(std::move(rhs.boneOffsetMatrixIndices_)),
+          boneWeights_(std::move(rhs.boneWeights_)),
+          indexVectors_(std::move(rhs.indexVectors_)),
+          inverseBindPoseMatrices_(std::move(rhs.inverseBindPoseMatrices_)),
+          boneParent_(std::move(rhs.boneParent_)),
+          indices_(std::move(rhs.indices_)),
+          materials_(std::move(rhs.materials_)),
+          subMeshes_(std::move(rhs.subMeshes_)),
+          nodes_(std::move(rhs.nodes_)),
+          animations_(std::move(rhs.animations_)),
+          rootNode_(std::move(rhs.rootNode_)),
+          globalInverse_(rhs.globalInverse_),
+          boneBoundingBoxes_(std::move(rhs.boneBoundingBoxes_))
     {
     }
 
@@ -101,7 +101,7 @@ namespace vku::gfx {
         nodes_ = std::move(rhs.nodes_);
         animations_ = std::move(rhs.animations_);
         rootNode_ = std::move(rhs.rootNode_);
-        globalInverse_ = std::move(rhs.globalInverse_);
+        globalInverse_ = rhs.globalInverse_;
         boneBoundingBoxes_ = std::move(rhs.boneBoundingBoxes_);
         return *this;
     }
@@ -122,13 +122,13 @@ namespace vku::gfx {
         vertices_.resize(numVertices);
         normals_.resize(numVertices);
         texCoords_.resize(maxUVChannels);
-        for (auto& texCoords : texCoords_) texCoords.resize(numVertices);
+        for (auto& texCoords : texCoords_) { texCoords.resize(numVertices); }
         if (hasTangentSpace) {
             tangents_.resize(numVertices);
             binormals_.resize(numVertices);
         }
         colors_.resize(maxColorChannels);
-        for (auto& colors : colors_) colors.resize(numVertices);
+        for (auto& colors : colors_) { colors.resize(numVertices); }
         indices_.resize(numIndices);
         materials_.resize(numMaterials);
     }
@@ -190,6 +190,6 @@ namespace vku::gfx {
         std::map<std::string, std::size_t> nodeIndexMap;
         for (const auto& node : nodes_) { nodeIndexMap[node->GetName()] = node->GetNodeIndex(); }
 
-        for (auto& animation : animations_) animation.FlattenHierarchy(nodes_.size(), nodeIndexMap);
+        for (auto& animation : animations_) { animation.FlattenHierarchy(nodes_.size(), nodeIndexMap); }
     }
 }

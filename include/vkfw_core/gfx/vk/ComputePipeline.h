@@ -22,7 +22,7 @@ namespace vku::gfx {
         ComputePipeline& operator=(const ComputePipeline&);
         ComputePipeline(ComputePipeline&&) noexcept;
         ComputePipeline& operator=(ComputePipeline&&) noexcept;
-        ~ComputePipeline();
+        ~ComputePipeline() override;
 
     private:
         /** Holds all shaders in the program. */

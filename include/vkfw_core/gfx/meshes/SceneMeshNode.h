@@ -28,41 +28,44 @@ namespace vku::gfx {
         SceneMeshNode(const SceneMeshNode& rhs);
         SceneMeshNode& operator=(const SceneMeshNode& rhs);
         SceneMeshNode(SceneMeshNode&& rhs) noexcept;
-        SceneMeshNode operator=(SceneMeshNode&& rhs) noexcept;
+        SceneMeshNode& operator=(SceneMeshNode&& rhs) noexcept;
         ~SceneMeshNode() noexcept;
 
         /** Returns the local transformation matrix. */
-        glm::mat4 GetLocalTransform() const noexcept { return localTransform_; }
+        [[nodiscard]] glm::mat4 GetLocalTransform() const noexcept { return localTransform_; }
         /** Returns the number of children nodes. */
-        std::size_t GetNumberOfNodes() const noexcept { return children_.size(); }
+        [[nodiscard]] std::size_t GetNumberOfNodes() const noexcept { return children_.size(); }
         /**
          *  Returns a child node.
          *  @param index the index of the child node.
          */
-        const SceneMeshNode* GetChild(std::size_t index) const noexcept { return children_[index].get(); }
+        [[nodiscard]] const SceneMeshNode* GetChild(std::size_t index) const noexcept { return children_[index].get(); }
         /** Returns the number of sub meshes of the node. */
-        std::size_t GetNumberOfSubMeshes() const noexcept { return subMeshIds_.size(); }
+        [[nodiscard]] std::size_t GetNumberOfSubMeshes() const noexcept { return subMeshIds_.size(); }
         /**
          *  Returns a sub-mesh.
          *  @param index the index of the sub mesh.
          */
-        std::size_t GetSubMeshID(std::size_t index) const noexcept { return subMeshIds_[index]; }
+        [[nodiscard]] std::size_t GetSubMeshID(std::size_t index) const noexcept { return subMeshIds_[index]; }
         /** Returns the nodes parent. */
-        const SceneMeshNode* GetParent() const noexcept { return parent_; }
+        [[nodiscard]] const SceneMeshNode* GetParent() const noexcept { return parent_; }
         /** Returns the node name. */
-        const std::string& GetName() const noexcept { return nodeName_; }
+        [[nodiscard]] const std::string& GetName() const noexcept { return nodeName_; }
         /** Returns the bone index. */
-        int GetBoneIndex() const noexcept { return boneIndex_; }
+        [[nodiscard]] int GetBoneIndex() const noexcept { return boneIndex_; }
         /** Returns the node index. */
-        unsigned int GetNodeIndex() const noexcept { return nodeIndex_; }
+        [[nodiscard]] unsigned int GetNodeIndex() const noexcept { return nodeIndex_; }
         /** Returns the nodes local AABB. */
-        const math::AABB3<float>& GetBoundingBox() const noexcept { return aabb_; }
+        [[nodiscard]] const math::AABB3<float>& GetBoundingBox() const noexcept { return aabb_; }
         /** Returns AABB for all sub meshes of the node. */
-        const std::vector<math::AABB3<float>>& GetSubMeshBoundingBoxes() const { return subMeshBoundingBoxes_; }
+        [[nodiscard]] const std::vector<math::AABB3<float>>& GetSubMeshBoundingBoxes() const
+        {
+            return subMeshBoundingBoxes_;
+        }
         /** Returns if the AABB is valid. */
-        bool IsBoundingBoxValid() const noexcept { return boundingBoxValid_; }
+        [[nodiscard]] bool IsBoundingBoxValid() const noexcept { return boundingBoxValid_; }
         /** Returns if the subtree of this node has meshes. */
-        bool HasMeshes() const noexcept { return hasMeshes_; }
+        [[nodiscard]] bool HasMeshes() const noexcept { return hasMeshes_; }
 
         void FlattenNodeTree(std::vector<const SceneMeshNode*>& nodes);
         bool GenerateBoundingBoxes(const MeshInfo& mesh);
@@ -78,8 +81,7 @@ namespace vku::gfx {
         /** Needed for serialization */
         friend class cereal::access;
 
-        template <class Archive>
-        void serialize(Archive& ar, const std::uint32_t)
+        template<class Archive> void serialize(Archive& ar, const std::uint32_t) // NOLINT
         {
             ar(cereal::make_nvp("nodeName", nodeName_),
                 cereal::make_nvp("children", children_),
@@ -91,7 +93,7 @@ namespace vku::gfx {
                 cereal::make_nvp("subMeshBoundingBoxes", subMeshBoundingBoxes_),
                 cereal::make_nvp("boundingBoxValid", boundingBoxValid_));
 
-            for (auto& c : children_) c->parent_ = this;
+            for (auto& c : children_) { c->parent_ = this; }
         }
 
         /** The nodes name. */
@@ -119,4 +121,5 @@ namespace vku::gfx {
     };
 }
 
+// NOLINTNEXTLINE
 CEREAL_CLASS_VERSION(vku::gfx::SceneMeshNode, 2)

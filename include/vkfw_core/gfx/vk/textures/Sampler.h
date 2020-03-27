@@ -16,7 +16,6 @@ namespace vku::gfx {
     {
     public:
         Sampler();
-        ~Sampler();
 
       private:
         /** Holds the Vulkan sampler. */

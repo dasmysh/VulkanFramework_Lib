@@ -22,7 +22,7 @@ namespace vku {
         using const_reference = const value_type&;
 
         aligned_vector(size_type alignedSize, size_type count, const T& value);
-        aligned_vector(size_type alignedSize, size_type count = 0) : alignedSize_{ alignedSize } { cont_.resize(count * alignedSize); }
+        explicit aligned_vector(size_type alignedSize, size_type count = 0) : alignedSize_{ alignedSize } { cont_.resize(count * alignedSize); }
         // template<class InputIt> aligned_vector(size_type alignedSize, InputIt first, InputIt last);
         aligned_vector(size_type alignedSize, std::initializer_list<T> init);
         aligned_vector(const aligned_vector& rhs) : alignedSize_{ rhs.alignedSize_ }, cont_{ rhs.cont_ } {}
@@ -61,11 +61,11 @@ namespace vku {
         const_reverse_iterator rend() const noexcept;
         const_reverse_iterator crend() const noexcept;*/
 
-        bool empty() const noexcept { return cont_.empty(); }
-        size_type size() const noexcept { return cont_.size() / alignedSize_; }
-        size_type max_size() const noexcept { return cont_.max_size() / alignedSize_; }
+        [[nodiscard]] bool empty() const noexcept { return cont_.empty(); }
+        [[nodiscard]] size_type size() const noexcept { return cont_.size() / alignedSize_; }
+        [[nodiscard]] size_type max_size() const noexcept { return cont_.max_size() / alignedSize_; }
         void reserve(size_type new_cap) { cont_.reserve(new_cap * alignedSize_); }
-        size_type capacity() const noexcept { return cont_.capacity() / alignedSize_; }
+        [[nodiscard]] size_type capacity() const noexcept { return cont_.capacity() / alignedSize_; }
         void shrink_to_fit() { cont_.shrink_to_fit(); }
 
         void clear() noexcept { cont_.clear(); }
@@ -85,7 +85,7 @@ namespace vku {
         void resize(size_type count, const value_type& value);
         void swap(aligned_vector& other) noexcept;
 
-        std::size_t GetAlignedSize() const { return alignedSize_; }
+        [[nodiscard]] std::size_t GetAlignedSize() const { return alignedSize_; }
 
     private:
         /** Holds the vectors alignment. */
@@ -115,7 +115,7 @@ namespace vku {
     }
 
     template<typename T>
-    inline aligned_vector<T>& aligned_vector<T>::operator=(const aligned_vector<T>& rhs)
+    inline aligned_vector<T>& aligned_vector<T>::operator=(const aligned_vector<T>& rhs) // NOLINT
     {
         if (this != &rhs) {
             alignedSize_ = rhs.alignedSize_;

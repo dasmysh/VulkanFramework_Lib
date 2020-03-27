@@ -50,15 +50,17 @@ namespace vku::gfx {
     void FreeCamera::UpdateCamera(double elapsedTime, const VKWindow* sender)
     {
         glm::vec3 camMove{ 0.0f };
-        if (sender->IsKeyPressed(GLFW_KEY_W)) camMove -= glm::vec3(0.0f, 0.0f, 1.0f);
-        if (sender->IsKeyPressed(GLFW_KEY_A)) camMove -= glm::vec3(1.0f, 0.0f, 0.0f);
-        if (sender->IsKeyPressed(GLFW_KEY_S)) camMove += glm::vec3(0.0f, 0.0f, 1.0f);
-        if (sender->IsKeyPressed(GLFW_KEY_D)) camMove += glm::vec3(1.0f, 0.0f, 0.0f);
-        if (sender->IsKeyPressed(GLFW_KEY_LEFT_SHIFT)) camMove -= glm::vec3(0.0f, 1.0f, 0.0f);
-        if (sender->IsKeyPressed(GLFW_KEY_SPACE)) camMove += glm::vec3(0.0f, 1.0f, 0.0f);
+        if (sender->IsKeyPressed(GLFW_KEY_W)) { camMove -= glm::vec3(0.0f, 0.0f, 1.0f); }
+        if (sender->IsKeyPressed(GLFW_KEY_A)) { camMove -= glm::vec3(1.0f, 0.0f, 0.0f); }
+        if (sender->IsKeyPressed(GLFW_KEY_S)) { camMove += glm::vec3(0.0f, 0.0f, 1.0f); }
+        if (sender->IsKeyPressed(GLFW_KEY_D)) { camMove += glm::vec3(1.0f, 0.0f, 0.0f); }
+        if (sender->IsKeyPressed(GLFW_KEY_LEFT_SHIFT)) { camMove -= glm::vec3(0.0f, 1.0f, 0.0f); }
+        if (sender->IsKeyPressed(GLFW_KEY_SPACE)) { camMove += glm::vec3(0.0f, 1.0f, 0.0f); }
 
         float moveLength = glm::length(camMove);
-        if (moveLength > glm::epsilon<float>()) camMove = (camMove / moveLength) * static_cast<float>(moveSpeed_ * elapsedTime);
+        if (moveLength > glm::epsilon<float>()) {
+            camMove = (camMove / moveLength) * static_cast<float>(moveSpeed_ * elapsedTime);
+        }
         auto camPos = GetPosition() + glm::inverse(GetOrientation()) * camMove;
 
 
@@ -77,7 +79,9 @@ namespace vku::gfx {
         auto yaw_delta = static_cast<float>(mouseDiff.x * rotSpeed * elapsedTime);
 
         currentPY_ += glm::vec2(pitch_delta, yaw_delta);
-        currentPY_.x = glm::clamp(currentPY_.x, -glm::half_pi<float>() * 0.99f, glm::half_pi<float>() * 0.99f);
+        constexpr float ONE_MINUS_DELTA = 0.99f;
+        currentPY_.x =
+            glm::clamp(currentPY_.x, -glm::half_pi<float>() * ONE_MINUS_DELTA, glm::half_pi<float>() * ONE_MINUS_DELTA);
         auto newOrientation = glm::quat(glm::vec3(currentPY_.x, 0.0f, 0.0f)) * glm::quat(glm::vec3(0.0f, currentPY_.y, 0.0f));
 
         auto aspectRatio = static_cast<float>(sender->GetClientSize().x) / static_cast<float>(sender->GetClientSize().y);

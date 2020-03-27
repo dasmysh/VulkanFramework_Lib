@@ -11,41 +11,17 @@
 
 namespace vku::gfx {
 
-    MemoryGroup::MemoryGroup(const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags) :
+    MemoryGroup::MemoryGroup(const LogicalDevice* device, const vk::MemoryPropertyFlags& memoryFlags) :
         DeviceMemoryGroup(device, memoryFlags),
         hostMemory_{ device, memoryFlags | vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent }
     {
     }
 
-
     MemoryGroup::~MemoryGroup() = default;
+    MemoryGroup::MemoryGroup(MemoryGroup&& rhs) noexcept = default;
+    MemoryGroup& MemoryGroup::operator=(MemoryGroup&& rhs) noexcept = default;
 
-    MemoryGroup::MemoryGroup(MemoryGroup&& rhs) noexcept :
-        DeviceMemoryGroup(std::move(rhs)),
-        hostMemory_{ std::move(rhs.hostMemory_) },
-        hostBuffers_{ std::move(rhs.hostBuffers_) },
-        hostImages_{ std::move(rhs.hostImages_) },
-        hostOffsets_{ std::move(rhs.hostOffsets_) },
-        bufferContents_{ std::move(rhs.bufferContents_) },
-        imageContents_{ std::move(rhs.imageContents_) }
-    {
-    }
-
-    MemoryGroup& MemoryGroup::operator=(MemoryGroup&& rhs) noexcept
-    {
-        this->~MemoryGroup();
-        DeviceMemoryGroup* tDMG = this;
-        *tDMG = static_cast<DeviceMemoryGroup&&>(std::move(rhs));
-        hostMemory_ = std::move(rhs.hostMemory_);
-        hostBuffers_ = std::move(rhs.hostBuffers_);
-        hostImages_ = std::move(rhs.hostImages_);
-        hostOffsets_ = std::move(rhs.hostOffsets_);
-        bufferContents_ = std::move(rhs.bufferContents_);
-        imageContents_ = std::move(rhs.imageContents_);
-        return *this;
-    }
-
-    unsigned int MemoryGroup::AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size, const std::vector<std::uint32_t>& queueFamilyIndices)
+    unsigned int MemoryGroup::AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         auto idx = DeviceMemoryGroup::AddBufferToGroup(usage, size, queueFamilyIndices);
 
@@ -55,8 +31,10 @@ namespace vku::gfx {
         return idx;
     }
 
-    unsigned int MemoryGroup::AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size,
-        const void* data, const std::function<void(void*)>& deleter, const std::vector<std::uint32_t>& queueFamilyIndices)
+    unsigned int MemoryGroup::AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size,
+                                               std::variant<void*, const void*> data,
+                                               const std::function<void(void*)>& deleter,
+                                               const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         auto idx = AddBufferToGroup(usage, size, queueFamilyIndices);
         AddDataToBufferInGroup(idx, 0, size, data, deleter);
@@ -64,7 +42,8 @@ namespace vku::gfx {
     }
 
     void MemoryGroup::AddDataToBufferInGroup(unsigned int bufferIdx, std::size_t offset, std::size_t dataSize,
-        const void * data, const std::function<void(void*)>& deleter)
+                                             std::variant<void*, const void*> data,
+                                             const std::function<void(void*)>& deleter)
     {
         BufferContentsDesc bufferContentsDesc;
         bufferContentsDesc.bufferIdx_ = bufferIdx;
@@ -88,9 +67,10 @@ namespace vku::gfx {
         return idx;
     }
 
-    void MemoryGroup::AddDataToTextureInGroup(unsigned int textureIdx, vk::ImageAspectFlags aspectFlags,
-        std::uint32_t mipLevel, std::uint32_t arrayLayer, const glm::u32vec3& size,
-        const void* data, const std::function<void(void*)>& deleter)
+    void MemoryGroup::AddDataToTextureInGroup(unsigned int textureIdx, const vk::ImageAspectFlags& aspectFlags,
+                                              std::uint32_t mipLevel, std::uint32_t arrayLayer,
+                                              const glm::u32vec3& size, std::variant<void*, const void*> data,
+                                              const std::function<void(void*)>& deleter)
     {
         ImageContentsDesc imgContDesc;
         imgContDesc.imageIdx_ = textureIdx;
@@ -114,19 +94,23 @@ namespace vku::gfx {
     {
         for (const auto& contentDesc : bufferContents_) {
             hostMemory_.CopyToHostMemory(
-                hostOffsets_[contentDesc.bufferIdx_] + contentDesc.offset_, contentDesc.size_, contentDesc.data_);
-            if (contentDesc.deleter_) contentDesc.deleter_(const_cast<void*>(contentDesc.data_));
+                hostOffsets_[contentDesc.bufferIdx_] + contentDesc.offset_, contentDesc.size_,
+                                         contentDesc.deleter_ ? std::get<void*>(contentDesc.data_)
+                                                              : std::get<const void*>(contentDesc.data_));
+            if (contentDesc.deleter_) { contentDesc.deleter_( std::get<void*>(contentDesc.data_)); }
         }
         for (const auto& contentDesc : imageContents_) {
             vk::ImageSubresource imgSubresource{ contentDesc.aspectFlags_, contentDesc.mipLevel_, contentDesc.arrayLayer_ };
             auto subresourceLayout = GetDevice()->GetDevice().getImageSubresourceLayout(hostImages_[contentDesc.imageIdx_].GetImage(), imgSubresource);
             hostMemory_.CopyToHostMemory(hostOffsets_[contentDesc.imageIdx_ + hostBuffers_.size()], glm::u32vec3(0),
-                subresourceLayout, contentDesc.size_, contentDesc.data_);
-            if (contentDesc.deleter_) contentDesc.deleter_(const_cast<void*>(contentDesc.data_));
+                                         subresourceLayout, contentDesc.size_,
+                                         contentDesc.deleter_ ? std::get<void*>(contentDesc.data_)
+                                                              : std::get<const void*>(contentDesc.data_));
+            if (contentDesc.deleter_) { contentDesc.deleter_(std::get<void*>(contentDesc.data_)); }
         }
 
-        for (auto i = 0U; i < hostBuffers_.size(); ++i) transfer.AddTransferToQueue(hostBuffers_[i], *GetBuffer(i));
-        for (auto i = 0U; i < hostImages_.size(); ++i) transfer.AddTransferToQueue(hostImages_[i], *GetTexture(i));
+        for (auto i = 0U; i < hostBuffers_.size(); ++i) { transfer.AddTransferToQueue(hostBuffers_[i], *GetBuffer(i)); }
+        for (auto i = 0U; i < hostImages_.size(); ++i) { transfer.AddTransferToQueue(hostImages_[i], *GetTexture(i)); }
 
         bufferContents_.clear();
         imageContents_.clear();

@@ -19,11 +19,12 @@ namespace vku::gfx {
     class FreeCamera final : public UserControlledCamera
     {
     public:
-        FreeCamera(const glm::vec3& position, const glm::quat& orientation,
-            float fovY, float aspectRatio, float zNear, float zFar, double speed = 30.0) noexcept;
+        static constexpr double DEFAULT_CAMERA_SPEED = 30.0;
+        FreeCamera(const glm::vec3& position, const glm::quat& orientation, float fovY, float aspectRatio, float zNear,
+                   float zFar, double speed = DEFAULT_CAMERA_SPEED) noexcept;
 
-        virtual bool HandleMouse(int button, int action, float mouseWheelDelta, const VKWindow* sender) override;
-        virtual void UpdateCamera(double elapsedTime, const VKWindow* sender) override;
+        bool HandleMouse(int button, int action, float mouseWheelDelta, const VKWindow* sender) override;
+        void UpdateCamera(double elapsedTime, const VKWindow* sender) override;
         void SetMoveSpeed(double speed);
         double GetMoveSpeed();
 

@@ -77,14 +77,17 @@ namespace vku::gfx {
      *  Calculates the mouse position on the arc-ball.
      *  @param mousePosition the mouse position in normalized device coordinates.
      */
-    glm::vec3 Arcball::MousePositionToArcball(const glm::vec2 & mousePosition) const
+    glm::vec3 Arcball::MousePositionToArcball(const glm::vec2 & mousePosition)
     {
         glm::vec3 result{ mousePosition, 0.0f };
         result = glm::clamp(result, glm::vec3(-1.0f), glm::vec3(1.0f));
 
         float length_squared = glm::dot(result, result);
-        if (length_squared <= 1.0f) result.z = sqrtf(1.0f - length_squared);
-        else result = glm::normalize(result);
+        if (length_squared <= 1.0f) {
+            result.z = sqrtf(1.0f - length_squared);
+        } else {
+            result = glm::normalize(result);
+        }
         return result;
     }
 }

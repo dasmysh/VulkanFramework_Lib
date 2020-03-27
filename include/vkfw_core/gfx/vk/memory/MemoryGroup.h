@@ -13,6 +13,7 @@
 #include "core/type_traits.h"
 #include "gfx/vk/buffers/HostBuffer.h"
 #include "gfx/vk/textures/HostTexture.h"
+#include <variant>
 
 namespace vku::gfx {
 
@@ -21,27 +22,28 @@ namespace vku::gfx {
     class MemoryGroup final : public DeviceMemoryGroup
     {
     public:
-        explicit MemoryGroup(const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags = vk::MemoryPropertyFlags());
-        virtual ~MemoryGroup() override;
+        explicit MemoryGroup(const LogicalDevice* device, const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags());
+        ~MemoryGroup() override;
         MemoryGroup(const MemoryGroup&) = delete;
         MemoryGroup& operator=(const MemoryGroup&) = delete;
         MemoryGroup(MemoryGroup&&) noexcept;
         MemoryGroup& operator=(MemoryGroup&&) noexcept;
 
         static constexpr unsigned int INVALID_INDEX = std::numeric_limits<unsigned int>::max();
-        unsigned int AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size,
-            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{}) override;
-        unsigned int AddTextureToGroup(const TextureDescriptor& desc,
-            const glm::u32vec4& size, std::uint32_t mipLevels,
-            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{}) override;
-        unsigned int AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size,
-            const void* data, const std::function<void(void*)>& deleter = nullptr,
-            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
+        unsigned int AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size,
+                         const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{}) override;
+        unsigned int AddTextureToGroup(const TextureDescriptor& desc, const glm::u32vec4& size, std::uint32_t mipLevels,
+                          const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{}) override;
+        unsigned int AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size, std::variant<void*, const void*> data,
+                         const std::function<void(void*)>& deleter = nullptr,
+                         const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         void AddDataToBufferInGroup(unsigned int bufferIdx, std::size_t offset, std::size_t dataSize,
-            const void* data, const std::function<void(void*)>& deleter = nullptr);
-        void AddDataToTextureInGroup(unsigned int textureIdx, vk::ImageAspectFlags aspectFlags,
-            std::uint32_t mipLevel, std::uint32_t arrayLayer, const glm::u32vec3& size,
-            const void* data, const std::function<void(void*)>& deleter = nullptr);
+                                    std::variant<void*, const void*> data,
+                                    const std::function<void(void*)>& deleter = nullptr);
+        void AddDataToTextureInGroup(unsigned int textureIdx, const vk::ImageAspectFlags& aspectFlags, std::uint32_t mipLevel,
+                                     std::uint32_t arrayLayer, const glm::u32vec3& size,
+                                     std::variant<void*, const void*> data,
+                                     const std::function<void(void*)>& deleter = nullptr);
         void FinalizeDeviceGroup() override;
         void TransferData(QueuedDeviceTransfer& transfer);
         void RemoveHostMemory();
@@ -73,13 +75,13 @@ namespace vku::gfx {
         struct BufferContentsDesc
         {
             /** The buffer index the contents belong to. */
-            unsigned int bufferIdx_;
+            unsigned int bufferIdx_ = 0;
             /** The offset to copy the data to (in bytes). */
-            std::size_t offset_;
+            std::size_t offset_ = 0;
             /** The size of the buffer data (in bytes). */
-            std::size_t size_;
+            std::size_t size_ = 0;
             /** Pointer to the data to copy. */
-            const void* data_;
+            std::variant<void*, const void*> data_;
             /** Deleter for the data_ element. */
             std::function<void(void*)> deleter_;
 
@@ -88,17 +90,17 @@ namespace vku::gfx {
         struct ImageContentsDesc
         {
             /** The image index the contents belong to. */
-            unsigned int imageIdx_;
+            unsigned int imageIdx_ = 0;
             /** The subresource aspect flags. */
             vk::ImageAspectFlags aspectFlags_;
             /** The MipMap level of the image contents. */
-            std::uint32_t mipLevel_;
+            std::uint32_t mipLevel_ = 0;
             /** The array layer of the image contents. */
-            std::uint32_t arrayLayer_;
+            std::uint32_t arrayLayer_ = 0;
             /** The size of the image data (in bytes). */
-            glm::u32vec3 size_;
+            glm::u32vec3 size_ = glm::u32vec3{0};
             /** Pointer to the data to copy. */
-            const void* data_;
+            std::variant<void*, const void*> data_;
             /** Deleter for the data_ element. */
             std::function<void(void*)> deleter_;
         };

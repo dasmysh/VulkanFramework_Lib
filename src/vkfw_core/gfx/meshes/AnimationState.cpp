@@ -37,8 +37,9 @@ namespace vku::gfx {
 
         localBonePoses_.resize(mesh_->GetNodes().size());
         globalBonePoses_.resize(mesh_->GetNodes().size());
-        for (auto i = 0U; i < localBonePoses_.size(); ++i)
+        for (auto i = 0U; i < localBonePoses_.size(); ++i) {
             localBonePoses_[i] = mesh_->GetNodes()[i]->GetLocalTransform();
+        }
 
     }
 
@@ -49,8 +50,12 @@ namespace vku::gfx {
     void AnimationState::Play(double currentTime)
     {
         isPlaying_ = true;
-        if (pauseTime_ != 0.0f) startTime_ += static_cast<float>(currentTime) - pauseTime_;
-        else startTime_ = static_cast<float>(currentTime);
+        if (pauseTime_ != 0.0f) {
+            startTime_ += static_cast<float>(currentTime) - pauseTime_;
+        }
+        else {
+            startTime_ = static_cast<float>(currentTime);
+        }
         pauseTime_ = 0.0f;
     }
 
@@ -60,7 +65,7 @@ namespace vku::gfx {
      */
     bool AnimationState::UpdateTime(double currentTime)
     {
-        if (!isPlaying_) return false;
+        if (!isPlaying_) { return false; }
 
         // Advance time
         currentPlayTime_ = (static_cast<float>(currentTime) - startTime_) * GetFramesPerSecond() * GetSpeed();
@@ -102,7 +107,7 @@ namespace vku::gfx {
 
         for (auto i = 0U; i < mesh_->GetNodes().size(); ++i) {
             glm::mat4 pose;
-            if (currentAnimation.ComputePoseAtTime(i, currentPlayTime_, pose)) localBonePoses_[i] = pose;
+            if (currentAnimation.ComputePoseAtTime(i, currentPlayTime_, pose)) { localBonePoses_[i] = pose; }
         }
 
         ComputeGlobalBonePose(mesh_->GetRootNode());
@@ -118,10 +123,17 @@ namespace vku::gfx {
     void AnimationState::ComputeGlobalBonePose(const SceneMeshNode* node)
     {
         auto nodeParent = node->GetParent();
-        while (nodeParent && node->GetBoneIndex() != -1 && (nodeParent->GetName().empty())) nodeParent = nodeParent->GetParent();
+        while (nodeParent != nullptr && node->GetBoneIndex() != -1 && (nodeParent->GetName().empty())) {
+            nodeParent = nodeParent->GetParent();
+        }
 
-        if (!nodeParent) globalBonePoses_[node->GetNodeIndex()] = localBonePoses_[node->GetNodeIndex()];
-        else globalBonePoses_[node->GetNodeIndex()] = globalBonePoses_[nodeParent->GetNodeIndex()] * localBonePoses_[node->GetNodeIndex()];
+        if (nodeParent == nullptr) {
+            globalBonePoses_[node->GetNodeIndex()] = localBonePoses_[node->GetNodeIndex()];
+        }
+        else {
+            globalBonePoses_[node->GetNodeIndex()] =
+                globalBonePoses_[nodeParent->GetNodeIndex()] * localBonePoses_[node->GetNodeIndex()];
+        }
 
         for (auto i = 0U; i < node->GetNumberOfNodes(); ++i) {
             ComputeGlobalBonePose(node->GetChild(i));

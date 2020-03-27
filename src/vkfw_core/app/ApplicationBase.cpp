@@ -562,8 +562,8 @@ namespace vku {
         glm::uvec2 requestedExtend(windowCfg.windowWidth_, windowCfg.windowHeight_);
 
         // NOLINTNEXTLINE
-        return CreateLogicalDevice(windowCfg, surface, [&surface, &requestedFormats, &requestedPresentMode, &requestedAdditionalImgCnt, &requestedExtend](const vk::PhysicalDevice& device)
-        {
+        return CreateLogicalDevice(windowCfg, surface, [&surface, &requestedFormats, &requestedPresentMode, &requestedAdditionalImgCnt, &requestedExtend](const vk::PhysicalDevice& device) {
+            // NOLINTNEXTLINE
             auto deviceSurfaceCaps = device.getSurfaceCapabilitiesKHR(surface);
             auto deviceSurfaceFormats = device.getSurfaceFormatsKHR(surface);
             auto presentModes = device.getSurfacePresentModesKHR(surface);

@@ -27,9 +27,9 @@ namespace vku::gfx {
     class Framebuffer final
     {
     public:
-        Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size, const std::vector<vk::Image>& images,
+        Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size, std::vector<vk::Image> images,
             const vk::RenderPass& renderPass, const FramebufferDescriptor& desc,
-            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{},
+            std::vector<std::uint32_t> queueFamilyIndices = std::vector<std::uint32_t>{},
             vk::CommandBuffer cmdBuffer = vk::CommandBuffer());
         Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size, const vk::RenderPass& renderPass,
             const FramebufferDescriptor& desc, const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{},
@@ -40,10 +40,10 @@ namespace vku::gfx {
         Framebuffer& operator=(Framebuffer&&) noexcept;
         ~Framebuffer();
 
-        glm::uvec2 GetSize() const { return size_; }
-        unsigned int GetWidth() const { return size_.x; }
-        unsigned int GetHeight() const { return size_.y; }
-        const vk::Framebuffer& GetFramebuffer() const { return *vkFramebuffer_; }
+        [[nodiscard]] glm::uvec2 GetSize() const { return size_; }
+        [[nodiscard]] unsigned int GetWidth() const { return size_.x; }
+        [[nodiscard]] unsigned int GetHeight() const { return size_.y; }
+        [[nodiscard]] const vk::Framebuffer& GetFramebuffer() const { return *vkFramebuffer_; }
 
     private:
         void CreateImages(vk::CommandBuffer cmdBuffer);

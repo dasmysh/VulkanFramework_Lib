@@ -19,7 +19,5 @@ namespace vku::gfx {
     }
 
 
-    ComputePipeline::~ComputePipeline()
-    {
-    }
+    ComputePipeline::~ComputePipeline() = default;
 }

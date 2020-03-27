@@ -36,18 +36,18 @@ namespace vku::gfx {
         void Stop() { isPlaying_ = false; currentPlayTime_ = 0.0f; pauseTime_ = 0.0f; }
 
         /** Accessor for animation speed. */
-        float GetSpeed() const { return animationPlaybackSpeed_.at(animationIndex_); }
+        [[nodiscard]] float GetSpeed() const { return animationPlaybackSpeed_.at(animationIndex_); }
         /** Accessor for animation frames per second. */
-        float GetFramesPerSecond() const { return animations_.at(animationIndex_).GetFramesPerSecond(); }
+        [[nodiscard]] float GetFramesPerSecond() const { return animations_.at(animationIndex_).GetFramesPerSecond(); }
         /** Accessor for animation duration. */
-        float GetDuration() const { return animations_.at(animationIndex_).GetDuration(); }
+        [[nodiscard]] float GetDuration() const { return animations_.at(animationIndex_).GetDuration(); }
         /** Accessor for animation time. */
-        float GetTime() const { return currentPlayTime_; }
+        [[nodiscard]] float GetTime() const { return currentPlayTime_; }
 
         /** Checks whether the animation is playing. */
-        bool IsPlaying() const { return isPlaying_; }
+        [[nodiscard]] bool IsPlaying() const { return isPlaying_; }
         /** Checks whether the animation is repeating. */
-        bool IsRepeating() const { return isRepeating_; }
+        [[nodiscard]] bool IsRepeating() const { return isRepeating_; }
 
         /** Updates the current time. */
         bool UpdateTime(double currentTime);
@@ -72,7 +72,7 @@ namespace vku::gfx {
          *  Returns the current animation index.
          *  @return the current animation index.
          */
-        std::size_t GetCurrentAnimationIndex() const { return animationIndex_; }
+        [[nodiscard]] std::size_t GetCurrentAnimationIndex() const { return animationIndex_; }
         /**
          *  Sets the current animation index.
          *  @param animationIndex the new current animation index.
@@ -80,11 +80,11 @@ namespace vku::gfx {
         void SetCurrentAnimationIndex(std::size_t animationIndex) { animationIndex_ = animationIndex; }
 
         /** Returns the global bone pose for a node. */
-        const glm::mat4& GetGlobalBonePose(std::size_t index) const { return globalBonePoses_[index]; }
+        [[nodiscard]] const glm::mat4& GetGlobalBonePose(std::size_t index) const { return globalBonePoses_[index]; }
         /** Returns the local bone pose for a node. */
-        const glm::mat4& GetLocalBonePose(std::size_t index) const { return localBonePoses_[index]; }
+        [[nodiscard]] const glm::mat4& GetLocalBonePose(std::size_t index) const { return localBonePoses_[index]; }
         /** Returns the skinning matrices. */
-        const std::vector<glm::mat4>& GetSkinningMatrices() const { return skinned_; }
+        [[nodiscard]] const std::vector<glm::mat4>& GetSkinningMatrices() const { return skinned_; }
 
     private:
         void ComputeGlobalBonePose(const SceneMeshNode* node);

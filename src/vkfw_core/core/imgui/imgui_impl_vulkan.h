@@ -8,25 +8,27 @@
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
-// The aim of imgui_impl_vulkan.h/.cpp is to be usable in your engine without any modification. 
+// The aim of imgui_impl_vulkan.h/.cpp is to be usable in your engine without any modification.
 // IF YOU FEEL YOU NEED TO MAKE ANY CHANGE TO THIS CODE, please share them and your feedback at https://github.com/ocornut/imgui/
 
 #include <vulkan/vulkan.h>
 #include <cstddef>
+
+#include <imgui.h>
 
 struct ImGui_ImplVulkan_InternalInfo;
 
 // Please zero-clear before use.
 struct ImGui_ImplVulkan_InitInfo
 {
-    VkInstance                      Instance;
-    VkPhysicalDevice                PhysicalDevice;
-    VkDevice                        Device;
-    uint32_t                        QueueFamily;
-    VkQueue                         Queue;
-    VkPipelineCache                 PipelineCache;
-    VkDescriptorPool                DescriptorPool;
-    const VkAllocationCallbacks*    Allocator;
+    VkInstance                      Instance = nullptr;
+    VkPhysicalDevice PhysicalDevice = nullptr;
+    VkDevice Device = nullptr;
+    uint32_t QueueFamily = 0;
+    VkQueue Queue = nullptr;
+    VkPipelineCache PipelineCache = 0;
+    VkDescriptorPool DescriptorPool = 0;
+    const VkAllocationCallbacks* Allocator = nullptr;
     ImGui_ImplVulkan_InternalInfo*  internal_ = nullptr;
 };
 
@@ -46,11 +48,11 @@ IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateDeviceObjects(ImGui_ImplVulka
 //-------------------------------------------------------------------------
 // Internal / Miscellaneous Vulkan Helpers
 //-------------------------------------------------------------------------
-// You probably do NOT need to use or care about those functions. 
+// You probably do NOT need to use or care about those functions.
 // Those functions only exist because:
 //   1) they facilitate the readability and maintenance of the multiple main.cpp examples files.
 //   2) the upcoming multi-viewport feature will need them internally.
-// Generally we avoid exposing any kind of superfluous high-level helpers in the bindings, 
+// Generally we avoid exposing any kind of superfluous high-level helpers in the bindings,
 // but it is too much code to duplicate everywhere so we exceptionally expose them.
 // Your application/engine will likely already have code to setup all that stuff (swap chain, render pass, frame buffers, etc.).
 // You may read this code to learn about Vulkan, but it is recommended you use you own custom tailored code to do equivalent work.

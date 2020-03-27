@@ -23,18 +23,22 @@ namespace vku::gfx {
     public:
         CameraBase(const glm::vec3& position, const glm::quat& orientation, const glm::mat4& projMatrix) noexcept;
         CameraBase(const glm::mat4& viewMatrix, const glm::mat4& projMatrix) noexcept;
+        CameraBase(const CameraBase&) = default;
+        CameraBase(CameraBase&&) = default;
+        CameraBase& operator=(const CameraBase&) = default;
+        CameraBase& operator=(CameraBase&&) = default;
         virtual ~CameraBase();
 
         /** Returns the cameras view matrix. */
-        const glm::mat4& GetViewMatrix() const noexcept { return viewMatrix_; }
+        [[nodiscard]] const glm::mat4& GetViewMatrix() const noexcept { return viewMatrix_; }
         /** Returns the cameras projection matrix. */
-        const glm::mat4& GetProjMatrix() const noexcept { return projMatrix_; }
+        [[nodiscard]] const glm::mat4& GetProjMatrix() const noexcept { return projMatrix_; }
         /** Returns the cameras position. */
-        const glm::vec3& GetPosition() const noexcept { return position_; }
+        [[nodiscard]] const glm::vec3& GetPosition() const noexcept { return position_; }
         /** Returns the cameras orientation. */
-        const glm::quat& GetOrientation() const noexcept { return orientation_; }
+        [[nodiscard]] const glm::quat& GetOrientation() const noexcept { return orientation_; }
         /** Returns the camera view frustum. */
-        const math::Frustum<float>& GetViewFrustum() const noexcept { return viewFrustum_; }
+        [[nodiscard]] const math::Frustum<float>& GetViewFrustum() const noexcept { return viewFrustum_; }
 
     protected:
         /**

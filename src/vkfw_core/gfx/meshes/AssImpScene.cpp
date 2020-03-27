@@ -6,7 +6,7 @@
  * @brief  Contains the implementation of a scene loaded by AssImp.
  */
 
-#include "gfx/meshes/AssimpScene.h"
+#include "gfx/meshes/AssImpScene.h"
 #include "app/ApplicationBase.h"
 #include <fstream>
 #include <filesystem>
@@ -34,8 +34,8 @@ namespace vku::gfx {
         return glm::vec3{ c.r, c.g, c.b };
     }
 
-    AssImpScene::AssImpScene(const std::string& resourceId, const LogicalDevice* device, MeshCreateFlags flags)
-        : Resource{resourceId, device}, meshFilename_{resourceId}
+    AssImpScene::AssImpScene(std::string resourceId, const LogicalDevice* device, MeshCreateFlags flags)
+        : Resource{std::move(resourceId), device}, meshFilename_{getId()}
     {
         auto filename = FindResourceLocation(meshFilename_);
 
@@ -48,7 +48,7 @@ namespace vku::gfx {
     }
 
     /** Default copy constructor. */
-    AssImpScene::AssImpScene(const AssImpScene& rhs) : Resource(rhs), MeshInfo(rhs), meshFilename_{rhs.meshFilename_} {}
+    AssImpScene::AssImpScene(const AssImpScene& rhs) = default;
 
     /** Default copy assignment operator. */
     AssImpScene& AssImpScene::operator=(const AssImpScene& rhs)
@@ -67,17 +67,7 @@ namespace vku::gfx {
     }
 
     /** Default move assignment operator. */
-    AssImpScene& AssImpScene::operator=(AssImpScene&& rhs) noexcept
-    {
-        if (this != &rhs) {
-            this->~AssImpScene();
-            Resource* tRes = this;
-            *tRes = static_cast<Resource&&>(std::move(rhs));
-            MeshInfo* tMesh = this;
-            *tMesh = static_cast<MeshInfo&&>(std::move(rhs));
-        }
-        return *this;
-    }
+    AssImpScene& AssImpScene::operator=(AssImpScene&& rhs) noexcept = default;
 
     /** Destructor. */
     AssImpScene::~AssImpScene() = default;
@@ -92,33 +82,41 @@ namespace vku::gfx {
         GetSubMeshes().clear();
         GetAnimations().clear();
 
-        unsigned int assimpFlags = (aiProcessPreset_TargetRealtime_MaxQuality | aiProcess_FlipUVs)
-                                   & !aiProcess_CalcTangentSpace & !aiProcess_GenNormals & !aiProcess_GenSmoothNormals;
-        if (flags & MeshCreateFlagBits::CREATE_TANGENTSPACE) assimpFlags |= aiProcess_CalcTangentSpace;
-        if (flags & MeshCreateFlagBits::NO_SMOOTH_NORMALS) assimpFlags |= aiProcess_GenNormals;
-        else assimpFlags |= aiProcess_GenSmoothNormals;
+        unsigned int assimpFlags = (static_cast<unsigned int>(aiProcessPreset_TargetRealtime_MaxQuality) | static_cast<unsigned int>(aiProcess_FlipUVs)) // NOLINT
+                                   & ~static_cast<unsigned int>(aiProcess_CalcTangentSpace) & ~static_cast<unsigned int>(aiProcess_GenNormals) & ~static_cast<unsigned int>(aiProcess_GenSmoothNormals);
+        if (flags & MeshCreateFlagBits::CREATE_TANGENTSPACE) {
+            assimpFlags |= static_cast<unsigned int>(aiProcess_CalcTangentSpace);
+        }
+        if (flags & MeshCreateFlagBits::NO_SMOOTH_NORMALS) {
+            assimpFlags |= static_cast<unsigned int>(aiProcess_GenNormals);
+        } else {
+            assimpFlags |= static_cast<unsigned int>(aiProcess_GenSmoothNormals);
+        }
 
         Assimp::Importer importer;
         auto scene = importer.ReadFile(filename, assimpFlags);
 
-        unsigned int maxUVChannels = 0, maxColorChannels = 0, numVertices = 0, numIndices = 0;
+        unsigned int maxUVChannels = 0;
+        unsigned int maxColorChannels = 0;
+        unsigned int numVertices = 0;
+        unsigned int numIndices = 0;
         bool hasTangentSpace = false;
         std::vector<std::vector<unsigned int>> indices;
         indices.resize(static_cast<size_t>(scene->mNumMeshes));
         auto numMeshes = static_cast<std::size_t>(scene->mNumMeshes);
         for (std::size_t i = 0; i < numMeshes; ++i) {
-            maxUVChannels = glm::max(maxUVChannels, scene->mMeshes[i]->GetNumUVChannels());
-            if (scene->mMeshes[i]->HasTangentsAndBitangents()) hasTangentSpace = true;
-            maxColorChannels = glm::max(maxColorChannels, scene->mMeshes[i]->GetNumColorChannels());
-            numVertices += scene->mMeshes[i]->mNumVertices;
-            auto numFaces = static_cast<std::size_t>(scene->mMeshes[i]->mNumFaces);
+            maxUVChannels = glm::max(maxUVChannels, scene->mMeshes[i]->GetNumUVChannels());          // NOLINT
+            if (scene->mMeshes[i]->HasTangentsAndBitangents()) { hasTangentSpace = true; }           // NOLINT
+            maxColorChannels = glm::max(maxColorChannels, scene->mMeshes[i]->GetNumColorChannels()); // NOLINT
+            numVertices += scene->mMeshes[i]->mNumVertices;                         // NOLINT
+            auto numFaces = static_cast<std::size_t>(scene->mMeshes[i]->mNumFaces); // NOLINT
             for (std::size_t fi = 0; fi < numFaces; ++fi) {
-                auto faceIndices = scene->mMeshes[i]->mFaces[fi].mNumIndices;
+                auto faceIndices = scene->mMeshes[i]->mFaces[fi].mNumIndices; // NOLINT
                 // TODO: currently lines and points are ignored. [12/14/2016 Sebastian Maisch]
                 if (faceIndices == 3) {
-                    indices[i].push_back(scene->mMeshes[i]->mFaces[fi].mIndices[0]);
-                    indices[i].push_back(scene->mMeshes[i]->mFaces[fi].mIndices[1]);
-                    indices[i].push_back(scene->mMeshes[i]->mFaces[fi].mIndices[2]);
+                    indices[i].push_back(scene->mMeshes[i]->mFaces[fi].mIndices[0]); // NOLINT
+                    indices[i].push_back(scene->mMeshes[i]->mFaces[fi].mIndices[1]); // NOLINT
+                    indices[i].push_back(scene->mMeshes[i]->mFaces[fi].mIndices[2]); // NOLINT
                     numIndices += faceIndices;
                 }
             }
@@ -129,7 +127,7 @@ namespace vku::gfx {
         ReserveMesh(maxUVChannels, maxColorChannels, hasTangentSpace, numVertices, numIndices, scene->mNumMaterials);
         auto numMaterials = static_cast<std::size_t>(scene->mNumMaterials);
         for (std::size_t i = 0; i < numMaterials; ++i) {
-            auto material = scene->mMaterials[i];
+            auto material = scene->mMaterials[i]; // NOLINT
             auto mat = GetMaterial(i);
             mat->ambient_ = GetMaterialColor(material, AI_MATKEY_COLOR_AMBIENT);
             mat->diffuse_ = GetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE);
@@ -137,8 +135,12 @@ namespace vku::gfx {
             material->Get(AI_MATKEY_OPACITY, mat->alpha_);
             material->Get(AI_MATKEY_SHININESS, mat->specularExponent_);
             material->Get(AI_MATKEY_REFRACTI, mat->refraction_);
-            aiString materialName, diffuseTexPath, bumpTexPath;
-            if (AI_SUCCESS == material->Get(AI_MATKEY_NAME, materialName)) mat->materialName_ = materialName.C_Str();
+            aiString materialName;
+            aiString diffuseTexPath;
+            aiString bumpTexPath;
+            if (AI_SUCCESS == material->Get(AI_MATKEY_NAME, materialName)) {
+                mat->materialName_ = materialName.C_Str();
+            }
 
             if (AI_SUCCESS == material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), diffuseTexPath)) {
                 mat->diffuseTextureFilename_ = sceneFilePath.parent_path().string() + "/" + diffuseTexPath.C_Str();
@@ -163,30 +165,36 @@ namespace vku::gfx {
         std::vector<std::vector<std::pair<unsigned int, float>>> boneWeights;
         boneWeights.resize(numVertices);
         for (unsigned int iMesh = 0; iMesh < scene->mNumMeshes; ++iMesh) {
-            auto mesh = scene->mMeshes[iMesh];
+            auto mesh = scene->mMeshes[iMesh]; // NOLINT
 
             if (mesh->HasPositions()) {
-                std::copy(mesh->mVertices, &mesh->mVertices[mesh->mNumVertices], reinterpret_cast<aiVector3D*>(&GetVertices()[currentMeshVertexOffset]));
+                std::copy(mesh->mVertices, &mesh->mVertices[mesh->mNumVertices],                   // NOLINT
+                          reinterpret_cast<aiVector3D*>(&GetVertices()[currentMeshVertexOffset])); // NOLINT
             }
             if (mesh->HasNormals()) {
-                std::copy(mesh->mNormals, &mesh->mNormals[mesh->mNumVertices], reinterpret_cast<aiVector3D*>(&GetNormals()[currentMeshVertexOffset]));
+                std::copy(mesh->mNormals, &mesh->mNormals[mesh->mNumVertices],                    // NOLINT
+                          reinterpret_cast<aiVector3D*>(&GetNormals()[currentMeshVertexOffset])); // NOLINT
             }
             for (unsigned int ti = 0; ti < mesh->GetNumUVChannels(); ++ti) {
-                std::copy(mesh->mTextureCoords[ti], &mesh->mTextureCoords[ti][mesh->mNumVertices], reinterpret_cast<aiVector3D*>(&GetTexCoords()[ti][currentMeshVertexOffset]));
+                std::copy(mesh->mTextureCoords[ti], &mesh->mTextureCoords[ti][mesh->mNumVertices],      // NOLINT
+                          reinterpret_cast<aiVector3D*>(&GetTexCoords()[ti][currentMeshVertexOffset])); // NOLINT
             }
             if (mesh->HasTangentsAndBitangents()) {
-                std::copy(mesh->mTangents, &mesh->mTangents[mesh->mNumVertices], reinterpret_cast<aiVector3D*>(&GetTangents()[currentMeshVertexOffset]));
-                std::copy(mesh->mBitangents, &mesh->mBitangents[mesh->mNumVertices], reinterpret_cast<aiVector3D*>(&GetBinormals()[currentMeshVertexOffset]));
+                std::copy(mesh->mTangents, &mesh->mTangents[mesh->mNumVertices],                    // NOLINT
+                          reinterpret_cast<aiVector3D*>(&GetTangents()[currentMeshVertexOffset])); // NOLINT
+                std::copy(mesh->mBitangents, &mesh->mBitangents[mesh->mNumVertices],                // NOLINT
+                          reinterpret_cast<aiVector3D*>(&GetBinormals()[currentMeshVertexOffset])); // NOLINT
             }
             for (unsigned int ci = 0; ci < mesh->GetNumColorChannels(); ++ci) {
-                std::copy(mesh->mColors[ci], &mesh->mColors[ci][mesh->mNumVertices], reinterpret_cast<aiColor4D*>(&GetColors()[ci][currentMeshVertexOffset]));
+                std::copy(mesh->mColors[ci], &mesh->mColors[ci][mesh->mNumVertices],                // NOLINT
+                          reinterpret_cast<aiColor4D*>(&GetColors()[ci][currentMeshVertexOffset])); // NOLINT
             }
 
             if (mesh->HasBones()) {
 
                 // Walk all bones of this mesh
                 for (auto b = 0U; b < mesh->mNumBones; ++b) {
-                    auto aiBone = mesh->mBones[b];
+                    auto aiBone = mesh->mBones[b]; // NOLINT
 
                     auto bone = bones.find(aiBone->mName.C_Str());
 
@@ -201,8 +209,8 @@ namespace vku::gfx {
 
                     for (auto w = 0U; w < aiBone->mNumWeights; ++w) {
 
-                        boneWeights[currentMeshVertexOffset + aiBone->mWeights[w].mVertexId].emplace_back(
-                            indexOfCurrentBone, aiBone->mWeights[w].mWeight);
+                        boneWeights[currentMeshVertexOffset + aiBone->mWeights[w].mVertexId].emplace_back( // NOLINT
+                            indexOfCurrentBone, aiBone->mWeights[w].mWeight); // NOLINT
                     }
                 }
             }
@@ -251,13 +259,14 @@ namespace vku::gfx {
 
             GetBoneOffsetMatrixIndices().push_back(newIndices);
             // normalize the bone weights.
-            GetBoneWeigths().push_back(newWeights / glm::max(sumWeights, 0.000000001f));
+            constexpr float WEIGHT_EPSILON = 0.000000001f;
+            GetBoneWeigths().push_back(newWeights / glm::max(sumWeights, WEIGHT_EPSILON));
         }
 
         // Loading animations
         if (scene->HasAnimations()) {
             for (auto a = 0U; a < scene->mNumAnimations; ++a) {
-                GetAnimations().emplace_back(scene->mAnimations[a]);
+                GetAnimations().emplace_back(scene->mAnimations[a]); // NOLINT
             }
         }
 
@@ -280,7 +289,7 @@ namespace vku::gfx {
                 ia(cereal::base_class<MeshInfo>(this), cereal::make_nvp("meshFilename", meshFilename_));
                 return true;
             }
-        } catch (cereal::Exception e) {
+        } catch (cereal::Exception& e) {
             spdlog::error("Could not load binary file. Falling back to Assimp.\nResourceID: {}\nFilename: "
                           "{}\nDescription: Cereal Error.\nError Message: {}",
                           getId(), BinaryIAWrapper::GetBinFilename(filename), e.what());
@@ -319,7 +328,7 @@ namespace vku::gfx {
         }
 
         for (auto i = 0U; i < node->mNumChildren; ++i) {
-            ParseBoneHierarchy(bones, node->mChildren[i], parent, parentMatrix);
+            ParseBoneHierarchy(bones, node->mChildren[i], parent, parentMatrix); // NOLINT
         }
     }
 }

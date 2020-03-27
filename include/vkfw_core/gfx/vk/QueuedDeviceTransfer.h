@@ -33,14 +33,14 @@ namespace vku::gfx {
         QueuedDeviceTransfer(QueuedDeviceTransfer&&) noexcept;
         QueuedDeviceTransfer& operator=(QueuedDeviceTransfer&&) noexcept;
 
-        std::unique_ptr<DeviceBuffer> CreateDeviceBufferWithData(vk::BufferUsageFlags deviceBufferUsage,
-            vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& deviceBufferQueues,
+        std::unique_ptr<DeviceBuffer> CreateDeviceBufferWithData(const vk::BufferUsageFlags& deviceBufferUsage,
+            const vk::MemoryPropertyFlags& memoryFlags, const std::vector<std::uint32_t>& deviceBufferQueues,
             std::size_t bufferSize, std::size_t dataSize, const void* data);
         std::unique_ptr<DeviceTexture> CreateDeviceTextureWithData(const TextureDescriptor& textureDesc,
             const std::vector<std::uint32_t>& deviceBufferQueues, const glm::u32vec4& textureSize,
             std::uint32_t mipLevels, const glm::u32vec4& dataSize, const void* data);
-        std::unique_ptr<DeviceBuffer> CreateDeviceBufferWithData(vk::BufferUsageFlags deviceBufferUsage,
-            vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& deviceBufferQueues,
+        std::unique_ptr<DeviceBuffer> CreateDeviceBufferWithData(const vk::BufferUsageFlags& deviceBufferUsage,
+            const vk::MemoryPropertyFlags& memoryFlags, const std::vector<std::uint32_t>& deviceBufferQueues,
             std::size_t size, const void* data);
         std::unique_ptr<DeviceTexture> CreateDeviceTextureWithData(const TextureDescriptor& textureDesc,
             const std::vector<std::uint32_t>& deviceBufferQueues, const glm::u32vec4& size,

@@ -16,11 +16,10 @@ namespace vku {
      * Constructor.
      * @param resourceId the resource id to use
      */
-    Resource::Resource(const std::string& resourceId, const gfx::LogicalDevice* device) :
-        device_{ device },
-        id_{ resourceId }
+    Resource::Resource(std::string resourceId, const gfx::LogicalDevice* device)
+        : id_{std::move(resourceId)}, device_{device}
     {
-    };
+    }
 
     /** Default copy constructor. */
     Resource::Resource(const Resource&) = default;
@@ -29,11 +28,7 @@ namespace vku {
     Resource& Resource::operator=(const Resource&) = default;
 
     /** Move constructor. */
-    Resource::Resource(Resource&& orig) noexcept :
-        device_{ orig.device_ },
-        id_{ std::move(orig.id_) }
-    {
-    };
+    Resource::Resource(Resource&& orig) noexcept : id_{std::move(orig.id_)}, device_{orig.device_} {};
 
     /** Move assignment operator. */
     Resource& Resource::operator=(Resource&& orig) noexcept
@@ -66,12 +61,13 @@ namespace vku {
     std::string Resource::FindGeneralFileLocation(const std::string& localFilename, const std::string& resourceId)
     {
         auto filename = ApplicationBase::instance().GetConfig().resourceBase_ + "/" + localFilename;
-        if (std::filesystem::exists(filename)) return filename;
+        if (std::filesystem::exists(filename)) { return filename; }
 
         for (const auto& dir : ApplicationBase::instance().GetConfig().resourceDirs_) {
-            filename = dir + "/" + localFilename;
-            if (dir.empty()) filename = localFilename;
-            if (std::filesystem::exists(filename)) return filename;
+            filename = dir;
+            filename.append("/").append(localFilename);
+            if (dir.empty()) { filename = localFilename; }
+            if (std::filesystem::exists(filename)) { return filename; }
         }
 
         spdlog::error("Error while loading resource.\nResourceID: {}\nFilename: {}\nDescription: Cannot find local resource file.", resourceId, localFilename);

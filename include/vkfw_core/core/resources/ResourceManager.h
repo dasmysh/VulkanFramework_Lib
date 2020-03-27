@@ -86,13 +86,13 @@ namespace vku {
             try {
                 wpResource = resources_.at(resId);
             }
-            catch (std::out_of_range e) {
+            catch (std::out_of_range&) {
                 spdlog::info("No resource with id \"{}\" found. Creating new one.", resId);
             }
             if (wpResource.expired()) {
                 std::shared_ptr<ResourceType> spResource(nullptr);
                 LoadResource(resId, spResource, std::forward<Args>(args)...);
-                if constexpr (reloadLoop) {
+                if constexpr (reloadLoop) { // NOLINT
                     while (!spResource) { LoadResource(resId, spResource, std::forward<Args>(args)...); }
                 }
                 wpResource = spResource;

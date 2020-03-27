@@ -15,7 +15,12 @@
 
 #include "animation_convert_helpers.h"
 
+// NOLINTNEXTLINE
+#include <assimp/scene.h> // NOLINT
+
 namespace vku::gfx {
+
+    constexpr float STANDARD_ANIMATION_FPS = 24.0f;
 
     /** Default constructor for animations. */
     Animation::Animation() = default;
@@ -30,32 +35,34 @@ namespace vku::gfx {
     Animation::Animation(aiAnimation* aiAnimation)
         : name_{aiAnimation->mName.C_Str()},
           framesPerSecond_{aiAnimation->mTicksPerSecond > 0.0 ? static_cast<float>(aiAnimation->mTicksPerSecond)
-                                                              : 24.0f},
+                                                              : STANDARD_ANIMATION_FPS},
           duration_{static_cast<float>(aiAnimation->mDuration)}
     {
         for (auto c = 0U; c < aiAnimation->mNumChannels; ++c) {
-            const auto aiChannel = aiAnimation->mChannels[c];
+            const auto aiChannel = aiAnimation->mChannels[c]; // NOLINT
 
             auto channel = Channel();
 
             // Copy position data for this channel
             for (auto p = 0U; p < aiChannel->mNumPositionKeys; ++p) {
-                channel.positionFrames_.emplace_back(static_cast<Time>(aiChannel->mPositionKeys[p].mTime),
-                                   *reinterpret_cast<glm::vec3*>(&aiChannel->mPositionKeys[p].mValue));
+                channel.positionFrames_.emplace_back(
+                    static_cast<Time>(aiChannel->mPositionKeys[p].mTime),                // NOLINT
+                    *reinterpret_cast<glm::vec3*>(&aiChannel->mPositionKeys[p].mValue)); // NOLINT
             }
 
             // Copy rotation data for this channel
             for (auto r = 0U; r < aiChannel->mNumRotationKeys; ++r) {
-                const auto& aiQuat = aiChannel->mRotationKeys[r].mValue;
+                const auto& aiQuat = aiChannel->mRotationKeys[r].mValue; // NOLINT
 
-                channel.rotationFrames_.emplace_back(static_cast<Time>(aiChannel->mRotationKeys[r].mTime),
+                channel.rotationFrames_.emplace_back(static_cast<Time>(aiChannel->mRotationKeys[r].mTime), // NOLINT
                                                                  glm::quat(aiQuat.w, aiQuat.x, aiQuat.y, aiQuat.z));
             }
 
             // Copy scaling data for this channel
             for (auto s = 0U; s < aiChannel->mNumScalingKeys; ++s) {
-                channel.scalingFrames_.emplace_back(static_cast<Time>(aiChannel->mScalingKeys[s].mTime),
-                                   *reinterpret_cast<glm::vec3*>(&aiChannel->mScalingKeys[s].mValue));
+                channel.scalingFrames_.emplace_back(
+                    static_cast<Time>(aiChannel->mScalingKeys[s].mTime),                // NOLINT
+                                   *reinterpret_cast<glm::vec3*>(&aiChannel->mScalingKeys[s].mValue)); // NOLINT
             }
 
             channelMap_[aiChannel->mNodeName.C_Str()] = channel;
@@ -157,7 +164,7 @@ namespace vku::gfx {
         glm::vec3 translation{0.0f};
         glm::vec3 scale{1.0f};
 
-        if (positionFrames.empty() || rotationFrames.empty() || scalingFrames.empty()) return false;
+        if (positionFrames.empty() || rotationFrames.empty() || scalingFrames.empty()) { return false; }
 
         // There is just one frame
         if (positionFrames.size() == 1) {

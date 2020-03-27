@@ -33,36 +33,37 @@ namespace vku::math {
     template<typename real> struct Frustum {
         using mat4 = glm::tmat4x4<real, glm::highp>;
         using vec4 = glm::tvec4<real, glm::highp>;
+        constexpr static std::size_t NUM_FRUSTUM_PLANES = 6;
 
-        Frustum(const mat4& mat) noexcept;
+        explicit Frustum(const mat4& mat) noexcept;
 
         /** The six planes defining the frustum. */
-        std::array<vec4, 6> planes_;
+        std::array<vec4, NUM_FRUSTUM_PLANES> planes_;
 
         /** Returns the left plane of the frustum. */
-        vec4& left() { return planes_[0]; }
+        [[nodiscard]] vec4& left() { return planes_[0]; }
         /** Returns the left plane of the frustum. */
-        const vec4& left() const { return planes_[0]; }
+        [[nodiscard]] const vec4& left() const { return planes_[0]; }
         /** Returns the right plane of the frustum. */
-        vec4& right() { return planes_[1]; }
+        [[nodiscard]] vec4& right() { return planes_[1]; }
         /** Returns the right plane of the frustum. */
-        const vec4& right() const { return planes_[1]; }
+        [[nodiscard]] const vec4& right() const { return planes_[1]; }
         /** Returns the top plane of the frustum. */
-        vec4& top() { return planes_[2]; }
+        [[nodiscard]] vec4& top() { return planes_[2]; }
         /** Returns the top plane of the frustum. */
-        const vec4& top() const { return planes_[2]; }
+        [[nodiscard]] const vec4& top() const { return planes_[2]; }
         /** Returns the bottom plane of the frustum. */
-        vec4& bttm() { return planes_[3]; }
+        [[nodiscard]] vec4& bttm() { return planes_[3]; }
         /** Returns the bottom plane of the frustum. */
-        const vec4& bttm() const { return planes_[3]; }
+        [[nodiscard]] const vec4& bttm() const { return planes_[3]; }
         /** Returns the near plane of the frustum. */
-        vec4& ner() { return planes_[4]; }
+        [[nodiscard]] vec4& npln() { return planes_[4]; }
         /** Returns the near plane of the frustum. */
-        const vec4& ner() const { return planes_[4]; }
+        [[nodiscard]] const vec4& npln() const { return planes_[4]; }
         /** Returns the far plane of the frustum. */
-        vec4& faar() { return planes_[5]; }
+        [[nodiscard]] vec4& fpln() { return planes_[5]; }
         /** Returns the far plane of the frustum. */
-        const vec4& faar() const { return planes_[5]; }
+        [[nodiscard]] const vec4& fpln() const { return planes_[5]; }
     };
 
     template<typename real>
@@ -88,8 +89,8 @@ namespace vku::math {
         right() /= glm::length(glm::vec3(right()));
         bttm() /= glm::length(glm::vec3(bttm()));
         top() /= glm::length(glm::vec3(top()));
-        ner() /= glm::length(glm::vec3(ner()));
-        faar() /= glm::length(glm::vec3(faar()));
+        npln() /= glm::length(glm::vec3(npln()));
+        fpln() /= glm::length(glm::vec3(fpln()));
     }
 
     template<typename real, int N, typename V> struct AABB
@@ -103,9 +104,9 @@ namespace vku::math {
         void SetMax(const V&);
 
         void Transform(const mat4&);
-        AABB NewFromTransform(const mat4&) const;
+        [[nodiscard]] AABB NewFromTransform(const mat4&) const;
 
-        AABB Union(const AABB& other) const;
+        [[nodiscard]] AABB Union(const AABB& other) const;
 
         /** Contains the minimum and maximum points of the box. */
         void AddPoint(const V&);
@@ -210,12 +211,12 @@ namespace vku::math {
     template<typename real, int N, typename V>
     inline void AABB<real, N, V>::FromPoints(const std::vector<V>& points)
     {
-        if (points.size() <= 0) return;
+        if (points.empty()) { return; }
 
         minmax_[0] = glm::vec3(std::numeric_limits<float>::max());
         minmax_[1] = glm::vec3(std::numeric_limits<float>::lowest());
 
-        for (const auto& point : points) AddPoint(point);
+        for (const auto& point : points) { AddPoint(point); }
     }
 
     template<typename real> using AABB2 = AABB<real, 2, glm::tvec2<real, glm::highp>>;

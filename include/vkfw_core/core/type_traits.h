@@ -30,16 +30,16 @@ namespace vku {
     struct has_contiguous_memory<std::array<T, N>> : std::true_type{};
 
     template<typename T>
-    struct has_contiguous_memory<T[]> : std::true_type{};
+    struct has_contiguous_memory<T[]> : std::true_type{}; // NOLINT
 
     template<typename T, std::size_t N>
-    struct has_contiguous_memory<T[N]> : std::true_type{};
+    struct has_contiguous_memory<T[N]> : std::true_type{}; // NOLINT
 
     template<typename T>
     struct has_contiguous_memory<aligned_vector<T>> : std::true_type {};
 
     template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value, std::size_t> byteSizeOf(const T& data) {
-        return static_cast<std::size_t>(sizeof(T::value_type) * data.size());
+        return static_cast<std::size_t>(sizeof(typename T::value_type) * data.size());
     }
 
     template<class T> std::size_t byteSizeOf(const aligned_vector<T>& data) {

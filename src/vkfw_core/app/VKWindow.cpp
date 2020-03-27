@@ -40,16 +40,16 @@ namespace vku {
         windowData_ = std::make_unique<ImGui_ImplVulkanH_WindowData>();
         this->InitWindow();
         this->InitVulkan();
-        if (useGUI) InitGUI();
+        if (useGUI) { InitGUI(); }
     }
 
     VKWindow::VKWindow(VKWindow&& rhs) noexcept :
-        window_{ std::move(rhs.window_) },
-        config_{ std::move(rhs.config_) },
+        window_{ rhs.window_ },
+        config_{ rhs.config_ },
         vkSurface_{ std::move(rhs.vkSurface_) },
-        vkSurfaceExtend_{ std::move(rhs.vkSurfaceExtend_) },
+        vkSurfaceExtend_{ rhs.vkSurfaceExtend_ },
         logicalDevice_{ std::move(rhs.logicalDevice_) },
-        graphicsQueue_{ std::move(rhs.graphicsQueue_) },
+        graphicsQueue_{ rhs.graphicsQueue_ },
         vkSwapchain_{ std::move(rhs.vkSwapchain_) },
         vkSwapchainRenderPass_{ std::move(rhs.vkSwapchainRenderPass_) },
         swapchainFramebuffers_{ std::move(rhs.swapchainFramebuffers_) },
@@ -59,19 +59,19 @@ namespace vku {
         vkImGuiCommandBuffers_{ std::move(rhs.vkImGuiCommandBuffers_) },
         vkImageAvailableSemaphore_{ std::move(rhs.vkImageAvailableSemaphore_) },
         vkRenderingFinishedSemaphore_{ std::move(rhs.vkRenderingFinishedSemaphore_) },
-        currentlyRenderedImage_{ std::move(rhs.currentlyRenderedImage_) },
+        currentlyRenderedImage_{ rhs.currentlyRenderedImage_ },
         vkImguiDescPool_{ std::move(rhs.vkImguiDescPool_) },
         windowData_{ std::move(rhs.windowData_) },
-        glfwWindowData_{ std::move(rhs.glfwWindowData_) },
+        glfwWindowData_{ rhs.glfwWindowData_ },
         imguiVulkanData_{ std::move(rhs.imguiVulkanData_) },
-        currMousePosition_{ std::move(rhs.currMousePosition_) },
-        prevMousePosition_{ std::move(rhs.prevMousePosition_) },
-        relativeMousePosition_{ std::move(rhs.relativeMousePosition_) },
-        mouseInWindow_{ std::move(rhs.mouseInWindow_) },
-        minimized_{ std::move(rhs.minimized_) },
-        maximized_{ std::move(rhs.maximized_) },
-        focused_{ std::move(rhs.focused_) },
-        frameCount_{ std::move(rhs.frameCount_) }
+        currMousePosition_{ rhs.currMousePosition_ },
+        prevMousePosition_{ rhs.prevMousePosition_ },
+        relativeMousePosition_{ rhs.relativeMousePosition_ },
+        mouseInWindow_{ rhs.mouseInWindow_ },
+        minimized_{ rhs.minimized_ },
+        maximized_{ rhs.maximized_ },
+        focused_{ rhs.focused_ },
+        frameCount_{ rhs.frameCount_ }
     {
         rhs.window_ = nullptr;
         rhs.glfwWindowData_ = nullptr;
@@ -81,12 +81,12 @@ namespace vku {
     {
         if (this != &rhs) {
             this->~VKWindow();
-            window_ = std::move(rhs.window_);
-            config_ = std::move(rhs.config_);
+            window_ = rhs.window_;
+            config_ = rhs.config_;
             vkSurface_ = std::move(rhs.vkSurface_);
-            vkSurfaceExtend_ = std::move(rhs.vkSurfaceExtend_);
+            vkSurfaceExtend_ = rhs.vkSurfaceExtend_;
             logicalDevice_ = std::move(rhs.logicalDevice_);
-            graphicsQueue_ = std::move(rhs.graphicsQueue_);
+            graphicsQueue_ = rhs.graphicsQueue_;
             vkSwapchain_ = std::move(rhs.vkSwapchain_);
             vkSwapchainRenderPass_ = std::move(rhs.vkSwapchainRenderPass_);
             swapchainFramebuffers_ = std::move(rhs.swapchainFramebuffers_);
@@ -96,19 +96,19 @@ namespace vku {
             vkImGuiCommandBuffers_ = std::move(rhs.vkImGuiCommandBuffers_);
             vkImageAvailableSemaphore_ = std::move(rhs.vkImageAvailableSemaphore_);
             vkRenderingFinishedSemaphore_ = std::move(rhs.vkRenderingFinishedSemaphore_);
-            currentlyRenderedImage_ = std::move(rhs.currentlyRenderedImage_);
+            currentlyRenderedImage_ = rhs.currentlyRenderedImage_;
             vkImguiDescPool_ = std::move(rhs.vkImguiDescPool_);
             windowData_ = std::move(rhs.windowData_);
-            glfwWindowData_ = std::move(rhs.glfwWindowData_);
+            glfwWindowData_ = rhs.glfwWindowData_;
             imguiVulkanData_ = std::move(rhs.imguiVulkanData_);
-            currMousePosition_ = std::move(rhs.currMousePosition_);
-            prevMousePosition_ = std::move(rhs.prevMousePosition_);
-            relativeMousePosition_ = std::move(rhs.relativeMousePosition_);
-            mouseInWindow_ = std::move(rhs.mouseInWindow_);
-            minimized_ = std::move(rhs.minimized_);
-            maximized_ = std::move(rhs.maximized_);
-            focused_ = std::move(rhs.focused_);
-            frameCount_ = std::move(rhs.frameCount_);
+            currMousePosition_ = rhs.currMousePosition_;
+            prevMousePosition_ = rhs.prevMousePosition_;
+            relativeMousePosition_ = rhs.relativeMousePosition_;
+            mouseInWindow_ = rhs.mouseInWindow_;
+            minimized_ = rhs.minimized_;
+            maximized_ = rhs.maximized_;
+            focused_ = rhs.focused_;
+            frameCount_ = rhs.frameCount_;
 
             rhs.glfwWindowData_ = nullptr;
             rhs.window_ = nullptr;
@@ -116,10 +116,14 @@ namespace vku {
         return *this;
     }
 
-    VKWindow::~VKWindow()
+    VKWindow::~VKWindow() noexcept
     {
-        this->ReleaseVulkan();
-        this->ReleaseWindow();
+        try {
+            this->ReleaseVulkan();
+            this->ReleaseWindow();
+        } catch (...) {
+            spdlog::critical("Error while releasing vulkan and window. Unknown exception.");
+        }
         config_->fullscreen_ = maximized_;
         config_->windowWidth_ = vkSurfaceExtend_.width;
         config_->windowHeight_ = vkSurfaceExtend_.height;
@@ -141,7 +145,9 @@ namespace vku {
 
         if (config_->fullscreen_) {
             glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
-            window_ = glfwCreateWindow(config_->windowWidth_, config_->windowHeight_, config_->windowTitle_.c_str(), glfwGetPrimaryMonitor(), nullptr);
+            window_ =
+                glfwCreateWindow(static_cast<int>(config_->windowWidth_), static_cast<int>(config_->windowHeight_),
+                                 config_->windowTitle_.c_str(), glfwGetPrimaryMonitor(), nullptr);
             if (window_ == nullptr) {
                 spdlog::critical("Could not create window!");
                 glfwTerminate();
@@ -151,13 +157,15 @@ namespace vku {
         } else {
             glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
             glfwWindowHint(GLFW_DECORATED, GLFW_TRUE);
-            window_ = glfwCreateWindow(config_->windowWidth_, config_->windowHeight_, config_->windowTitle_.c_str(), nullptr, nullptr);
+            window_ =
+                glfwCreateWindow(static_cast<int>(config_->windowWidth_), static_cast<int>(config_->windowHeight_),
+                                 config_->windowTitle_.c_str(), nullptr, nullptr);
             if (window_ == nullptr) {
                 spdlog::critical("Could not create window!");
                 glfwTerminate();
                 throw std::runtime_error("Could not create window!");
             }
-            glfwSetWindowPos(window_, config_->windowLeft_, config_->windowTop_);
+            glfwSetWindowPos(window_, static_cast<int>(config_->windowLeft_), static_cast<int>(config_->windowTop_));
         }
         glfwSetWindowUserPointer(window_, this);
         glfwSetInputMode(window_, GLFW_STICKY_MOUSE_BUTTONS, 1);
@@ -207,9 +215,11 @@ namespace vku {
             throw std::runtime_error("Could not create window surface.");
         }
         logicalDevice_ = ApplicationBase::instance().CreateLogicalDevice(*config_, *vkSurface_);
-        for (auto i = 0U; i < config_->queues_.size(); ++i) if (config_->queues_[i].graphics_) {
-            graphicsQueue_ = i;
-            break;
+        for (auto i = 0U; i < config_->queues_.size(); ++i) {
+            if (config_->queues_[i].graphics_) {
+                graphicsQueue_ = i;
+                break;
+            }
         }
 
         RecreateSwapChain();
@@ -302,7 +312,8 @@ namespace vku {
 
     void VKWindow::RecreateSwapChain()
     {
-        int width = 0, height = 0;
+        int width = 0;
+        int height = 0;
         while (width == 0 || height == 0) {
             glfwGetFramebufferSize(window_, &width, &height);
             glfwWaitEvents();
@@ -318,6 +329,7 @@ namespace vku {
 
         DestroySwapchainImages();
 
+        // NOLINTNEXTLINE
         auto surfaceCapabilities = logicalDevice_->GetPhysicalDevice().getSurfaceCapabilitiesKHR(*vkSurface_);
         auto deviceSurfaceFormats = logicalDevice_->GetPhysicalDevice().getSurfaceFormatsKHR(*vkSurface_);
         auto surfaceFormats = cfg::GetVulkanSurfaceFormatsFromConfig(*config_);
@@ -325,12 +337,16 @@ namespace vku {
         std::sort(surfaceFormats.begin(), surfaceFormats.end(), [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0.format < f1.format; });
 
         vk::SurfaceFormatKHR surfaceFormat;
-        if (deviceSurfaceFormats.size() == 1 && deviceSurfaceFormats[0].format == vk::Format::eUndefined) surfaceFormat = surfaceFormats[0];
+        if (deviceSurfaceFormats.size() == 1 && deviceSurfaceFormats[0].format == vk::Format::eUndefined) {
+            surfaceFormat = surfaceFormats[0];
+        }
         else {
             std::vector<vk::SurfaceFormatKHR> formatIntersection;
             std::set_intersection(deviceSurfaceFormats.begin(), deviceSurfaceFormats.end(), surfaceFormats.begin(), surfaceFormats.end(),
                 std::back_inserter(formatIntersection), [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0 == f1; });
-            if (!formatIntersection.empty()) surfaceFormat = formatIntersection[0]; // no color space check here as color space does not depend on the color space flag but the actual format.
+            if (!formatIntersection.empty()) {
+                surfaceFormat = formatIntersection[0]; // no color space check here as color space does not depend on the color space flag but the actual format.
+            }
             else {
                 spdlog::critical("No suitable surface format found after correct enumeration (this should never happen).");
                 throw std::runtime_error("No suitable surface format found after correct enumeration (this should never happen).");
@@ -338,10 +354,12 @@ namespace vku {
         }
 
         auto presentMode = cfg::GetVulkanPresentModeFromConfig(*config_);
-        auto surfaceCaps = logicalDevice_->GetPhysicalDevice().getSurfaceCapabilitiesKHR(*vkSurface_);
+        // auto surfaceCaps = logicalDevice_->GetPhysicalDevice().getSurfaceCapabilitiesKHR(*vkSurface_);
         glm::u32vec2 configSurfaceSize(static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height));
-        glm::u32vec2 minSurfaceSize(surfaceCaps.minImageExtent.width, surfaceCaps.minImageExtent.height);
-        glm::u32vec2 maxSurfaceSize(surfaceCaps.maxImageExtent.width, surfaceCaps.maxImageExtent.height);
+        glm::u32vec2 minSurfaceSize(surfaceCapabilities.minImageExtent.width,
+                                    surfaceCapabilities.minImageExtent.height);
+        glm::u32vec2 maxSurfaceSize(surfaceCapabilities.maxImageExtent.width,
+                                    surfaceCapabilities.maxImageExtent.height);
         auto surfaceExtend = glm::clamp(configSurfaceSize, minSurfaceSize, maxSurfaceSize);
         vkSurfaceExtend_ = vk::Extent2D{ surfaceExtend.x, surfaceExtend.y };
         auto imageCount = surfaceCapabilities.minImageCount + cfg::GetVulkanAdditionalImageCountFromConfig(*config_);
@@ -349,7 +367,7 @@ namespace vku {
         {
             vk::SwapchainCreateInfoKHR swapChainCreateInfo{ vk::SwapchainCreateFlagsKHR(), *vkSurface_, imageCount, surfaceFormat.format, surfaceFormat.colorSpace,
                 vkSurfaceExtend_, 1, vk::ImageUsageFlagBits::eColorAttachment, vk::SharingMode::eExclusive, 0, nullptr, surfaceCapabilities.currentTransform,
-                vk::CompositeAlphaFlagBitsKHR::eOpaque, presentMode, true, *vkSwapchain_ };
+                vk::CompositeAlphaFlagBitsKHR::eOpaque, presentMode, static_cast<vk::Bool32>(true), *vkSwapchain_ };
             vkSwapchain_ = logicalDevice_->GetDevice().createSwapchainKHRUnique(swapChainCreateInfo);
         }
         windowData_->Width = vkSurfaceExtend_.width;
@@ -453,7 +471,9 @@ namespace vku {
         vk::FenceCreateInfo fenceCreateInfo{ vk::FenceCreateFlagBits::eSignaled };
         vkCmdBufferUFences_.resize(vkCommandBuffers_.size());
         vkCmdBufferFences_.resize(vkCommandBuffers_.size());
-        for (auto& fence : vkCmdBufferUFences_) fence = logicalDevice_->GetDevice().createFenceUnique(fenceCreateInfo);
+        for (auto& fence : vkCmdBufferUFences_) {
+            fence = logicalDevice_->GetDevice().createFenceUnique(fenceCreateInfo);
+        }
         std::transform(vkCmdBufferUFences_.begin(), vkCmdBufferUFences_.end(), vkCmdBufferFences_.begin(), [](auto& cmdBuffer) { return *cmdBuffer; });
     }
 
@@ -491,14 +511,29 @@ namespace vku {
 
     std::pair<unsigned int, vk::Format> VKWindow::FindSupportedDepthFormat() const
     {
+        constexpr std::size_t BITS_RBG8 = 24;
         std::vector<std::pair<unsigned int, vk::Format>> candidates;
-        if (config_->depthBufferBits_ == 16 && config_->stencilBufferBits_ == 0) candidates.emplace_back(std::make_pair(2, vk::Format::eD16Unorm));
-        if (config_->depthBufferBits_ <= 24 && config_->stencilBufferBits_ == 0) candidates.emplace_back(std::make_pair(4, vk::Format::eX8D24UnormPack32));
-        if (config_->depthBufferBits_ <= 32 && config_->stencilBufferBits_ == 0) candidates.emplace_back(std::make_pair(4, vk::Format::eD32Sfloat));
-        if (config_->depthBufferBits_ ==  0 && config_->stencilBufferBits_ <= 8) candidates.emplace_back(std::make_pair(1, vk::Format::eS8Uint));
-        if (config_->depthBufferBits_ <= 16 && config_->stencilBufferBits_ <= 8) candidates.emplace_back(std::make_pair(3, vk::Format::eD16UnormS8Uint));
-        if (config_->depthBufferBits_ <= 24 && config_->stencilBufferBits_ <= 8) candidates.emplace_back(std::make_pair(4, vk::Format::eD24UnormS8Uint));
-        if (config_->depthBufferBits_ <= 32 && config_->stencilBufferBits_ <= 8) candidates.emplace_back(std::make_pair(5, vk::Format::eD32SfloatS8Uint));
+        if (config_->depthBufferBits_ == 16 && config_->stencilBufferBits_ == 0) {
+            candidates.emplace_back(std::make_pair(2, vk::Format::eD16Unorm));
+        }
+        if (config_->depthBufferBits_ <= BITS_RBG8 && config_->stencilBufferBits_ == 0) {
+            candidates.emplace_back(std::make_pair(4, vk::Format::eX8D24UnormPack32));
+        }
+        if (config_->depthBufferBits_ <= 32 && config_->stencilBufferBits_ == 0) {
+            candidates.emplace_back(std::make_pair(4, vk::Format::eD32Sfloat));
+        }
+        if (config_->depthBufferBits_ == 0 && config_->stencilBufferBits_ <= 8) {
+            candidates.emplace_back(std::make_pair(1, vk::Format::eS8Uint));
+        }
+        if (config_->depthBufferBits_ <= 16 && config_->stencilBufferBits_ <= 8) {
+            candidates.emplace_back(std::make_pair(3, vk::Format::eD16UnormS8Uint));
+        }
+        if (config_->depthBufferBits_ <= BITS_RBG8 && config_->stencilBufferBits_ <= 8) {
+            candidates.emplace_back(std::make_pair(4, vk::Format::eD24UnormS8Uint));
+        }
+        if (config_->depthBufferBits_ <= 32 && config_->stencilBufferBits_ <= 8) {
+            candidates.emplace_back(std::make_pair(5, vk::Format::eD32SfloatS8Uint));
+        }
 
         return logicalDevice_->FindSupportedFormat(candidates, vk::ImageTiling::eOptimal, vk::FormatFeatureFlagBits::eDepthStencilAttachment);
     }
@@ -521,7 +556,7 @@ namespace vku {
 
     void VKWindow::ReleaseWindow()
     {
-        if (window_) glfwDestroyWindow(window_);
+        if (window_ != nullptr) { glfwDestroyWindow(window_); }
         window_ = nullptr;
     }
 
@@ -530,7 +565,9 @@ namespace vku {
         auto result = logicalDevice_->GetDevice().acquireNextImageKHR(*vkSwapchain_, std::numeric_limits<std::uint64_t>::max(), *vkImageAvailableSemaphore_, vk::Fence());
         currentlyRenderedImage_ = result.value;
 
+        // NOLINTNEXTLINE
         if (result.result == vk::Result::eErrorOutOfDateKHR) {
+            // NOLINTNEXTLINE
             RecreateSwapChain();
             return;
         }
@@ -551,8 +588,10 @@ namespace vku {
     {
         {
             auto syncResult = logicalDevice_->GetDevice().getFenceStatus(vkCmdBufferFences_[currentlyRenderedImage_]);
-            while (syncResult == vk::Result::eTimeout || syncResult == vk::Result::eNotReady)
-                syncResult = logicalDevice_->GetDevice().waitForFences(vkCmdBufferFences_[currentlyRenderedImage_], VK_TRUE, defaultFenceTimeout);
+            while (syncResult == vk::Result::eTimeout || syncResult == vk::Result::eNotReady) {
+                syncResult = logicalDevice_->GetDevice().waitForFences(vkCmdBufferFences_[currentlyRenderedImage_],
+                                                                       VK_TRUE, defaultFenceTimeout);
+            }
 
             if (syncResult != vk::Result::eSuccess) {
                 spdlog::critical("Error synchronizing command buffer. ({}).", vk::to_string(syncResult));
@@ -585,18 +624,18 @@ namespace vku {
             vkImGuiCommandBuffers_[currentlyRenderedImage_]->end();
         }
 
-        vk::PipelineStageFlags waitStages[]{ vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eTopOfPipe };
-        vk::Semaphore waitSemaphores[]{ *vkImageAvailableSemaphore_, *vkDataAvailableSemaphore_ };
+        std::array<vk::PipelineStageFlags, 2> waitStages{ vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eTopOfPipe };
+        std::array<vk::Semaphore, 2> waitSemaphores{*vkImageAvailableSemaphore_, *vkDataAvailableSemaphore_};
         std::array<vk::CommandBuffer, 2> submitCmdBuffers{ *vkCommandBuffers_[currentlyRenderedImage_], *vkImGuiCommandBuffers_[currentlyRenderedImage_] };
-        vk::SubmitInfo submitInfo{ 2, waitSemaphores, waitStages, 2, submitCmdBuffers.data(), 1, &(*vkRenderingFinishedSemaphore_) };
+        vk::SubmitInfo submitInfo{ 2, waitSemaphores.data(), waitStages.data(), 2, submitCmdBuffers.data(), 1, &(*vkRenderingFinishedSemaphore_) };
 
         logicalDevice_->GetQueue(graphicsQueue_, 0).submit(submitInfo, vkCmdBufferFences_[currentlyRenderedImage_]);
     }
 
     void VKWindow::SubmitFrame()
     {
-        vk::SwapchainKHR swapchains[] = { *vkSwapchain_ };
-        vk::PresentInfoKHR presentInfo{ 1, &(*vkRenderingFinishedSemaphore_), 1, swapchains, &currentlyRenderedImage_ }; //<- wait on these semaphores
+        std::array<vk::SwapchainKHR, 1> swapchains = { *vkSwapchain_ };
+        vk::PresentInfoKHR presentInfo{ 1, &(*vkRenderingFinishedSemaphore_), 1, swapchains.data(), &currentlyRenderedImage_ }; //<- wait on these semaphores
         auto result = logicalDevice_->GetQueue(graphicsQueue_, 0).presentKHR(presentInfo);
 
         if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || frameBufferResize_) {
@@ -605,9 +644,10 @@ namespace vku {
 
             try {
                 // TODO: notify all resources depending on this...
-                ApplicationBase::instance().OnResize(config_->windowWidth_, config_->windowHeight_, this);
+                ApplicationBase::instance().OnResize(static_cast<int>(config_->windowWidth_),
+                                                     static_cast<int>(config_->windowHeight_), this);
             }
-            catch (std::runtime_error e) {
+            catch (std::runtime_error& e) {
                 spdlog::critical("Could not reacquire resources after resize: {}", e.what());
                 throw std::runtime_error("Could not reacquire resources after resize.");
             }
@@ -625,8 +665,10 @@ namespace vku {
         for (std::size_t i = 0U; i < vkCommandBuffers_.size(); ++i) {
             {
                 auto syncResult = vk::Result::eTimeout;
-                while (syncResult == vk::Result::eTimeout)
-                    syncResult = logicalDevice_->GetDevice().waitForFences(vkCmdBufferFences_[i], VK_TRUE, defaultFenceTimeout);
+                while (syncResult == vk::Result::eTimeout) {
+                    syncResult =
+                        logicalDevice_->GetDevice().waitForFences(vkCmdBufferFences_[i], VK_TRUE, defaultFenceTimeout);
+                }
 
                 if (syncResult != vk::Result::eSuccess) {
                     spdlog::critical("Error synchronizing command buffers. ({}).", vk::to_string(syncResult));
@@ -683,7 +725,7 @@ namespace vku {
     void VKWindow::WindowSizeCallback(int width, int height)
     {
         spdlog::info("Got window resize event ({}, {}) ...", width, height);
-        if (width == 0 || height == 0) return;
+        if (width == 0 || height == 0) { return; }
 
         spdlog::debug("Begin HandleResize()");
 
@@ -694,17 +736,18 @@ namespace vku {
 
     void VKWindow::WindowFocusCallback(int focused)
     {
-        if (focused == GLFW_TRUE) focused_ = true;
-        else focused_ = false;
+        focused_ = focused == GLFW_TRUE;
     }
 
     // ReSharper disable once CppMemberFunctionMayBeStatic
+    // NOLINTNEXTLINE
     void VKWindow::WindowCloseCallback() const
     {
         spdlog::info("Got close event ...");
     }
 
     // ReSharper disable once CppMemberFunctionMayBeStatic
+    // NOLINTNEXTLINE
     void VKWindow::FramebufferSizeCallback(int width, int height) const
     {
         spdlog::info("Got framebuffer resize event ({}, {}) ...", width, height);
@@ -717,7 +760,7 @@ namespace vku {
             minimized_ = true;
             maximized_ = false;
         } else {
-            if (minimized_) ApplicationBase::instance().SetPause(false);
+            if (minimized_) { ApplicationBase::instance().SetPause(false); }
             minimized_ = false;
             maximized_ = false;
         }
@@ -739,8 +782,9 @@ namespace vku {
 
     void VKWindow::CursorEnterCallback(int entered)
     {
-        if (entered) {
-            double xpos, ypos;
+        if (entered != 0) {
+            double xpos;
+            double ypos;
             glfwGetCursorPos(window_, &xpos, &ypos);
             currMousePosition_ = glm::vec2(static_cast<float>(xpos), static_cast<float>(ypos));
             mouseInWindow_ = true;
@@ -752,7 +796,8 @@ namespace vku {
     void VKWindow::ScrollCallback(double, double yoffset)
     {
         if (mouseInWindow_) {
-            ApplicationBase::instance().HandleMouse(-1, 0, 0, 50.0f * static_cast<float>(yoffset), this);
+            constexpr float SCROLL_SCALE = 50.0f;
+            ApplicationBase::instance().HandleMouse(-1, 0, 0, SCROLL_SCALE * static_cast<float>(yoffset), this);
         }
     }
 
@@ -774,6 +819,7 @@ namespace vku {
     }
 
     // ReSharper disable once CppMemberFunctionMayBeStatic
+    // NOLINTNEXTLINE
     void VKWindow::DropCallback(int, const char**) const
     {
         throw std::runtime_error("File dropping not implemented.");
@@ -798,43 +844,43 @@ namespace vku {
 
     void VKWindow::glfwWindowPosCallback(GLFWwindow* window, int xpos, int ypos)
     {
-        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         win->WindowPosCallback(xpos, ypos);
     }
 
     void VKWindow::glfwWindowSizeCallback(GLFWwindow* window, int width, int height)
     {
-        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         win->WindowSizeCallback(width, height);
     }
 
     void VKWindow::glfwWindowFocusCallback(GLFWwindow* window, int focused)
     {
-        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         win->WindowFocusCallback(focused);
     }
 
     void VKWindow::glfwWindowCloseCallback(GLFWwindow* window)
     {
-        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         win->WindowCloseCallback();
     }
 
     void VKWindow::glfwFramebufferSizeCallback(GLFWwindow* window, int width, int height)
     {
-        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         win->FramebufferSizeCallback(width, height);
     }
 
     void VKWindow::glfwWindowIconifyCallback(GLFWwindow* window, int iconified)
     {
-        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         win->WindowIconifyCallback(iconified);
     }
 
     void VKWindow::glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     {
-        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         ImGui_ImplGlfw_MouseButtonCallback(win->glfwWindowData_, button, action, mods);
 
         auto& io = ImGui::GetIO();
@@ -845,7 +891,7 @@ namespace vku {
 
     void VKWindow::glfwCursorPosCallback(GLFWwindow* window, double xpos, double ypos)
     {
-        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         win->SetMousePosition(xpos, ypos);
 
         auto& io = ImGui::GetIO();
@@ -856,13 +902,13 @@ namespace vku {
 
     void VKWindow::glfwCursorEnterCallback(GLFWwindow* window, int entered)
     {
-        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         win->CursorEnterCallback(entered);
     }
 
     void VKWindow::glfwScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
     {
-        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         ImGui_ImplGlfw_ScrollCallback(win->glfwWindowData_, xoffset, yoffset);
 
         auto& io = ImGui::GetIO();
@@ -873,7 +919,7 @@ namespace vku {
 
     void VKWindow::glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
     {
-        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         ImGui_ImplGlfw_KeyCallback(win->glfwWindowData_, key, scancode, action, mods);
 
         auto& io = ImGui::GetIO();
@@ -884,7 +930,7 @@ namespace vku {
 
     void VKWindow::glfwCharCallback(GLFWwindow* window, unsigned int codepoint)
     {
-        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         ImGui_ImplGlfw_CharCallback(win->glfwWindowData_, codepoint);
 
         auto& io = ImGui::GetIO();
@@ -897,14 +943,14 @@ namespace vku {
     {
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureKeyboard) {
-            auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+            auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
             win->CharModsCallback(codepoint, mods);
         }
     }
 
     void VKWindow::glfwDropCallback(GLFWwindow* window, int count, const char** paths)
     {
-        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window));
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         win->DropCallback(count, paths);
     }
 

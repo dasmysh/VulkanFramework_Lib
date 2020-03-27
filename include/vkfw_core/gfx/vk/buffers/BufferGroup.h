@@ -21,22 +21,22 @@ namespace vku::gfx {
     class [[deprecated("Replaced by MemoryGroup that also handles textures.")]] BufferGroup
     {
     public:
-        explicit BufferGroup(const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags = vk::MemoryPropertyFlags());
+        explicit BufferGroup(const LogicalDevice* device, const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags());
         virtual ~BufferGroup();
         BufferGroup(const BufferGroup&) = delete;
         BufferGroup& operator=(const BufferGroup&) = delete;
         BufferGroup(BufferGroup&&) noexcept;
         BufferGroup& operator=(BufferGroup&&) noexcept;
 
-        unsigned int AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size,
+        unsigned int AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
-        unsigned int AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size, const void* data,
+        unsigned int AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size, const void* data,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         void FinalizeGroup(QueuedDeviceTransfer* transfer = nullptr);
 
         DeviceBuffer* GetBuffer(unsigned int bufferIdx) { return &deviceBuffers_[bufferIdx]; }
 
-        template<class T> std::enable_if_t<has_contiguous_memory<T>::value> AddBufferToGroup(vk::BufferUsageFlags usage, const T& data,
+        template<class T> std::enable_if_t<has_contiguous_memory<T>::value> AddBufferToGroup(const vk::BufferUsageFlags& usage, const T& data,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
 
     private:
@@ -60,7 +60,7 @@ namespace vku::gfx {
     };
 
     template <class T>
-    std::enable_if_t<has_contiguous_memory<T>::value> BufferGroup::AddBufferToGroup(vk::BufferUsageFlags usage,
+    std::enable_if_t<has_contiguous_memory<T>::value> BufferGroup::AddBufferToGroup(const vk::BufferUsageFlags& usage,
         const T& data, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         AddBufferToGroup(usage, byteSizeOf(data), data.data(), queueFamilyIndices);

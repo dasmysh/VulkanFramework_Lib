@@ -19,7 +19,7 @@ namespace vku::gfx {
     public:
         HostTexture(const LogicalDevice* device, const TextureDescriptor& desc,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
-        virtual ~HostTexture() override;
+        ~HostTexture() override;
         HostTexture(const HostTexture&);
         HostTexture& operator=(const HostTexture&);
         HostTexture(HostTexture&&) noexcept;

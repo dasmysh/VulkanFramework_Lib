@@ -12,13 +12,13 @@
 namespace vku::gfx {
 
     /** Constructor. */
-    SubMesh::SubMesh(const MeshInfo* mesh, const std::string& objectName, unsigned int indexOffset, unsigned int numIndices, unsigned int materialID) :
-        objectName_(objectName),
+    SubMesh::SubMesh(const MeshInfo* mesh, std::string objectName, unsigned int indexOffset, unsigned int numIndices, unsigned int materialID) :
+        objectName_(std::move(objectName)),
         indexOffset_(indexOffset),
         numIndices_(numIndices),
         materialID_(materialID)
     {
-        if (numIndices_ == 0) return;
+        if (numIndices_ == 0) { return; }
         auto& vertices = mesh->GetVertices();
         auto& indices = mesh->GetIndices();
         aabb_.minmax_[0] = aabb_.minmax_[1] = vertices[indices[indexOffset_]];
@@ -38,10 +38,10 @@ namespace vku::gfx {
     /** Default move constructor. */
     SubMesh::SubMesh(SubMesh&& rhs) noexcept :
         objectName_(std::move(rhs.objectName_)),
-        indexOffset_(std::move(rhs.indexOffset_)),
-        numIndices_(std::move(rhs.numIndices_)),
-        aabb_(std::move(rhs.aabb_)),
-        materialID_(std::move(rhs.materialID_))
+        indexOffset_(rhs.indexOffset_),
+        numIndices_(rhs.numIndices_),
+        aabb_(rhs.aabb_),
+        materialID_(rhs.materialID_)
     {
     }
 
@@ -51,10 +51,10 @@ namespace vku::gfx {
         if (this != &rhs) {
             this->~SubMesh();
             objectName_ = std::move(rhs.objectName_);
-            indexOffset_ = std::move(rhs.indexOffset_);
-            numIndices_ = std::move(rhs.numIndices_);
-            aabb_ = std::move(rhs.aabb_);
-            materialID_ = std::move(rhs.materialID_);
+            indexOffset_ = rhs.indexOffset_;
+            numIndices_ = rhs.numIndices_;
+            aabb_ = rhs.aabb_;
+            materialID_ = rhs.materialID_;
         }
         return *this;
     }

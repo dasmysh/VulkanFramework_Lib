@@ -17,7 +17,7 @@
 namespace vku::gfx {
 
     SceneMeshNode::SceneMeshNode() :
-        nodeName_{}, localTransform_{ glm::mat4{1.0} }, parent_{ nullptr }
+        localTransform_{ glm::mat4{1.0} }, parent_{ nullptr }
     {
         aabb_.minmax_[0] = glm::vec3(std::numeric_limits<float>::infinity());
         aabb_.minmax_[1] = glm::vec3(-std::numeric_limits<float>::infinity());
@@ -36,41 +36,45 @@ namespace vku::gfx {
 
         auto numMeshes = static_cast<std::size_t>(node->mNumMeshes);
         auto numChildren = static_cast<std::size_t>(node->mNumChildren);
-        for (std::size_t i = 0; i < numMeshes; ++i) subMeshIds_.push_back(node->mMeshes[i]);
-        for (std::size_t i = 0; i < numChildren; ++i) children_.push_back(std::make_unique<SceneMeshNode>(node->mChildren[i], this, boneMap));
+        for (std::size_t i = 0; i < numMeshes; ++i) { subMeshIds_.push_back(node->mMeshes[i]); } // NOLINT
+        for (std::size_t i = 0; i < numChildren; ++i) {
+            children_.push_back(std::make_unique<SceneMeshNode>(node->mChildren[i], this, boneMap)); // NOLINT
+        }
 
         auto nodeBone = boneMap.find(nodeName_);
-        if (nodeBone != boneMap.end()) boneIndex_ = nodeBone->second;
+        if (nodeBone != boneMap.end()) { boneIndex_ = nodeBone->second; }
     }
 
-    SceneMeshNode::SceneMeshNode(const SceneMeshNode& rhs) :
-        nodeName_(rhs.nodeName_),
-        subMeshIds_(rhs.subMeshIds_),
-        localTransform_(rhs.localTransform_),
-        parent_(rhs.parent_),
-        aabb_(rhs.aabb_),
-        boneIndex_(rhs.boneIndex_),
-        nodeIndex_(rhs.nodeIndex_),
-        subMeshBoundingBoxes_(rhs.subMeshBoundingBoxes_),
+    SceneMeshNode::SceneMeshNode(const SceneMeshNode& rhs)
+        : nodeName_(rhs.nodeName_),
+          subMeshIds_(rhs.subMeshIds_),
+          localTransform_(rhs.localTransform_),
+          parent_(rhs.parent_),
+          boneIndex_(rhs.boneIndex_),
+          nodeIndex_(rhs.nodeIndex_),
+          aabb_(rhs.aabb_),
+          subMeshBoundingBoxes_(rhs.subMeshBoundingBoxes_),
           boundingBoxValid_(rhs.boundingBoxValid_),
           hasMeshes_(rhs.hasMeshes_)
     {
         children_.resize(rhs.children_.size());
-        for (std::size_t i = 0; i < children_.size(); ++i) children_[i] = std::make_unique<SceneMeshNode>(*rhs.children_[i]);
+        for (std::size_t i = 0; i < children_.size(); ++i) {
+            children_[i] = std::make_unique<SceneMeshNode>(*rhs.children_[i]);
+        }
     }
 
-    SceneMeshNode::SceneMeshNode(SceneMeshNode&& rhs) noexcept :
-        nodeName_(std::move(rhs.nodeName_)),
-        children_(std::move(rhs.children_)),
-        subMeshIds_(std::move(rhs.subMeshIds_)),
-        localTransform_(std::move(rhs.localTransform_)),
-        parent_(std::move(rhs.parent_)),
-        aabb_(std::move(rhs.aabb_)),
-        boneIndex_(std::move(rhs.boneIndex_)),
-        nodeIndex_(std::move(rhs.nodeIndex_)),
-        subMeshBoundingBoxes_(std::move(rhs.subMeshBoundingBoxes_)),
-          boundingBoxValid_(std::move(rhs.boundingBoxValid_)),
-          hasMeshes_(std::move(rhs.hasMeshes_))
+    SceneMeshNode::SceneMeshNode(SceneMeshNode&& rhs) noexcept
+        : nodeName_(std::move(rhs.nodeName_)),
+          children_(std::move(rhs.children_)),
+          subMeshIds_(std::move(rhs.subMeshIds_)),
+          localTransform_(rhs.localTransform_),
+          parent_(rhs.parent_),
+          boneIndex_(rhs.boneIndex_),
+          nodeIndex_(rhs.nodeIndex_),
+          aabb_(rhs.aabb_),
+          subMeshBoundingBoxes_(std::move(rhs.subMeshBoundingBoxes_)),
+          boundingBoxValid_(rhs.boundingBoxValid_),
+          hasMeshes_(rhs.hasMeshes_)
     {
 
     }
@@ -84,26 +88,26 @@ namespace vku::gfx {
         return *this;
     }
 
-    SceneMeshNode SceneMeshNode::operator=(SceneMeshNode&& rhs) noexcept
+    SceneMeshNode& SceneMeshNode::operator=(SceneMeshNode&& rhs) noexcept
     {
         if (this != &rhs) {
             this->~SceneMeshNode();
             nodeName_ = std::move(rhs.nodeName_);
             children_ = std::move(rhs.children_);
             subMeshIds_ = std::move(rhs.subMeshIds_);
-            localTransform_ = std::move(rhs.localTransform_);
-            parent_ = std::move(rhs.parent_);
-            aabb_ = std::move(rhs.aabb_);
-            boneIndex_ = std::move(rhs.boneIndex_);
-            nodeIndex_ = std::move(rhs.nodeIndex_);
+            localTransform_ = rhs.localTransform_;
+            parent_ = rhs.parent_;
+            aabb_ = rhs.aabb_;
+            boneIndex_ = rhs.boneIndex_;
+            nodeIndex_ = rhs.nodeIndex_;
             subMeshBoundingBoxes_ = std::move(rhs.subMeshBoundingBoxes_);
-            boundingBoxValid_ = std::move(rhs.boundingBoxValid_);
-            hasMeshes_ = std::move(rhs.hasMeshes_);
+            boundingBoxValid_ = rhs.boundingBoxValid_;
+            hasMeshes_ = rhs.hasMeshes_;
         }
         return *this;
     }
 
-    SceneMeshNode::~SceneMeshNode() = default;
+    SceneMeshNode::~SceneMeshNode() noexcept = default;
 
     void SceneMeshNode::FlattenNodeTree(std::vector<const SceneMeshNode*>& nodes) { FlattenNodeTreeInternal(nodes); }
 

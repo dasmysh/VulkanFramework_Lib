@@ -23,28 +23,28 @@ namespace vku::gfx {
         /** Holds the materials name. */
         std::string materialName_;
         /** Holds the materials ambient color. */
-        glm::vec3 ambient_;
+        glm::vec3 ambient_ = glm::vec3{1.0f};
         /** Holds the materials diffuse albedo. */
-        glm::vec3 diffuse_;
+        glm::vec3 diffuse_ = glm::vec3{1.0f};
         /** Holds the materials specular albedo. */
-        glm::vec3 specular_;
+        glm::vec3 specular_ = glm::vec3{1.0f};
         /** Holds the materials alpha value. */
-        float alpha_;
+        float alpha_ = 1.0f;
         /** Holds the materials specular exponent. */
-        float specularExponent_;
+        float specularExponent_ = 0.0f;
         /** Holds the materials index of refraction. */
-        float refraction_;
+        float refraction_ = 1.0f;
         /** Holds the materials diffuse texture file name. */
         std::string diffuseTextureFilename_;
         /** Holds the materials bump map file name. */
         std::string bumpMapFilename_;
         /** Holds the materials bump multiplier. */
-        float bumpMultiplier_;
+        float bumpMultiplier_ = 1.0f;
         /** Holds whether this material has an alpha channel. */
         bool hasAlpha_ = false;
 
         template <class Archive>
-        void serialize(Archive& ar, const std::uint32_t)
+        void serialize(Archive& ar, const std::uint32_t) // NOLINT
         {
             ar(cereal::make_nvp("ambientColor", ambient_),
                 cereal::make_nvp("diffuseColor", diffuse_),
@@ -79,4 +79,5 @@ namespace vku::gfx {
     };
 }
 
+// NOLINTNEXTLINE
 CEREAL_CLASS_VERSION(vku::gfx::MaterialInfo, 1)

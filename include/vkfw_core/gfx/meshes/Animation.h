@@ -15,11 +15,12 @@
 #include <cereal/cereal.hpp>
 #include <cereal/types/map.hpp>
 #include <cereal/types/complex.hpp>
-#include <assimp/scene.h>
 #include <glm/gtc/quaternion.hpp>
 #include <glm/vec3.hpp>
 
 #include "core/serialization_helper.h"
+
+struct aiAnimation;
 
 namespace vku::gfx {
 
@@ -37,7 +38,7 @@ namespace vku::gfx {
         std::vector<std::pair<Time, glm::vec3>> scalingFrames_;
 
         template <class Archive>
-        void save(Archive& ar, const std::uint32_t) const
+        void save(Archive& ar, const std::uint32_t) const  // NOLINT
         {
             ar(cereal::make_nvp("positionFrames", positionFrames_),
                 cereal::make_nvp("rotationFrames", rotationFrames_),
@@ -45,7 +46,7 @@ namespace vku::gfx {
         }
 
         template <class Archive>
-        void load(Archive& ar, const std::uint32_t)
+        void load(Archive& ar, const std::uint32_t)  // NOLINT
         {
             ar(cereal::make_nvp("positionFrames", positionFrames_),
                 cereal::make_nvp("rotationFrames", rotationFrames_),
@@ -68,8 +69,8 @@ namespace vku::gfx {
          *  @param end the end time of the animation.
          *  @param playback the playback time (speed) of the animation.
          */
-        AnimationInfo(const std::string& name, std::size_t animationIndex, float start, float end, float playback = 1.0f)
-            : name_{ name }, animationIndex_ { animationIndex }, startTime_{ start }, endTime_{ end }, playbackSpeed_{ playback }
+        AnimationInfo(std::string name, std::size_t animationIndex, float start, float end, float playback = 1.0f)
+            : name_{ std::move(name) }, animationIndex_ { animationIndex }, startTime_{ start }, endTime_{ end }, playbackSpeed_{ playback }
         {
         }
 
@@ -130,23 +131,23 @@ namespace vku::gfx {
     {
     public:
         Animation();
-        Animation(aiAnimation* aiAnimation);
+        explicit Animation(aiAnimation* aiAnimation);
 
         void FlattenHierarchy(std::size_t numNodes, const std::map<std::string, std::size_t>& nodeNamesMap);
 
         /** Returns the number of ticks per second. */
-        float GetFramesPerSecond() const;
+        [[nodiscard]] float GetFramesPerSecond() const;
         /** Returns the duration of the animation in seconds. */
-        float GetDuration() const;
+        [[nodiscard]] float GetDuration() const;
         /** Returns the animations name. */
-        const std::string& GetName() const { return name_; }
+        [[nodiscard]] const std::string& GetName() const { return name_; }
         /**
          *  Returns the channel of one bone.
          *  @param id id of the bone.
          */
         // const Channel& GetChannel(std::size_t id) const;
 
-        Animation GetSubSequence(const std::string& name, Time start, Time end) const;
+        [[nodiscard]] Animation GetSubSequence(const std::string& name, Time start, Time end) const;
 
         bool ComputePoseAtTime(std::size_t id, Time time, glm::mat4& pose) const;
 
@@ -155,7 +156,7 @@ namespace vku::gfx {
         friend class cereal::access;
 
         template <class Archive>
-        void save(Archive& ar, const std::uint32_t) const
+        void save(Archive& ar, const std::uint32_t) const  // NOLINT
         {
             ar(cereal::make_nvp("name", name_), cereal::make_nvp("channels", channelMap_),
                cereal::make_nvp("framesPerSecond", framesPerSecond_),
@@ -163,7 +164,7 @@ namespace vku::gfx {
         }
 
         template <class Archive>
-        void load(Archive& ar, const std::uint32_t)
+        void load(Archive& ar, const std::uint32_t)  // NOLINT
         {
             ar(cereal::make_nvp("name", name_), cereal::make_nvp("channels", channelMap_),
                cereal::make_nvp("framesPerSecond", framesPerSecond_),
@@ -192,5 +193,7 @@ namespace vku::gfx {
 
 }
 
+// NOLINTNEXTLINE
 CEREAL_CLASS_VERSION(vku::gfx::Channel, 2)
+// NOLINTNEXTLINE
 CEREAL_CLASS_VERSION(vku::gfx::Animation, 2)

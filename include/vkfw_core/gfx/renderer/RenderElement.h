@@ -22,7 +22,7 @@ namespace vku::gfx {
     class RenderElement final
     {
     public:
-        using BufferReference = std::pair<const DeviceBuffer*, std::size_t>;
+        using BufferReference = std::pair<const DeviceBuffer*, vk::DeviceSize>;
         using UBOBinding = std::tuple<const UniformBufferObject*, std::uint32_t, std::size_t>;
         using DescSetBinding = std::pair<vk::DescriptorSet, std::uint32_t>;
 
@@ -43,13 +43,19 @@ namespace vku::gfx {
 
         friend bool operator<(const RenderElement& l, const RenderElement& r)
         {
-            if (l.isTransparent_ && !r.isTransparent_) return false;
-            else if (r.isTransparent_ && !l.isTransparent_) return true;
-            else if (l.isTransparent_ && r.isTransparent_) return l.cameraDistance_ < r.cameraDistance_;
+            if (l.isTransparent_ && !r.isTransparent_) {
+                return false;
+            }
+            if (r.isTransparent_ && !l.isTransparent_) {
+                return true;
+            }
+            if (l.isTransparent_ && r.isTransparent_) {
+                return l.cameraDistance_ < r.cameraDistance_;
+            }
 
-            if (l.pipeline_ < r.pipeline_) return true;
-            if (l.vertexBuffer_.first < r.vertexBuffer_.first) return true;
-            if (l.indexBuffer_.first < r.indexBuffer_.first) return true;
+            if (l.pipeline_ < r.pipeline_) { return true; }
+            if (l.vertexBuffer_.first < r.vertexBuffer_.first) { return true; }
+            if (l.indexBuffer_.first < r.indexBuffer_.first) { return true; }
             return l.cameraDistance_ > r.cameraDistance_;
         }
 
@@ -106,25 +112,25 @@ namespace vku::gfx {
 
     RenderElement& RenderElement::BindCameraMatricesUBO(UBOBinding cameraMatricesUBO)
     {
-        cameraMatricesUBO_ = cameraMatricesUBO;
+        cameraMatricesUBO_ = std::move(cameraMatricesUBO);
         return *this;
     }
 
     RenderElement& RenderElement::BindWorldMatricesUBO(UBOBinding worldMatricesUBO)
     {
-        worldMatricesUBO_ = worldMatricesUBO;
+        worldMatricesUBO_ = std::move(worldMatricesUBO);
         return *this;
     }
 
     RenderElement& RenderElement::BindUBO(UBOBinding ubo)
     {
-        generalUBOs_.push_back(ubo);
+        generalUBOs_.emplace_back(std::move(ubo));
         return *this;
     }
 
     RenderElement& RenderElement::BindDescriptorSet(DescSetBinding descSet)
     {
-        generalDescSets_.push_back(descSet);
+        generalDescSets_.emplace_back(std::move(descSet));
         return *this;
     }
 
@@ -146,23 +152,30 @@ namespace vku::gfx {
 
     const RenderElement& RenderElement::DrawElement(vk::CommandBuffer cmdBuffer, const RenderElement* lastElement /*= nullptr*/) const
     {
-        if (!lastElement || lastElement->pipeline_ == pipeline_)
+        if ((lastElement == nullptr) || lastElement->pipeline_ == pipeline_) {
             cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline_);
-        if (!lastElement || lastElement->vertexBuffer_ == vertexBuffer_)
+        }
+        if ((lastElement == nullptr) || lastElement->vertexBuffer_ == vertexBuffer_) {
             cmdBuffer.bindVertexBuffers(0, 1, vertexBuffer_.first->GetBufferPtr(), &vertexBuffer_.second);
-        if (!lastElement || lastElement->indexBuffer_ == indexBuffer_)
+        }
+        if ((lastElement == nullptr) || lastElement->indexBuffer_ == indexBuffer_) {
             cmdBuffer.bindIndexBuffer(indexBuffer_.first->GetBuffer(), indexBuffer_.second, vk::IndexType::eUint32);
+        }
 
         std::get<0>(cameraMatricesUBO_)->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, pipelineLayout_,
             std::get<1>(cameraMatricesUBO_), std::get<2>(cameraMatricesUBO_));
         std::get<0>(worldMatricesUBO_)->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, pipelineLayout_,
             std::get<1>(worldMatricesUBO_), std::get<2>(worldMatricesUBO_));
 
-        for (const auto& ubo : generalUBOs_)
-            std::get<0>(ubo)->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, pipelineLayout_, std::get<1>(ubo), std::get<2>(ubo));
+        for (const auto& ubo : generalUBOs_) {
+            std::get<0>(ubo)->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, pipelineLayout_, std::get<1>(ubo),
+                                   std::get<2>(ubo));
+        }
 
-        for (const auto& ds : generalDescSets_)
-            cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout_, ds.second, ds.first, nullptr);
+        for (const auto& ds : generalDescSets_) {
+            cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout_, ds.second, ds.first,
+                                         nullptr);
+        }
 
         cmdBuffer.drawIndexed(indexCount_, instanceCount_, firstIndex_, vertexOffset_, firstInstance_);
         return *this;

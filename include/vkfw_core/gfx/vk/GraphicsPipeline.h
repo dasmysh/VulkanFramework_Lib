@@ -14,7 +14,7 @@
 
 namespace vku::gfx {
 
-    class Framebuffer;
+    class Framebuffer; // NOLINT
     class Shader;
 
     class GraphicsPipeline final
@@ -31,17 +31,53 @@ namespace vku::gfx {
         template<class Vertex> void ResetVertexInput() const;
         void ResetFramebuffer(const glm::uvec2& size, unsigned int numViewports, unsigned int numScissors) const;
         void CreatePipeline(bool keepState, vk::RenderPass renderPass, unsigned int subpass, vk::PipelineLayout pipelineLayout);
-        vk::Pipeline GetPipeline() const { return *vkPipeline_; }
+        [[nodiscard]] vk::Pipeline GetPipeline() const { return *vkPipeline_; }
 
-        vk::Viewport& GetViewport(unsigned int idx) const { assert(state_); return state_->viewports_[idx]; }
-        vk::Rect2D& GetScissor(unsigned int idx) const { assert(state_); return state_->scissors_[idx]; }
-        vk::PipelineMultisampleStateCreateInfo& GetMultisampling() const { assert(state_); return state_->multisampling_; }
-        vk::PipelineRasterizationStateCreateInfo& GetRasterizer() const { assert(state_); return state_->rasterizer_; }
-        vk::PipelineDepthStencilStateCreateInfo& GetDepthStencil() const { assert(state_); return state_->depthStencil_; }
-        vk::PipelineTessellationStateCreateInfo& GetTesselation() const { assert(state_); return state_->tesselation_; }
-        vk::PipelineColorBlendAttachmentState& GetColorBlendAttachment(unsigned int idx) const { assert(state_); return state_->colorBlendAttachments_[idx]; }
-        vk::PipelineColorBlendStateCreateInfo& GetColorBlending() const { assert(state_); return state_->colorBlending_; }
-        std::vector<vk::DynamicState>& GetDynamicStates() const { assert(state_); return state_->dynamicStates_; }
+        [[nodiscard]] vk::Viewport& GetViewport(unsigned int idx) const
+        {
+            assert(state_);
+            return state_->viewports_[idx];
+        }
+        [[nodiscard]] vk::Rect2D& GetScissor(unsigned int idx) const
+        {
+            assert(state_);
+            return state_->scissors_[idx];
+        }
+        [[nodiscard]] vk::PipelineMultisampleStateCreateInfo& GetMultisampling() const
+        {
+            assert(state_);
+            return state_->multisampling_;
+        }
+        [[nodiscard]] vk::PipelineRasterizationStateCreateInfo& GetRasterizer() const
+        {
+            assert(state_);
+            return state_->rasterizer_;
+        }
+        [[nodiscard]] vk::PipelineDepthStencilStateCreateInfo& GetDepthStencil() const
+        {
+            assert(state_);
+            return state_->depthStencil_;
+        }
+        [[nodiscard]] vk::PipelineTessellationStateCreateInfo& GetTesselation() const
+        {
+            assert(state_);
+            return state_->tesselation_;
+        }
+        [[nodiscard]] vk::PipelineColorBlendAttachmentState& GetColorBlendAttachment(unsigned int idx) const
+        {
+            assert(state_);
+            return state_->colorBlendAttachments_[idx];
+        }
+        [[nodiscard]] vk::PipelineColorBlendStateCreateInfo& GetColorBlending() const
+        {
+            assert(state_);
+            return state_->colorBlending_;
+        }
+        [[nodiscard]] std::vector<vk::DynamicState>& GetDynamicStates() const
+        {
+            assert(state_);
+            return state_->dynamicStates_;
+        }
 
     private:
 

@@ -24,10 +24,10 @@ namespace vku::gfx {
 
 
         void AddUBOToBuffer(MemoryGroup* memoryGroup, unsigned int bufferIndex,
-            std::size_t bufferOffset, std::size_t size, const void* data);
+            std::size_t bufferOffset, std::size_t size, void* data);
         void AddUBOToBufferPrefill(MemoryGroup* memoryGroup, unsigned int bufferIndex,
-            std::size_t bufferOffset, std::size_t size, const void* data);
-        void CreateLayout(vk::DescriptorPool descPool, vk::ShaderStageFlags shaderFlags, bool isDynamicBuffer = false, std::uint32_t binding = 0);
+            std::size_t bufferOffset, std::size_t size, void* data);
+        void CreateLayout(vk::DescriptorPool descPool, const vk::ShaderStageFlags& shaderFlags, bool isDynamicBuffer = false, std::uint32_t binding = 0);
         void UseLayout(vk::DescriptorPool descPool, vk::DescriptorSetLayout usedLayout, bool isDynamicBuffer = false, std::uint32_t binding = 0);
         void FillUploadCmdBuffer(vk::CommandBuffer cmdBuffer, std::size_t instanceIdx, std::size_t size) const;
         void FillDescriptorSetWrite(vk::WriteDescriptorSet& descWrite) const;
@@ -35,8 +35,8 @@ namespace vku::gfx {
         void Bind(vk::CommandBuffer cmdBuffer, vk::PipelineBindPoint bindingPoint, vk::PipelineLayout pipelineLayout,
             std::uint32_t setIndex, std::size_t instanceIdx) const;
 
-        std::size_t GetCompleteSize() const { return singleSize_ * numInstances_; }
-        vk::DescriptorSetLayout GetDescriptorLayout() const { return descLayout_; }
+        [[nodiscard]] std::size_t GetCompleteSize() const { return singleSize_ * numInstances_; }
+        [[nodiscard]] vk::DescriptorSetLayout GetDescriptorLayout() const { return descLayout_; }
 
 
         //////////////////////////////////////////////////////////////////////////

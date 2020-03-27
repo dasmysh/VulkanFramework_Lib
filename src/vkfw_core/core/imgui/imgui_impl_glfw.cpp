@@ -38,11 +38,13 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>   // for glfwGetWin32Window
 #endif
-#define GLFW_HAS_WINDOW_TOPMOST     (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+ GLFW_FLOATING
-#define GLFW_HAS_WINDOW_HOVERED     (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ GLFW_HOVERED
-#define GLFW_HAS_WINDOW_ALPHA       (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ glfwSetWindowOpacity
-#define GLFW_HAS_PER_MONITOR_DPI    (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ glfwGetMonitorContentScale
-#define GLFW_HAS_VULKAN             (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+ glfwCreateWindowSurface
+// #define GLFW_HAS_WINDOW_TOPMOST     (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+ GLFW_FLOATING
+// #define GLFW_HAS_WINDOW_HOVERED     (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ GLFW_HOVERED
+// #define GLFW_HAS_WINDOW_ALPHA       (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ glfwSetWindowOpacity
+// #define GLFW_HAS_PER_MONITOR_DPI    (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ glfwGetMonitorContentScale
+// #define GLFW_HAS_VULKAN             (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+ glfwCreateWindowSurface
+
+#include <array>
 
 // Data
 enum GlfwClientApi
@@ -56,24 +58,25 @@ struct ImGui_GLFWWindow {
     GLFWwindow*      g_Window = nullptr;
     GlfwClientApi    g_ClientApi = GlfwClientApi_Unknown;
     double           g_Time = 0.0;
-    bool             g_MouseJustPressed[5] = { false, false, false, false, false };
-    GLFWcursor*      g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
+    std::array<bool, 5> g_MouseJustPressed = {false, false, false, false, false};
+    std::array<GLFWcursor*, ImGuiMouseCursor_COUNT> g_MouseCursors = {nullptr};
 };
 
 static const char* ImGui_ImplGlfw_GetClipboardText(void* user_data)
 {
-    return glfwGetClipboardString((GLFWwindow*)user_data);
+    return glfwGetClipboardString((GLFWwindow*)user_data); // NOLINT
 }
 
 static void ImGui_ImplGlfw_SetClipboardText(void* user_data, const char* text)
 {
-    glfwSetClipboardString((GLFWwindow*)user_data, text);
+    glfwSetClipboardString((GLFWwindow*)user_data, text); // NOLINT
 }
 
 void ImGui_ImplGlfw_MouseButtonCallback(ImGui_GLFWWindow* imgui_window, int button, int action, int /*mods*/)
 {
-    if (action == GLFW_PRESS && button >= 0 && button < IM_ARRAYSIZE(imgui_window->g_MouseJustPressed))
-        imgui_window->g_MouseJustPressed[button] = true;
+    if (action == GLFW_PRESS && button >= 0 && button < static_cast<int>(imgui_window->g_MouseJustPressed.size())) {
+        imgui_window->g_MouseJustPressed[button] = true; // NOLINT
+    }
 }
 
 void ImGui_ImplGlfw_ScrollCallback(ImGui_GLFWWindow*, double xoffset, double yoffset)
@@ -86,10 +89,8 @@ void ImGui_ImplGlfw_ScrollCallback(ImGui_GLFWWindow*, double xoffset, double yof
 void ImGui_ImplGlfw_KeyCallback(ImGui_GLFWWindow*, int key, int, int action, int mods)
 {
     ImGuiIO& io = ImGui::GetIO();
-    if (action == GLFW_PRESS)
-        io.KeysDown[key] = true;
-    if (action == GLFW_RELEASE)
-        io.KeysDown[key] = false;
+    if (action == GLFW_PRESS) { io.KeysDown[key] = true; } // NOLINT
+    if (action == GLFW_RELEASE) { io.KeysDown[key] = false; } // NOLINT
 
     (void)mods; // Modifiers are not reliable across systems
     io.KeyCtrl = io.KeysDown[GLFW_KEY_LEFT_CONTROL] || io.KeysDown[GLFW_KEY_RIGHT_CONTROL];
@@ -101,20 +102,24 @@ void ImGui_ImplGlfw_KeyCallback(ImGui_GLFWWindow*, int key, int, int action, int
 void ImGui_ImplGlfw_CharCallback(ImGui_GLFWWindow*, unsigned int c)
 {
     ImGuiIO& io = ImGui::GetIO();
-    if (c > 0 && c < 0x10000)
-        io.AddInputCharacter((unsigned short)c);
+    if (c > 0 && c < 0x10000) { io.AddInputCharacter((unsigned short)c); }
 }
 
 static bool ImGui_ImplGlfw_Init(ImGui_GLFWWindow** imgui_window, GLFWwindow* window, GlfwClientApi client_api)
 {
-    (*imgui_window) = new ImGui_GLFWWindow;
+    (*imgui_window) = new ImGui_GLFWWindow; // NOLINT
     (*imgui_window)->g_Window = window;
     (*imgui_window)->g_Time = 0.0;
 
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
-    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
-    io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
+    io.BackendFlags = static_cast<unsigned int>(io.BackendFlags)
+                      | static_cast<unsigned int>(
+                          ImGuiBackendFlags_HasMouseCursors); // We can honor GetMouseCursor() values (optional)
+    io.BackendFlags =
+        static_cast<unsigned int>(io.BackendFlags)
+        | static_cast<unsigned int>(
+            ImGuiBackendFlags_HasSetMousePos); // We can honor io.WantSetMousePos requests (optional, rarely used)
 
     // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array.
     io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;
@@ -171,25 +176,25 @@ bool ImGui_ImplGlfw_InitForVulkan(ImGui_GLFWWindow** imgui_window, GLFWwindow* w
 
 void ImGui_ImplGlfw_Shutdown(ImGui_GLFWWindow* imgui_window)
 {
-    for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
-    {
-        glfwDestroyCursor(imgui_window->g_MouseCursors[cursor_n]);
-        imgui_window->g_MouseCursors[cursor_n] = NULL;
+    for (auto& cursor : imgui_window->g_MouseCursors) {
+        glfwDestroyCursor(cursor);
+        cursor = nullptr;
     }
     imgui_window->g_ClientApi = GlfwClientApi_Unknown;
 
-    delete imgui_window;
+    delete imgui_window; // NOLINT
 }
 
 static void ImGui_ImplGlfw_UpdateMousePosAndButtons(ImGui_GLFWWindow* imgui_window)
 {
     // Update buttons
     ImGuiIO& io = ImGui::GetIO();
-    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
+    // for (int i = 0; i < std::size(io.MouseDown) IM_ARRAYSIZE(io.MouseDown); i++)
+    for (int i = 0; i < static_cast<int>(std::size(io.MouseDown)); i++)
     {
         // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-        io.MouseDown[i] = imgui_window->g_MouseJustPressed[i] || glfwGetMouseButton(imgui_window->g_Window, i) != 0;
-        imgui_window->g_MouseJustPressed[i] = false;
+        io.MouseDown[i] = imgui_window->g_MouseJustPressed[i] || glfwGetMouseButton(imgui_window->g_Window, i) != 0; // NOLINT
+        imgui_window->g_MouseJustPressed[i] = false;                                                   // NOLINT
     }
 
     // Update mouse position
@@ -208,7 +213,8 @@ static void ImGui_ImplGlfw_UpdateMousePosAndButtons(ImGui_GLFWWindow* imgui_wind
         }
         else
         {
-            double mouse_x, mouse_y;
+            double mouse_x;
+            double mouse_y;
             glfwGetCursorPos(imgui_window->g_Window, &mouse_x, &mouse_y);
             io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
         }
@@ -218,8 +224,10 @@ static void ImGui_ImplGlfw_UpdateMousePosAndButtons(ImGui_GLFWWindow* imgui_wind
 static void ImGui_ImplGlfw_UpdateMouseCursor(ImGui_GLFWWindow* imgui_window)
 {
     ImGuiIO& io = ImGui::GetIO();
-    if ((io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) || glfwGetInputMode(imgui_window->g_Window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
+    if (((static_cast<unsigned int>(io.ConfigFlags) & static_cast<unsigned int>(ImGuiConfigFlags_NoMouseCursorChange)) != 0)
+        || glfwGetInputMode(imgui_window->g_Window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED) {
         return;
+    }
 
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
     if (imgui_cursor == ImGuiMouseCursor_None || io.MouseDrawCursor)
@@ -231,7 +239,7 @@ static void ImGui_ImplGlfw_UpdateMouseCursor(ImGui_GLFWWindow* imgui_window)
     {
         // Show OS mouse cursor
         // FIXME-PLATFORM: Unfocused windows seems to fail changing the mouse cursor with GLFW 3.2, but 3.3 works here.
-        glfwSetCursor(imgui_window->g_Window, imgui_window->g_MouseCursors[imgui_cursor] ? imgui_window->g_MouseCursors[imgui_cursor] : imgui_window->g_MouseCursors[ImGuiMouseCursor_Arrow]);
+        glfwSetCursor(imgui_window->g_Window, imgui_window->g_MouseCursors[imgui_cursor] ? imgui_window->g_MouseCursors[imgui_cursor] : imgui_window->g_MouseCursors[ImGuiMouseCursor_Arrow]); // NOLINT
         glfwSetInputMode(imgui_window->g_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
     }
 }
@@ -242,29 +250,34 @@ void ImGui_ImplGlfw_NewFrame(ImGui_GLFWWindow* imgui_window)
     IM_ASSERT(io.Fonts->IsBuilt());     // Font atlas needs to be built, call renderer _NewFrame() function e.g. ImGui_ImplOpenGL3_NewFrame()
 
     // Setup display size
-    int w, h;
-    int display_w, display_h;
+    int w;
+    int h;
+    int display_w;
+    int display_h;
     glfwGetWindowSize(imgui_window->g_Window, &w, &h);
     glfwGetFramebufferSize(imgui_window->g_Window, &display_w, &display_h);
     io.DisplaySize = ImVec2((float)w, (float)h);
-    io.DisplayFramebufferScale = ImVec2(w > 0 ? ((float)display_w / w) : 0, h > 0 ? ((float)display_h / h) : 0);
+    io.DisplayFramebufferScale = ImVec2(w > 0 ? (static_cast<float>(display_w) / static_cast<float>(w)) : 0,
+                                        h > 0 ? (static_cast<float>(display_h) / static_cast<float>(h)) : 0);
 
     // Setup time step
     double current_time = glfwGetTime();
-    io.DeltaTime = imgui_window->g_Time > 0.0 ? (float)(current_time - imgui_window->g_Time) : (float)(1.0f/60.0f);
+    constexpr float FRAME_TIME = 1.0f / 60.0f;
+    io.DeltaTime = imgui_window->g_Time > 0.0 ? (float)(current_time - imgui_window->g_Time) : FRAME_TIME;
     imgui_window->g_Time = current_time;
 
     ImGui_ImplGlfw_UpdateMousePosAndButtons(imgui_window);
     ImGui_ImplGlfw_UpdateMouseCursor(imgui_window);
 
     // Gamepad navigation mapping [BETA]
-    memset(io.NavInputs, 0, sizeof(io.NavInputs));
-    if (io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad)
+    memset(io.NavInputs, 0, sizeof(io.NavInputs)); // NOLINT
+    if ((static_cast<unsigned int>(io.ConfigFlags) & static_cast<unsigned int>(ImGuiConfigFlags_NavEnableGamepad)) != 0)
     {
         // Update gamepad inputs
-        #define MAP_BUTTON(NAV_NO, BUTTON_NO)       { if (buttons_count > BUTTON_NO && buttons[BUTTON_NO] == GLFW_PRESS) io.NavInputs[NAV_NO] = 1.0f; }
-        #define MAP_ANALOG(NAV_NO, AXIS_NO, V0, V1) { float v = (axes_count > AXIS_NO) ? axes[AXIS_NO] : V0; v = (v - V0) / (V1 - V0); if (v > 1.0f) v = 1.0f; if (io.NavInputs[NAV_NO] < v) io.NavInputs[NAV_NO] = v; }
-        int axes_count = 0, buttons_count = 0;
+        #define MAP_BUTTON(NAV_NO, BUTTON_NO)       { if (buttons_count > BUTTON_NO && buttons[BUTTON_NO] == GLFW_PRESS) io.NavInputs[NAV_NO] = 1.0f; } // NOLINT
+        #define MAP_ANALOG(NAV_NO, AXIS_NO, V0, V1) { float v = (axes_count > AXIS_NO) ? axes[AXIS_NO] : V0; v = (v - V0) / (V1 - V0); if (v > 1.0f) v = 1.0f; if (io.NavInputs[NAV_NO] < v) io.NavInputs[NAV_NO] = v; } // NOLINT
+        int axes_count = 0;
+        int buttons_count = 0;
         const float* axes = glfwGetJoystickAxes(GLFW_JOYSTICK_1, &axes_count);
         const unsigned char* buttons = glfwGetJoystickButtons(GLFW_JOYSTICK_1, &buttons_count);
         MAP_BUTTON(ImGuiNavInput_Activate,   0);     // Cross / A
@@ -285,9 +298,12 @@ void ImGui_ImplGlfw_NewFrame(ImGui_GLFWWindow* imgui_window)
         MAP_ANALOG(ImGuiNavInput_LStickDown, 1,  -0.3f,  -0.9f);
         #undef MAP_BUTTON
         #undef MAP_ANALOG
-        if (axes_count > 0 && buttons_count > 0)
-            io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
-        else
-            io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
+        if (axes_count > 0 && buttons_count > 0) {
+            io.BackendFlags = static_cast<int>(static_cast<unsigned int>(io.BackendFlags)
+                                               | static_cast<unsigned int>(ImGuiBackendFlags_HasGamepad));
+        } else {
+            io.BackendFlags = static_cast<int>(static_cast<unsigned int>(io.BackendFlags)
+                                                & ~static_cast<unsigned int>(ImGuiBackendFlags_HasGamepad));
+        }
     }
 }

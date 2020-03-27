@@ -17,9 +17,9 @@ namespace vku::gfx {
     class DeviceBuffer final : public Buffer
     {
     public:
-        DeviceBuffer(const LogicalDevice* device, vk::BufferUsageFlags usage, vk::MemoryPropertyFlags memoryFlags = vk::MemoryPropertyFlags(),
+        DeviceBuffer(const LogicalDevice* device, const vk::BufferUsageFlags& usage, const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags(),
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
-        virtual ~DeviceBuffer() override;
+        ~DeviceBuffer() override;
         DeviceBuffer(const DeviceBuffer&) = delete;
         DeviceBuffer& operator=(const DeviceBuffer&) = delete;
         DeviceBuffer(DeviceBuffer&&) noexcept;

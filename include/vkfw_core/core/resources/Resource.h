@@ -30,7 +30,7 @@ namespace vku {
     class Resource
     {
     public:
-        Resource(const std::string& resourceId, const gfx::LogicalDevice* device);
+        Resource(std::string resourceId, const gfx::LogicalDevice* device);
         Resource(const Resource&);
         Resource& operator=(const Resource&);
         Resource(Resource&&) noexcept;
@@ -49,6 +49,6 @@ namespace vku {
         /** Holds the resources id. */
         std::string id_;
         /** Holds the device object for dependencies. */
-        const gfx::LogicalDevice* device_;
+        const gfx::LogicalDevice* device_ = nullptr;
     };
 }

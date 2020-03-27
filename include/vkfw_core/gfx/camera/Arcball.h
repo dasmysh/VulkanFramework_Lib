@@ -23,13 +23,13 @@ namespace vku::gfx {
     class Arcball final
     {
     public:
-        Arcball(int button) noexcept;
+        explicit Arcball(int button) noexcept;
 
         bool HandleMouse(int button, int action, const vku::VKWindow* sender) noexcept;
         glm::quat GetWorldRotation(double elapsedTime, const glm::quat& camPosOrientation) noexcept;
 
     private:
-        glm::vec3 MousePositionToArcball(const glm::vec2& mousePosition) const;
+        [[nodiscard]] static glm::vec3 MousePositionToArcball(const glm::vec2& mousePosition);
 
         /** Holds the button to use. */
         const int button_;

@@ -13,9 +13,9 @@
 
 namespace vku::gfx {
 
-    Shader::Shader(const std::string & resourceId, const LogicalDevice * device, const std::string & shaderFilename) :
+    Shader::Shader(const std::string & resourceId, const LogicalDevice * device, std::string shaderFilename) :
         Resource{ resourceId, device },
-        shaderFilename_{ shaderFilename },
+        shaderFilename_{ std::move(shaderFilename) },
         type_{ vk::ShaderStageFlagBits::eVertex },
         strType_{ "vertex" }
     {
@@ -72,7 +72,7 @@ namespace vku::gfx {
         file.read(buffer.data(), fileSize);
         file.close();
 
-        vk::ShaderModuleCreateInfo moduleCreateInfo{ vk::ShaderModuleCreateFlags(), fileSize, reinterpret_cast<std::uint32_t*>(buffer.data()) };
+        vk::ShaderModuleCreateInfo moduleCreateInfo{ vk::ShaderModuleCreateFlags(), fileSize, reinterpret_cast<std::uint32_t*>(buffer.data()) }; // NOLINT
 
         shaderModule_ = GetDevice()->GetDevice().createShaderModuleUnique(moduleCreateInfo);
     }

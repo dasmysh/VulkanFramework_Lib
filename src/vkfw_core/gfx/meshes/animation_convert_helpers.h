@@ -33,7 +33,7 @@ namespace vku::gfx {
 
         for (std::size_t f = 0U; f < maxSearch; ++f) {
             if (frames[f].first > time) {
-                if (f == 0) return 0;
+                if (f == 0) { return 0; }
                 return f - 1;
             }
         }
@@ -111,7 +111,7 @@ namespace vku::gfx {
                                                           Time start, Time end)
     {
         auto newChannelData = std::vector<std::pair<Time, Transform>>();
-        if (orig.size() == 0) {
+        if (orig.empty()) {
             return newChannelData;
         }
 

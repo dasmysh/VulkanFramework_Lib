@@ -42,8 +42,8 @@ namespace vku::gfx {
     {
         const double mouseWheelSpeed = 8.0;
         float radius = glm::length(GetPosition());
-        if (sender->IsKeyPressed(GLFW_KEY_W)) radius -= static_cast<float>(mouseWheelSpeed * elapsedTime);
-        if (sender->IsKeyPressed(GLFW_KEY_S)) radius += static_cast<float>(mouseWheelSpeed * elapsedTime);
+        if (sender->IsKeyPressed(GLFW_KEY_W)) { radius -= static_cast<float>(mouseWheelSpeed * elapsedTime); }
+        if (sender->IsKeyPressed(GLFW_KEY_S)) { radius += static_cast<float>(mouseWheelSpeed * elapsedTime); }
 
         radius = glm::max(radius, 0.0f);
 
@@ -71,10 +71,11 @@ namespace vku::gfx {
         if (mouseWheelDelta != 0) {
             if (sender->IsKeyPressed(GLFW_KEY_LEFT_CONTROL)) {
                 SetPosition(GetPosition() - 0.01f * mouseWheelDelta * glm::normalize(GetPosition()));
-            }
-            else {
-                auto fov = fovY_ - mouseWheelDelta * glm::radians(0.03f);
-                fovY_ = glm::clamp(fov, glm::radians(1.0f), glm::radians(80.0f));
+            } else {
+                constexpr float ARCBALL_ANGLE_SCALE = 0.03f;
+                constexpr float ARCBALL_MAX_ANGLE = 80.0f;
+                auto fov = fovY_ - mouseWheelDelta * glm::radians(ARCBALL_ANGLE_SCALE);
+                fovY_ = glm::clamp(fov, glm::radians(1.0f), glm::radians(ARCBALL_MAX_ANGLE));
             }
             handled = true;
         }

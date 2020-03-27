@@ -45,41 +45,47 @@ namespace vku::gfx {
          */
         std::vector<SubMesh>& GetSubMeshes() noexcept { return subMeshes_; }
         /** Const accessor to the meshes sub-meshes. */
-        const std::vector<SubMesh>& GetSubMeshes() const noexcept { return subMeshes_; }
+        [[nodiscard]] const std::vector<SubMesh>& GetSubMeshes() const noexcept { return subMeshes_; }
         /** Accessor to the nodes of the mesh. */
-        const std::vector<const SceneMeshNode*>& GetNodes() const noexcept { return nodes_; }
+        [[nodiscard]] const std::vector<const SceneMeshNode*>& GetNodes() const noexcept { return nodes_; }
         /** Returns the root node of the mesh. */
-        const SceneMeshNode* GetRootNode() const noexcept { return rootNode_.get(); }
+        [[nodiscard]] const SceneMeshNode* GetRootNode() const noexcept { return rootNode_.get(); }
 
-        const std::vector<glm::vec3>& GetVertices() const { return vertices_; }
-        const std::vector<glm::vec3>& GetNormals() const { return normals_; }
-        const std::vector<std::vector<glm::vec3>>& GetTexCoords() const { return texCoords_; }
-        const std::vector<glm::vec3>& GetTangents() const { return tangents_; }
-        const std::vector<glm::vec3>& GetBinormals() const { return binormals_; }
-        const std::vector<std::vector<glm::vec4>>& GetColors() const { return colors_; }
-        const std::vector<std::vector<glm::uvec4>>& GetIndexVectors() const { return indexVectors_; }
+        [[nodiscard]] const std::vector<glm::vec3>& GetVertices() const { return vertices_; }
+        [[nodiscard]] const std::vector<glm::vec3>& GetNormals() const { return normals_; }
+        [[nodiscard]] const std::vector<std::vector<glm::vec3>>& GetTexCoords() const { return texCoords_; }
+        [[nodiscard]] const std::vector<glm::vec3>& GetTangents() const { return tangents_; }
+        [[nodiscard]] const std::vector<glm::vec3>& GetBinormals() const { return binormals_; }
+        [[nodiscard]] const std::vector<std::vector<glm::vec4>>& GetColors() const { return colors_; }
+        [[nodiscard]] const std::vector<std::vector<glm::uvec4>>& GetIndexVectors() const { return indexVectors_; }
 
-        const std::vector<std::uint32_t>& GetIndices() const noexcept { return indices_; }
+        [[nodiscard]] const std::vector<std::uint32_t>& GetIndices() const noexcept { return indices_; }
 
-        const std::vector<Animation>& GetAnimations() const noexcept { return animations_; }
+        [[nodiscard]] const std::vector<Animation>& GetAnimations() const noexcept { return animations_; }
 
         /** Returns the offset matrices for all bones. */
-        const std::vector<glm::mat4>& GetInverseBindPoseMatrices() const noexcept { return inverseBindPoseMatrices_; }
+        [[nodiscard]] const std::vector<glm::mat4>& GetInverseBindPoseMatrices() const noexcept
+        {
+            return inverseBindPoseMatrices_;
+        }
         /** Returns the AABB for all bones. */
-        const std::vector<math::AABB3<float>>& GetBoneBoundingBoxes() const noexcept { return boneBoundingBoxes_; }
+        [[nodiscard]] const std::vector<math::AABB3<float>>& GetBoneBoundingBoxes() const noexcept
+        {
+            return boneBoundingBoxes_;
+        }
         /**
          *  Returns the parent bone of any given bone.
          *  @param boneIndex index of the child bone.
          */
-        std::size_t GetParentBone(std::size_t boneIndex) const { return boneParent_[boneIndex]; }
+        [[nodiscard]] std::size_t GetParentBone(std::size_t boneIndex) const { return boneParent_[boneIndex]; }
         /** Returns the number of bones used by the mesh. */
-        std::size_t GetNumberOfBones() const noexcept { return inverseBindPoseMatrices_.size(); }
+        [[nodiscard]] std::size_t GetNumberOfBones() const noexcept { return inverseBindPoseMatrices_.size(); }
 
         /** Returns the global inverse matrix of the mesh. */
-        glm::mat4 GetGlobalInverse() const { return globalInverse_; }
+        [[nodiscard]] glm::mat4 GetGlobalInverse() const { return globalInverse_; }
 
-        const std::vector<MaterialInfo>& GetMaterials() const { return materials_; }
-        const MaterialInfo* GetMaterial(unsigned int id) const { return &materials_[id]; }
+        [[nodiscard]] const std::vector<MaterialInfo>& GetMaterials() const { return materials_; }
+        [[nodiscard]] const MaterialInfo* GetMaterial(unsigned int id) const { return &materials_[id]; }
 
         template<class VertexType>
         void GetVertices(std::vector<VertexType>& vertices) const;
@@ -119,8 +125,7 @@ namespace vku::gfx {
         /** Needed for serialization */
         friend class cereal::access;
 
-        template <class Archive>
-        void save(Archive& ar, const std::uint32_t) const
+        template<class Archive> void save(Archive& ar, const std::uint32_t) const // NOLINT
         {
             ar(cereal::make_nvp("vertices", vertices_),
                 cereal::make_nvp("normals", normals_),
@@ -142,8 +147,7 @@ namespace vku::gfx {
                 cereal::make_nvp("boneBoundingBoxes", boneBoundingBoxes_));
         }
 
-        template <class Archive>
-        void load(Archive& ar, const std::uint32_t)
+        template<class Archive> void load(Archive& ar, const std::uint32_t) // NOLINT
         {
             ar(cereal::make_nvp("vertices", vertices_),
                 cereal::make_nvp("normals", normals_),
@@ -219,4 +223,5 @@ namespace vku::gfx {
     }
 }
 
+// NOLINTNEXTLINE
 CEREAL_CLASS_VERSION(vku::gfx::MeshInfo, 3)

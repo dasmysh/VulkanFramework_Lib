@@ -25,29 +25,28 @@ namespace vku::gfx {
     {
     public:
         SubMesh() = default;
-        SubMesh(const MeshInfo* mesh, const std::string& objectName, unsigned int indexOffset, unsigned int numIndices, unsigned int materialID);
+        SubMesh(const MeshInfo* mesh, std::string objectName, unsigned int indexOffset, unsigned int numIndices, unsigned int materialID);
         SubMesh(const SubMesh&);
         SubMesh& operator=(const SubMesh&);
         SubMesh(SubMesh&&) noexcept;
         SubMesh& operator=(SubMesh&&) noexcept;
         virtual ~SubMesh();
 
-        const std::string& GetName() const { return objectName_; }
-        std::uint64_t GetSerializationID() const { return serializationID_; }
-        unsigned int GetIndexOffset() const { return indexOffset_; }
-        unsigned int GetNumberOfIndices() const { return numIndices_; }
-        unsigned int GetNumberOfTriangles() const { return numIndices_ / 3; }
-        const math::AABB3<float>& GetLocalAABB() const { return aabb_; }
-        unsigned int GetMaterialID() const { return materialID_; }
+        [[nodiscard]] const std::string& GetName() const { return objectName_; }
+        [[nodiscard]] std::uint64_t GetSerializationID() const { return serializationID_; }
+        [[nodiscard]] unsigned int GetIndexOffset() const { return indexOffset_; }
+        [[nodiscard]] unsigned int GetNumberOfIndices() const { return numIndices_; }
+        [[nodiscard]] unsigned int GetNumberOfTriangles() const { return numIndices_ / 3; }
+        [[nodiscard]] const math::AABB3<float>& GetLocalAABB() const { return aabb_; }
+        [[nodiscard]] unsigned int GetMaterialID() const { return materialID_; }
 
     private:
         /** Needed for serialization */
         friend class cereal::access;
 
-        template <class Archive>
-        void serialize(Archive& ar, const std::uint32_t)
+        template<class Archive> void serialize(Archive& ar, const std::uint32_t) // NOLINT
         {
-            serializationID_ = reinterpret_cast<std::uint64_t>(this);
+            serializationID_ = reinterpret_cast<std::uint64_t>(this); // NOLINT
             ar(cereal::make_nvp("objectName", objectName_),
                 cereal::make_nvp("serializationID", serializationID_),
                 cereal::make_nvp("indexOffset", indexOffset_),
@@ -71,4 +70,5 @@ namespace vku::gfx {
     };
 }
 
+// NOLINTNEXTLINE
 CEREAL_CLASS_VERSION(vku::gfx::SubMesh, 1)

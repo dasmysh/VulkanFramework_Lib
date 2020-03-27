@@ -88,9 +88,11 @@ namespace vku::gfx {
     void GraphicsPipeline::ResetFramebuffer(const glm::uvec2& size, unsigned int numViewports, unsigned int numScissors) const
     {
         state_->viewports_.resize(numViewports);
-        for (auto& viewport : state_->viewports_) viewport = vk::Viewport{ 0.0f, 0.0f, static_cast<float>(size.x), static_cast<float>(size.y), 0.0f, 1.0f };
+        for (auto& viewport : state_->viewports_) {
+            viewport = vk::Viewport{0.0f, 0.0f, static_cast<float>(size.x), static_cast<float>(size.y), 0.0f, 1.0f};
+        }
         state_->scissors_.resize(numScissors);
-        for (auto& scissor : state_->scissors_) scissor = vk::Rect2D{ vk::Offset2D(), vk::Extent2D{ size.x, size.y } };
+        for (auto& scissor : state_->scissors_) { scissor = vk::Rect2D{vk::Offset2D(), vk::Extent2D{size.x, size.y}}; }
 
         state_->viewportState_ = vk::PipelineViewportStateCreateInfo{ vk::PipelineViewportStateCreateFlags(), numViewports, state_->viewports_.data(), numScissors, state_->scissors_.data() };
         state_->multisampling_ = vk::PipelineMultisampleStateCreateInfo{ vk::PipelineMultisampleStateCreateFlags(), vk::SampleCountFlagBits::e1, VK_FALSE, 1.0f, nullptr, VK_FALSE, VK_FALSE };
@@ -110,6 +112,6 @@ namespace vku::gfx {
 
         vkPipeline_ = device_->GetDevice().createGraphicsPipelineUnique(vk::PipelineCache(), pipelineInfo);
 
-        if (!keepState) state_.reset();
+        if (!keepState) { state_.reset(); }
     }
 }

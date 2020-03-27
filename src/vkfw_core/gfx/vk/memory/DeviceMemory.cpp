@@ -13,14 +13,16 @@
 
 namespace vku::gfx {
 
-    DeviceMemory::DeviceMemory(const LogicalDevice* device, vk::MemoryPropertyFlags properties) :
+    DeviceMemory::DeviceMemory(const LogicalDevice* device, const vk::MemoryPropertyFlags& properties) :
         device_{ device },
         size_{ 0 },
         memoryProperties_{ properties }
     {
     }
 
-    DeviceMemory::DeviceMemory(const LogicalDevice* device, vk::MemoryRequirements memRequirements, vk::MemoryPropertyFlags properties) :
+    DeviceMemory::DeviceMemory(const LogicalDevice* device, vk::MemoryRequirements memRequirements,
+                               const vk::MemoryPropertyFlags& properties)
+        :
         DeviceMemory(device, properties)
     {
         InitializeMemory(memRequirements);
@@ -80,9 +82,11 @@ namespace vku::gfx {
         const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize, const void* data) const
     {
         assert(vkDeviceMemory_ && "Device memory must be valid.");
-        auto dataBytes = reinterpret_cast<const std::uint8_t*>(data);
+        auto dataBytes = reinterpret_cast<const std::uint8_t*>(data); // NOLINT
         MapAndProcess(offsetToTexture, offset, layout, dataSize,
-            [dataBytes](void* deviceMem, std::size_t offset, std::size_t size) { memcpy(deviceMem, &dataBytes[offset], size); });
+                      [dataBytes](void* deviceMem, std::size_t offset, std::size_t size) {
+                          memcpy(deviceMem, &dataBytes[offset], size); // NOLINT
+                      });
     }
 
     void DeviceMemory::CopyFromHostMemory(std::size_t offset, std::size_t size, void* data) const
@@ -95,16 +99,19 @@ namespace vku::gfx {
         const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize, void* data) const
     {
         assert(vkDeviceMemory_ && "Device memory must be valid.");
-        auto dataBytes = reinterpret_cast<std::uint8_t*>(data);
+        auto dataBytes = reinterpret_cast<std::uint8_t*>(data); // NOLINT
         MapAndProcess(offsetToTexture, offset, layout, dataSize,
-            [dataBytes](void* deviceMem, std::size_t offset, std::size_t size) { memcpy(&dataBytes[offset], deviceMem, size); });
+                      [dataBytes](void* deviceMem, std::size_t offset, std::size_t size) {
+                          memcpy(&dataBytes[offset], deviceMem, size); // NOLINT
+                      });
     }
 
-    std::uint32_t DeviceMemory::FindMemoryType(const LogicalDevice* device, std::uint32_t typeFilter, vk::MemoryPropertyFlags properties)
+    std::uint32_t DeviceMemory::FindMemoryType(const LogicalDevice* device, std::uint32_t typeFilter,
+                                               const vk::MemoryPropertyFlags& properties)
     {
         auto memProperties = device->GetPhysicalDevice().getMemoryProperties();
         for (std::uint32_t i = 0; i < memProperties.memoryTypeCount; i++) {
-            if (CheckMemoryType(memProperties, i, typeFilter, properties)) return i;
+            if (CheckMemoryType(memProperties, i, typeFilter, properties)) { return i; }
         }
 
         spdlog::critical("Failed to find suitable memory type ({}).", vk::to_string(properties));
@@ -112,17 +119,17 @@ namespace vku::gfx {
     }
 
     bool DeviceMemory::CheckMemoryType(const LogicalDevice* device, std::uint32_t typeToCheck, std::uint32_t typeFilter,
-        vk::MemoryPropertyFlags properties)
+                                       const vk::MemoryPropertyFlags& properties)
     {
         auto memProperties = device->GetPhysicalDevice().getMemoryProperties();
         return CheckMemoryType(memProperties, typeToCheck, typeFilter, properties);
     }
 
     bool DeviceMemory::CheckMemoryType(const vk::PhysicalDeviceMemoryProperties& memProperties, std::uint32_t typeToCheck,
-        std::uint32_t typeFilter, vk::MemoryPropertyFlags properties)
+        std::uint32_t typeFilter, const vk::MemoryPropertyFlags& properties)
     {
-        if ((typeFilter & (1 << typeToCheck)) && (memProperties.memoryTypes[typeToCheck].propertyFlags & properties) == properties) return true;
-        return false;
+        return (((typeFilter & (1U << typeToCheck)) != 0U)
+                && (memProperties.memoryTypes[typeToCheck].propertyFlags & properties) == properties); // NOLINT
     }
 
     void DeviceMemory::MapAndProcess(std::size_t offset, std::size_t size, const std::function<void(void* deviceMem, std::size_t size)>& processFunc) const
@@ -140,7 +147,7 @@ namespace vku::gfx {
         assert(memoryProperties_ & (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent));
         auto mapOffset = offset.z * layout.depthPitch + offsetToTexture;
         auto deviceMem = device_->GetDevice().mapMemory(*vkDeviceMemory_, mapOffset + layout.offset, layout.size);
-        auto deviceBytes = reinterpret_cast<std::uint8_t*>(deviceMem);
+        auto deviceBytes = reinterpret_cast<std::uint8_t*>(deviceMem); // NOLINT
 
         if (layout.rowPitch == dataSize.x && layout.depthPitch == dataSize.y
             && offset.x == 0 && offset.y == 0) {
@@ -150,7 +157,7 @@ namespace vku::gfx {
             for (auto z = 0U; z < dataSize.z; ++z) {
                 auto deviceMemPos = z * layout.depthPitch + offset.y * layout.rowPitch;
                 auto dataMemPos = z * dataSize.x * dataSize.y;
-                processFunc(&deviceBytes[deviceMemPos], dataMemPos, dataSize.x * dataSize.y);
+                processFunc(&deviceBytes[deviceMemPos], dataMemPos, dataSize.x * dataSize.y); // NOLINT
             }
         }
         else {
@@ -158,7 +165,7 @@ namespace vku::gfx {
                 for (auto y = 0U; y < dataSize.y; ++y) {
                     auto deviceMemPos = z * layout.depthPitch + (offset.y + y) * layout.rowPitch + offset.x;
                     auto dataMemPos = (z * dataSize.y + y) * dataSize.x;
-                    processFunc(&deviceBytes[deviceMemPos], dataMemPos, dataSize.x);
+                    processFunc(&deviceBytes[deviceMemPos], dataMemPos, dataSize.x); // NOLINT
                 }
             }
         }

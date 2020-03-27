@@ -13,7 +13,8 @@
 
 namespace vku::gfx {
 
-    TextureDescriptor TextureDescriptor::StagingTextureDesc(unsigned int bytesPP, vk::Format format, vk::SampleCountFlagBits samples)
+    TextureDescriptor TextureDescriptor::StagingTextureDesc(std::size_t bytesPP, vk::Format format,
+                                                            vk::SampleCountFlagBits samples)
     {
         TextureDescriptor texDesc(bytesPP, format, samples);
         texDesc.createFlags_ = vk::ImageCreateFlags();
@@ -24,7 +25,7 @@ namespace vku::gfx {
         return texDesc;
     }
 
-    TextureDescriptor TextureDescriptor::StagingTextureDesc(const TextureDescriptor orig)
+    TextureDescriptor TextureDescriptor::StagingTextureDesc(const TextureDescriptor& orig)
     {
         TextureDescriptor texDesc = orig;
         texDesc.imageTiling_ = vk::ImageTiling::eLinear;
@@ -34,7 +35,8 @@ namespace vku::gfx {
         return texDesc;
     }
 
-    TextureDescriptor TextureDescriptor::SampleOnlyTextureDesc(unsigned int bytesPP, vk::Format format, vk::SampleCountFlagBits samples)
+    TextureDescriptor TextureDescriptor::SampleOnlyTextureDesc(std::size_t bytesPP, vk::Format format,
+                                                               vk::SampleCountFlagBits samples)
     {
         TextureDescriptor texDesc(bytesPP, format, samples);
         texDesc.createFlags_ = vk::ImageCreateFlags();
@@ -45,7 +47,8 @@ namespace vku::gfx {
         return texDesc;
     }
 
-    TextureDescriptor TextureDescriptor::DepthBufferTextureDesc(unsigned int bytesPP, vk::Format format, vk::SampleCountFlagBits samples)
+    TextureDescriptor TextureDescriptor::DepthBufferTextureDesc(std::size_t bytesPP, vk::Format format,
+                                                                vk::SampleCountFlagBits samples)
     {
         TextureDescriptor texDesc(bytesPP, format, samples);
         texDesc.createFlags_ = vk::ImageCreateFlags();
@@ -57,13 +60,13 @@ namespace vku::gfx {
     }
 
     Texture::Texture(const LogicalDevice* device, const TextureDescriptor& desc,
-        const std::vector<std::uint32_t>& queueFamilyIndices) :
+        std::vector<std::uint32_t> queueFamilyIndices) :
         device_{ device },
         imageDeviceMemory_{ device, desc.memoryProperties_ },
         size_{ 0 },
         mipLevels_{ 0 },
         desc_{ desc },
-        queueFamilyIndices_{ queueFamilyIndices }
+        queueFamilyIndices_{ std::move(queueFamilyIndices) }
     {
         assert(desc_.bytesPP_ > 0);
     }
@@ -127,7 +130,7 @@ namespace vku::gfx {
             vk::Extent3D(size.x, size_.y, size_.z),
             mipLevels, size_.w, desc_.samples_, desc_.imageTiling_,
             desc_.imageUsage_, desc_.sharingMode_, 0, nullptr, desc_.imageLayout_ };
-        if (queueFamilyIndices_.size() > 0) {
+        if (!queueFamilyIndices_.empty()) {
             imgCreateInfo.setQueueFamilyIndexCount(static_cast<std::uint32_t>(queueFamilyIndices_.size()));
             imgCreateInfo.setPQueueFamilyIndices(queueFamilyIndices_.data());
         }
@@ -168,7 +171,7 @@ namespace vku::gfx {
         const std::vector<vk::Semaphore>& waitSemaphores,
         const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence)
     {
-        if (desc_.imageLayout_ == newLayout) return vk::UniqueCommandBuffer();
+        if (desc_.imageLayout_ == newLayout) { return vk::UniqueCommandBuffer(); }
 
         auto transitionCmdBuffer = CommandBuffers::beginSingleTimeSubmit(device_, transitionQueueIdx.first);
         TransitionLayout(newLayout, *transitionCmdBuffer);
@@ -199,7 +202,7 @@ namespace vku::gfx {
             vk::Offset3D{ static_cast<std::int32_t>(srcOffset.x), static_cast<std::int32_t>(srcOffset.y), static_cast<std::int32_t>(srcOffset.z) },
             subresourceLayersDst,
             vk::Offset3D{ static_cast<std::int32_t>(dstOffset.x), static_cast<std::int32_t>(dstOffset.y), static_cast<std::int32_t>(dstOffset.z) },
-            vk::Extent3D{ size.x / desc_.bytesPP_, size.y, size.z } };
+            vk::Extent3D{ size.x / static_cast<std::uint32_t>(desc_.bytesPP_), size.y, size.z } };
         cmdBuffer.copyImage(*vkImage_, desc_.imageLayout_, *dstImage.vkImage_, dstImage.desc_.imageLayout_, copyRegion);
     }
 
@@ -232,10 +235,14 @@ namespace vku::gfx {
     {
         // TODO: support of the metadata aspect?
         if (desc_.format_ == vk::Format::eD16Unorm || desc_.format_ == vk::Format::eX8D24UnormPack32
-            || desc_.format_ == vk::Format::eD32Sfloat) return vk::ImageAspectFlagBits::eDepth;
-        if (desc_.format_ == vk::Format::eS8Uint) return vk::ImageAspectFlagBits::eStencil;
+            || desc_.format_ == vk::Format::eD32Sfloat) {
+            return vk::ImageAspectFlagBits::eDepth;
+        }
+        if (desc_.format_ == vk::Format::eS8Uint) { return vk::ImageAspectFlagBits::eStencil; }
         if (desc_.format_ == vk::Format::eD16UnormS8Uint || desc_.format_ == vk::Format::eD24UnormS8Uint
-            || desc_.format_ == vk::Format::eD32SfloatS8Uint) return vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
+            || desc_.format_ == vk::Format::eD32SfloatS8Uint) {
+            return vk::ImageAspectFlagBits::eDepth | vk::ImageAspectFlagBits::eStencil;
+        }
         return vk::ImageAspectFlagBits::eColor;
     }
 
@@ -259,7 +266,7 @@ namespace vku::gfx {
         switch (layout) {
         case vk::ImageLayout::eUndefined: return vk::PipelineStageFlagBits::eTopOfPipe;
         case vk::ImageLayout::ePreinitialized: return vk::PipelineStageFlagBits::eHost;
-        case vk::ImageLayout::eTransferDstOptimal: return vk::PipelineStageFlagBits::eTransfer;
+        case vk::ImageLayout::eTransferDstOptimal:
         case vk::ImageLayout::eTransferSrcOptimal: return vk::PipelineStageFlagBits::eTransfer;
         case vk::ImageLayout::eColorAttachmentOptimal: return vk::PipelineStageFlagBits::eColorAttachmentOutput;
         case vk::ImageLayout::eDepthStencilAttachmentOptimal: return vk::PipelineStageFlagBits::eEarlyFragmentTests;

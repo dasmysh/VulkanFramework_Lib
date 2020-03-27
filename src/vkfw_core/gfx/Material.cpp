@@ -23,29 +23,18 @@ namespace vku::gfx {
         materialInfo_{ materialInfo }
     {
         assert(materialInfo_ != nullptr);
-        if (!materialInfo_->diffuseTextureFilename_.empty())
-            diffuseTexture_ = device->GetTextureManager()->GetResource(
-                materialInfo->diffuseTextureFilename_, true, true, memoryGroup, queueFamilyIndices);
-        if (!materialInfo_->bumpMapFilename_.empty())
+        if (!materialInfo_->diffuseTextureFilename_.empty()) {
+            diffuseTexture_ = device->GetTextureManager()->GetResource(materialInfo->diffuseTextureFilename_, true,
+                                                                       true, memoryGroup, queueFamilyIndices);
+        }
+        if (!materialInfo_->bumpMapFilename_.empty()) {
             bumpMap_ = device->GetTextureManager()->GetResource(materialInfo->bumpMapFilename_, true, true, memoryGroup,
                                                                 queueFamilyIndices);
-    }
-
-    Material::Material(const Material& rhs) :
-        materialInfo_{ rhs.materialInfo_ },
-        diffuseTexture_{ rhs.diffuseTexture_ },
-        bumpMap_{ rhs.bumpMap_ }
-    {
-    }
-
-    Material& Material::operator=(const Material& rhs)
-    {
-        if (this != &rhs) {
-            Material tmp{ rhs };
-            std::swap(*this, tmp);
         }
-        return *this;
     }
+
+    Material::Material(const Material& rhs) = default;
+    Material& Material::operator=(const Material& rhs) = default;
 
     Material::Material(Material&& rhs) noexcept :
         materialInfo_{ rhs.materialInfo_ },

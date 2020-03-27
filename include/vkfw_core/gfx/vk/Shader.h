@@ -16,12 +16,12 @@ namespace vku::gfx {
     {
     public:
         Shader(const std::string& shaderFilename, const LogicalDevice* device);
-        Shader(const std::string& resourceId, const LogicalDevice* device, const std::string& shaderFilename);
+        Shader(const std::string& resourceId, const LogicalDevice* device, std::string shaderFilename);
         Shader(const Shader&);
         Shader& operator=(const Shader&);
         Shader(Shader&&) noexcept;
         Shader& operator=(Shader&&) noexcept;
-        virtual ~Shader() override;
+        ~Shader() override;
 
         void FillShaderStageInfo(vk::PipelineShaderStageCreateInfo& shaderStageCreateInfo) const;
 

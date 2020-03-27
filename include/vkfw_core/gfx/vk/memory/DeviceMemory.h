@@ -17,11 +17,12 @@ namespace vku::gfx {
     class Buffer;
     class Texture;
 
-    class DeviceMemory
+    class DeviceMemory final
     {
     public:
-        DeviceMemory(const LogicalDevice* device, vk::MemoryPropertyFlags properties);
-        DeviceMemory(const LogicalDevice* device, vk::MemoryRequirements memRequirements, vk::MemoryPropertyFlags properties);
+        DeviceMemory(const LogicalDevice* device, const vk::MemoryPropertyFlags& properties);
+        DeviceMemory(const LogicalDevice* device, vk::MemoryRequirements memRequirements,
+                     const vk::MemoryPropertyFlags& properties);
         DeviceMemory(const DeviceMemory&) = delete;
         DeviceMemory& operator=(const DeviceMemory&) = delete;
         DeviceMemory(DeviceMemory&&) noexcept;
@@ -42,15 +43,16 @@ namespace vku::gfx {
         void CopyFromHostMemory(std::size_t offsetToTexture, const glm::u32vec3& offset,
             const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize, void* data) const;
 
-        vk::MemoryPropertyFlags GetMemoryProperties() const { return memoryProperties_; }
+        [[nodiscard]] vk::MemoryPropertyFlags GetMemoryProperties() const { return memoryProperties_; }
 
-        static std::uint32_t FindMemoryType(const LogicalDevice* device, std::uint32_t typeFilter, vk::MemoryPropertyFlags properties);
+        static std::uint32_t FindMemoryType(const LogicalDevice* device, std::uint32_t typeFilter,
+                                            const vk::MemoryPropertyFlags& properties);
         static bool CheckMemoryType(const LogicalDevice* device, std::uint32_t typeToCheck, std::uint32_t typeFilter,
-            vk::MemoryPropertyFlags properties);
+                                    const vk::MemoryPropertyFlags& properties);
 
     private:
         static bool CheckMemoryType(const vk::PhysicalDeviceMemoryProperties& memProperties, std::uint32_t typeToCheck,
-            std::uint32_t typeFilter, vk::MemoryPropertyFlags properties);
+                                    std::uint32_t typeFilter, const vk::MemoryPropertyFlags& properties);
         void MapAndProcess(std::size_t offset, std::size_t size, const std::function<void(void* deviceMem, std::size_t size)>& processFunc) const;
         void MapAndProcess(std::size_t offsetToTexture, const glm::u32vec3& offset,
             const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize,

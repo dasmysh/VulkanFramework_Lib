@@ -24,7 +24,7 @@ namespace vku::gfx {
         inline void SetCurrentPipeline(vk::PipelineLayout currentPipelineLayout,
             vk::Pipeline currentOpaquePipeline, vk::Pipeline currentTransparentPipeline);
         inline void SetCurrentGeometry(BufferReference currentVertexBuffer, BufferReference currentIndexBuffer);
-        inline void SetCurrentWorldMatrices(UBOBinding currentWorldMatrices);
+        inline void SetCurrentWorldMatrices(const UBOBinding& currentWorldMatrices);
 
         inline RenderElement& AddOpaqueElement(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex,
             std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix,
@@ -39,7 +39,7 @@ namespace vku::gfx {
         std::vector<RenderElement> opaqueElements_;
         std::vector<RenderElement> transparentElements_;
 
-        const CameraBase* camera_;
+        const CameraBase* camera_; // NOLINT(clang-diagnostic-unused-private-field)
         UBOBinding cameraMatricesUBO_;
         vk::PipelineLayout currentPipelineLayout_ = vk::PipelineLayout();
         vk::Pipeline currentOpaquePipeline_ = vk::Pipeline();
@@ -53,7 +53,7 @@ namespace vku::gfx {
 
     RenderList::RenderList(const CameraBase* camera, UBOBinding cameraUBO) :
         camera_{ camera },
-        cameraMatricesUBO_{ cameraUBO }
+        cameraMatricesUBO_{ std::move(cameraUBO) }
     {
     }
 
@@ -71,7 +71,7 @@ namespace vku::gfx {
         currentIndexBuffer_ = currentIndexBuffer;
     }
 
-    void RenderList::SetCurrentWorldMatrices(UBOBinding currentWorldMatrices)
+    void RenderList::SetCurrentWorldMatrices(const UBOBinding& currentWorldMatrices)
     {
         currentWorldMatrices_ = currentWorldMatrices;
     }
@@ -106,10 +106,10 @@ namespace vku::gfx {
         std::sort(transparentElements_.begin(), transparentElements_.end());
 
         const RenderElement* lastElement = nullptr;
-        for (const auto& re : opaqueElements_) lastElement = &re.DrawElement(cmdBuffer, lastElement);
+        for (const auto& re : opaqueElements_) { lastElement = &re.DrawElement(cmdBuffer, lastElement); }
 
         lastElement = nullptr;
-        for (const auto& re : transparentElements_) lastElement = &re.DrawElement(cmdBuffer, lastElement);
+        for (const auto& re : transparentElements_) { lastElement = &re.DrawElement(cmdBuffer, lastElement); }
     }
 
 }

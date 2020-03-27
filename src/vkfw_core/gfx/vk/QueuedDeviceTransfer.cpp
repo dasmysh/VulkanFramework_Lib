@@ -17,14 +17,18 @@ namespace vku::gfx {
 
     QueuedDeviceTransfer::QueuedDeviceTransfer(const LogicalDevice* device, std::pair<std::uint32_t, std::uint32_t> transferQueue) :
         device_{ device },
-        transferQueue_{ transferQueue }
+        transferQueue_{ std::move(transferQueue) }
     {
     }
 
 
     QueuedDeviceTransfer::~QueuedDeviceTransfer()
     {
-        if (!transferCmdBuffers_.empty()) FinishTransfer();
+        try {
+            if (!transferCmdBuffers_.empty()) { FinishTransfer(); }
+        } catch (...) {
+            spdlog::critical("Could not finish queued device transfer. Unknown exception.");
+        }
     }
 
     QueuedDeviceTransfer::QueuedDeviceTransfer(QueuedDeviceTransfer&& rhs) noexcept :
@@ -46,14 +50,15 @@ namespace vku::gfx {
     }
 
     std::unique_ptr<DeviceBuffer> QueuedDeviceTransfer::CreateDeviceBufferWithData(
-        vk::BufferUsageFlags deviceBufferUsage, vk::MemoryPropertyFlags memoryFlags,
+        const vk::BufferUsageFlags& deviceBufferUsage, const vk::MemoryPropertyFlags& memoryFlags,
         const std::vector<std::uint32_t>& deviceBufferQueues, std::size_t bufferSize,
         std::size_t dataSize, const void* data)
     {
         AddStagingBuffer(dataSize, data);
 
         std::vector<std::uint32_t> queueFamilies;
-        for (auto queue : deviceBufferQueues) queueFamilies.push_back(device_->GetQueueInfo(queue).familyIndex_);
+        queueFamilies.reserve(deviceBufferQueues.size());
+        for (auto queue : deviceBufferQueues) { queueFamilies.push_back(device_->GetQueueInfo(queue).familyIndex_); }
         auto deviceBuffer = std::make_unique<DeviceBuffer>(device_, vk::BufferUsageFlagBits::eTransferDst | deviceBufferUsage,
             memoryFlags, queueFamilies);
         deviceBuffer->InitializeBuffer(bufferSize);
@@ -70,7 +75,8 @@ namespace vku::gfx {
         AddStagingTexture(dataSize, mipLevels, textureDesc, data);
 
         std::vector<std::uint32_t> queueFamilies;
-        for (auto queue : deviceBufferQueues) queueFamilies.push_back(device_->GetQueueInfo(queue).familyIndex_);
+        queueFamilies.reserve(deviceBufferQueues.size());
+        for (auto queue : deviceBufferQueues) { queueFamilies.push_back(device_->GetQueueInfo(queue).familyIndex_); }
         auto deviceTexture = std::make_unique<DeviceTexture>(device_, textureDesc, queueFamilies);
         deviceTexture->InitializeImage(textureSize, mipLevels);
 
@@ -80,7 +86,7 @@ namespace vku::gfx {
     }
 
     std::unique_ptr<DeviceBuffer> QueuedDeviceTransfer::CreateDeviceBufferWithData(
-        vk::BufferUsageFlags deviceBufferUsage, vk::MemoryPropertyFlags memoryFlags,
+        const vk::BufferUsageFlags& deviceBufferUsage, const vk::MemoryPropertyFlags& memoryFlags,
         const std::vector<std::uint32_t>& deviceBufferQueues, std::size_t size, const void* data)
     {
         return CreateDeviceBufferWithData(deviceBufferUsage, memoryFlags, deviceBufferQueues, size, size, data);

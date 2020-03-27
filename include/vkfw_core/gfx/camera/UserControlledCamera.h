@@ -28,7 +28,7 @@ namespace vku::gfx {
         UserControlledCamera(const glm::mat4& viewMatrix, const glm::mat4& projMatrix) noexcept :
             CameraBase{ viewMatrix, projMatrix }
         {}
-        virtual ~UserControlledCamera() = default;
+        ~UserControlledCamera() override = default;
 
         virtual bool HandleMouse(int button, int action, float mouseWheelDelta, const VKWindow* sender) = 0;
         virtual void UpdateCamera(double elapsedTime, const VKWindow* sender) = 0;

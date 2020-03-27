@@ -44,10 +44,10 @@ namespace vku::gfx {
         : Texture2D{textureFilename, flipTexture, device}
     {
         auto loadFn = [this, &transfer, &queueFamilyIndices](const glm::u32vec4& size, const TextureDescriptor& desc,
-                                                             const void* data) {
+                                                             void* data) {
             texturePtr_ = transfer.CreateDeviceTextureWithData(desc, queueFamilyIndices, size, 1, data);
             texture_ = texturePtr_.get();
-            stbi_image_free(const_cast<void*>(data));
+            stbi_image_free(data);
         };
         if (stbi_is_hdr(textureFilename_.c_str()) != 0) {
             LoadTextureHDR(textureFilename_, loadFn);
@@ -63,26 +63,29 @@ namespace vku::gfx {
         Texture2D{ textureFilename, flipTexture, device }
     {
         memoryGroup_ = &memGroup;
-        auto loadFn = [this, &memGroup, &queueFamilyIndices](const glm::u32vec4& size, const TextureDescriptor& desc, const void* data)
+        auto loadFn = [this, &memGroup, &queueFamilyIndices](const glm::u32vec4& size, const TextureDescriptor& desc, void* data)
         {
             textureIdx_ = memGroup.AddTextureToGroup(desc, size, 1, queueFamilyIndices);
             glm::u32vec3 dataSize(size.x * memGroup.GetHostTexture(textureIdx_)->GetDescriptor().bytesPP_, size.y, size.z);
             memGroup.AddDataToTextureInGroup(textureIdx_, vk::ImageAspectFlagBits::eColor, 0, 0, dataSize, data, stbi_image_free);
             texture_ = memGroup.GetTexture(textureIdx_);
         };
-        if (stbi_is_hdr(textureFilename_.c_str()) != 0) LoadTextureHDR(textureFilename_, loadFn);
-        else LoadTextureLDR(textureFilename_, useSRGB, loadFn);
+        if (stbi_is_hdr(textureFilename_.c_str()) != 0) {
+            LoadTextureHDR(textureFilename_, loadFn);
+        } else {
+            LoadTextureLDR(textureFilename_, useSRGB, loadFn);
+        }
     }
 
-    Texture2D::~Texture2D()
-    {
-    }
+    Texture2D::~Texture2D() = default;
 
     void Texture2D::LoadTextureLDR(const std::string& filename, bool useSRGB,
-        const std::function<void(const glm::u32vec4& size, const TextureDescriptor& desc, const void* data)>& loadFn)
+        const std::function<void(const glm::u32vec4& size, const TextureDescriptor& desc, void* data)>& loadFn)
     {
-        auto imgWidth = 0, imgHeight = 0, imgChannels = 0;
-        if (!stbi_info(filename.c_str(), &imgWidth, &imgHeight, &imgChannels)) {
+        auto imgWidth = 0;
+        auto imgHeight = 0;
+        auto imgChannels = 0;
+        if (stbi_info(filename.c_str(), &imgWidth, &imgHeight, &imgChannels) == 0) {
             spdlog::error(
                 "Could not get information from texture (LDR).\nResourceID: {}\nFilename: {}\nDescription: STBI Error.",
                 getId(), filename);
@@ -94,7 +97,7 @@ namespace vku::gfx {
         int requestedChannels = imgChannels;
 
         auto image = stbi_load(filename.c_str(), &imgWidth, &imgHeight, &imgChannels, requestedChannels);
-        if (!image) {
+        if (image == nullptr) {
             spdlog::error("Could not load texture (LDR).\nResourceID: {}\nFilename: {}\nDescription: STBI Error.",
                           getId(), filename);
             throw stbi_error{};
@@ -106,10 +109,12 @@ namespace vku::gfx {
     }
 
     void Texture2D::LoadTextureHDR(const std::string& filename,
-        const std::function<void(const glm::u32vec4& size, const TextureDescriptor& desc, const void* data)>& loadFn)
+        const std::function<void(const glm::u32vec4& size, const TextureDescriptor& desc, void* data)>& loadFn)
     {
-        auto imgWidth = 0, imgHeight = 0, imgChannels = 0;
-        if (!stbi_info(filename.c_str(), &imgWidth, &imgHeight, &imgChannels)) {
+        auto imgWidth = 0;
+        auto imgHeight = 0;
+        auto imgChannels = 0;
+        if (stbi_info(filename.c_str(), &imgWidth, &imgHeight, &imgChannels) == 0) {
             spdlog::error(
                 "Could not get information from texture (HDR).\nResourceID: {}\nFilename: {}\nDescription: STBI Error.",
                 getId(), filename);
@@ -122,7 +127,7 @@ namespace vku::gfx {
         int requestedChannels = imgChannels;
 
         auto image = stbi_loadf(filename.c_str(), &imgWidth, &imgHeight, &imgChannels, requestedChannels);
-        if (!image) {
+        if (image ==  nullptr) {
             spdlog::error("Could not load texture (HDR).\nResourceID: {}\nFilename: {}\nDescription: STBI Error.",
                           getId(), filename);
             throw stbi_error{};
@@ -137,30 +142,51 @@ namespace vku::gfx {
     {
         std::vector<std::pair<unsigned int, vk::Format>> candiateFormats;
         if (imgChannels == 1) {
-            if (FormatProperties::USE_SRGB == fmtProps) candiateFormats.emplace_back(std::make_pair(1, vk::Format::eR8Srgb));
-            if (FormatProperties::USE_HDR == fmtProps) candiateFormats.emplace_back(std::make_pair(4, vk::Format::eR32Sfloat));
-            else candiateFormats.emplace_back(std::make_pair(1, vk::Format::eR8Unorm));
+            if (FormatProperties::USE_SRGB == fmtProps) {
+                candiateFormats.emplace_back(std::make_pair(1, vk::Format::eR8Srgb));
+            }
+            if (FormatProperties::USE_HDR == fmtProps) {
+                candiateFormats.emplace_back(std::make_pair(4, vk::Format::eR32Sfloat));
+            } else {
+                candiateFormats.emplace_back(std::make_pair(1, vk::Format::eR8Unorm));
+            }
         }
         if (imgChannels <= 2) {
-            if (FormatProperties::USE_SRGB == fmtProps) candiateFormats.emplace_back(std::make_pair(2, vk::Format::eR8G8Srgb));
-            if (FormatProperties::USE_HDR == fmtProps) candiateFormats.emplace_back(std::make_pair(8, vk::Format::eR32G32Sfloat));
-            else candiateFormats.emplace_back(std::make_pair(2, vk::Format::eR8G8Unorm));
+            if (FormatProperties::USE_SRGB == fmtProps) {
+                candiateFormats.emplace_back(std::make_pair(2, vk::Format::eR8G8Srgb));
+            }
+            if (FormatProperties::USE_HDR == fmtProps) {
+                candiateFormats.emplace_back(std::make_pair(8, vk::Format::eR32G32Sfloat));
+            } else {
+                candiateFormats.emplace_back(std::make_pair(2, vk::Format::eR8G8Unorm));
+            }
         }
         if (imgChannels <= 3) {
-            if (FormatProperties::USE_SRGB == fmtProps) candiateFormats.emplace_back(std::make_pair(3, vk::Format::eR8G8B8Srgb));
-            if (FormatProperties::USE_HDR == fmtProps) candiateFormats.emplace_back(std::make_pair(12, vk::Format::eR32G32B32Sfloat));
-            else candiateFormats.emplace_back(std::make_pair(3, vk::Format::eR8G8B8Unorm));
+            if (FormatProperties::USE_SRGB == fmtProps) {
+                candiateFormats.emplace_back(std::make_pair(3, vk::Format::eR8G8B8Srgb));
+            }
+            if (FormatProperties::USE_HDR == fmtProps) {
+                constexpr int BYTES_RGB32F = 12;
+                candiateFormats.emplace_back(std::make_pair(BYTES_RGB32F, vk::Format::eR32G32B32Sfloat));
+            } else {
+                candiateFormats.emplace_back(std::make_pair(3, vk::Format::eR8G8B8Unorm));
+            }
         }
         if (imgChannels <= 4) {
-            if (FormatProperties::USE_SRGB == fmtProps) candiateFormats.emplace_back(std::make_pair(4, vk::Format::eR8G8B8A8Srgb));
-            if (FormatProperties::USE_HDR == fmtProps) candiateFormats.emplace_back(std::make_pair(16, vk::Format::eR32G32B32A32Sfloat));
-            else candiateFormats.emplace_back(std::make_pair(4, vk::Format::eR8G8B8A8Unorm));
+            if (FormatProperties::USE_SRGB == fmtProps) {
+                candiateFormats.emplace_back(std::make_pair(4, vk::Format::eR8G8B8A8Srgb));
+            }
+            if (FormatProperties::USE_HDR == fmtProps) {
+                candiateFormats.emplace_back(std::make_pair(16, vk::Format::eR32G32B32A32Sfloat));
+            } else {
+                candiateFormats.emplace_back(std::make_pair(4, vk::Format::eR8G8B8A8Unorm));
+            }
         }
 
         auto fmt = GetDevice()->FindSupportedFormat(candiateFormats, vk::ImageTiling::eOptimal,
             vk::FormatFeatureFlagBits::eSampledImage | vk::FormatFeatureFlagBits::eSampledImageFilterLinear);
         int singleChannelBytes = fmtProps == FormatProperties::USE_HDR ? 4 : 1;
-        imgChannels = fmt.first / singleChannelBytes;
+        imgChannels = static_cast<int>(fmt.first) / singleChannelBytes;
         return fmt;
     }
 }

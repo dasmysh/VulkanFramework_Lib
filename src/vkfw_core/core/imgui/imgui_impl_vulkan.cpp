@@ -26,9 +26,11 @@
 //  2016-10-18: Vulkan: Add location decorators & change to use structs as in/out in glsl, update embedded spv (produced with glslangValidator -x). Null the released resources.
 //  2016-08-27: Vulkan: Fix Vulkan example for use when a depth buffer is active.
 
+#include <cstddef>
+
 #include "imgui.h"
 #include "imgui_impl_vulkan.h"
-#include <stdio.h>
+#include <cstdio>
 #include "main.h"
 
 
@@ -71,106 +73,107 @@ struct ImGui_ImplVulkan_InternalInfo
 /** Copied from ImGui example. */
 static void check_vk_result(VkResult err)
 {
-    if (err == 0) return;
+    if (err == 0) { return; }
     spdlog::error("VkResult {}", err);
-    if (err < 0) throw std::runtime_error("Vulkan Error.");
+    if (err < 0) { throw std::runtime_error("Vulkan Error."); }
 }
 
 // glsl_shader.vert, compiled with:
 // # glslangValidator -V -x -o glsl_shader.vert.u32 glsl_shader.vert
+// NOLINTNEXTLINE
 static uint32_t __glsl_shader_vert_spv[] =
 {
-    0x07230203,0x00010000,0x00080001,0x0000002e,0x00000000,0x00020011,0x00000001,0x0006000b,
-    0x00000001,0x4c534c47,0x6474732e,0x3035342e,0x00000000,0x0003000e,0x00000000,0x00000001,
-    0x000a000f,0x00000000,0x00000004,0x6e69616d,0x00000000,0x0000000b,0x0000000f,0x00000015,
-    0x0000001b,0x0000001c,0x00030003,0x00000002,0x000001c2,0x00040005,0x00000004,0x6e69616d,
-    0x00000000,0x00030005,0x00000009,0x00000000,0x00050006,0x00000009,0x00000000,0x6f6c6f43,
-    0x00000072,0x00040006,0x00000009,0x00000001,0x00005655,0x00030005,0x0000000b,0x0074754f,
-    0x00040005,0x0000000f,0x6c6f4361,0x0000726f,0x00030005,0x00000015,0x00565561,0x00060005,
-    0x00000019,0x505f6c67,0x65567265,0x78657472,0x00000000,0x00060006,0x00000019,0x00000000,
-    0x505f6c67,0x7469736f,0x006e6f69,0x00030005,0x0000001b,0x00000000,0x00040005,0x0000001c,
-    0x736f5061,0x00000000,0x00060005,0x0000001e,0x73755075,0x6e6f4368,0x6e617473,0x00000074,
-    0x00050006,0x0000001e,0x00000000,0x61635375,0x0000656c,0x00060006,0x0000001e,0x00000001,
-    0x61725475,0x616c736e,0x00006574,0x00030005,0x00000020,0x00006370,0x00040047,0x0000000b,
-    0x0000001e,0x00000000,0x00040047,0x0000000f,0x0000001e,0x00000002,0x00040047,0x00000015,
-    0x0000001e,0x00000001,0x00050048,0x00000019,0x00000000,0x0000000b,0x00000000,0x00030047,
-    0x00000019,0x00000002,0x00040047,0x0000001c,0x0000001e,0x00000000,0x00050048,0x0000001e,
-    0x00000000,0x00000023,0x00000000,0x00050048,0x0000001e,0x00000001,0x00000023,0x00000008,
-    0x00030047,0x0000001e,0x00000002,0x00020013,0x00000002,0x00030021,0x00000003,0x00000002,
-    0x00030016,0x00000006,0x00000020,0x00040017,0x00000007,0x00000006,0x00000004,0x00040017,
-    0x00000008,0x00000006,0x00000002,0x0004001e,0x00000009,0x00000007,0x00000008,0x00040020,
-    0x0000000a,0x00000003,0x00000009,0x0004003b,0x0000000a,0x0000000b,0x00000003,0x00040015,
-    0x0000000c,0x00000020,0x00000001,0x0004002b,0x0000000c,0x0000000d,0x00000000,0x00040020,
-    0x0000000e,0x00000001,0x00000007,0x0004003b,0x0000000e,0x0000000f,0x00000001,0x00040020,
-    0x00000011,0x00000003,0x00000007,0x0004002b,0x0000000c,0x00000013,0x00000001,0x00040020,
-    0x00000014,0x00000001,0x00000008,0x0004003b,0x00000014,0x00000015,0x00000001,0x00040020,
-    0x00000017,0x00000003,0x00000008,0x0003001e,0x00000019,0x00000007,0x00040020,0x0000001a,
-    0x00000003,0x00000019,0x0004003b,0x0000001a,0x0000001b,0x00000003,0x0004003b,0x00000014,
-    0x0000001c,0x00000001,0x0004001e,0x0000001e,0x00000008,0x00000008,0x00040020,0x0000001f,
-    0x00000009,0x0000001e,0x0004003b,0x0000001f,0x00000020,0x00000009,0x00040020,0x00000021,
-    0x00000009,0x00000008,0x0004002b,0x00000006,0x00000028,0x00000000,0x0004002b,0x00000006,
-    0x00000029,0x3f800000,0x00050036,0x00000002,0x00000004,0x00000000,0x00000003,0x000200f8,
-    0x00000005,0x0004003d,0x00000007,0x00000010,0x0000000f,0x00050041,0x00000011,0x00000012,
-    0x0000000b,0x0000000d,0x0003003e,0x00000012,0x00000010,0x0004003d,0x00000008,0x00000016,
-    0x00000015,0x00050041,0x00000017,0x00000018,0x0000000b,0x00000013,0x0003003e,0x00000018,
-    0x00000016,0x0004003d,0x00000008,0x0000001d,0x0000001c,0x00050041,0x00000021,0x00000022,
-    0x00000020,0x0000000d,0x0004003d,0x00000008,0x00000023,0x00000022,0x00050085,0x00000008,
-    0x00000024,0x0000001d,0x00000023,0x00050041,0x00000021,0x00000025,0x00000020,0x00000013,
-    0x0004003d,0x00000008,0x00000026,0x00000025,0x00050081,0x00000008,0x00000027,0x00000024,
-    0x00000026,0x00050051,0x00000006,0x0000002a,0x00000027,0x00000000,0x00050051,0x00000006,
-    0x0000002b,0x00000027,0x00000001,0x00070050,0x00000007,0x0000002c,0x0000002a,0x0000002b,
-    0x00000028,0x00000029,0x00050041,0x00000011,0x0000002d,0x0000001b,0x0000000d,0x0003003e,
-    0x0000002d,0x0000002c,0x000100fd,0x00010038
+    0x07230203, 0x00010000, 0x00080001, 0x0000002e, 0x00000000, 0x00020011, 0x00000001, 0x0006000b, // NOLINT
+    0x00000001, 0x4c534c47, 0x6474732e, 0x3035342e, 0x00000000, 0x0003000e, 0x00000000, 0x00000001, // NOLINT
+    0x000a000f, 0x00000000, 0x00000004, 0x6e69616d, 0x00000000, 0x0000000b, 0x0000000f, 0x00000015, // NOLINT
+    0x0000001b, 0x0000001c, 0x00030003, 0x00000002, 0x000001c2, 0x00040005, 0x00000004, 0x6e69616d, // NOLINT
+    0x00000000, 0x00030005, 0x00000009, 0x00000000, 0x00050006, 0x00000009, 0x00000000, 0x6f6c6f43, // NOLINT
+    0x00000072, 0x00040006, 0x00000009, 0x00000001, 0x00005655, 0x00030005, 0x0000000b, 0x0074754f, // NOLINT
+    0x00040005, 0x0000000f, 0x6c6f4361, 0x0000726f, 0x00030005, 0x00000015, 0x00565561, 0x00060005, // NOLINT
+    0x00000019, 0x505f6c67, 0x65567265, 0x78657472, 0x00000000, 0x00060006, 0x00000019, 0x00000000, // NOLINT
+    0x505f6c67, 0x7469736f, 0x006e6f69, 0x00030005, 0x0000001b, 0x00000000, 0x00040005, 0x0000001c, // NOLINT
+    0x736f5061, 0x00000000, 0x00060005, 0x0000001e, 0x73755075, 0x6e6f4368, 0x6e617473, 0x00000074, // NOLINT
+    0x00050006, 0x0000001e, 0x00000000, 0x61635375, 0x0000656c, 0x00060006, 0x0000001e, 0x00000001, // NOLINT
+    0x61725475, 0x616c736e, 0x00006574, 0x00030005, 0x00000020, 0x00006370, 0x00040047, 0x0000000b, // NOLINT
+    0x0000001e, 0x00000000, 0x00040047, 0x0000000f, 0x0000001e, 0x00000002, 0x00040047, 0x00000015, // NOLINT
+    0x0000001e, 0x00000001, 0x00050048, 0x00000019, 0x00000000, 0x0000000b, 0x00000000, 0x00030047, // NOLINT
+    0x00000019, 0x00000002, 0x00040047, 0x0000001c, 0x0000001e, 0x00000000, 0x00050048, 0x0000001e, // NOLINT
+    0x00000000, 0x00000023, 0x00000000, 0x00050048, 0x0000001e, 0x00000001, 0x00000023, 0x00000008, // NOLINT
+    0x00030047, 0x0000001e, 0x00000002, 0x00020013, 0x00000002, 0x00030021, 0x00000003, 0x00000002, // NOLINT
+    0x00030016, 0x00000006, 0x00000020, 0x00040017, 0x00000007, 0x00000006, 0x00000004, 0x00040017, // NOLINT
+    0x00000008, 0x00000006, 0x00000002, 0x0004001e, 0x00000009, 0x00000007, 0x00000008, 0x00040020, // NOLINT
+    0x0000000a, 0x00000003, 0x00000009, 0x0004003b, 0x0000000a, 0x0000000b, 0x00000003, 0x00040015, // NOLINT
+    0x0000000c, 0x00000020, 0x00000001, 0x0004002b, 0x0000000c, 0x0000000d, 0x00000000, 0x00040020, // NOLINT
+    0x0000000e, 0x00000001, 0x00000007, 0x0004003b, 0x0000000e, 0x0000000f, 0x00000001, 0x00040020, // NOLINT
+    0x00000011, 0x00000003, 0x00000007, 0x0004002b, 0x0000000c, 0x00000013, 0x00000001, 0x00040020, // NOLINT
+    0x00000014, 0x00000001, 0x00000008, 0x0004003b, 0x00000014, 0x00000015, 0x00000001, 0x00040020, // NOLINT
+    0x00000017, 0x00000003, 0x00000008, 0x0003001e, 0x00000019, 0x00000007, 0x00040020, 0x0000001a, // NOLINT
+    0x00000003, 0x00000019, 0x0004003b, 0x0000001a, 0x0000001b, 0x00000003, 0x0004003b, 0x00000014, // NOLINT
+    0x0000001c, 0x00000001, 0x0004001e, 0x0000001e, 0x00000008, 0x00000008, 0x00040020, 0x0000001f, // NOLINT
+    0x00000009, 0x0000001e, 0x0004003b, 0x0000001f, 0x00000020, 0x00000009, 0x00040020, 0x00000021, // NOLINT
+    0x00000009, 0x00000008, 0x0004002b, 0x00000006, 0x00000028, 0x00000000, 0x0004002b, 0x00000006, // NOLINT
+    0x00000029, 0x3f800000, 0x00050036, 0x00000002, 0x00000004, 0x00000000, 0x00000003, 0x000200f8, // NOLINT
+    0x00000005, 0x0004003d, 0x00000007, 0x00000010, 0x0000000f, 0x00050041, 0x00000011, 0x00000012, // NOLINT
+    0x0000000b, 0x0000000d, 0x0003003e, 0x00000012, 0x00000010, 0x0004003d, 0x00000008, 0x00000016, // NOLINT
+    0x00000015, 0x00050041, 0x00000017, 0x00000018, 0x0000000b, 0x00000013, 0x0003003e, 0x00000018, // NOLINT
+    0x00000016, 0x0004003d, 0x00000008, 0x0000001d, 0x0000001c, 0x00050041, 0x00000021, 0x00000022, // NOLINT
+    0x00000020, 0x0000000d, 0x0004003d, 0x00000008, 0x00000023, 0x00000022, 0x00050085, 0x00000008, // NOLINT
+    0x00000024, 0x0000001d, 0x00000023, 0x00050041, 0x00000021, 0x00000025, 0x00000020, 0x00000013, // NOLINT
+    0x0004003d, 0x00000008, 0x00000026, 0x00000025, 0x00050081, 0x00000008, 0x00000027, 0x00000024, // NOLINT
+    0x00000026, 0x00050051, 0x00000006, 0x0000002a, 0x00000027, 0x00000000, 0x00050051, 0x00000006, // NOLINT
+    0x0000002b, 0x00000027, 0x00000001, 0x00070050, 0x00000007, 0x0000002c, 0x0000002a, 0x0000002b, // NOLINT
+    0x00000028, 0x00000029, 0x00050041, 0x00000011, 0x0000002d, 0x0000001b, 0x0000000d, 0x0003003e, // NOLINT
+    0x0000002d, 0x0000002c, 0x000100fd, 0x00010038                                                  // NOLINT
 };
 
 // glsl_shader.frag, compiled with:
 // # glslangValidator -V -x -o glsl_shader.frag.u32 glsl_shader.frag
+// NOLINTNEXTLINE
 static uint32_t __glsl_shader_frag_spv[] =
 {
-    0x07230203,0x00010000,0x00080001,0x0000001e,0x00000000,0x00020011,0x00000001,0x0006000b,
-    0x00000001,0x4c534c47,0x6474732e,0x3035342e,0x00000000,0x0003000e,0x00000000,0x00000001,
-    0x0007000f,0x00000004,0x00000004,0x6e69616d,0x00000000,0x00000009,0x0000000d,0x00030010,
-    0x00000004,0x00000007,0x00030003,0x00000002,0x000001c2,0x00040005,0x00000004,0x6e69616d,
-    0x00000000,0x00040005,0x00000009,0x6c6f4366,0x0000726f,0x00030005,0x0000000b,0x00000000,
-    0x00050006,0x0000000b,0x00000000,0x6f6c6f43,0x00000072,0x00040006,0x0000000b,0x00000001,
-    0x00005655,0x00030005,0x0000000d,0x00006e49,0x00050005,0x00000016,0x78655473,0x65727574,
-    0x00000000,0x00040047,0x00000009,0x0000001e,0x00000000,0x00040047,0x0000000d,0x0000001e,
-    0x00000000,0x00040047,0x00000016,0x00000022,0x00000000,0x00040047,0x00000016,0x00000021,
-    0x00000000,0x00020013,0x00000002,0x00030021,0x00000003,0x00000002,0x00030016,0x00000006,
-    0x00000020,0x00040017,0x00000007,0x00000006,0x00000004,0x00040020,0x00000008,0x00000003,
-    0x00000007,0x0004003b,0x00000008,0x00000009,0x00000003,0x00040017,0x0000000a,0x00000006,
-    0x00000002,0x0004001e,0x0000000b,0x00000007,0x0000000a,0x00040020,0x0000000c,0x00000001,
-    0x0000000b,0x0004003b,0x0000000c,0x0000000d,0x00000001,0x00040015,0x0000000e,0x00000020,
-    0x00000001,0x0004002b,0x0000000e,0x0000000f,0x00000000,0x00040020,0x00000010,0x00000001,
-    0x00000007,0x00090019,0x00000013,0x00000006,0x00000001,0x00000000,0x00000000,0x00000000,
-    0x00000001,0x00000000,0x0003001b,0x00000014,0x00000013,0x00040020,0x00000015,0x00000000,
-    0x00000014,0x0004003b,0x00000015,0x00000016,0x00000000,0x0004002b,0x0000000e,0x00000018,
-    0x00000001,0x00040020,0x00000019,0x00000001,0x0000000a,0x00050036,0x00000002,0x00000004,
-    0x00000000,0x00000003,0x000200f8,0x00000005,0x00050041,0x00000010,0x00000011,0x0000000d,
-    0x0000000f,0x0004003d,0x00000007,0x00000012,0x00000011,0x0004003d,0x00000014,0x00000017,
-    0x00000016,0x00050041,0x00000019,0x0000001a,0x0000000d,0x00000018,0x0004003d,0x0000000a,
-    0x0000001b,0x0000001a,0x00050057,0x00000007,0x0000001c,0x00000017,0x0000001b,0x00050085,
-    0x00000007,0x0000001d,0x00000012,0x0000001c,0x0003003e,0x00000009,0x0000001d,0x000100fd,
-    0x00010038
+    0x07230203, 0x00010000, 0x00080001, 0x0000001e, 0x00000000, 0x00020011, 0x00000001, 0x0006000b, // NOLINT
+    0x00000001, 0x4c534c47, 0x6474732e, 0x3035342e, 0x00000000, 0x0003000e, 0x00000000, 0x00000001, // NOLINT
+    0x0007000f, 0x00000004, 0x00000004, 0x6e69616d, 0x00000000, 0x00000009, 0x0000000d, 0x00030010, // NOLINT
+    0x00000004, 0x00000007, 0x00030003, 0x00000002, 0x000001c2, 0x00040005, 0x00000004, 0x6e69616d, // NOLINT
+    0x00000000, 0x00040005, 0x00000009, 0x6c6f4366, 0x0000726f, 0x00030005, 0x0000000b, 0x00000000, // NOLINT
+    0x00050006, 0x0000000b, 0x00000000, 0x6f6c6f43, 0x00000072, 0x00040006, 0x0000000b, 0x00000001, // NOLINT
+    0x00005655, 0x00030005, 0x0000000d, 0x00006e49, 0x00050005, 0x00000016, 0x78655473, 0x65727574, // NOLINT
+    0x00000000, 0x00040047, 0x00000009, 0x0000001e, 0x00000000, 0x00040047, 0x0000000d, 0x0000001e, // NOLINT
+    0x00000000, 0x00040047, 0x00000016, 0x00000022, 0x00000000, 0x00040047, 0x00000016, 0x00000021, // NOLINT
+    0x00000000, 0x00020013, 0x00000002, 0x00030021, 0x00000003, 0x00000002, 0x00030016, 0x00000006, // NOLINT
+    0x00000020, 0x00040017, 0x00000007, 0x00000006, 0x00000004, 0x00040020, 0x00000008, 0x00000003, // NOLINT
+    0x00000007, 0x0004003b, 0x00000008, 0x00000009, 0x00000003, 0x00040017, 0x0000000a, 0x00000006, // NOLINT
+    0x00000002, 0x0004001e, 0x0000000b, 0x00000007, 0x0000000a, 0x00040020, 0x0000000c, 0x00000001, // NOLINT
+    0x0000000b, 0x0004003b, 0x0000000c, 0x0000000d, 0x00000001, 0x00040015, 0x0000000e, 0x00000020, // NOLINT
+    0x00000001, 0x0004002b, 0x0000000e, 0x0000000f, 0x00000000, 0x00040020, 0x00000010, 0x00000001, // NOLINT
+    0x00000007, 0x00090019, 0x00000013, 0x00000006, 0x00000001, 0x00000000, 0x00000000, 0x00000000, // NOLINT
+    0x00000001, 0x00000000, 0x0003001b, 0x00000014, 0x00000013, 0x00040020, 0x00000015, 0x00000000, // NOLINT
+    0x00000014, 0x0004003b, 0x00000015, 0x00000016, 0x00000000, 0x0004002b, 0x0000000e, 0x00000018, // NOLINT
+    0x00000001, 0x00040020, 0x00000019, 0x00000001, 0x0000000a, 0x00050036, 0x00000002, 0x00000004, // NOLINT
+    0x00000000, 0x00000003, 0x000200f8, 0x00000005, 0x00050041, 0x00000010, 0x00000011, 0x0000000d, // NOLINT
+    0x0000000f, 0x0004003d, 0x00000007, 0x00000012, 0x00000011, 0x0004003d, 0x00000014, 0x00000017, // NOLINT
+    0x00000016, 0x00050041, 0x00000019, 0x0000001a, 0x0000000d, 0x00000018, 0x0004003d, 0x0000000a, // NOLINT
+    0x0000001b, 0x0000001a, 0x00050057, 0x00000007, 0x0000001c, 0x00000017, 0x0000001b, 0x00050085, // NOLINT
+    0x00000007, 0x0000001d, 0x00000012, 0x0000001c, 0x0003003e, 0x00000009, 0x0000001d, 0x000100fd, // NOLINT
+    0x00010038                                                                                      // NOLINT
 };
 
 static uint32_t ImGui_ImplVulkan_MemoryType(ImGui_ImplVulkan_InitInfo* vkinfo, VkMemoryPropertyFlags properties, uint32_t type_bits)
 {
     VkPhysicalDeviceMemoryProperties prop;
     vkGetPhysicalDeviceMemoryProperties(vkinfo->PhysicalDevice, &prop);
-    for (uint32_t i = 0; i < prop.memoryTypeCount; i++)
-        if ((prop.memoryTypes[i].propertyFlags & properties) == properties && type_bits & (1<<i))
-            return i;
+    for (uint32_t i = 0; i < prop.memoryTypeCount; i++) {
+        if ((prop.memoryTypes[i].propertyFlags & properties) == properties && type_bits & (1 << i)) { return i; } // NOLINT
+    }
+    // NOLINTNEXTLINE
     return 0xFFFFFFFF; // Unable to find memoryType
 }
 
 static void CreateOrResizeBuffer(ImGui_ImplVulkan_InitInfo* vkinfo, VkBuffer& buffer, VkDeviceMemory& buffer_memory, VkDeviceSize& p_buffer_size, size_t new_size, VkBufferUsageFlagBits usage)
 {
     VkResult err;
-    if (buffer != VK_NULL_HANDLE)
-        vkDestroyBuffer(vkinfo->Device, buffer, vkinfo->Allocator);
-    if (buffer_memory)
-        vkFreeMemory(vkinfo->Device, buffer_memory, vkinfo->Allocator);
+    if (buffer != VK_NULL_HANDLE) { vkDestroyBuffer(vkinfo->Device, buffer, vkinfo->Allocator); }
+    if (buffer_memory != 0) { vkFreeMemory(vkinfo->Device, buffer_memory, vkinfo->Allocator); }
 
     VkDeviceSize vertex_buffer_size_aligned = ((new_size - 1) / vkinfo->internal_->g_BufferMemoryAlignment + 1) * vkinfo->internal_->g_BufferMemoryAlignment;
     VkBufferCreateInfo buffer_info = {};
@@ -201,44 +204,47 @@ static void CreateOrResizeBuffer(ImGui_ImplVulkan_InitInfo* vkinfo, VkBuffer& bu
 void ImGui_ImplVulkan_RenderDrawData(ImGui_ImplVulkan_InitInfo* vkinfo, ImDrawData* draw_data, VkCommandBuffer command_buffer)
 {
     VkResult err;
-    if (draw_data->TotalVtxCount == 0)
-        return;
+    if (draw_data->TotalVtxCount == 0) { return; }
 
     FrameDataForRender* fd = &vkinfo->internal_->g_FramesDataBuffers[vkinfo->internal_->g_FrameIndex];
-    vkinfo->internal_->g_FrameIndex = (vkinfo->internal_->g_FrameIndex + 1) % vkinfo->internal_->g_FramesDataBuffers.size();
+    vkinfo->internal_->g_FrameIndex = static_cast<int>(static_cast<unsigned int>((vkinfo->internal_->g_FrameIndex + 1)) % vkinfo->internal_->g_FramesDataBuffers.size());
 
     // Create the Vertex and Index buffers:
     size_t vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
     size_t index_size = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
-    if (!fd->VertexBuffer || fd->VertexBufferSize < vertex_size)
-        CreateOrResizeBuffer(vkinfo, fd->VertexBuffer, fd->VertexBufferMemory, fd->VertexBufferSize, vertex_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-    if (!fd->IndexBuffer || fd->IndexBufferSize < index_size)
-        CreateOrResizeBuffer(vkinfo, fd->IndexBuffer, fd->IndexBufferMemory, fd->IndexBufferSize, index_size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+    if (fd->VertexBuffer == 0 || fd->VertexBufferSize < vertex_size) {
+        CreateOrResizeBuffer(vkinfo, fd->VertexBuffer, fd->VertexBufferMemory, fd->VertexBufferSize, vertex_size,
+                             VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+    }
+    if (fd->IndexBuffer == 0 || fd->IndexBufferSize < index_size) {
+        CreateOrResizeBuffer(vkinfo, fd->IndexBuffer, fd->IndexBufferMemory, fd->IndexBufferSize, index_size,
+                             VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+    }
 
     // Upload Vertex and index Data:
     {
-        ImDrawVert* vtx_dst = NULL;
-        ImDrawIdx* idx_dst = NULL;
-        err = vkMapMemory(vkinfo->Device, fd->VertexBufferMemory, 0, vertex_size, 0, (void**)(&vtx_dst));
+        ImDrawVert* vtx_dst = nullptr;
+        ImDrawIdx* idx_dst = nullptr;
+        err = vkMapMemory(vkinfo->Device, fd->VertexBufferMemory, 0, vertex_size, 0, (void**)(&vtx_dst)); // NOLINT
         check_vk_result(err);
-        err = vkMapMemory(vkinfo->Device, fd->IndexBufferMemory, 0, index_size, 0, (void**)(&idx_dst));
+        err = vkMapMemory(vkinfo->Device, fd->IndexBufferMemory, 0, index_size, 0, (void**)(&idx_dst)); // NOLINT
         check_vk_result(err);
         for (int n = 0; n < draw_data->CmdListsCount; n++)
         {
-            const ImDrawList* cmd_list = draw_data->CmdLists[n];
+            const ImDrawList* cmd_list = draw_data->CmdLists[n]; // NOLINT
             memcpy(vtx_dst, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
             memcpy(idx_dst, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-            vtx_dst += cmd_list->VtxBuffer.Size;
-            idx_dst += cmd_list->IdxBuffer.Size;
+            vtx_dst += cmd_list->VtxBuffer.Size; // NOLINT
+            idx_dst += cmd_list->IdxBuffer.Size; // NOLINT
         }
-        VkMappedMemoryRange range[2] = {};
+        std::array<VkMappedMemoryRange, 2> range = {};
         range[0].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
         range[0].memory = fd->VertexBufferMemory;
         range[0].size = VK_WHOLE_SIZE;
         range[1].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
         range[1].memory = fd->IndexBufferMemory;
         range[1].size = VK_WHOLE_SIZE;
-        err = vkFlushMappedMemoryRanges(vkinfo->Device, 2, range);
+        err = vkFlushMappedMemoryRanges(vkinfo->Device, 2, range.data());
         check_vk_result(err);
         vkUnmapMemory(vkinfo->Device, fd->VertexBufferMemory);
         vkUnmapMemory(vkinfo->Device, fd->IndexBufferMemory);
@@ -247,15 +253,15 @@ void ImGui_ImplVulkan_RenderDrawData(ImGui_ImplVulkan_InitInfo* vkinfo, ImDrawDa
     // Bind pipeline and descriptor sets:
     {
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkinfo->internal_->g_Pipeline);
-        VkDescriptorSet desc_set[1] = { vkinfo->internal_->g_DescriptorSet };
-        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkinfo->internal_->g_PipelineLayout, 0, 1, desc_set, 0, NULL);
+        std::array<VkDescriptorSet, 1> desc_set = {vkinfo->internal_->g_DescriptorSet};
+        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkinfo->internal_->g_PipelineLayout, 0, 1, desc_set.data(), 0, nullptr);
     }
 
     // Bind Vertex And Index Buffer:
     {
-        VkBuffer vertex_buffers[1] = { fd->VertexBuffer };
-        VkDeviceSize vertex_offset[1] = { 0 };
-        vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffers, vertex_offset);
+        std::array<VkBuffer, 1> vertex_buffers = {fd->VertexBuffer};
+        std::array<VkDeviceSize, 1> vertex_offset = {0};
+        vkCmdBindVertexBuffers(command_buffer, 0, 1, vertex_buffers.data(), vertex_offset.data());
         vkCmdBindIndexBuffer(command_buffer, fd->IndexBuffer, 0, VK_INDEX_TYPE_UINT16);
     }
 
@@ -274,14 +280,14 @@ void ImGui_ImplVulkan_RenderDrawData(ImGui_ImplVulkan_InitInfo* vkinfo, ImDrawDa
     // Setup scale and translation:
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayMin is typically (0,0) for single viewport apps.
     {
-        float scale[2];
+        std::array<float, 2> scale = {};
         scale[0] = 2.0f / draw_data->DisplaySize.x;
         scale[1] = 2.0f / draw_data->DisplaySize.y;
-        float translate[2];
+        std::array<float, 2> translate = {};
         translate[0] = -1.0f - draw_data->DisplayPos.x * scale[0];
         translate[1] = -1.0f - draw_data->DisplayPos.y * scale[1];
-        vkCmdPushConstants(command_buffer, vkinfo->internal_->g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 0, sizeof(float) * 2, scale);
-        vkCmdPushConstants(command_buffer, vkinfo->internal_->g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 2, sizeof(float) * 2, translate);
+        vkCmdPushConstants(command_buffer, vkinfo->internal_->g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 0, sizeof(float) * 2, scale.data());
+        vkCmdPushConstants(command_buffer, vkinfo->internal_->g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 2, sizeof(float) * 2, translate.data());
     }
 
     // Render the command lists:
@@ -290,11 +296,11 @@ void ImGui_ImplVulkan_RenderDrawData(ImGui_ImplVulkan_InitInfo* vkinfo, ImDrawDa
     ImVec2 display_pos = draw_data->DisplayPos;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
-        const ImDrawList* cmd_list = draw_data->CmdLists[n];
+        const ImDrawList* cmd_list = draw_data->CmdLists[n]; // NOLINT
         for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
-            if (pcmd->UserCallback)
+            if (pcmd->UserCallback != nullptr)
             {
                 pcmd->UserCallback(cmd_list, pcmd);
             }
@@ -312,7 +318,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImGui_ImplVulkan_InitInfo* vkinfo, ImDrawDa
                 // Draw
                 vkCmdDrawIndexed(command_buffer, pcmd->ElemCount, 1, idx_offset, vtx_offset, 0);
             }
-            idx_offset += pcmd->ElemCount;
+            idx_offset += static_cast<int>(pcmd->ElemCount);
         }
         vtx_offset += cmd_list->VtxBuffer.Size;
     }
@@ -323,7 +329,8 @@ bool ImGui_ImplVulkan_CreateFontsTexture(ImGui_ImplVulkan_InitInfo* vkinfo, VkCo
     ImGuiIO& io = ImGui::GetIO();
 
     unsigned char* pixels;
-    int width, height;
+    int width;
+    int height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
     size_t upload_size = width*height*4*sizeof(char);
 
@@ -342,7 +349,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture(ImGui_ImplVulkan_InitInfo* vkinfo, VkCo
         info.arrayLayers = 1;
         info.samples = VK_SAMPLE_COUNT_1_BIT;
         info.tiling = VK_IMAGE_TILING_OPTIMAL;
-        info.usage = VK_IMAGE_USAGE_SAMPLED_BIT | VK_IMAGE_USAGE_TRANSFER_DST_BIT;
+        info.usage = static_cast<unsigned int>(VK_IMAGE_USAGE_SAMPLED_BIT) | static_cast<unsigned int>(VK_IMAGE_USAGE_TRANSFER_DST_BIT);
         info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
         err = vkCreateImage(vkinfo->Device, &info, vkinfo->Allocator, &vkinfo->internal_->g_FontImage);
@@ -375,17 +382,17 @@ bool ImGui_ImplVulkan_CreateFontsTexture(ImGui_ImplVulkan_InitInfo* vkinfo, VkCo
 
     // Update the Descriptor Set:
     {
-        VkDescriptorImageInfo desc_image[1] = {};
+        std::array<VkDescriptorImageInfo, 1> desc_image = {};
         desc_image[0].sampler = vkinfo->internal_->g_FontSampler;
         desc_image[0].imageView = vkinfo->internal_->g_FontView;
         desc_image[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        VkWriteDescriptorSet write_desc[1] = {};
+        std::array<VkWriteDescriptorSet, 1> write_desc = {};
         write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
         write_desc[0].dstSet = vkinfo->internal_->g_DescriptorSet;
         write_desc[0].descriptorCount = 1;
         write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        write_desc[0].pImageInfo = desc_image;
-        vkUpdateDescriptorSets(vkinfo->Device, 1, write_desc, 0, NULL);
+        write_desc[0].pImageInfo = desc_image.data();
+        vkUpdateDescriptorSets(vkinfo->Device, 1, write_desc.data(), 0, nullptr);
     }
 
     // Create the Upload Buffer:
@@ -412,22 +419,22 @@ bool ImGui_ImplVulkan_CreateFontsTexture(ImGui_ImplVulkan_InitInfo* vkinfo, VkCo
 
     // Upload to Buffer:
     {
-        char* map = NULL;
-        err = vkMapMemory(vkinfo->Device, vkinfo->internal_->g_UploadBufferMemory, 0, upload_size, 0, (void**)(&map));
+        char* map = nullptr;
+        err = vkMapMemory(vkinfo->Device, vkinfo->internal_->g_UploadBufferMemory, 0, upload_size, 0, (void**)(&map)); // NOLINT
         check_vk_result(err);
         memcpy(map, pixels, upload_size);
-        VkMappedMemoryRange range[1] = {};
+        std::array<VkMappedMemoryRange, 1> range = {};
         range[0].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
         range[0].memory = vkinfo->internal_->g_UploadBufferMemory;
         range[0].size = upload_size;
-        err = vkFlushMappedMemoryRanges(vkinfo->Device, 1, range);
+        err = vkFlushMappedMemoryRanges(vkinfo->Device, 1, range.data());
         check_vk_result(err);
         vkUnmapMemory(vkinfo->Device, vkinfo->internal_->g_UploadBufferMemory);
     }
 
     // Copy to Image:
     {
-        VkImageMemoryBarrier copy_barrier[1] = {};
+        std::array<VkImageMemoryBarrier, 1> copy_barrier = {};
         copy_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         copy_barrier[0].dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         copy_barrier[0].oldLayout = VK_IMAGE_LAYOUT_UNDEFINED;
@@ -438,7 +445,8 @@ bool ImGui_ImplVulkan_CreateFontsTexture(ImGui_ImplVulkan_InitInfo* vkinfo, VkCo
         copy_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         copy_barrier[0].subresourceRange.levelCount = 1;
         copy_barrier[0].subresourceRange.layerCount = 1;
-        vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, NULL, 0, NULL, 1, copy_barrier);
+        vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_HOST_BIT, VK_PIPELINE_STAGE_TRANSFER_BIT, 0, 0, nullptr,
+                             0, nullptr, 1, copy_barrier.data());
 
         VkBufferImageCopy region = {};
         region.imageSubresource.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
@@ -448,7 +456,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture(ImGui_ImplVulkan_InitInfo* vkinfo, VkCo
         region.imageExtent.depth = 1;
         vkCmdCopyBufferToImage(command_buffer, vkinfo->internal_->g_UploadBuffer, vkinfo->internal_->g_FontImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
-        VkImageMemoryBarrier use_barrier[1] = {};
+        std::array<VkImageMemoryBarrier, 1> use_barrier = {};
         use_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
         use_barrier[0].srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
         use_barrier[0].dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
@@ -460,11 +468,12 @@ bool ImGui_ImplVulkan_CreateFontsTexture(ImGui_ImplVulkan_InitInfo* vkinfo, VkCo
         use_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         use_barrier[0].subresourceRange.levelCount = 1;
         use_barrier[0].subresourceRange.layerCount = 1;
-        vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, use_barrier);
+        vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0,
+                             0, nullptr, 0, nullptr, 1, use_barrier.data());
     }
 
     // Store our identifier
-    io.Fonts->TexID = (ImTextureID)(intptr_t)vkinfo->internal_->g_FontImage;
+    io.Fonts->TexID = (ImTextureID)(intptr_t)vkinfo->internal_->g_FontImage; // NOLINT
 
     return true;
 }
@@ -491,7 +500,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects(ImGui_ImplVulkan_InitInfo* vkinfo)
         check_vk_result(err);
     }
 
-    if (!vkinfo->internal_->g_FontSampler)
+    if (vkinfo->internal_->g_FontSampler == 0)
     {
         VkSamplerCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -508,18 +517,18 @@ bool ImGui_ImplVulkan_CreateDeviceObjects(ImGui_ImplVulkan_InitInfo* vkinfo)
         check_vk_result(err);
     }
 
-    if (!vkinfo->internal_->g_DescriptorSetLayout)
+    if (vkinfo->internal_->g_DescriptorSetLayout == 0)
     {
-        VkSampler sampler[1] = { vkinfo->internal_->g_FontSampler};
-        VkDescriptorSetLayoutBinding binding[1] = {};
+        std::array<VkSampler, 1> sampler = { vkinfo->internal_->g_FontSampler};
+        std::array<VkDescriptorSetLayoutBinding, 1> binding = {};
         binding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         binding[0].descriptorCount = 1;
         binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        binding[0].pImmutableSamplers = sampler;
+        binding[0].pImmutableSamplers = sampler.data();
         VkDescriptorSetLayoutCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         info.bindingCount = 1;
-        info.pBindings = binding;
+        info.pBindings = binding.data();
         err = vkCreateDescriptorSetLayout(vkinfo->Device, &info, vkinfo->Allocator, &vkinfo->internal_->g_DescriptorSetLayout);
         check_vk_result(err);
     }
@@ -535,25 +544,25 @@ bool ImGui_ImplVulkan_CreateDeviceObjects(ImGui_ImplVulkan_InitInfo* vkinfo)
         check_vk_result(err);
     }
 
-    if (!vkinfo->internal_->g_PipelineLayout)
+    if (vkinfo->internal_->g_PipelineLayout == 0)
     {
         // Constants: we are using 'vec2 offset' and 'vec2 scale' instead of a full 3d projection matrix
-        VkPushConstantRange push_constants[1] = {};
+        std::array<VkPushConstantRange, 1> push_constants = {};
         push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         push_constants[0].offset = sizeof(float) * 0;
         push_constants[0].size = sizeof(float) * 4;
-        VkDescriptorSetLayout set_layout[1] = { vkinfo->internal_->g_DescriptorSetLayout };
+        std::array<VkDescriptorSetLayout, 1> set_layout = { vkinfo->internal_->g_DescriptorSetLayout };
         VkPipelineLayoutCreateInfo layout_info = {};
         layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         layout_info.setLayoutCount = 1;
-        layout_info.pSetLayouts = set_layout;
+        layout_info.pSetLayouts = set_layout.data();
         layout_info.pushConstantRangeCount = 1;
-        layout_info.pPushConstantRanges = push_constants;
+        layout_info.pPushConstantRanges = push_constants.data();
         err = vkCreatePipelineLayout(vkinfo->Device, &layout_info, vkinfo->Allocator, &vkinfo->internal_->g_PipelineLayout);
         check_vk_result(err);
     }
 
-    VkPipelineShaderStageCreateInfo stage[2] = {};
+    std::array<VkPipelineShaderStageCreateInfo, 2> stage = {};
     stage[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stage[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
     stage[0].module = vert_module;
@@ -563,30 +572,30 @@ bool ImGui_ImplVulkan_CreateDeviceObjects(ImGui_ImplVulkan_InitInfo* vkinfo)
     stage[1].module = frag_module;
     stage[1].pName = "main";
 
-    VkVertexInputBindingDescription binding_desc[1] = {};
+    std::array<VkVertexInputBindingDescription, 1> binding_desc = {};
     binding_desc[0].stride = sizeof(ImDrawVert);
     binding_desc[0].inputRate = VK_VERTEX_INPUT_RATE_VERTEX;
 
-    VkVertexInputAttributeDescription attribute_desc[3] = {};
+    std::array<VkVertexInputAttributeDescription, 3> attribute_desc = {};
     attribute_desc[0].location = 0;
     attribute_desc[0].binding = binding_desc[0].binding;
     attribute_desc[0].format = VK_FORMAT_R32G32_SFLOAT;
-    attribute_desc[0].offset = IM_OFFSETOF(ImDrawVert, pos);
+    attribute_desc[0].offset = offsetof(ImDrawVert, pos); // NOLINT
     attribute_desc[1].location = 1;
     attribute_desc[1].binding = binding_desc[0].binding;
     attribute_desc[1].format = VK_FORMAT_R32G32_SFLOAT;
-    attribute_desc[1].offset = IM_OFFSETOF(ImDrawVert, uv);
+    attribute_desc[1].offset = offsetof(ImDrawVert, uv); // NOLINT
     attribute_desc[2].location = 2;
     attribute_desc[2].binding = binding_desc[0].binding;
     attribute_desc[2].format = VK_FORMAT_R8G8B8A8_UNORM;
-    attribute_desc[2].offset = IM_OFFSETOF(ImDrawVert, col);
+    attribute_desc[2].offset = offsetof(ImDrawVert, col); // NOLINT
 
     VkPipelineVertexInputStateCreateInfo vertex_info = {};
     vertex_info.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO;
     vertex_info.vertexBindingDescriptionCount = 1;
-    vertex_info.pVertexBindingDescriptions = binding_desc;
+    vertex_info.pVertexBindingDescriptions = &binding_desc[0];
     vertex_info.vertexAttributeDescriptionCount = 3;
-    vertex_info.pVertexAttributeDescriptions = attribute_desc;
+    vertex_info.pVertexAttributeDescriptions = &attribute_desc[0];
 
     VkPipelineInputAssemblyStateCreateInfo ia_info = {};
     ia_info.sType = VK_STRUCTURE_TYPE_PIPELINE_INPUT_ASSEMBLY_STATE_CREATE_INFO;
@@ -608,7 +617,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects(ImGui_ImplVulkan_InitInfo* vkinfo)
     ms_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     ms_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
-    VkPipelineColorBlendAttachmentState color_attachment[1] = {};
+    std::array<VkPipelineColorBlendAttachmentState, 1> color_attachment = {};
     color_attachment[0].blendEnable = VK_TRUE;
     color_attachment[0].srcColorBlendFactor = VK_BLEND_FACTOR_SRC_ALPHA;
     color_attachment[0].dstColorBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
@@ -616,7 +625,9 @@ bool ImGui_ImplVulkan_CreateDeviceObjects(ImGui_ImplVulkan_InitInfo* vkinfo)
     color_attachment[0].srcAlphaBlendFactor = VK_BLEND_FACTOR_ONE_MINUS_SRC_ALPHA;
     color_attachment[0].dstAlphaBlendFactor = VK_BLEND_FACTOR_ZERO;
     color_attachment[0].alphaBlendOp = VK_BLEND_OP_ADD;
-    color_attachment[0].colorWriteMask = VK_COLOR_COMPONENT_R_BIT | VK_COLOR_COMPONENT_G_BIT | VK_COLOR_COMPONENT_B_BIT | VK_COLOR_COMPONENT_A_BIT;
+    color_attachment[0].colorWriteMask = static_cast<unsigned int>(VK_COLOR_COMPONENT_R_BIT)
+                                         | static_cast<unsigned int>(VK_COLOR_COMPONENT_G_BIT)
+        | static_cast<unsigned int>(VK_COLOR_COMPONENT_B_BIT) | static_cast<unsigned int>(VK_COLOR_COMPONENT_A_BIT);
 
     VkPipelineDepthStencilStateCreateInfo depth_info = {};
     depth_info.sType = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
@@ -624,19 +635,19 @@ bool ImGui_ImplVulkan_CreateDeviceObjects(ImGui_ImplVulkan_InitInfo* vkinfo)
     VkPipelineColorBlendStateCreateInfo blend_info = {};
     blend_info.sType = VK_STRUCTURE_TYPE_PIPELINE_COLOR_BLEND_STATE_CREATE_INFO;
     blend_info.attachmentCount = 1;
-    blend_info.pAttachments = color_attachment;
+    blend_info.pAttachments = &color_attachment[0];
 
-    VkDynamicState dynamic_states[2] = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
+    std::array<VkDynamicState, 2> dynamic_states = { VK_DYNAMIC_STATE_VIEWPORT, VK_DYNAMIC_STATE_SCISSOR };
     VkPipelineDynamicStateCreateInfo dynamic_state = {};
     dynamic_state.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO;
-    dynamic_state.dynamicStateCount = (uint32_t)IM_ARRAYSIZE(dynamic_states);
-    dynamic_state.pDynamicStates = dynamic_states;
+    dynamic_state.dynamicStateCount = static_cast<uint32_t>(std::size(dynamic_states));
+    dynamic_state.pDynamicStates = &dynamic_states[0];
 
     VkGraphicsPipelineCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
     info.flags = vkinfo->internal_->g_PipelineCreateFlags;
     info.stageCount = 2;
-    info.pStages = stage;
+    info.pStages = &stage[0];
     info.pVertexInputState = &vertex_info;
     info.pInputAssemblyState = &ia_info;
     info.pViewportState = &viewport_info;
@@ -658,12 +669,12 @@ bool ImGui_ImplVulkan_CreateDeviceObjects(ImGui_ImplVulkan_InitInfo* vkinfo)
 
 void    ImGui_ImplVulkan_InvalidateFontUploadObjects(ImGui_ImplVulkan_InitInfo* info)
 {
-    if (info->internal_->g_UploadBuffer)
+    if ((info->internal_->g_UploadBuffer) != 0)
     {
         vkDestroyBuffer(info->Device, info->internal_->g_UploadBuffer, info->Allocator);
         info->internal_->g_UploadBuffer = VK_NULL_HANDLE;
     }
-    if (info->internal_->g_UploadBufferMemory)
+    if ((info->internal_->g_UploadBufferMemory) != 0)
     {
         vkFreeMemory(info->Device, info->internal_->g_UploadBufferMemory, info->Allocator);
         info->internal_->g_UploadBufferMemory = VK_NULL_HANDLE;
@@ -676,19 +687,19 @@ void    ImGui_ImplVulkan_InvalidateDeviceObjects(ImGui_ImplVulkan_InitInfo* info
 
     for (auto& fd : info->internal_->g_FramesDataBuffers)
     {
-        if (fd.VertexBuffer) { vkDestroyBuffer(info->Device, fd.VertexBuffer, info->Allocator); fd.VertexBuffer = VK_NULL_HANDLE; }
-        if (fd.VertexBufferMemory) { vkFreeMemory(info->Device, fd.VertexBufferMemory, info->Allocator); fd.VertexBufferMemory = VK_NULL_HANDLE; }
-        if (fd.IndexBuffer) { vkDestroyBuffer(info->Device, fd.IndexBuffer, info->Allocator); fd.IndexBuffer = VK_NULL_HANDLE; }
-        if (fd.IndexBufferMemory) { vkFreeMemory(info->Device, fd.IndexBufferMemory, info->Allocator); fd.IndexBufferMemory = VK_NULL_HANDLE; }
+        if ((fd.VertexBuffer) != 0) { vkDestroyBuffer(info->Device, fd.VertexBuffer, info->Allocator); fd.VertexBuffer = VK_NULL_HANDLE; }
+        if ((fd.VertexBufferMemory) != 0) { vkFreeMemory(info->Device, fd.VertexBufferMemory, info->Allocator); fd.VertexBufferMemory = VK_NULL_HANDLE; }
+        if ((fd.IndexBuffer) != 0) { vkDestroyBuffer(info->Device, fd.IndexBuffer, info->Allocator); fd.IndexBuffer = VK_NULL_HANDLE; }
+        if ((fd.IndexBufferMemory) != 0) { vkFreeMemory(info->Device, fd.IndexBufferMemory, info->Allocator); fd.IndexBufferMemory = VK_NULL_HANDLE; }
     }
 
-    if (info->internal_->g_FontView)             { vkDestroyImageView(info->Device, info->internal_->g_FontView, info->Allocator); info->internal_->g_FontView = VK_NULL_HANDLE; }
-    if (info->internal_->g_FontImage)            { vkDestroyImage(info->Device, info->internal_->g_FontImage, info->Allocator); info->internal_->g_FontImage = VK_NULL_HANDLE; }
-    if (info->internal_->g_FontMemory)           { vkFreeMemory(info->Device, info->internal_->g_FontMemory, info->Allocator); info->internal_->g_FontMemory = VK_NULL_HANDLE; }
-    if (info->internal_->g_FontSampler)          { vkDestroySampler(info->Device, info->internal_->g_FontSampler, info->Allocator); info->internal_->g_FontSampler = VK_NULL_HANDLE; }
-    if (info->internal_->g_DescriptorSetLayout) { vkDestroyDescriptorSetLayout(info->Device, info->internal_->g_DescriptorSetLayout, info->Allocator); info->internal_->g_DescriptorSetLayout = VK_NULL_HANDLE; }
-    if (info->internal_->g_PipelineLayout) { vkDestroyPipelineLayout(info->Device, info->internal_->g_PipelineLayout, info->Allocator); info->internal_->g_PipelineLayout = VK_NULL_HANDLE; }
-    if (info->internal_->g_Pipeline) { vkDestroyPipeline(info->Device, info->internal_->g_Pipeline, info->Allocator); info->internal_->g_Pipeline = VK_NULL_HANDLE; }
+    if ((info->internal_->g_FontView) != 0)             { vkDestroyImageView(info->Device, info->internal_->g_FontView, info->Allocator); info->internal_->g_FontView = VK_NULL_HANDLE; }
+    if ((info->internal_->g_FontImage) != 0)            { vkDestroyImage(info->Device, info->internal_->g_FontImage, info->Allocator); info->internal_->g_FontImage = VK_NULL_HANDLE; }
+    if ((info->internal_->g_FontMemory) != 0)           { vkFreeMemory(info->Device, info->internal_->g_FontMemory, info->Allocator); info->internal_->g_FontMemory = VK_NULL_HANDLE; }
+    if ((info->internal_->g_FontSampler) != 0)          { vkDestroySampler(info->Device, info->internal_->g_FontSampler, info->Allocator); info->internal_->g_FontSampler = VK_NULL_HANDLE; }
+    if ((info->internal_->g_DescriptorSetLayout) != 0)  { vkDestroyDescriptorSetLayout(info->Device, info->internal_->g_DescriptorSetLayout, info->Allocator); info->internal_->g_DescriptorSetLayout = VK_NULL_HANDLE; }
+    if ((info->internal_->g_PipelineLayout) != 0)       { vkDestroyPipelineLayout(info->Device, info->internal_->g_PipelineLayout, info->Allocator); info->internal_->g_PipelineLayout = VK_NULL_HANDLE; }
+    if ((info->internal_->g_Pipeline) != 0)             { vkDestroyPipeline(info->Device, info->internal_->g_Pipeline, info->Allocator); info->internal_->g_Pipeline = VK_NULL_HANDLE; }
 }
 
 bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass, std::size_t numBackbuffers)
@@ -700,7 +711,7 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
     IM_ASSERT(info->DescriptorPool != VK_NULL_HANDLE);
     IM_ASSERT(render_pass != VK_NULL_HANDLE);
 
-    info->internal_ = new ImGui_ImplVulkan_InternalInfo;
+    info->internal_ = new ImGui_ImplVulkan_InternalInfo; // NOLINT
     info->internal_->g_FramesDataBuffers.resize(numBackbuffers);
     info->internal_->g_RenderPass = render_pass;
     ImGui_ImplVulkan_CreateDeviceObjects(info);
@@ -711,7 +722,7 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
 void ImGui_ImplVulkan_Shutdown(ImGui_ImplVulkan_InitInfo* info)
 {
     ImGui_ImplVulkan_InvalidateDeviceObjects(info);
-    delete info->internal_;
+    delete info->internal_; // NOLINT
 }
 
 void ImGui_ImplVulkan_NewFrame(ImGui_ImplVulkan_InitInfo*)
@@ -733,8 +744,9 @@ void ImGui_ImplVulkan_NewFrame(ImGui_ImplVulkan_InitInfo*)
 // (those functions do not interact with any of the state used by the regular ImGui_ImplVulkan_XXX functions)
 //-------------------------------------------------------------------------
 
-#include <stdlib.h> // malloc
+#include <cstdlib> // malloc
 
+// NOLINTNEXTLINE
 ImGui_ImplVulkanH_WindowData::ImGui_ImplVulkanH_WindowData()
 {
     Width = Height = 0;

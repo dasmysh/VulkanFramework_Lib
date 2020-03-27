@@ -41,15 +41,15 @@ namespace vku::gfx {
         ~Mesh();
 
         template<class VertexType, class MaterialType>
-        static Mesh CreateWithInternalMemoryGroup(std::shared_ptr<const MeshInfo> meshInfo, std::size_t numBackbuffers,
+        static Mesh CreateWithInternalMemoryGroup(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
             const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags = vk::MemoryPropertyFlags(),
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         template<class VertexType, class MaterialType>
-        static Mesh CreateWithMemoryGroup(std::shared_ptr<const MeshInfo> meshInfo, std::size_t numBackbuffers,
+        static Mesh CreateWithMemoryGroup(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
             const LogicalDevice* device, MemoryGroup& memoryGroup,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         template<class VertexType, class MaterialType>
-        static Mesh CreateInExternalBuffer(std::shared_ptr<const MeshInfo> meshInfo, std::size_t numBackbuffers,
+        static Mesh CreateInExternalBuffer(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
             const LogicalDevice* device, MemoryGroup& memoryGroup, unsigned int bufferIdx, std::size_t offset,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
 
@@ -59,9 +59,18 @@ namespace vku::gfx {
 
         void UploadMeshData(QueuedDeviceTransfer& transfer);
         void CreateDescriptorSets(std::size_t numBackbuffers);
-        vk::DescriptorSetLayout GetMaterialTexturesDescriptorLayout() const { return *materialTexturesDescriptorSetLayout_; }
-        vk::DescriptorSetLayout GetMaterialBufferDescriptorLayout() const { return materialsUBO_.GetDescriptorLayout(); }
-        vk::DescriptorSetLayout GetWorldMatricesDescriptorLayout() const { return worldMatricesUBO_.GetDescriptorLayout(); }
+        [[nodiscard]] vk::DescriptorSetLayout GetMaterialTexturesDescriptorLayout() const
+        {
+            return *materialTexturesDescriptorSetLayout_;
+        }
+        [[nodiscard]] vk::DescriptorSetLayout GetMaterialBufferDescriptorLayout() const
+        {
+            return materialsUBO_.GetDescriptorLayout();
+        }
+        [[nodiscard]] vk::DescriptorSetLayout GetWorldMatricesDescriptorLayout() const
+        {
+            return worldMatricesUBO_.GetDescriptorLayout();
+        }
 
         void TransferWorldMatrices(vk::CommandBuffer transferCmdBuffer, std::size_t backbufferIdx) const;
 
@@ -80,10 +89,10 @@ namespace vku::gfx {
             const SubMesh& subMesh, RenderList& renderList) const;
 
     private:
-        Mesh(const LogicalDevice* device, std::shared_ptr<const MeshInfo> meshInfo, UniformBufferObject&& materialsUBO,
-            std::size_t numBackbuffers, vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices);
+        Mesh(const LogicalDevice* device, const std::shared_ptr<const MeshInfo>& meshInfo, UniformBufferObject&& materialsUBO,
+            std::size_t numBackbuffers, const vk::MemoryPropertyFlags& memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices);
 
-        Mesh(const LogicalDevice* device, std::shared_ptr<const MeshInfo> meshInfo, UniformBufferObject&& materialsUBO,
+        Mesh(const LogicalDevice* device, const std::shared_ptr<const MeshInfo>& meshInfo, UniformBufferObject&& materialsUBO,
             std::size_t numBackbuffers, MemoryGroup& memoryGroup, unsigned int bufferIndex, const std::vector<std::uint32_t>& queueFamilyIndices);
 
         template<class VertexType, class MaterialType>
@@ -104,9 +113,9 @@ namespace vku::gfx {
         /** The index into the memory group. */
         unsigned int bufferIdx_;
         /** Holds a pointer to the vertex buffer and an offset to the vertex data. */
-        std::pair<const DeviceBuffer*, std::size_t> vertexBuffer_;
+        std::pair<const DeviceBuffer*, vk::DeviceSize> vertexBuffer_;
         /** Holds a pointer to the index buffer and an offset to the index data. */
-        std::pair<const DeviceBuffer*, std::size_t> indexBuffer_;
+        std::pair<const DeviceBuffer*, vk::DeviceSize> indexBuffer_;
 
         /** Holds the uniform buffer for the world matrices. */
         UniformBufferObject worldMatricesUBO_;
@@ -129,7 +138,7 @@ namespace vku::gfx {
     };
 
     template<class VertexType, class MaterialType>
-    inline Mesh Mesh::CreateWithInternalMemoryGroup(std::shared_ptr<const MeshInfo> meshInfo, std::size_t numBackbuffers,
+    inline Mesh Mesh::CreateWithInternalMemoryGroup(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
         const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         Mesh result{ device, meshInfo, UniformBufferObject::Create<MaterialType>(device, meshInfo->GetMaterials().size()),
@@ -139,7 +148,7 @@ namespace vku::gfx {
     }
 
     template<class VertexType, class MaterialType>
-    inline Mesh Mesh::CreateWithMemoryGroup(std::shared_ptr<const MeshInfo> meshInfo, std::size_t numBackbuffers,
+    inline Mesh Mesh::CreateWithMemoryGroup(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
         const LogicalDevice* device, MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         Mesh result{ device, meshInfo, UniformBufferObject::Create<MaterialType>(device, meshInfo->GetMaterials().size()),
@@ -149,7 +158,7 @@ namespace vku::gfx {
     }
 
     template<class VertexType, class MaterialType>
-    inline Mesh Mesh::CreateInExternalBuffer(std::shared_ptr<const MeshInfo> meshInfo, std::size_t numBackbuffers,
+    inline Mesh Mesh::CreateInExternalBuffer(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
         const LogicalDevice* device, MemoryGroup& memoryGroup, unsigned int bufferIdx, std::size_t offset,
         const std::vector<std::uint32_t>& queueFamilyIndices)
     {

@@ -12,13 +12,13 @@
 
 namespace vku::gfx {
 
-    Buffer::Buffer(const LogicalDevice* device, vk::BufferUsageFlags usage,
-        vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices) :
+    Buffer::Buffer(const LogicalDevice* device, const vk::BufferUsageFlags& usage,
+        const vk::MemoryPropertyFlags& memoryFlags, std::vector<std::uint32_t> queueFamilyIndices) :
         device_{ device },
         bufferDeviceMemory_{ device, memoryFlags },
         size_{ 0 },
         usage_{ usage },
-        queueFamilyIndices_{ queueFamilyIndices }
+        queueFamilyIndices_{ std::move(queueFamilyIndices) }
     {
     }
 
@@ -54,11 +54,11 @@ namespace vku::gfx {
 
         size_ = size;
         vk::BufferCreateInfo bufferCreateInfo{ vk::BufferCreateFlags(), static_cast<vk::DeviceSize>(size_), usage_, vk::SharingMode::eExclusive };
-        if (queueFamilyIndices_.size() > 0) {
+        if (!queueFamilyIndices_.empty()) {
             bufferCreateInfo.setQueueFamilyIndexCount(static_cast<std::uint32_t>(queueFamilyIndices_.size()));
             bufferCreateInfo.setPQueueFamilyIndices(queueFamilyIndices_.data());
         }
-        if (queueFamilyIndices_.size() > 1) bufferCreateInfo.setSharingMode(vk::SharingMode::eExclusive);
+        if (queueFamilyIndices_.size() > 1) { bufferCreateInfo.setSharingMode(vk::SharingMode::eExclusive); }
         buffer_ = device_->GetDevice().createBufferUnique(bufferCreateInfo);
 
         if (initMemory) {

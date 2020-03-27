@@ -35,7 +35,7 @@ namespace vku {
         VKWindow(VKWindow&&) noexcept;
         VKWindow& operator=(const VKWindow&) = delete;
         VKWindow& operator=(VKWindow&&) noexcept;
-        ~VKWindow();
+        ~VKWindow() noexcept;
 
         [[nodiscard]] bool IsFocused() const { return focused_; }
         [[nodiscard]] bool IsClosing() const;
@@ -140,7 +140,7 @@ namespace vku {
         /** ImGui window data. */
         std::unique_ptr<ImGui_ImplVulkanH_WindowData> windowData_;
         /** ImGui GLFW window data. */
-        ImGui_GLFWWindow* glfwWindowData_;
+        ImGui_GLFWWindow* glfwWindowData_ = nullptr;
         /** ImGui vulkan data. */
         std::unique_ptr<ImGui_ImplVulkan_InitInfo> imguiVulkanData_;
 
@@ -148,7 +148,7 @@ namespace vku {
         /** Holds the current mouse position. */
         glm::vec2 currMousePosition_;
         /** Holds the current normalized (in [-1,1]) mouse position. */
-        glm::vec2 currMousePositionNormalized_;
+        glm::vec2 currMousePositionNormalized_ = glm::vec2{0.0f};
         /** Holds the last mouse position. */
         glm::vec2 prevMousePosition_;
         /** Holds the relative mouse position. */
@@ -164,7 +164,7 @@ namespace vku {
         /** <c>true</c> if maximized. */
         bool maximized_;
         /** Holds whether the window is in focus. */
-        bool focused_;
+        bool focused_ = false;
         /** The number (id) of the current frame. */
         std::uint64_t frameCount_;
 

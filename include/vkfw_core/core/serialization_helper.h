@@ -20,8 +20,8 @@ namespace vku {
     template<class Stream, class Archive> class ArchiveWrapper
     {
     public:
-        ArchiveWrapper(const std::string& filename) : fstream_{ GetBinFilename(filename), std::ios::binary }, archive_{ fstream_ } {}
-        bool IsValid() const { return fstream_ ? true : false; }
+        explicit ArchiveWrapper(const std::string& filename) : fstream_{ GetBinFilename(filename), std::ios::binary }, archive_{ fstream_ } {}
+        [[nodiscard]] bool IsValid() const { return fstream_ ? true : false; }
         static std::string GetBinFilename(const std::string& filename) { return filename + ".vkbin"; }
 
         template <class... Types> Archive& operator()(Types&&... args) {
@@ -43,13 +43,13 @@ namespace vku {
     class BinaryIAWrapper final : public ArchiveWrapper<std::ifstream, cereal::BinaryInputArchive>
     {
     public:
-        BinaryIAWrapper(const std::string& filename);
+        explicit BinaryIAWrapper(const std::string& filename);
     };
 
     class BinaryOAWrapper final : public ArchiveWrapper<std::ofstream, cereal::BinaryOutputArchive>
     {
     public:
-        BinaryOAWrapper(const std::string& filename);
+        explicit BinaryOAWrapper(const std::string& filename);
     };
 }
 

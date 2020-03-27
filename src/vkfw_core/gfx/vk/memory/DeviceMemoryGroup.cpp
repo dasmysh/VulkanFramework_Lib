@@ -13,7 +13,7 @@
 
 namespace vku::gfx {
 
-    DeviceMemoryGroup::DeviceMemoryGroup(const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags) :
+    DeviceMemoryGroup::DeviceMemoryGroup(const LogicalDevice* device, const vk::MemoryPropertyFlags& memoryFlags) :
         device_{ device },
         deviceMemory_{ device, memoryFlags | vk::MemoryPropertyFlagBits::eDeviceLocal }
     {
@@ -42,7 +42,7 @@ namespace vku::gfx {
         return *this;
     }
 
-    unsigned int DeviceMemoryGroup::AddBufferToGroup(vk::BufferUsageFlags usage, std::size_t size, const std::vector<std::uint32_t>& queueFamilyIndices)
+    unsigned int DeviceMemoryGroup::AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         deviceBuffers_.emplace_back(device_, vk::BufferUsageFlagBits::eTransferDst | usage, vk::MemoryPropertyFlags(), queueFamilyIndices);
         deviceBuffers_.back().InitializeBuffer(size, false);
@@ -111,8 +111,8 @@ namespace vku::gfx {
         std::vector<DeviceBuffer>& deviceBuffers, std::vector<DeviceTexture>& deviceImages, DeviceMemory& deviceMemory)
     {
         BindObjects(deviceOffsets, deviceBuffers, deviceImages, deviceMemory);
-        for (auto i = 0U; i < deviceImages.size(); ++i) {
-            deviceImages[i].InitializeImageView();
+        for (auto& deviceImage : deviceImages) {
+            deviceImage.InitializeImageView();
         }
     }
 
@@ -134,19 +134,23 @@ namespace vku::gfx {
     {
         auto memRequirements = device->GetDevice().getImageMemoryRequirements(image.GetImage());
         std::size_t newOffset;
-        if (lastImage == nullptr) newOffset = device->CalculateBufferImageOffset(image, imageOffset);
-        else newOffset = device->CalculateImageImageOffset(*lastImage, image, imageOffset);
+        if (lastImage == nullptr) {
+            newOffset = device->CalculateBufferImageOffset(image, imageOffset);
+        } else {
+            newOffset = device->CalculateImageImageOffset(*lastImage, image, imageOffset);
+        }
         memRequirements.size += newOffset - imageOffset;
         imageOffset = newOffset;
         return FillAllocationInfo(device, memRequirements, image.GetDeviceMemory().GetMemoryProperties(), allocInfo);
     }
 
     std::size_t DeviceMemoryGroup::FillAllocationInfo(const LogicalDevice* device, const vk::MemoryRequirements& memRequirements,
-        vk::MemoryPropertyFlags memProperties, vk::MemoryAllocateInfo& allocInfo)
+        const vk::MemoryPropertyFlags& memProperties, vk::MemoryAllocateInfo& allocInfo)
     {
-        if (allocInfo.allocationSize == 0) allocInfo.memoryTypeIndex =
-            DeviceMemory::FindMemoryType(device, memRequirements.memoryTypeBits, memProperties);
-        else if (!DeviceMemory::CheckMemoryType(device, allocInfo.memoryTypeIndex, memRequirements.memoryTypeBits, memProperties)) {
+        if (allocInfo.allocationSize == 0) {
+            allocInfo.memoryTypeIndex =
+                DeviceMemory::FindMemoryType(device, memRequirements.memoryTypeBits, memProperties);
+        } else if (!DeviceMemory::CheckMemoryType(device, allocInfo.memoryTypeIndex, memRequirements.memoryTypeBits, memProperties)) {
             spdlog::critical(
                 "MemoryGroup memory type ({}) does not fit required memory type for buffer or image ({:#x}).",
                 allocInfo.memoryTypeIndex, memRequirements.memoryTypeBits);

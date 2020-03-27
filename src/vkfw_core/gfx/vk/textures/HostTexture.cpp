@@ -57,10 +57,10 @@ namespace vku::gfx {
 
     void HostTexture::InitializeData(const glm::u32vec4& textureSize, std::uint32_t mipLevels, const glm::u32vec4& dataSize, const void* data)
     {
-        auto byData = reinterpret_cast<const std::uint8_t*>(data);
+        auto byData = reinterpret_cast<const std::uint8_t*>(data); // NOLINT
         InitializeImage(textureSize, mipLevels);
         for (auto al = 0U; al < dataSize.w; ++al) {
-            auto layerData = &byData[dataSize.x * dataSize.y * dataSize.z * al];
+            auto layerData = &byData[dataSize.x * dataSize.y * dataSize.z * al]; // NOLINT
             UploadData(0, al, glm::u32vec3(0), glm::xyz(dataSize), layerData);
         }
     }

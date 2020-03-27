@@ -47,7 +47,7 @@ namespace vku::gfx {
     {
     public:
         LogicalDevice(const cfg::WindowCfg& windowCfg, const vk::PhysicalDevice& phDevice,
-            const std::vector<DeviceQueueDesc>& queueDescs, const vk::SurfaceKHR& surface = vk::SurfaceKHR());
+            std::vector<DeviceQueueDesc> queueDescs, const vk::SurfaceKHR& surface = vk::SurfaceKHR());
         LogicalDevice(const LogicalDevice&); // TODO: implement [10/30/2016 Sebastian Maisch]
         LogicalDevice(LogicalDevice&&) noexcept;
         LogicalDevice& operator=(const LogicalDevice&);
@@ -72,7 +72,7 @@ namespace vku::gfx {
 
         [[nodiscard]] vk::UniqueCommandPool
         CreateCommandPoolForQueue(unsigned int familyIndex,
-                                  vk::CommandPoolCreateFlags flags = vk::CommandPoolCreateFlags()) const;
+                                  const vk::CommandPoolCreateFlags& flags = vk::CommandPoolCreateFlags()) const;
         std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline(const std::vector<std::string>& shaderNames,
             const glm::uvec2& size, unsigned int numBlendAttachments);
 
@@ -94,7 +94,7 @@ namespace vku::gfx {
 
         [[nodiscard]] std::pair<unsigned int, vk::Format>
         FindSupportedFormat(const std::vector<std::pair<unsigned int, vk::Format>>& candidates, vk::ImageTiling tiling,
-                            vk::FormatFeatureFlags features) const;
+                            const vk::FormatFeatureFlags& features) const;
 
     private:
         [[nodiscard]] PFN_vkVoidFunction LoadVKDeviceFunction(const std::string& functionName,

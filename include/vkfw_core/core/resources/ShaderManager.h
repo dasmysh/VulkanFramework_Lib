@@ -20,7 +20,7 @@ namespace vku {
         ShaderManager& operator=(const ShaderManager&);
         ShaderManager(ShaderManager&&) noexcept;
         ShaderManager& operator=(ShaderManager&&) noexcept;
-        virtual ~ShaderManager() override;
+        ~ShaderManager() override;
 
     };
 }

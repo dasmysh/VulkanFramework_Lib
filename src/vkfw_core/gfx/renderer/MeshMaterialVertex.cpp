@@ -13,10 +13,10 @@ namespace vku::gfx {
 
     vk::VertexInputBindingDescription MeshVertex::bindingDescription_{ 0, sizeof(MeshVertex), vk::VertexInputRate::eVertex };
     std::array<vk::VertexInputAttributeDescription, 4> MeshVertex::attributeDescriptions_{ {
-        { 0, 0, vk::Format::eR32G32B32Sfloat, offsetof(MeshVertex, position_) },
-        { 1, 0, vk::Format::eR32G32Sfloat, offsetof(MeshVertex, texCoord_) },
-        { 2, 0, vk::Format::eR32G32B32Sfloat, offsetof(MeshVertex, normal_) },
-        { 3, 0, vk::Format::eR32G32B32Sfloat, offsetof(MeshVertex, tangent_) } } };
+        { 0, 0, vk::Format::eR32G32B32Sfloat, offsetof(MeshVertex, position_) }, // NOLINT
+         {1, 0, vk::Format::eR32G32Sfloat, offsetof(MeshVertex, texCoord_)},    // NOLINT
+         {2, 0, vk::Format::eR32G32B32Sfloat, offsetof(MeshVertex, normal_)},   // NOLINT
+         {3, 0, vk::Format::eR32G32B32Sfloat, offsetof(MeshVertex, tangent_)}}}; // NOLINT
 
     MeshVertex::MeshVertex(const vku::gfx::MeshInfo* mi, std::size_t index) :
         position_{ mi->GetVertices()[index] },
