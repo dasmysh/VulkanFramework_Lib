@@ -1,13 +1,21 @@
 file(RELATIVE_PATH PROJECT_REL_PATH ${PROJECT_SOURCE_DIR}/src ${CMAKE_CURRENT_SOURCE_DIR})
 
-file(GLOB_RECURSE RES_FILES ${FWLIB_RESOURCE_BASE_PATH}/*.*)
+file(GLOB_RECURSE RES_FILES ${VKFWCORE_RESOURCE_BASE_PATH}/*.*)
 file(GLOB_RECURSE SHADER_FILES
-    ${FWLIB_RESOURCE_BASE_PATH}/*.vert 
-    ${FWLIB_RESOURCE_BASE_PATH}/*.frag 
-    ${FWLIB_RESOURCE_BASE_PATH}/*.comp 
-    ${FWLIB_RESOURCE_BASE_PATH}/*.tesc 
-    ${FWLIB_RESOURCE_BASE_PATH}/*.tese
-    ${FWLIB_RESOURCE_BASE_PATH}/*.geom)
+    ${VKFWCORE_RESOURCE_BASE_PATH}/*.vert
+    ${VKFWCORE_RESOURCE_BASE_PATH}/*.tesc
+    ${VKFWCORE_RESOURCE_BASE_PATH}/*.tese
+    ${VKFWCORE_RESOURCE_BASE_PATH}/*.geom
+    ${VKFWCORE_RESOURCE_BASE_PATH}/*.frag
+    ${VKFWCORE_RESOURCE_BASE_PATH}/*.comp
+    ${VKFWCORE_RESOURCE_BASE_PATH}/*.mesh
+    ${VKFWCORE_RESOURCE_BASE_PATH}/*.task
+    ${VKFWCORE_RESOURCE_BASE_PATH}/*.rgen
+    ${VKFWCORE_RESOURCE_BASE_PATH}/*.rint
+    ${VKFWCORE_RESOURCE_BASE_PATH}/*.rahit
+    ${VKFWCORE_RESOURCE_BASE_PATH}/*.rchit
+    ${VKFWCORE_RESOURCE_BASE_PATH}/*.rmiss
+    ${VKFWCORE_RESOURCE_BASE_PATH}/*.rcall)
 set(COMPILED_SHADERS "")
 foreach(SHADER ${SHADER_FILES})
     compile_spirv_shader(${SHADER})
@@ -15,9 +23,9 @@ foreach(SHADER ${SHADER_FILES})
 endforeach()
 if(NOT "${COMPILED_SHADERS}" STREQUAL "")
     LIST(REMOVE_ITEM RES_FILES ${COMPILED_SHADERS})
-    source_group(TREE ${FWLIB_RESOURCE_BASE_PATH} PREFIX "resources\\compiled_shaders" FILES ${COMPILED_SHADERS})
+    source_group(TREE ${VKFWCORE_RESOURCE_BASE_PATH} PREFIX "resources\\compiled_shaders" FILES ${COMPILED_SHADERS})
 endif()
-source_group(TREE ${FWLIB_RESOURCE_BASE_PATH} PREFIX "resources" FILES ${RES_FILES})
+source_group(TREE ${VKFWCORE_RESOURCE_BASE_PATH} PREFIX "resources" FILES ${RES_FILES})
 
 
 file(GLOB_RECURSE SRC_FILES
@@ -49,13 +57,14 @@ file(GLOB TOP_FILES
 source_group(" " FILES ${TOP_FILES})
 
 
-file(GLOB_RECURSE RES_OBJ_FILES ${FWLIB_RESOURCE_BASE_PATH}/*.obj)
+file(GLOB_RECURSE RES_OBJ_FILES ${VKFWCORE_RESOURCE_BASE_PATH}/*.obj)
 foreach(f ${RES_OBJ_FILES})
     set_source_files_properties(${f} PROPERTIES HEADER_FILE_ONLY TRUE)
 endforeach()
 
 add_library(vk_framework_core ${SRC_FILES} ${INCLUDE_FILES} ${EXTERN_SOURCES} ${TOP_FILES} ${RES_FILES} ${COMPILED_SHADERS})
-target_link_libraries(vk_framework_core PRIVATE vkfw_options vkfw_warnings Vulkan::Vulkan Shaderc::Shaderc CONAN_PKG::fmt CONAN_PKG::spdlog CONAN_PKG::cereal CONAN_PKG::glm CONAN_PKG::glfw CONAN_PKG::imgui CONAN_PKG::stb CONAN_PKG::assimp)
+target_link_libraries(vk_framework_core PUBLIC vkfw_options vkfw_warnings Vulkan::Vulkan CONAN_PKG::fmt CONAN_PKG::spdlog CONAN_PKG::cereal CONAN_PKG::glm CONAN_PKG::imgui)
+target_link_libraries(vk_framework_core PRIVATE Shaderc::Shaderc CONAN_PKG::glfw CONAN_PKG::stb CONAN_PKG::assimp)
 target_include_directories(vk_framework_core PUBLIC
     ${PROJECT_SOURCE_DIR}/include/${PROJECT_REL_PATH}
     ${CMAKE_CURRENT_SOURCE_DIR}

@@ -38,6 +38,10 @@ set(CONAN_EXTRA_REQUIRES "")
 set(CONAN_EXTRA_OPTIONS "")
 
 set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
+                         catch2/2.11.3
+                         docopt.cpp/0.6.2
+                         fmt/6.1.2
+                         spdlog/1.5.0
                          cereal/1.3.0
                          glm/${GLM_VERSION}
                          glfw/3.3.2@bincrafters/stable
@@ -89,13 +93,13 @@ endif()
 
 
 
-set(FW_DEBUG_PIPELINE ON CACHE BOOL "Checks if application is started from RenderDoc and uses only a single queue then.")
+set(VKFW_DEBUG_PIPELINE ON CACHE BOOL "Checks if application is started from RenderDoc and uses only a single queue then.")
 if (${FW_DEBUG_PIPELINE})
     target_compile_definitions(vkfw_options INTERFACE FW_DEBUG_PIPELINE)
 endif()
 
-set(FWLIB_RESOURCE_BASE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/resources)
-# set(FWLIB_RESOURCE_BASE_PATH ${FWLIB_RESOURCE_BASE_PATH} PARENT_SCOPE)
+set(VKFWCORE_RESOURCE_BASE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/resources)
+set(VKFWCORE_RESOURCE_BASE_PATH ${VKFWCORE_RESOURCE_BASE_PATH} PARENT_SCOPE)
 
 
 if(ENABLE_TESTING)
