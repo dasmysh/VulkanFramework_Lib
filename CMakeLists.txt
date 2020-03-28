@@ -48,8 +48,12 @@ set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
 include(cmake/Conan.cmake)
 run_conan()
 
+list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
+
 find_package(Vulkan 1.1.126.0 REQUIRED)
+find_package(Shaderc REQUIRED)
 target_compile_definitions(vkfw_options INTERFACE VULKAN_HPP_TYPESAFE_CONVERSION)
+include(cmake/CompileSpirvShader.cmake)
 
 if(NOT EXISTS "${CMAKE_BINARY_DIR}/glm.natvis")
   message(
@@ -83,7 +87,6 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/extern/imgui/cpp/imgui_stdlib.h")
        "${CMAKE_BINARY_DIR}/extern/imgui/cpp/imgui_stdlib.h")
 endif()
 
-include(cmake/CompileSpirvShader.cmake)
 
 
 set(FW_DEBUG_PIPELINE ON CACHE BOOL "Checks if application is started from RenderDoc and uses only a single queue then.")

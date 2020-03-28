@@ -55,12 +55,10 @@ foreach(f ${RES_OBJ_FILES})
 endforeach()
 
 add_library(vk_framework_core ${SRC_FILES} ${INCLUDE_FILES} ${EXTERN_SOURCES} ${TOP_FILES} ${RES_FILES} ${COMPILED_SHADERS})
-target_link_libraries(vk_framework_core PRIVATE vkfw_options vkfw_warnings ${Vulkan_LIBRARY} CONAN_PKG::fmt CONAN_PKG::spdlog CONAN_PKG::cereal CONAN_PKG::glm CONAN_PKG::glfw CONAN_PKG::imgui CONAN_PKG::stb CONAN_PKG::assimp)
+target_link_libraries(vk_framework_core PRIVATE vkfw_options vkfw_warnings Vulkan::Vulkan Shaderc::Shaderc CONAN_PKG::fmt CONAN_PKG::spdlog CONAN_PKG::cereal CONAN_PKG::glm CONAN_PKG::glfw CONAN_PKG::imgui CONAN_PKG::stb CONAN_PKG::assimp)
 target_include_directories(vk_framework_core PUBLIC
     ${PROJECT_SOURCE_DIR}/include/${PROJECT_REL_PATH}
     ${CMAKE_CURRENT_SOURCE_DIR}
-    ${Vulkan_INCLUDE_DIR}
-    ${Vulkan_INCLUDE_DIR}
     ${CMAKE_BINARY_DIR}/extern/imgui/cpp)
 #    extern/glfw/include
 #    extern/glm
