@@ -10,7 +10,7 @@
 
 #include <utility>
 
-namespace vku::stdext {
+namespace vkfw_core::stdext {
 
     template <typename T> class owned_ptr final
     {

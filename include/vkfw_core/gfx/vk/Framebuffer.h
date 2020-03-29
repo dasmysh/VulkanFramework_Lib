@@ -12,7 +12,7 @@
 #include "gfx/vk/textures/DeviceTexture.h"
 #include "memory/DeviceMemoryGroup.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class LogicalDevice;
 

@@ -10,7 +10,7 @@
 
 #include "primitives.h"
 
-namespace vku::math {
+namespace vkfw_core::math {
 
     template<class T> AABB3<T> transformAABB(const AABB3<T>& aabb, const glm::mat4& m)
     {

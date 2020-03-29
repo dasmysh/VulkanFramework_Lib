@@ -22,7 +22,7 @@
 
 struct aiAnimation;
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     using Time = float;
 
@@ -194,6 +194,6 @@ namespace vku::gfx {
 }
 
 // NOLINTNEXTLINE
-CEREAL_CLASS_VERSION(vku::gfx::Channel, 2)
+CEREAL_CLASS_VERSION(vkfw_core::gfx::Channel, 2)
 // NOLINTNEXTLINE
-CEREAL_CLASS_VERSION(vku::gfx::Animation, 2)
+CEREAL_CLASS_VERSION(vkfw_core::gfx::Animation, 2)

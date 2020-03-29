@@ -15,7 +15,7 @@
 #include <fstream>
 #include <cereal/archives/binary.hpp>
 
-namespace vku {
+namespace vkfw_core {
 
     template<class Stream, class Archive> class ArchiveWrapper
     {
@@ -92,7 +92,7 @@ namespace cereal {
     }
 
     template<class Archive, typename T>
-    void serialize(Archive & ar, vku::math::AABB3<T>& aabb)
+    void serialize(Archive & ar, vkfw_core::math::AABB3<T>& aabb)
     {
         ar(make_nvp("min", aabb.minmax_[0]), make_nvp("max", aabb.minmax_[1]));
     }

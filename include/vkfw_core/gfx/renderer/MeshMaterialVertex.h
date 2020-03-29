@@ -12,7 +12,7 @@
 #include <glm/vec3.hpp>
 #include <vulkan/vulkan.hpp>
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class MeshInfo;
     struct Material;
@@ -27,7 +27,7 @@ namespace vku::gfx {
         MeshVertex() = default;
         MeshVertex(const glm::vec3& position, const glm::vec2& texCoord, const glm::vec3& normal, const glm::vec3& tangent) :
             position_{ position }, texCoord_{ texCoord }, normal_{ normal }, tangent_{ tangent } {};
-        MeshVertex(const vku::gfx::MeshInfo* mi, std::size_t index);
+        MeshVertex(const vkfw_core::gfx::MeshInfo* mi, std::size_t index);
         static vk::VertexInputBindingDescription bindingDescription_;
         static std::array<vk::VertexInputAttributeDescription, 4> attributeDescriptions_;
     };

@@ -12,7 +12,7 @@
 #include <glm/mat4x4.hpp>
 #include "gfx/meshes/Animation.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class MeshInfo;
     class SceneMeshNode;

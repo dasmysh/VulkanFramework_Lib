@@ -11,7 +11,7 @@
 #include "gfx/renderer/RenderElement.h"
 #include "gfx/camera/CameraBase.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class RenderList final
     {
@@ -76,7 +76,7 @@ namespace vku::gfx {
         currentWorldMatrices_ = currentWorldMatrices;
     }
 
-    vku::gfx::RenderElement& RenderList::AddOpaqueElement(std::uint32_t indexCount, std::uint32_t instanceCount,
+    vkfw_core::gfx::RenderElement& RenderList::AddOpaqueElement(std::uint32_t indexCount, std::uint32_t instanceCount,
         std::uint32_t firstIndex, std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix,
         const math::AABB3<float>& boundingBox)
     {
@@ -89,7 +89,7 @@ namespace vku::gfx {
         return result;
     }
 
-    vku::gfx::RenderElement& RenderList::AddTransparentElement(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex, std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix, const math::AABB3<float>& boundingBox)
+    vkfw_core::gfx::RenderElement& RenderList::AddTransparentElement(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex, std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix, const math::AABB3<float>& boundingBox)
     {
         auto& result = transparentElements_.emplace_back(true, currentTransparentPipeline_, currentPipelineLayout_);
         result.BindVertexBuffer(currentVertexBuffer_);

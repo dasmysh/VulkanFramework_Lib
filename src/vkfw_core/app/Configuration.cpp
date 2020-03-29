@@ -8,7 +8,7 @@
 
 #include "app/Configuration.h"
 
-namespace vku::cfg {
+namespace vkfw_core::cfg {
 
     QueueCfg::QueueCfg() = default;
     QueueCfg::QueueCfg(const QueueCfg& rhs) = default;

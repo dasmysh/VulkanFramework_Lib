@@ -8,7 +8,7 @@
 
 #include "gfx/vk/textures/DeviceTexture.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     DeviceTexture::DeviceTexture(const LogicalDevice* device, const TextureDescriptor& desc,
         const std::vector<std::uint32_t>& queueFamilyIndices) :

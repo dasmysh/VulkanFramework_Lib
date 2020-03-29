@@ -12,7 +12,7 @@
 
 #include <glm/vec2.hpp>
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class Framebuffer; // NOLINT
     class Shader;

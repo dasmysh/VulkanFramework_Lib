@@ -9,7 +9,7 @@
 #include "gfx/renderer/MeshMaterialVertex.h"
 #include "gfx/meshes/MeshInfo.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     vk::VertexInputBindingDescription MeshVertex::bindingDescription_{ 0, sizeof(MeshVertex), vk::VertexInputRate::eVertex };
     std::array<vk::VertexInputAttributeDescription, 4> MeshVertex::attributeDescriptions_{ {
@@ -18,7 +18,7 @@ namespace vku::gfx {
          {2, 0, vk::Format::eR32G32B32Sfloat, offsetof(MeshVertex, normal_)},   // NOLINT
          {3, 0, vk::Format::eR32G32B32Sfloat, offsetof(MeshVertex, tangent_)}}}; // NOLINT
 
-    MeshVertex::MeshVertex(const vku::gfx::MeshInfo* mi, std::size_t index) :
+    MeshVertex::MeshVertex(const vkfw_core::gfx::MeshInfo* mi, std::size_t index) :
         position_{ mi->GetVertices()[index] },
         texCoord_{ mi->GetTexCoords()[0][index] },
         normal_ { mi->GetNormals()[index] },

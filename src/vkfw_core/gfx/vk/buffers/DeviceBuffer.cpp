@@ -9,7 +9,7 @@
 #include "gfx/vk/buffers/DeviceBuffer.h"
 #include "gfx/vk/buffers/HostBuffer.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     DeviceBuffer::DeviceBuffer(const LogicalDevice* device, const vk::BufferUsageFlags& usage,
         const vk::MemoryPropertyFlags& memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices) :

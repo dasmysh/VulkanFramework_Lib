@@ -10,7 +10,7 @@
 
 #include "gfx/vk/memory/MemoryGroup.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class UniformBufferObject
     {
@@ -23,10 +23,10 @@ namespace vku::gfx {
         ~UniformBufferObject();
 
 
-        void AddUBOToBuffer(MemoryGroup* memoryGroup, unsigned int bufferIndex,
-            std::size_t bufferOffset, std::size_t size, void* data);
-        void AddUBOToBufferPrefill(MemoryGroup* memoryGroup, unsigned int bufferIndex,
-            std::size_t bufferOffset, std::size_t size, void* data);
+        void AddUBOToBuffer(MemoryGroup* memoryGroup, unsigned int bufferIndex, std::size_t bufferOffset,
+                            std::size_t size, std::variant<void*, const void*> data);
+        void AddUBOToBufferPrefill(MemoryGroup* memoryGroup, unsigned int bufferIndex, std::size_t bufferOffset,
+                                   std::size_t size, std::variant<void*, const void*> data);
         void CreateLayout(vk::DescriptorPool descPool, const vk::ShaderStageFlags& shaderFlags, bool isDynamicBuffer = false, std::uint32_t binding = 0);
         void UseLayout(vk::DescriptorPool descPool, vk::DescriptorSetLayout usedLayout, bool isDynamicBuffer = false, std::uint32_t binding = 0);
         void FillUploadCmdBuffer(vk::CommandBuffer cmdBuffer, std::size_t instanceIdx, std::size_t size) const;
@@ -84,26 +84,26 @@ namespace vku::gfx {
     };
 
     template<class ContentType>
-    UniformBufferObject vku::gfx::UniformBufferObject::Create(const LogicalDevice* device, std::size_t numInstances /*= 1*/)
+    UniformBufferObject vkfw_core::gfx::UniformBufferObject::Create(const LogicalDevice* device, std::size_t numInstances /*= 1*/)
     {
         return UniformBufferObject{ device, sizeof(ContentType), numInstances };
     }
 
     template<class ContentType>
-    void vku::gfx::UniformBufferObject::AddUBOToBuffer(MemoryGroup* memoryGroup, unsigned int bufferIndex,
+    void vkfw_core::gfx::UniformBufferObject::AddUBOToBuffer(MemoryGroup* memoryGroup, unsigned int bufferIndex,
         std::size_t bufferOffset, const ContentType& data)
     {
         AddUBOToBuffer(memoryGroup, bufferIndex, bufferOffset, sizeof(ContentType), &data);
     }
 
     template<class ContentType>
-    void vku::gfx::UniformBufferObject::FillUploadCmdBuffer(vk::CommandBuffer cmdBuffer, std::size_t instanceIdx) const
+    void vkfw_core::gfx::UniformBufferObject::FillUploadCmdBuffer(vk::CommandBuffer cmdBuffer, std::size_t instanceIdx) const
     {
         FillUploadCmdBuffer(cmdBuffer, instanceIdx, sizeof(ContentType));
     }
 
     template<class ContentType>
-    void vku::gfx::UniformBufferObject::UpdateInstanceData(std::size_t instanceIdx, const ContentType& data) const
+    void vkfw_core::gfx::UniformBufferObject::UpdateInstanceData(std::size_t instanceIdx, const ContentType& data) const
     {
         UpdateInstanceData(instanceIdx, sizeof(ContentType), &data);
     }

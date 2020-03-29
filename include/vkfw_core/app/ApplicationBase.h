@@ -12,7 +12,7 @@
 
 #include <glm/vec2.hpp>
 
-namespace vku::cfg {
+namespace vkfw_core::cfg {
     class Configuration;
 
     std::vector<vk::SurfaceFormatKHR> GetVulkanSurfaceFormatsFromConfig(const WindowCfg& cfg);
@@ -20,11 +20,11 @@ namespace vku::cfg {
     std::uint32_t GetVulkanAdditionalImageCountFromConfig(const WindowCfg& cfg);
 }
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
     class LogicalDevice;
 }
 
-namespace vku {
+namespace vkfw_core {
 
     class VKWindow;
 

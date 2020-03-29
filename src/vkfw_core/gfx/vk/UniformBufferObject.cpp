@@ -8,7 +8,7 @@
 
 #include "gfx/vk/UniformBufferObject.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     UniformBufferObject::UniformBufferObject(const LogicalDevice* device, std::size_t singleSize, std::size_t numInstances) :
         device_{ device },
@@ -55,8 +55,8 @@ namespace vku::gfx {
 
     UniformBufferObject::~UniformBufferObject() = default;
 
-    void UniformBufferObject::AddUBOToBuffer(MemoryGroup* memoryGroup, unsigned int bufferIndex, std::size_t bufferOffset,
-        std::size_t size, void* data)
+    void UniformBufferObject::AddUBOToBuffer(MemoryGroup* memoryGroup, unsigned int bufferIndex, std::size_t bufferOffset, std::size_t size,
+                                             std::variant<void*, const void*> data)
     {
         memoryGroup_ = memoryGroup;
         bufferIdx_ = bufferIndex;
@@ -72,7 +72,8 @@ namespace vku::gfx {
     }
 
     void UniformBufferObject::AddUBOToBufferPrefill(MemoryGroup* memoryGroup, unsigned int bufferIndex,
-        std::size_t bufferOffset, std::size_t size, void* data)
+                                                    std::size_t bufferOffset, std::size_t size,
+                                                    std::variant<void*, const void*> data)
     {
         memoryGroup_ = memoryGroup;
         bufferIdx_ = bufferIndex;

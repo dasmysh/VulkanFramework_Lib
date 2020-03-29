@@ -10,7 +10,7 @@
 
 #include <type_traits>
 
-namespace vku {
+namespace vkfw_core {
 
     template<typename Enum> struct EnableBitMaskOperators { static constexpr bool enable = false; };
     template<typename Enum, typename Enable = void> class EnumFlags;

@@ -17,7 +17,7 @@
 #include <glm/ext/quaternion_float.hpp>
 #include <glm/gtc/matrix_access.hpp>
 
-namespace vku::math {
+namespace vkfw_core::math {
 
     /** Line for two dimensions using floats. */
     template<typename real> using Line2 = std::array<glm::tvec2<real, glm::highp>, 2>;

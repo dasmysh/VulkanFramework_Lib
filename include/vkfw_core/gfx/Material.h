@@ -12,7 +12,7 @@
 
 #include <glm/vec3.hpp>
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class Texture2D;
     class LogicalDevice;
@@ -80,4 +80,4 @@ namespace vku::gfx {
 }
 
 // NOLINTNEXTLINE
-CEREAL_CLASS_VERSION(vku::gfx::MaterialInfo, 1)
+CEREAL_CLASS_VERSION(vkfw_core::gfx::MaterialInfo, 1)

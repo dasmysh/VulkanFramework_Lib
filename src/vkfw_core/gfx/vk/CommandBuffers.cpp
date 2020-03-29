@@ -10,7 +10,7 @@
 
 #include "gfx/vk/CommandBuffers.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     CommandBuffers::CommandBuffers(const LogicalDevice* device, unsigned int queueFamily, vk::CommandBufferLevel level, std::uint32_t numBuffers) :
         device_{ device },

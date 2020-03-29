@@ -14,7 +14,7 @@
 #include <core/serialization_helper.h>
 #include <core/enum_flags.h>
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     enum class MeshCreateFlagBits : unsigned int {
         NO_SMOOTH_NORMALS = 0x1,
@@ -22,11 +22,11 @@ namespace vku::gfx {
     };
 }
 
-namespace vku {
+namespace vkfw_core {
     template<> struct EnableBitMaskOperators<gfx::MeshCreateFlagBits> { static constexpr bool enable = true; };
 }
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     using MeshCreateFlags = EnumFlags<MeshCreateFlagBits>;
 

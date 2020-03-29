@@ -15,5 +15,5 @@
 #include <fstream>
 
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 }

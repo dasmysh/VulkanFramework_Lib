@@ -11,7 +11,7 @@
 #include "gfx/camera/UserControlledCamera.h"
 #include <glm/gtc/quaternion.hpp>
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     /**
     * Represents a free moving camera.

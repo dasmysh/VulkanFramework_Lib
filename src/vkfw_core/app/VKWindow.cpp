@@ -20,7 +20,7 @@
 #include "core/imgui/imgui_impl_glfw.h"
 #include "core/imgui/imgui_impl_vulkan.h"
 
-namespace vku {
+namespace vkfw_core {
 
     /**
      * Creates a new windows VKWindow.

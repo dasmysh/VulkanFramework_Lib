@@ -10,7 +10,7 @@
 
 #include "gfx/vk/Shader.h"
 
-namespace vku {
+namespace vkfw_core {
 
     class ShaderManager final : public ResourceManager<gfx::Shader>
     {

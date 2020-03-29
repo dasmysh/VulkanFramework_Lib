@@ -11,7 +11,7 @@
 #include "gfx/vk/LogicalDevice.h"
 #include "core/string_algorithms.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     Shader::Shader(const std::string & resourceId, const LogicalDevice * device, std::string shaderFilename) :
         Resource{ resourceId, device },

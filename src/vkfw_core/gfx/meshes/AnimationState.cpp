@@ -10,7 +10,7 @@
 #include "gfx/meshes/MeshInfo.h"
 #include "gfx/meshes/SceneMeshNode.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     /**
      *  Constructor of AnimationState.

@@ -12,7 +12,7 @@
 
 #include <glm/gtc/type_precision.hpp>
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class QueuedDeviceTransfer;
     class MemoryGroup;

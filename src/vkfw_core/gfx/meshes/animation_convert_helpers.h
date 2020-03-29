@@ -11,7 +11,7 @@
 
 #include <glm/gtc/quaternion.hpp>
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     ///
     /// Find the frame at a given timestamp. If there is no frame at this

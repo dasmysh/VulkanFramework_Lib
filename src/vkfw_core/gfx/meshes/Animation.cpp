@@ -9,7 +9,6 @@
 #include "gfx/meshes/Animation.h"
 
 #include <cassert>
-#include <glm/glm.hpp>
 #include <limits>
 #include <utility>
 
@@ -18,7 +17,7 @@
 // NOLINTNEXTLINE
 #include <assimp/scene.h> // NOLINT
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     constexpr float STANDARD_ANIMATION_FPS = 24.0f;
 

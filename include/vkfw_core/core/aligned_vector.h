@@ -11,7 +11,7 @@
 #include <vector>
 #include <cstdint>
 
-namespace vku {
+namespace vkfw_core {
 
     template<typename T> class aligned_vector
     {

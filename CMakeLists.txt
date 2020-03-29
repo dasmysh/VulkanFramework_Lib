@@ -5,7 +5,7 @@ project(VKFWLib CXX)
 include(cmake/StandardProjectSettings.cmake)
 
 add_library(vkfw_options INTERFACE)
-target_compile_features(vkfw_options INTERFACE cxx_std_17)
+target_compile_features(vkfw_options INTERFACE cxx_std_20)
 
 add_library(vkfw_warnings INTERFACE)
 
@@ -52,10 +52,7 @@ set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
 include(cmake/Conan.cmake)
 run_conan()
 
-list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_LIST_DIR}/cmake)
-
 find_package(Vulkan 1.1.126.0 REQUIRED)
-find_package(Shaderc REQUIRED)
 target_compile_definitions(vkfw_options INTERFACE VULKAN_HPP_TYPESAFE_CONVERSION)
 include(cmake/CompileSpirvShader.cmake)
 
@@ -94,8 +91,8 @@ endif()
 
 
 set(VKFW_DEBUG_PIPELINE ON CACHE BOOL "Checks if application is started from RenderDoc and uses only a single queue then.")
-if (${FW_DEBUG_PIPELINE})
-    target_compile_definitions(vkfw_options INTERFACE FW_DEBUG_PIPELINE)
+if (${VKFW_DEBUG_PIPELINE})
+    target_compile_definitions(vkfw_options INTERFACE VKFW_DEBUG_PIPELINE)
 endif()
 
 set(VKFWCORE_RESOURCE_BASE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/resources)

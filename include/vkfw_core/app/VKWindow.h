@@ -14,7 +14,7 @@
 
 struct GLFWwindow;
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
     class Framebuffer;
     class LogicalDevice;
 }
@@ -23,7 +23,7 @@ struct ImGui_ImplVulkanH_WindowData;
 struct ImGui_GLFWWindow;
 struct ImGui_ImplVulkan_InitInfo;
 
-namespace vku {
+namespace vkfw_core {
 
     class ApplicationBase;
 

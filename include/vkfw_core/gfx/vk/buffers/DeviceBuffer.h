@@ -11,7 +11,7 @@
 #include "main.h"
 #include "Buffer.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
     class HostBuffer;
 
     class DeviceBuffer final : public Buffer

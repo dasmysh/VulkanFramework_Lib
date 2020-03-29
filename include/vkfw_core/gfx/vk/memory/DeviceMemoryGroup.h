@@ -13,7 +13,7 @@
 #include "gfx/vk/buffers/DeviceBuffer.h"
 #include "gfx/vk/textures/DeviceTexture.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class LogicalDevice;
     class HostBuffer;

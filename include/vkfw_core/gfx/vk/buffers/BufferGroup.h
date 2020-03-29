@@ -13,7 +13,7 @@
 #include "core/type_traits.h"
 #include "DeviceBuffer.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class HostBuffer;
     class QueuedDeviceTransfer;

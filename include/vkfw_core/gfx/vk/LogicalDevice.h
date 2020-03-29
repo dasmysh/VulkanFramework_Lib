@@ -12,20 +12,20 @@
 
 #include <glm/vec2.hpp>
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
     class Texture2D;
 }
 
-namespace vku {
+namespace vkfw_core {
     class ShaderManager;
     using TextureManager = ResourceManager<gfx::Texture2D>;
 }
 
-namespace vku::cfg {
+namespace vkfw_core::cfg {
     class WindowCfg;
 }
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
     class GraphicsPipeline;
     class Framebuffer; // NOLINT
     class Buffer;      // NOLINT
@@ -141,8 +141,6 @@ namespace vku::gfx {
         /** Holds the dummy texture. */
         std::shared_ptr<Texture2D> dummyTexture_;
 
-#ifdef FW_DEBUG_PIPELINE
         bool singleQueueOnly_ = false;
-#endif
     };
 }

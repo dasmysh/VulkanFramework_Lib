@@ -10,7 +10,7 @@
 
 #include "main.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class Shader final : public Resource
     {

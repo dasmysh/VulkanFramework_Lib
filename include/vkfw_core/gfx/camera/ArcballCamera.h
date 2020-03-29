@@ -11,7 +11,7 @@
 #include "gfx/camera/Arcball.h"
 #include "gfx/camera/UserControlledCamera.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     /**
     * Represents a camera rotating around the origin.

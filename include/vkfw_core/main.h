@@ -44,7 +44,7 @@
 #include "core/resources/Resource.h"
 #include "core/resources/ResourceManager.h"
 
-namespace vku {
+namespace vkfw_core {
     class ApplicationBase;
 }
 // ReSharper restore CppUnusedIncludeDirective

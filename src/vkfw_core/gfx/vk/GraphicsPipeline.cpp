@@ -10,7 +10,7 @@
 #include "gfx/vk/LogicalDevice.h"
 #include "core/resources/ShaderManager.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     GraphicsPipeline::GraphicsPipeline(const LogicalDevice* device, const std::vector<std::shared_ptr<Shader>>& shaders, const glm::uvec2& size, unsigned int numBlendAttachments) :
         device_{ device },

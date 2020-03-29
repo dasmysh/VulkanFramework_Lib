@@ -28,7 +28,7 @@
 
 VULKAN_HPP_DEFAULT_DISPATCH_LOADER_DYNAMIC_STORAGE
 
-namespace vku {
+namespace vkfw_core {
 
     /**
      * Logs the debug output of Vulkan.
@@ -80,7 +80,7 @@ namespace vku {
     }
 }
 
-namespace vku::qf {
+namespace vkfw_core::qf {
 
     int findQueueFamily(const vk::PhysicalDevice& device, const cfg::QueueCfg& desc, const vk::SurfaceKHR& surface = vk::SurfaceKHR())
     {
@@ -114,7 +114,7 @@ namespace vku::qf {
 }
 
 
-namespace vku::cfg {
+namespace vkfw_core::cfg {
 
     std::vector<vk::SurfaceFormatKHR> GetVulkanSurfaceFormatsFromConfig(const WindowCfg& cfg)
     {
@@ -183,7 +183,7 @@ namespace vku::cfg {
     }
 }
 
-namespace vku {
+namespace vkfw_core {
 
     ApplicationBase* ApplicationBase::instance_ = nullptr;
 
@@ -523,19 +523,19 @@ namespace vku {
             }
         }
 
-#ifdef FW_DEBUG_PIPELINE
-        if (vkPhysicalDevices_.size() == 1) {
-            auto devProps = (*vkPhysicalDevices_.begin()).second.getProperties();
-            if (devProps.pipelineCacheUUID[0] == 'r' && devProps.pipelineCacheUUID[1] == 'd' &&
-                devProps.pipelineCacheUUID[2] == 'o' && devProps.pipelineCacheUUID[3] == 'c') {
-                physicalDevice = (*vkPhysicalDevices_.begin()).second;
-                foundDevice = true;
-                while (deviceQueueDesc.size() < windowCfg.queues_.size()) {
-                    deviceQueueDesc.emplace_back(0, windowCfg.queues_[deviceQueueDesc.size()].priorities_);
+        if constexpr (use_debug_pipeline) {
+            if (vkPhysicalDevices_.size() == 1) {
+                auto devProps = (*vkPhysicalDevices_.begin()).second.getProperties();
+                if (devProps.pipelineCacheUUID[0] == 'r' && devProps.pipelineCacheUUID[1] == 'd'
+                    && devProps.pipelineCacheUUID[2] == 'o' && devProps.pipelineCacheUUID[3] == 'c') {
+                    physicalDevice = (*vkPhysicalDevices_.begin()).second;
+                    foundDevice = true;
+                    while (deviceQueueDesc.size() < windowCfg.queues_.size()) {
+                        deviceQueueDesc.emplace_back(0, windowCfg.queues_[deviceQueueDesc.size()].priorities_);
+                    }
                 }
             }
         }
-#endif
 
         if (!foundDevice) {
             spdlog::critical("Could not find suitable Vulkan GPU.");

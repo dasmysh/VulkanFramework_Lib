@@ -13,7 +13,7 @@
 #include <glm/gtc/matrix_access.hpp>
 #include <glm/gtc/quaternion.hpp>
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     /**
      *  Constructor. View matrix constructed from position and orientation.

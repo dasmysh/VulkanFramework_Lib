@@ -10,11 +10,11 @@
 
 #include "gfx/camera/CameraBase.h"
 
-namespace vku {
+namespace vkfw_core {
     class VKWindow;
 }
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     /**
      * Represents a user controlled camera.

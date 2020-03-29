@@ -11,7 +11,7 @@
 #include "main.h"
 #include "gfx/vk/LogicalDevice.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class CommandBuffers
     {

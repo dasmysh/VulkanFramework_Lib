@@ -9,7 +9,7 @@
 #include <assimp/matrix4x4.h>
 #include <glm/mat4x4.hpp>
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     ///
     /// Converts a assimp aiMatrix4x4 into a glm::mat4.

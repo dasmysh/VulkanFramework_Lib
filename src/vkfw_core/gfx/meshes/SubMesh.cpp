@@ -9,7 +9,7 @@
 #include "gfx/meshes/SubMesh.h"
 #include "gfx/meshes/MeshInfo.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     /** Constructor. */
     SubMesh::SubMesh(const MeshInfo* mesh, std::string objectName, unsigned int indexOffset, unsigned int numIndices, unsigned int materialID) :

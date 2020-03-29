@@ -18,7 +18,7 @@
 
 struct aiNode;
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class DeviceBuffer;
 

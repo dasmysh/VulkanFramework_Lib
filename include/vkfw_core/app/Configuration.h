@@ -12,7 +12,7 @@
 // ReSharper disable once CppUnusedIncludeDirective
 #include <cereal/types/vector.hpp>
 
-namespace vku::cfg {
+namespace vkfw_core::cfg {
 
     enum class SwapOptions
     {
@@ -28,26 +28,26 @@ namespace vku::cfg {
 namespace cereal {
 
     template<class Archive> inline
-    std::string save_minimal(Archive const &, ::vku::cfg::SwapOptions const & so)
+    std::string save_minimal(Archive const &, ::vkfw_core::cfg::SwapOptions const & so)
     {
         std::string strValue;
-        if (so == vku::cfg::SwapOptions::DOUBLE_BUFFERING) { strValue = "DOUBLE_BUFFERING"; }
-        if (so == vku::cfg::SwapOptions::DOUBLE_BUFFERING_VSYNC) { strValue = "DOUBLE_BUFFERING_VSYNC"; }
-        if (so == vku::cfg::SwapOptions::TRIPLE_BUFFERING) { strValue = "TRIPLE_BUFFERING"; }
+        if (so == vkfw_core::cfg::SwapOptions::DOUBLE_BUFFERING) { strValue = "DOUBLE_BUFFERING"; }
+        if (so == vkfw_core::cfg::SwapOptions::DOUBLE_BUFFERING_VSYNC) { strValue = "DOUBLE_BUFFERING_VSYNC"; }
+        if (so == vkfw_core::cfg::SwapOptions::TRIPLE_BUFFERING) { strValue = "TRIPLE_BUFFERING"; }
         return strValue;
     }
 
     template<class Archive> inline
-    void load_minimal(Archive const &, ::vku::cfg::SwapOptions& so, std::string const & strValue)
+    void load_minimal(Archive const &, ::vkfw_core::cfg::SwapOptions& so, std::string const & strValue)
     {
-        if (strValue == "DOUBLE_BUFFERING") { so = vku::cfg::SwapOptions::DOUBLE_BUFFERING; }
-        if (strValue == "DOUBLE_BUFFERING_VSYNC") { so = vku::cfg::SwapOptions::DOUBLE_BUFFERING_VSYNC; }
-        if (strValue == "TRIPLE_BUFFERING") { so = vku::cfg::SwapOptions::TRIPLE_BUFFERING; }
+        if (strValue == "DOUBLE_BUFFERING") { so = vkfw_core::cfg::SwapOptions::DOUBLE_BUFFERING; }
+        if (strValue == "DOUBLE_BUFFERING_VSYNC") { so = vkfw_core::cfg::SwapOptions::DOUBLE_BUFFERING_VSYNC; }
+        if (strValue == "TRIPLE_BUFFERING") { so = vkfw_core::cfg::SwapOptions::TRIPLE_BUFFERING; }
     }
 }
 
 
-namespace vku::cfg {
+namespace vkfw_core::cfg {
 
     constexpr std::size_t DEFAULT_SCREEN_SIZE_X = 800;
     constexpr std::size_t DEFAULT_SCREEN_SIZE_Y = 600;
@@ -242,8 +242,8 @@ namespace vku::cfg {
 }
 
 // NOLINTNEXTLINE(cert-err58-cpp,misc-definitions-in-headers)
-CEREAL_CLASS_VERSION(vku::cfg::QueueCfg, 1)
+CEREAL_CLASS_VERSION(vkfw_core::cfg::QueueCfg, 1)
 // NOLINTNEXTLINE(cert-err58-cpp,misc-definitions-in-headers)
-CEREAL_CLASS_VERSION(vku::cfg::WindowCfg, 1)
+CEREAL_CLASS_VERSION(vkfw_core::cfg::WindowCfg, 1)
 // NOLINTNEXTLINE(cert-err58-cpp,misc-definitions-in-headers)
-CEREAL_CLASS_VERSION(vku::cfg::Configuration, 1)
+CEREAL_CLASS_VERSION(vkfw_core::cfg::Configuration, 1)

@@ -13,7 +13,7 @@
 #include <glm/mat4x4.hpp>
 #include "core/math/primitives.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     /**
      * Represents a base camera.

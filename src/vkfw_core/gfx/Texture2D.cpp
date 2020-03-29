@@ -15,7 +15,7 @@
 #include "gfx/vk/memory/MemoryGroup.h"
 #include "app/VKWindow.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     Texture2D::Texture2D(const std::string& textureFilename, bool flipTexture, const LogicalDevice* device)
         : Resource{textureFilename, device},

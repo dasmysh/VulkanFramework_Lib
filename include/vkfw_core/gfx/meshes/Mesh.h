@@ -15,7 +15,7 @@
 #include "gfx/vk/UniformBufferObject.h"
 #include <tuple>
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class MeshInfo;
     class MemoryGroup;
@@ -169,9 +169,10 @@ namespace vku::gfx {
     }
 
     template<class VertexType, class MaterialType>
-    inline void Mesh::CreateBuffersInMemoryGroup(std::size_t offset, std::size_t numBackbuffers,
+    inline void Mesh::CreateBuffersInMemoryGroup(std::size_t offset, std::size_t,
         const std::vector<std::uint32_t>& queueFamilyIndices)
     {
+        // TODO: possible bug? numBackbuffers is not used currently. [3/28/2020 Sebastian Maisch]
         std::vector<VertexType> vertices;
         meshInfo_->GetVertices(vertices);
 
@@ -183,8 +184,8 @@ namespace vku::gfx {
         worldMatrices.model_ = glm::mat4{ 1.0f };
         worldMatrices.normalMatrix_ = glm::mat4{ 1.0f };
 
-        auto vertexBufferSize = vku::byteSizeOf(vertices);
-        auto indexBufferSize = vku::byteSizeOf(meshInfo_->GetIndices());
+        auto vertexBufferSize = vkfw_core::byteSizeOf(vertices);
+        auto indexBufferSize = vkfw_core::byteSizeOf(meshInfo_->GetIndices());
         auto materialBufferSize = device_->CalculateUniformBufferAlignment(byteSizeOf(materialUBOContent));
 
         vertexMaterialData_.resize(vertexBufferSize + materialBufferSize + sizeof(WorldMatrixUBO));

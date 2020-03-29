@@ -8,7 +8,7 @@
 
 #include "core/resources/ShaderManager.h"
 
-namespace vku {
+namespace vkfw_core {
     /**
      * Constructor.
      * @param device the device to create resources in this manager.

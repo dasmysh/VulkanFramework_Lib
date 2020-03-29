@@ -9,7 +9,7 @@
 #include "core/serialization_helper.h"
 #include <filesystem>
 
-namespace vku {
+namespace vkfw_core {
 
     BinaryIAWrapper::BinaryIAWrapper(const std::string& filename) :
         ArchiveWrapper{ filename }

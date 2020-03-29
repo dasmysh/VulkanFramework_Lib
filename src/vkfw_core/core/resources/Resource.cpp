@@ -11,7 +11,7 @@
 #include "app/ApplicationBase.h"
 #include "app/Configuration.h"
 
-namespace vku {
+namespace vkfw_core {
     /**
      * Constructor.
      * @param resourceId the resource id to use

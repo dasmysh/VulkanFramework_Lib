@@ -12,7 +12,7 @@
 #include "core/math/primitives.h"
 #include <cereal/cereal.hpp>
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     struct Material;
     class MeshInfo;
@@ -71,4 +71,4 @@ namespace vku::gfx {
 }
 
 // NOLINTNEXTLINE
-CEREAL_CLASS_VERSION(vku::gfx::SubMesh, 1)
+CEREAL_CLASS_VERSION(vkfw_core::gfx::SubMesh, 1)

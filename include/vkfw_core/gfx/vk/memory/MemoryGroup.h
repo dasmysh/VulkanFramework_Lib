@@ -15,7 +15,7 @@
 #include "gfx/vk/textures/HostTexture.h"
 #include <variant>
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class QueuedDeviceTransfer;
 

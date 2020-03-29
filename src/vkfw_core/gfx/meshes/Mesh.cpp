@@ -16,7 +16,7 @@
 #include "gfx/camera/CameraBase.h"
 #include "core/math/math.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     Mesh::Mesh(const LogicalDevice* device, const std::shared_ptr<const MeshInfo>& meshInfo, UniformBufferObject&& materialsUBO,
         std::size_t numBackbuffers, const vk::MemoryPropertyFlags& memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices) :
@@ -27,7 +27,7 @@ namespace vku::gfx {
         bufferIdx_{ DeviceMemoryGroup::INVALID_INDEX },
         vertexBuffer_{ nullptr, 0 },
         indexBuffer_{ nullptr, 0 },
-        worldMatricesUBO_{ vku::gfx::UniformBufferObject::Create<WorldMatrixUBO>(device, numBackbuffers * meshInfo->GetNodes().size()) },
+        worldMatricesUBO_{ vkfw_core::gfx::UniformBufferObject::Create<WorldMatrixUBO>(device, numBackbuffers * meshInfo->GetNodes().size()) },
         materialsUBO_{ std::move(materialsUBO) }
     {
         CreateMaterials(queueFamilyIndices);
@@ -41,7 +41,7 @@ namespace vku::gfx {
         bufferIdx_{ bufferIndex },
         vertexBuffer_{ nullptr, 0 },
         indexBuffer_{ nullptr, 0 },
-        worldMatricesUBO_{ vku::gfx::UniformBufferObject::Create<WorldMatrixUBO>(device, numBackbuffers * meshInfo->GetNodes().size()) },
+        worldMatricesUBO_{ vkfw_core::gfx::UniformBufferObject::Create<WorldMatrixUBO>(device, numBackbuffers * meshInfo->GetNodes().size()) },
         materialsUBO_{ std::move(materialsUBO) }
     {
         CreateMaterials(queueFamilyIndices);

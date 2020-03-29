@@ -9,7 +9,7 @@
 #include "gfx/vk/memory/MemoryGroup.h"
 #include "gfx/vk/QueuedDeviceTransfer.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     MemoryGroup::MemoryGroup(const LogicalDevice* device, const vk::MemoryPropertyFlags& memoryFlags) :
         DeviceMemoryGroup(device, memoryFlags),

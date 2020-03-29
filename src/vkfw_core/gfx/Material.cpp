@@ -10,7 +10,7 @@
 #include "gfx/Texture2D.h"
 #include "gfx/vk/LogicalDevice.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
 
     Material::Material() :

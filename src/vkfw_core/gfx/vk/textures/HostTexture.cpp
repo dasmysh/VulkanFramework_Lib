@@ -9,7 +9,7 @@
 #include "gfx/vk/textures/HostTexture.h"
 #include <glm/gtx/vec_swizzle.hpp>
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     HostTexture::HostTexture(const LogicalDevice* device, const TextureDescriptor& desc,
         const std::vector<std::uint32_t>& queueFamilyIndices) :

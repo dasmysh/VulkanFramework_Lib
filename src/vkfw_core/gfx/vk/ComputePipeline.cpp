@@ -10,7 +10,7 @@
 #include "gfx/vk/LogicalDevice.h"
 #include "core/resources/ShaderManager.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     ComputePipeline::ComputePipeline(const std::string& shaderStageId, gfx::LogicalDevice* device) :
         Resource(shaderStageId, device)

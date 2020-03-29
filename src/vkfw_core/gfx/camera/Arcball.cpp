@@ -15,7 +15,7 @@
 #include <glm/gtx/rotate_vector.hpp>
 #include <glm/gtx/quaternion.hpp>
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     /**
      *  Constructor.
@@ -35,7 +35,7 @@ namespace vku::gfx {
      *  @param action the mouse buttons action.
      *  @param sender the application to supply normalized screen coordinates.
      */
-    bool Arcball::HandleMouse(int theButton, int action, const vku::VKWindow* sender) noexcept
+    bool Arcball::HandleMouse(int theButton, int action, const vkfw_core::VKWindow* sender) noexcept
     {
         bool handled = false;
         if (button_ == theButton && action == GLFW_PRESS) {

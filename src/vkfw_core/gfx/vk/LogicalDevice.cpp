@@ -16,7 +16,7 @@
 #include "gfx/vk/memory/MemoryGroup.h"
 #include "gfx/vk/QueuedDeviceTransfer.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     LogicalDevice::LogicalDevice(const cfg::WindowCfg& windowCfg, const vk::PhysicalDevice& phDevice,
         std::vector<DeviceQueueDesc> queueDescs, const vk::SurfaceKHR& surface) :
@@ -35,18 +35,25 @@ namespace vku::gfx {
         }
 
         std::vector<vk::DeviceQueueCreateInfo> queueCreateInfo;
-#ifdef FW_DEBUG_PIPELINE
-        {
-            auto devProps = vkPhysicalDevice_.getProperties();
-            if (devProps.pipelineCacheUUID[0] == 'r' && devProps.pipelineCacheUUID[1] == 'd'
-                && devProps.pipelineCacheUUID[2] == 'o' && devProps.pipelineCacheUUID[3] == 'c') {
-                singleQueueOnly_ = true;
+        if constexpr (use_debug_pipeline) {
+            {
+                auto devProps = vkPhysicalDevice_.getProperties();
+                if (devProps.pipelineCacheUUID[0] == 'r' && devProps.pipelineCacheUUID[1] == 'd'
+                    && devProps.pipelineCacheUUID[2] == 'o' && devProps.pipelineCacheUUID[3] == 'c') {
+                    singleQueueOnly_ = true;
+                }
             }
-        }
 
-        if (singleQueueOnly_) {
-            float prio = 1.0f;
-            queueCreateInfo.emplace_back(vk::DeviceQueueCreateFlags(), 0, 1, &prio);
+            if (singleQueueOnly_) {
+                float prio = 1.0f;
+                queueCreateInfo.emplace_back(vk::DeviceQueueCreateFlags(), 0, 1, &prio);
+            } else {
+                for (const auto& queueDesc : queueDescriptions_) {
+                    auto& priorities = deviceQFamilyPriorities[queueDesc.familyIndex_];
+                    queueCreateInfo.emplace_back(vk::DeviceQueueCreateFlags(), queueDesc.familyIndex_,
+                                                 static_cast<std::uint32_t>(priorities.size()), priorities.data());
+                }
+            }
         } else {
             for (const auto& queueDesc : queueDescriptions_) {
                 auto& priorities = deviceQFamilyPriorities[queueDesc.familyIndex_];
@@ -54,13 +61,6 @@ namespace vku::gfx {
                                              static_cast<std::uint32_t>(priorities.size()), priorities.data());
             }
         }
-#elif
-        for (const auto& queueDesc : queueDescriptions_) {
-            auto& priorities = deviceQFamilyPriorities[queueDesc.familyIndex_];
-            queueCreateInfo.emplace_back(vk::DeviceQueueCreateFlags(), queueDesc.familyIndex_,
-                                         static_cast<std::uint32_t>(priorities.size()), priorities.data());
-        }
-#endif
 
         auto deviceFeatures = vkPhysicalDevice_.getFeatures();
         std::vector<const char*> enabledDeviceExtensions;
@@ -100,23 +100,31 @@ namespace vku::gfx {
             const auto& mappings = deviceQueueDesc.second;
             vkQueuesByDeviceFamily_[deviceQueueDesc.first].resize(priorities.size());
 
-            vk::CommandPoolCreateInfo poolInfo{ vk::CommandPoolCreateFlags(), singleQueueOnly_ ? 0 : deviceQueueDesc.first };
-            vkCmdPoolsByDeviceQFamily_[deviceQueueDesc.first] = vkDevice_->createCommandPoolUnique(poolInfo);
+            if constexpr (use_debug_pipeline) {
+                vk::CommandPoolCreateInfo poolInfo{vk::CommandPoolCreateFlags(),
+                                                   singleQueueOnly_ ? 0 : deviceQueueDesc.first};
+                vkCmdPoolsByDeviceQFamily_[deviceQueueDesc.first] = vkDevice_->createCommandPoolUnique(poolInfo);
+            } else {
+                vk::CommandPoolCreateInfo poolInfo{vk::CommandPoolCreateFlags(), deviceQueueDesc.first};
+                vkCmdPoolsByDeviceQFamily_[deviceQueueDesc.first] = vkDevice_->createCommandPoolUnique(poolInfo);
+            }
 
-#ifdef FW_DEBUG_PIPELINE
             vk::Queue vkSingleQueue;
-            if (singleQueueOnly_) { vkSingleQueue = vkDevice_->getQueue(0, 0); }
-#endif
+            if constexpr (use_debug_pipeline) {
+                if (singleQueueOnly_) { vkSingleQueue = vkDevice_->getQueue(0, 0); }
+            }
+
             for (auto j = 0U; j < priorities.size(); ++j) {
-#ifdef FW_DEBUG_PIPELINE
-                if (singleQueueOnly_) {
-                    vkQueuesByDeviceFamily_[deviceQueueDesc.first][j] = vkSingleQueue;
+                if constexpr (use_debug_pipeline) {
+                    if (singleQueueOnly_) {
+                        vkQueuesByDeviceFamily_[deviceQueueDesc.first][j] = vkSingleQueue;
+                    } else {
+                        vkQueuesByDeviceFamily_[deviceQueueDesc.first][j] =
+                            vkDevice_->getQueue(deviceQueueDesc.first, j);
+                    }
                 } else {
                     vkQueuesByDeviceFamily_[deviceQueueDesc.first][j] = vkDevice_->getQueue(deviceQueueDesc.first, j);
                 }
-#elif
-                vkQueuesByDeviceFamily_[deviceQueueDesc.first][j] = vkDevice_->getQueue(deviceQueueDesc.first, j);
-#endif
                 vkQueuesByRequestedFamily_[mappings[j].first][mappings[j].second] = vkQueuesByDeviceFamily_[deviceQueueDesc.first][j];
                 vkCmdPoolsByRequestedQFamily_[mappings[j].first] = *vkCmdPoolsByDeviceQFamily_[deviceQueueDesc.first];
             }
@@ -175,8 +183,13 @@ namespace vku::gfx {
 
     vk::UniqueCommandPool LogicalDevice::CreateCommandPoolForQueue(unsigned int familyIndex, const vk::CommandPoolCreateFlags& flags) const
     {
-        vk::CommandPoolCreateInfo poolInfo{ flags, singleQueueOnly_ ? 0 : familyIndex };
-        return vkDevice_->createCommandPoolUnique(poolInfo);
+        if constexpr (use_debug_pipeline) {
+            vk::CommandPoolCreateInfo poolInfo{flags, singleQueueOnly_ ? 0 : familyIndex};
+            return vkDevice_->createCommandPoolUnique(poolInfo);
+        } else {
+            vk::CommandPoolCreateInfo poolInfo{flags, familyIndex};
+            return vkDevice_->createCommandPoolUnique(poolInfo);
+        }
     }
 
     std::unique_ptr<GraphicsPipeline> LogicalDevice::CreateGraphicsPipeline(const std::vector<std::string>& shaderNames,

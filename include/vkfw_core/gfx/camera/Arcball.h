@@ -11,11 +11,11 @@
 #include <glm/vec2.hpp>
 #include <glm/ext/quaternion_float.hpp>
 
-namespace vku {
+namespace vkfw_core {
     class VKWindow;
 }
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     /**
      * Helper class for generic arc-balls.
@@ -25,7 +25,7 @@ namespace vku::gfx {
     public:
         explicit Arcball(int button) noexcept;
 
-        bool HandleMouse(int button, int action, const vku::VKWindow* sender) noexcept;
+        bool HandleMouse(int button, int action, const vkfw_core::VKWindow* sender) noexcept;
         glm::quat GetWorldRotation(double elapsedTime, const glm::quat& camPosOrientation) noexcept;
 
     private:

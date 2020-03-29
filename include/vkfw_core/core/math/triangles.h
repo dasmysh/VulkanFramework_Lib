@@ -8,11 +8,10 @@
 
 #pragma once
 
-#include <glm/glm.hpp>
 #include "primitives.h"
 #include <random>
 
-namespace vku::math {
+namespace vkfw_core::math {
 
     // Triangle properties consist of:
     // - vec(circumscribed circle center, radius)

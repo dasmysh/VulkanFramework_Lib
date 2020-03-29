@@ -24,9 +24,9 @@
 #define GLM_ENABLE_EXPERIMENTAL
 #include <glm/gtx/transform.hpp>
 
-CEREAL_SPECIALIZE_FOR_ALL_ARCHIVES(vku::gfx::AssImpScene, cereal::specialization::member_serialize)
+// CEREAL_SPECIALIZE_FOR_ALL_ARCHIVES(vkfw_core::gfx::AssImpScene, cereal::specialization::member_serialize)
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     inline glm::vec3 GetMaterialColor(aiMaterial* material, const char* pKey, unsigned int type, unsigned int idx) {
         aiColor3D c;
@@ -276,8 +276,7 @@ namespace vku::gfx {
     void AssImpScene::saveBinary(const std::string& filename) const
     {
         BinaryOAWrapper oa{ filename };
-        // oa(cereal::make_nvp("assimpMesh", *this));
-        oa(cereal::base_class<MeshInfo>(this), cereal::make_nvp("meshFilename", meshFilename_));
+        oa(cereal::make_nvp("meshInfo", *static_cast<const MeshInfo*>(this)), cereal::make_nvp("meshFilename", meshFilename_));
     }
 
     bool AssImpScene::loadBinary(const std::string& filename)
@@ -285,8 +284,8 @@ namespace vku::gfx {
         try {
             BinaryIAWrapper ia{ filename };
             if (ia.IsValid()) {
-                // ia(cereal::make_nvp("assimpMesh", *this));
-                ia(cereal::base_class<MeshInfo>(this), cereal::make_nvp("meshFilename", meshFilename_));
+                ia(cereal::make_nvp("meshInfo", *static_cast<MeshInfo*>(this)),
+                   cereal::make_nvp("meshFilename", meshFilename_));
                 return true;
             }
         } catch (cereal::Exception& e) {

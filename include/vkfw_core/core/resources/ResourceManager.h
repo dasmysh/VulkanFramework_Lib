@@ -10,11 +10,11 @@
 
 #include <spdlog/spdlog.h>
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
     class LogicalDevice;
 }
 
-namespace vku {
+namespace vkfw_core {
 
     class ApplicationBase;
 

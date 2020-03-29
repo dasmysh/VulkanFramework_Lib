@@ -12,7 +12,7 @@
 #include <regex>
 #include <sstream>
 
-namespace vku {
+namespace vkfw_core {
 
     template<typename T> T lexical_cast(const std::string& arg) {
         std::stringstream sstr(arg);

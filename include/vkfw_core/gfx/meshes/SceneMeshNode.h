@@ -16,7 +16,7 @@
 
 struct aiNode;
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class MeshInfo;
 
@@ -122,4 +122,4 @@ namespace vku::gfx {
 }
 
 // NOLINTNEXTLINE
-CEREAL_CLASS_VERSION(vku::gfx::SceneMeshNode, 2)
+CEREAL_CLASS_VERSION(vkfw_core::gfx::SceneMeshNode, 2)

@@ -1,2 +1,3 @@
 
+add_subdirectory(vkfw_glsl_preprocessor)
 add_subdirectory(vkfw_core)

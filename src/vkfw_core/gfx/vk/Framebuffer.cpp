@@ -10,7 +10,7 @@
 #include "gfx/vk/LogicalDevice.h"
 #include "gfx/vk/CommandBuffers.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     Framebuffer::Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size,
         std::vector<vk::Image> images, const vk::RenderPass& renderPass, const FramebufferDescriptor& desc,

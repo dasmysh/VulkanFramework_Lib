@@ -11,7 +11,7 @@
 #include "gfx/vk/buffers/BufferGroup.h"
 #include "gfx/vk/CommandBuffers.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     TextureDescriptor TextureDescriptor::StagingTextureDesc(std::size_t bytesPP, vk::Format format,
                                                             vk::SampleCountFlagBits samples)

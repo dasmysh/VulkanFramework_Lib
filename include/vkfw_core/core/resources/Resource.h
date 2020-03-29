@@ -10,11 +10,11 @@
 
 #include "main.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
     class LogicalDevice;
 }
 
-namespace vku {
+namespace vkfw_core {
 
     struct file_not_found final : public std::exception {
         explicit file_not_found(std::string filename) : std::exception{ "File not found." }, filename_{ std::move(filename) } {}

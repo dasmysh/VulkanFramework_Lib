@@ -12,7 +12,7 @@
 #include "gfx/vk/LogicalDevice.h"
 #include "gfx/vk/memory/DeviceMemory.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class Buffer
     {

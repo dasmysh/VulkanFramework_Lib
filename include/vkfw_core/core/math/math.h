@@ -12,7 +12,7 @@
 
 #include <cmath>
 
-namespace vku::math {
+namespace vkfw_core::math {
 
     /**
      *  Modulo operator that correctly simulates a ring.

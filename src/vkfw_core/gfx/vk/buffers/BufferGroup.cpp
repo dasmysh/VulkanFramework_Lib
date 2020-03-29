@@ -14,7 +14,7 @@
 // ReSharper restore CppUnusedIncludeDirective
 #include "gfx/vk/QueuedDeviceTransfer.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     BufferGroup::BufferGroup(const LogicalDevice* device, const vk::MemoryPropertyFlags& memoryFlags) :
         device_{ device },

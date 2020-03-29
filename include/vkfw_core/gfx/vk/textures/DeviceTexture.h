@@ -11,7 +11,7 @@
 #include "main.h"
 #include "Texture.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class DeviceTexture final : public Texture
     {

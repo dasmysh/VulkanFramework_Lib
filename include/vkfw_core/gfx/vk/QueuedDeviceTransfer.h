@@ -13,7 +13,7 @@
 
 #include <glm/gtc/type_precision.hpp>
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class DeviceBuffer;
     class HostBuffer;
@@ -54,14 +54,14 @@ namespace vku::gfx {
 
         void FinishTransfer();
 
-        template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> CreateDeviceBufferWithData(
+        template<class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> CreateDeviceBufferWithData(
             vk::BufferUsageFlags deviceBufferUsage, vk::MemoryPropertyFlags memoryFlags,
             const std::vector<std::uint32_t>& deviceBufferQueues, const T& data);
-        template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> CreateDeviceBufferWithData(
+        template<class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> CreateDeviceBufferWithData(
             vk::BufferUsageFlags deviceBufferUsage, vk::MemoryPropertyFlags memoryFlags,
             const std::vector<std::uint32_t>& deviceBufferQueues, std::size_t bufferSize, const T& data);
 
-        template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> TransferDataToBuffer(const T& data, const Buffer& dst, std::size_t dstOffset);
+        template<class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value> TransferDataToBuffer(const T& data, const Buffer& dst, std::size_t dstOffset);
 
     private:
         void AddStagingBuffer(std::size_t dataSize, const void* data);
@@ -80,7 +80,7 @@ namespace vku::gfx {
         std::vector<vk::UniqueCommandBuffer> transferCmdBuffers_;
     };
 
-    template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> QueuedDeviceTransfer::CreateDeviceBufferWithData(
+    template <class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> QueuedDeviceTransfer::CreateDeviceBufferWithData(
         vk::BufferUsageFlags deviceBufferUsage, vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& deviceBufferQueues,
         std::size_t bufferSize, const T& data)
     {
@@ -88,14 +88,14 @@ namespace vku::gfx {
             bufferSize, byteSizeOf(data), data.data());
     }
 
-    template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> QueuedDeviceTransfer::CreateDeviceBufferWithData(
+    template <class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> QueuedDeviceTransfer::CreateDeviceBufferWithData(
         vk::BufferUsageFlags deviceBufferUsage, vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& deviceBufferQueues, const T& data)
     {
         return CreateDeviceBufferWithData(deviceBufferUsage, memoryFlags, deviceBufferQueues,
             byteSizeOf(data), data.data());
     }
 
-    template <class T> std::enable_if_t<vku::has_contiguous_memory<T>::value> QueuedDeviceTransfer::TransferDataToBuffer(const T& data,
+    template <class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value> QueuedDeviceTransfer::TransferDataToBuffer(const T& data,
         const Buffer& dst, std::size_t dstOffset)
     {
         TransferDataToBuffer(byteSizeOf(data), data.data(), dst, dstOffset);

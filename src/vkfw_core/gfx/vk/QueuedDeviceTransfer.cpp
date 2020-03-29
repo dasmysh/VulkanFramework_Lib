@@ -13,7 +13,7 @@
 #include "gfx/vk/textures/DeviceTexture.h"
 #include "gfx/vk/CommandBuffers.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     QueuedDeviceTransfer::QueuedDeviceTransfer(const LogicalDevice* device, std::pair<std::uint32_t, std::uint32_t> transferQueue) :
         device_{ device },

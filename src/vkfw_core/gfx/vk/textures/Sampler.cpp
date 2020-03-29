@@ -8,7 +8,7 @@
 
 #include "gfx/vk/textures/Sampler.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     Sampler::Sampler()
     {

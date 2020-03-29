@@ -12,7 +12,7 @@
 #include "Texture.h"
 #include "core/type_traits.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class HostTexture final : public Texture
     {

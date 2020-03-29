@@ -14,7 +14,7 @@
 #include "gfx/meshes/MeshInfo.h"
 
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     SceneMeshNode::SceneMeshNode() :
         localTransform_{ glm::mat4{1.0} }, parent_{ nullptr }

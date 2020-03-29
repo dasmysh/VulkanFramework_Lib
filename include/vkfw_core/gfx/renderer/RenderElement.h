@@ -14,7 +14,7 @@
 #include "main.h"
 #include "core/math/primitives.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     class DeviceBuffer;
     class UniformBufferObject;

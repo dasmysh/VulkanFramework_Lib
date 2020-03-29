@@ -11,7 +11,7 @@
 #include "gfx/vk/textures/HostTexture.h"
 
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     DeviceMemoryGroup::DeviceMemoryGroup(const LogicalDevice* device, const vk::MemoryPropertyFlags& memoryFlags) :
         device_{ device },

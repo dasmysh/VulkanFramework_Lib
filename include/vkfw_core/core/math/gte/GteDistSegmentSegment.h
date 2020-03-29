@@ -78,8 +78,8 @@ namespace gte
     template <typename Real, typename Vector, typename Segment>
     using DCPSegmentSegment = DCPQuery<Real, Vector, Segment, Segment>;
 
-    using DCPSegment2Segment2 = DCPSegmentSegment<float, glm::vec2, vku::math::Seg2<float>>;
-    using DCPSegment3Segment3 = DCPSegmentSegment<float, glm::vec3, vku::math::Seg3<float>>;
+    using DCPSegment2Segment2 = DCPSegmentSegment<float, glm::vec2, vkfw_core::math::Seg2<float>>;
+    using DCPSegment3Segment3 = DCPSegmentSegment<float, glm::vec3, vkfw_core::math::Seg3<float>>;
 
     //----------------------------------------------------------------------------
     template <typename Real, typename Vector, typename Segment>

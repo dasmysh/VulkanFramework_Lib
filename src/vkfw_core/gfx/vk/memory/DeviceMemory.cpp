@@ -11,7 +11,7 @@
 #include "gfx/vk/textures/Texture.h"
 #include "gfx/vk/buffers/Buffer.h"
 
-namespace vku::gfx {
+namespace vkfw_core::gfx {
 
     DeviceMemory::DeviceMemory(const LogicalDevice* device, const vk::MemoryPropertyFlags& properties) :
         device_{ device },

@@ -12,7 +12,7 @@
 #include <array>
 #include "core/aligned_vector.h"
 
-namespace vku {
+namespace vkfw_core {
 
     template<typename T>
     struct has_contiguous_memory : std::false_type {};
@@ -38,7 +38,7 @@ namespace vku {
     template<typename T>
     struct has_contiguous_memory<aligned_vector<T>> : std::true_type {};
 
-    template<class T> std::enable_if_t<vku::has_contiguous_memory<T>::value, std::size_t> byteSizeOf(const T& data) {
+    template<class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value, std::size_t> byteSizeOf(const T& data) {
         return static_cast<std::size_t>(sizeof(typename T::value_type) * data.size());
     }
 

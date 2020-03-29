@@ -14,7 +14,7 @@
 #include <glm/gtx/exterior_product.hpp>
 #include <glm/gtc/constants.hpp>
 
-namespace vku::math {
+namespace vkfw_core::math {
 
     /**
     *  Checks if two segments intersect.
