@@ -181,8 +181,8 @@ $RECYCLE.BIN/
 *.out
 *.app
 
-resources/shader/**/*.gen
-resources/shader/**/*.gen.*
+resources/**/*.gen
+resources/**/*.gen.*
 resources/**/*.myshbin
 resources/**/*.vkbin
 resources/**/*.spv
