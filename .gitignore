@@ -182,7 +182,9 @@ $RECYCLE.BIN/
 *.app
 
 resources/shader/**/*.gen
+resources/shader/**/*.gen.*
 resources/**/*.myshbin
+resources/**/*.vkbin
 resources/**/*.spv
 
 # include all resource files
