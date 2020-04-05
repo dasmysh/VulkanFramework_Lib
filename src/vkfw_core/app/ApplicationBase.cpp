@@ -427,6 +427,12 @@ namespace vkfw_core {
     void ApplicationBase::InitVulkan(const std::string& applicationName, std::uint32_t applicationVersion)
     {
         spdlog::info("Initializing Vulkan...");
+        {
+            vk::DynamicLoader dl;
+            auto vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
+            VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
+        }
+
         std::vector<const char*> enabledExtensions;
         auto glfwExtensionCount = 0U;
         auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
@@ -454,10 +460,6 @@ namespace vkfw_core {
                                         static_cast<std::uint32_t>(api_version)};
             vk::InstanceCreateInfo createInfo{ vk::InstanceCreateFlags(), &appInfo, static_cast<std::uint32_t>(vkValidationLayers_.size()), vkValidationLayers_.data(),
                 static_cast<std::uint32_t>(enabledExtensions.size()), enabledExtensions.data() };
-
-            vk::DynamicLoader dl;
-            auto vkGetInstanceProcAddr = dl.getProcAddress<PFN_vkGetInstanceProcAddr>("vkGetInstanceProcAddr");
-            VULKAN_HPP_DEFAULT_DISPATCHER.init(vkGetInstanceProcAddr);
 
             vkInstance_ = vk::createInstanceUnique(createInfo);
             VULKAN_HPP_DEFAULT_DISPATCHER.init(vkInstance_.get());
