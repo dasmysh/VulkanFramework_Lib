@@ -95,9 +95,30 @@ namespace vkfw_core::qf {
         for (std::uint32_t i = 0; i < queueCount; i++) {
             if (queueProps[i].queueCount < desc.priorities_.size()) { continue; }
 
-            if ((reqFlags == vk::QueueFlagBits::eTransfer && queueProps[i].queueFlags == vk::QueueFlagBits::eTransfer)
-                || (reqFlags != vk::QueueFlagBits::eTransfer && queueProps[i].queueFlags & reqFlags)) {
-                if (surface && desc.graphics_ && (device.getSurfaceSupportKHR(i, surface) != 0U)) {
+            bool flagsFit = false;
+            if (reqFlags == vk::QueueFlagBits::eTransfer
+                && (queueProps[i].queueFlags == vk::QueueFlagBits::eTransfer
+                    || queueProps[i].queueFlags == (vk::QueueFlagBits::eTransfer | vk::QueueFlagBits::eSparseBinding))) {
+                flagsFit = true;
+            }
+            if (reqFlags == vk::QueueFlagBits::eTransfer
+                && (queueProps[i].queueFlags == vk::QueueFlagBits::eTransfer
+                    || queueProps[i].queueFlags == (vk::QueueFlagBits::eTransfer | vk::QueueFlagBits::eSparseBinding))) {
+                flagsFit = true;
+            }
+            if (reqFlags == (vk::QueueFlagBits::eTransfer | vk::QueueFlagBits::eSparseBinding)
+                && queueProps[i].queueFlags == (vk::QueueFlagBits::eTransfer | vk::QueueFlagBits::eSparseBinding)) {
+                flagsFit = true;
+            }
+            if ((reqFlags != vk::QueueFlagBits::eTransfer && reqFlags != vk::QueueFlagBits::eSparseBinding
+                 && reqFlags != (vk::QueueFlagBits::eTransfer | vk::QueueFlagBits::eSparseBinding))
+                && queueProps[i].queueFlags & reqFlags) {
+                flagsFit = true;
+            }
+
+
+            if (flagsFit) {
+                if (surface && desc.graphics_ && (device.getSurfaceSupportKHR(i, surface) == 0U)) {
                     continue;
                 }
                 return i;
