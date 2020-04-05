@@ -56,7 +56,7 @@ namespace vkfw_core::gfx {
     UniformBufferObject::~UniformBufferObject() = default;
 
     void UniformBufferObject::AddUBOToBuffer(MemoryGroup* memoryGroup, unsigned int bufferIndex, std::size_t bufferOffset, std::size_t size,
-                                             std::variant<void*, const void*> data)
+                                             const void* data)
     {
         memoryGroup_ = memoryGroup;
         bufferIdx_ = bufferIndex;
@@ -73,7 +73,7 @@ namespace vkfw_core::gfx {
 
     void UniformBufferObject::AddUBOToBufferPrefill(MemoryGroup* memoryGroup, unsigned int bufferIndex,
                                                     std::size_t bufferOffset, std::size_t size,
-                                                    std::variant<void*, const void*> data)
+                                                    const void* data)
     {
         memoryGroup_ = memoryGroup;
         bufferIdx_ = bufferIndex;

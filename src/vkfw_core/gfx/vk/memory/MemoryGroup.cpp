@@ -11,6 +11,10 @@
 
 namespace vkfw_core::gfx {
 
+    template<class T> struct always_false : std::false_type
+    {
+    };
+
     MemoryGroup::MemoryGroup(const LogicalDevice* device, const vk::MemoryPropertyFlags& memoryFlags) :
         DeviceMemoryGroup(device, memoryFlags),
         hostMemory_{ device, memoryFlags | vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent }
@@ -45,12 +49,29 @@ namespace vkfw_core::gfx {
                                              std::variant<void*, const void*> data,
                                              const std::function<void(void*)>& deleter)
     {
+        assert(std::holds_alternative<void*>(data) || !deleter);
         BufferContentsDesc bufferContentsDesc;
         bufferContentsDesc.bufferIdx_ = bufferIdx;
         bufferContentsDesc.offset_ = offset;
         bufferContentsDesc.size_ = dataSize;
-        bufferContentsDesc.data_ = data;
-        bufferContentsDesc.deleter_ = deleter;
+        if (deleter) {
+
+            bufferContentsDesc.data_ = data;
+            bufferContentsDesc.deleter_ = deleter;
+        } else {
+            bufferContentsDesc.data_ = std::visit(
+                [](auto&& arg) {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (std::is_same_v<T, void*>) {
+                        return const_cast<const void*>(arg);
+                    } else if constexpr (std::is_same_v<T, const void*>) {
+                        return arg;
+                    }
+                    else static_assert(always_false<T>::value, "non-exhaustive visitor!");
+                },
+                data);
+            bufferContentsDesc.deleter_ = nullptr;
+        }
         bufferContents_.push_back(bufferContentsDesc);
     }
 
@@ -72,14 +93,32 @@ namespace vkfw_core::gfx {
                                               const glm::u32vec3& size, std::variant<void*, const void*> data,
                                               const std::function<void(void*)>& deleter)
     {
+        assert((deleter && std::holds_alternative<void*>(data))
+               || (!deleter && std::holds_alternative<const void*>(data)));
         ImageContentsDesc imgContDesc;
         imgContDesc.imageIdx_ = textureIdx;
         imgContDesc.aspectFlags_ = aspectFlags;
         imgContDesc.mipLevel_ = mipLevel;
         imgContDesc.arrayLayer_ = arrayLayer;
         imgContDesc.size_ = size;
-        imgContDesc.data_ = data;
-        imgContDesc.deleter_ = deleter;
+        if (deleter) {
+
+            imgContDesc.data_ = data;
+            imgContDesc.deleter_ = deleter;
+        } else {
+            imgContDesc.data_ = std::visit(
+                [](auto&& arg) {
+                    using T = std::decay_t<decltype(arg)>;
+                    if constexpr (std::is_same_v<T, void*>) {
+                        return const_cast<const void*>(arg);
+                    } else if constexpr (std::is_same_v<T, const void*>) {
+                        return arg;
+                    } else
+                        static_assert(always_false<T>::value, "non-exhaustive visitor!");
+                },
+                data);
+            imgContDesc.deleter_ = nullptr;
+        }
         imageContents_.push_back(imgContDesc);
     }
 
