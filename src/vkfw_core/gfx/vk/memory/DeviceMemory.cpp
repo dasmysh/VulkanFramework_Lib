@@ -151,19 +151,19 @@ namespace vkfw_core::gfx {
 
         if (layout.rowPitch == dataSize.x && layout.depthPitch == dataSize.y
             && offset.x == 0 && offset.y == 0) {
-            processFunc(deviceBytes, 0, dataSize.x * dataSize.y * dataSize.z);
+            processFunc(deviceBytes, 0, static_cast<std::size_t>(dataSize.x) * static_cast<std::size_t>(dataSize.y) * static_cast<std::size_t>(dataSize.z));
         }
         else if (layout.rowPitch == dataSize.x && offset.x == 0) {
             for (auto z = 0U; z < dataSize.z; ++z) {
                 auto deviceMemPos = z * layout.depthPitch + offset.y * layout.rowPitch;
                 auto dataMemPos = z * dataSize.x * dataSize.y;
-                processFunc(&deviceBytes[deviceMemPos], dataMemPos, dataSize.x * dataSize.y); // NOLINT
+                processFunc(&deviceBytes[deviceMemPos], dataMemPos, static_cast<std::size_t>(dataSize.x) * static_cast<std::size_t>(dataSize.y)); // NOLINT
             }
         }
         else {
             for (auto z = 0U; z < dataSize.z; ++z) {
                 for (auto y = 0U; y < dataSize.y; ++y) {
-                    auto deviceMemPos = z * layout.depthPitch + (offset.y + y) * layout.rowPitch + offset.x;
+                    auto deviceMemPos = z * layout.depthPitch + (static_cast<std::size_t>(offset.y) + y) * layout.rowPitch + offset.x;
                     auto dataMemPos = (z * dataSize.y + y) * dataSize.x;
                     processFunc(&deviceBytes[deviceMemPos], dataMemPos, dataSize.x); // NOLINT
                 }

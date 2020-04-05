@@ -47,7 +47,7 @@
 #include <array>
 
 // Data
-enum GlfwClientApi
+enum class GlfwClientApi : unsigned int
 {
     GlfwClientApi_Unknown,
     GlfwClientApi_OpenGL,
@@ -56,7 +56,7 @@ enum GlfwClientApi
 
 struct ImGui_GLFWWindow {
     GLFWwindow*      g_Window = nullptr;
-    GlfwClientApi    g_ClientApi = GlfwClientApi_Unknown;
+    GlfwClientApi    g_ClientApi = GlfwClientApi::GlfwClientApi_Unknown;
     double           g_Time = 0.0;
     std::array<bool, 5> g_MouseJustPressed = {false, false, false, false, false};
     std::array<GLFWcursor*, ImGuiMouseCursor_COUNT> g_MouseCursors = {nullptr};
@@ -166,12 +166,12 @@ static bool ImGui_ImplGlfw_Init(ImGui_GLFWWindow** imgui_window, GLFWwindow* win
 
 bool ImGui_ImplGlfw_InitForOpenGL(ImGui_GLFWWindow** imgui_window, GLFWwindow* window)
 {
-    return ImGui_ImplGlfw_Init(imgui_window, window, GlfwClientApi_OpenGL);
+    return ImGui_ImplGlfw_Init(imgui_window, window, GlfwClientApi::GlfwClientApi_OpenGL);
 }
 
 bool ImGui_ImplGlfw_InitForVulkan(ImGui_GLFWWindow** imgui_window, GLFWwindow* window)
 {
-    return ImGui_ImplGlfw_Init(imgui_window, window, GlfwClientApi_Vulkan);
+    return ImGui_ImplGlfw_Init(imgui_window, window, GlfwClientApi::GlfwClientApi_Vulkan);
 }
 
 void ImGui_ImplGlfw_Shutdown(ImGui_GLFWWindow* imgui_window)
@@ -180,7 +180,7 @@ void ImGui_ImplGlfw_Shutdown(ImGui_GLFWWindow* imgui_window)
         glfwDestroyCursor(cursor);
         cursor = nullptr;
     }
-    imgui_window->g_ClientApi = GlfwClientApi_Unknown;
+    imgui_window->g_ClientApi = GlfwClientApi::GlfwClientApi_Unknown;
 
     delete imgui_window; // NOLINT
 }

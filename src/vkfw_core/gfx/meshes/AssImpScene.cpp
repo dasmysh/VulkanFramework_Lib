@@ -208,9 +208,9 @@ namespace vkfw_core::gfx {
                     unsigned int indexOfCurrentBone = bones[aiBone->mName.C_Str()];
 
                     for (auto w = 0U; w < aiBone->mNumWeights; ++w) {
-
-                        boneWeights[currentMeshVertexOffset + aiBone->mWeights[w].mVertexId].emplace_back( // NOLINT
-                            indexOfCurrentBone, aiBone->mWeights[w].mWeight); // NOLINT
+                        auto boneIndex = static_cast<std::size_t>(currentMeshVertexOffset)
+                                         + static_cast<std::size_t>(aiBone->mWeights[w].mVertexId); // NOLINT
+                        boneWeights[boneIndex].emplace_back(indexOfCurrentBone, aiBone->mWeights[w].mWeight); // NOLINT
                     }
                 }
             }

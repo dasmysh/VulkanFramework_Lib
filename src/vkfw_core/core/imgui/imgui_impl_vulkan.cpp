@@ -207,7 +207,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImGui_ImplVulkan_InitInfo* vkinfo, ImDrawDa
     if (draw_data->TotalVtxCount == 0) { return; }
 
     FrameDataForRender* fd = &vkinfo->internal_->g_FramesDataBuffers[vkinfo->internal_->g_FrameIndex];
-    vkinfo->internal_->g_FrameIndex = static_cast<int>(static_cast<unsigned int>((vkinfo->internal_->g_FrameIndex + 1)) % vkinfo->internal_->g_FramesDataBuffers.size());
+    vkinfo->internal_->g_FrameIndex = ((static_cast<int>(static_cast<std::size_t>(vkinfo->internal_->g_FrameIndex) + 1)) % vkinfo->internal_->g_FramesDataBuffers.size());
 
     // Create the Vertex and Index buffers:
     size_t vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
@@ -332,7 +332,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture(ImGui_ImplVulkan_InitInfo* vkinfo, VkCo
     int width;
     int height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
-    size_t upload_size = width*height*4*sizeof(char);
+    size_t upload_size = static_cast<std::size_t>(width)*static_cast<std::size_t>(height)*4ULL*sizeof(char);
 
     VkResult err;
 

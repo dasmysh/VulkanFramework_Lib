@@ -25,7 +25,7 @@ namespace vkfw_core::gfx {
         auto texSize = rhs.GetSize();
         auto mipLevels = rhs.GetMipLevels();
         InitializeImage(texSize, mipLevels);
-        std::vector<std::uint8_t> tmp(texSize.x * texSize.y * texSize.z);
+        std::vector<std::uint8_t> tmp(static_cast<std::size_t>(texSize.x) * static_cast<std::size_t>(texSize.y) * static_cast<std::size_t>(texSize.z));
         for (auto ml = 0U; ml < mipLevels; ++ml) {
             for (auto al = 0U; al < texSize.w; ++al) {
                 rhs.DownloadData(ml, al, glm::xyz(texSize), tmp.data());
