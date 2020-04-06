@@ -215,7 +215,10 @@ namespace vkfw_core {
      * @param applicationVersion the applications version.
      * @param configFileName the configuration file to use.
      */
-    ApplicationBase::ApplicationBase(const std::string& applicationName, std::uint32_t applicationVersion, const std::string& configFileName) :
+    ApplicationBase::ApplicationBase(const std::string& applicationName, std::uint32_t applicationVersion,
+                                     const std::string& configFileName, const std::vector<std::string>& requiredInstanceExtensions,
+                                     const std::vector<std::string>& requiredDeviceExtensions)
+        :
         configFileName_{ configFileName },
         pause_(true),
         stopped_(false),
@@ -240,13 +243,13 @@ namespace vkfw_core {
             (*oa) << cereal::make_nvp("configuration", config_);
         }
 
-        InitVulkan(applicationName, applicationVersion);
+        InitVulkan(applicationName, applicationVersion, requiredInstanceExtensions);
         instance_ = this;
 
         // TODO: Check if the GUI works with multiple windows. [10/19/2018 Sebastian Maisch]
         bool first = true;
         for (auto& wc : config_.windows_) {
-            windows_.emplace_back(wc, first);
+            windows_.emplace_back(wc, first, requiredDeviceExtensions);
             windows_.back().ShowWindow();
             first = false;
         }
@@ -445,7 +448,8 @@ namespace vkfw_core {
         }
     }
 
-    void ApplicationBase::InitVulkan(const std::string& applicationName, std::uint32_t applicationVersion)
+    void ApplicationBase::InitVulkan(const std::string& applicationName, std::uint32_t applicationVersion,
+                                     const std::vector<std::string>& requiredInstanceExtensions)
     {
         spdlog::info("Initializing Vulkan...");
         {
@@ -457,9 +461,13 @@ namespace vkfw_core {
         std::vector<const char*> enabledExtensions;
         auto glfwExtensionCount = 0U;
         auto glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
-        enabledExtensions.resize(glfwExtensionCount);
+        enabledExtensions.resize(glfwExtensionCount + requiredInstanceExtensions.size());
         // NOLINTNEXTLINE
-        for (auto i = 0U; i < glfwExtensionCount; ++i) { enabledExtensions[i] = glfwExtensions[i]; }
+        auto i = 0ULL;
+        for (; i < glfwExtensionCount; ++i) { enabledExtensions[i] = glfwExtensions[i]; }
+        for (; i < glfwExtensionCount + requiredInstanceExtensions.size(); ++i) {
+            enabledExtensions[i] = requiredInstanceExtensions[i - glfwExtensionCount].c_str();
+        }
 
         // NOLINTNEXTLINE
         auto useValidationLayers = config_.useValidationLayers_;
@@ -515,18 +523,19 @@ namespace vkfw_core {
         spdlog::info("Initializing Vulkan... done.");
     }
 
-    std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(const cfg::WindowCfg& windowCfg,
+    std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(
+        const cfg::WindowCfg& windowCfg, const std::vector<std::string>& requiredDeviceExtensions,
         const vk::SurfaceKHR& surface, const std::function<bool(const vk::PhysicalDevice&)>& additionalDeviceChecks) const
     {
         vk::PhysicalDevice physicalDevice;
         std::vector<gfx::DeviceQueueDesc> deviceQueueDesc;
-        std::vector<std::string> requiredExtensions;
-        if (surface) { requiredExtensions.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME); }
+        std::vector<std::string> requiredDeviceExtensionsInternal = requiredDeviceExtensions;
+        if (surface) { requiredDeviceExtensionsInternal.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME); }
         auto foundDevice = false;
         for (const auto& device : vkPhysicalDevices_) {
             deviceQueueDesc.clear();
 
-            if (!CheckDeviceExtensions(device.second, requiredExtensions)) { continue; }
+            if (!CheckDeviceExtensions(device.second, requiredDeviceExtensions)) { continue; }
             if (!additionalDeviceChecks(device.second)) { continue; }
 
             for (const auto& queueDesc : windowCfg.queues_) {
@@ -565,7 +574,8 @@ namespace vkfw_core {
             throw std::runtime_error("Could not find suitable Vulkan GPU.");
         }
 
-        auto logicalDevice = std::make_unique<gfx::LogicalDevice>(windowCfg, physicalDevice, deviceQueueDesc, surface);
+        auto logicalDevice = std::make_unique<gfx::LogicalDevice>(windowCfg, physicalDevice, deviceQueueDesc,
+                                                                  requiredDeviceExtensionsInternal, surface);
         VULKAN_HPP_DEFAULT_DISPATCHER.init(logicalDevice->GetDevice());
         return std::move(logicalDevice);
     }
@@ -576,7 +586,10 @@ namespace vkfw_core {
         return CreateLogicalDevice(windowCfg, surface, [](const vk::PhysicalDevice&) { return true; });
     }*/
 
-    std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const vk::SurfaceKHR& surface) const
+    std::unique_ptr<gfx::LogicalDevice>
+    ApplicationBase::CreateLogicalDevice(const cfg::WindowCfg& windowCfg,
+                                         const std::vector<std::string>& requiredDeviceExtensions,
+                                         const vk::SurfaceKHR& surface) const
     {
         auto requestedFormats = cfg::GetVulkanSurfaceFormatsFromConfig(windowCfg);
         std::sort(requestedFormats.begin(), requestedFormats.end(), [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0.format < f1.format; });
@@ -585,7 +598,7 @@ namespace vkfw_core {
         glm::uvec2 requestedExtend(windowCfg.windowWidth_, windowCfg.windowHeight_);
 
         // NOLINTNEXTLINE
-        return CreateLogicalDevice(windowCfg, surface, [&surface, &requestedFormats, &requestedPresentMode, &requestedAdditionalImgCnt, &requestedExtend](const vk::PhysicalDevice& device) {
+        return CreateLogicalDevice(windowCfg, requiredDeviceExtensions, surface, [&surface, &requestedFormats, &requestedPresentMode, &requestedAdditionalImgCnt, &requestedExtend](const vk::PhysicalDevice& device) {
             // NOLINTNEXTLINE
             auto deviceSurfaceCaps = device.getSurfaceCapabilitiesKHR(surface);
             auto deviceSurfaceFormats = device.getSurfaceFormatsKHR(surface);

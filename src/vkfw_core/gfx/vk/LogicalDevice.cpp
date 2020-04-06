@@ -19,7 +19,10 @@
 namespace vkfw_core::gfx {
 
     LogicalDevice::LogicalDevice(const cfg::WindowCfg& windowCfg, const vk::PhysicalDevice& phDevice,
-        std::vector<DeviceQueueDesc> queueDescs, const vk::SurfaceKHR& surface) :
+                                 std::vector<DeviceQueueDesc> queueDescs,
+                                 const std::vector<std::string>& requiredDeviceExtensions,
+                                 const vk::SurfaceKHR& surface)
+        :
         windowCfg_(windowCfg),
         vkPhysicalDevice_(phDevice),
         vkPhysicalDeviceLimits_(phDevice.getProperties().limits), // NOLINT
@@ -70,6 +73,13 @@ namespace vkfw_core::gfx {
             auto extensions = vkPhysicalDevice_.enumerateDeviceExtensionProperties();
             for (const auto& extension : extensions) {
                 spdlog::info("- {}[SpecVersion: {}]", extension.extensionName, extension.specVersion);
+            }
+
+            enabledDeviceExtensions.resize(requiredDeviceExtensions.size());
+            // NOLINTNEXTLINE
+            auto i = 0ULL;
+            for (; i < requiredDeviceExtensions.size(); ++i) {
+                enabledDeviceExtensions[i] = requiredDeviceExtensions[i].c_str();
             }
 
             auto dbgMkFound = std::find_if(extensions.begin(), extensions.end(),

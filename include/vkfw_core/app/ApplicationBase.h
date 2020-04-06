@@ -31,7 +31,10 @@ namespace vkfw_core {
     class ApplicationBase
     {
     public:
-        ApplicationBase(const std::string& applicationName, std::uint32_t applicationVersion, const std::string& configFileName);
+        ApplicationBase(const std::string& applicationName, std::uint32_t applicationVersion,
+                        const std::string& configFileName,
+                        const std::vector<std::string>& requiredInstanceExtensions = {},
+                        const std::vector<std::string>& requiredDeviceExtensions = {});
         ApplicationBase(const ApplicationBase&) = delete;
         ApplicationBase(ApplicationBase&&) = delete;
         ApplicationBase& operator=(const ApplicationBase&) = delete;
@@ -67,7 +70,7 @@ namespace vkfw_core {
         [[nodiscard]] const std::vector<const char*>& GetVKValidationLayers() const { return vkValidationLayers_; }
         [[nodiscard]] const vk::Instance& GetVKInstance() const { return *vkInstance_; }
         [[nodiscard]] std::unique_ptr<gfx::LogicalDevice>
-        CreateLogicalDevice(const cfg::WindowCfg& windowCfg,
+        CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const std::vector<std::string>& requiredDeviceExtensions,
             const vk::SurfaceKHR& surface = vk::SurfaceKHR()) const;
         // std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const vk::SurfaceKHR& surface) const;
 
@@ -123,10 +126,13 @@ namespace vkfw_core {
         virtual void RenderGUI(const VKWindow* window) = 0;
 
     private:
-        void InitVulkan(const std::string& applicationName, std::uint32_t applicationVersion);
+        void InitVulkan(const std::string& applicationName, std::uint32_t applicationVersion,
+                        const std::vector<std::string>& requiredInstanceExtensions);
         static unsigned int ScorePhysicalDevice(const vk::PhysicalDevice& device);
         static bool CheckDeviceExtensions(const vk::PhysicalDevice& device, const std::vector<std::string>& requiredExtensions);
-        std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const vk::SurfaceKHR& surface,
+        std::unique_ptr<gfx::LogicalDevice>
+        CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const std::vector<std::string>& requiredDeviceExtensions,
+                            const vk::SurfaceKHR& surface,
                             const std::function<bool(const vk::PhysicalDevice&)>& additionalDeviceChecks) const;
         [[nodiscard]] PFN_vkVoidFunction LoadVKInstanceFunction(const std::string& functionName,
                                                                 const std::string& extensionName,

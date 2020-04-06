@@ -47,7 +47,9 @@ namespace vkfw_core::gfx {
     {
     public:
         LogicalDevice(const cfg::WindowCfg& windowCfg, const vk::PhysicalDevice& phDevice,
-            std::vector<DeviceQueueDesc> queueDescs, const vk::SurfaceKHR& surface = vk::SurfaceKHR());
+                      std::vector<DeviceQueueDesc> queueDescs,
+                      const std::vector<std::string>& requiredDeviceExtensions,
+                      const vk::SurfaceKHR& surface = vk::SurfaceKHR());
         LogicalDevice(const LogicalDevice&); // TODO: implement [10/30/2016 Sebastian Maisch]
         LogicalDevice(LogicalDevice&&) noexcept;
         LogicalDevice& operator=(const LogicalDevice&);
