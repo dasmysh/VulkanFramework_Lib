@@ -525,7 +525,7 @@ namespace vkfw_core {
 
     std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(
         const cfg::WindowCfg& windowCfg, const std::vector<std::string>& requiredDeviceExtensions,
-        const vk::SurfaceKHR& surface, const std::function<bool(const vk::PhysicalDevice&)>& additionalDeviceChecks) const
+        const vk::SurfaceKHR& surface, const function_view<bool(const vk::PhysicalDevice&)>& additionalDeviceChecks) const
     {
         vk::PhysicalDevice physicalDevice;
         std::vector<gfx::DeviceQueueDesc> deviceQueueDesc;

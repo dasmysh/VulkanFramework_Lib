@@ -132,7 +132,8 @@ namespace vkfw_core::gfx {
                 && (memProperties.memoryTypes[typeToCheck].propertyFlags & properties) == properties); // NOLINT
     }
 
-    void DeviceMemory::MapAndProcess(std::size_t offset, std::size_t size, const std::function<void(void* deviceMem, std::size_t size)>& processFunc) const
+    void DeviceMemory::MapAndProcess(std::size_t offset, std::size_t size,
+                                     const function_view<void(void* deviceMem, std::size_t size)>& processFunc) const
     {
         assert(memoryProperties_ & (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent));
         auto deviceMem = device_->GetDevice().mapMemory(*vkDeviceMemory_, offset, size, vk::MemoryMapFlags());
@@ -142,7 +143,7 @@ namespace vkfw_core::gfx {
 
     void DeviceMemory::MapAndProcess(std::size_t offsetToTexture, const glm::u32vec3& offset,
         const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize,
-        const std::function<void(void* deviceMem, std::size_t offset, std::size_t size)>& processFunc) const
+        const function_view<void(void* deviceMem, std::size_t offset, std::size_t size)>& processFunc) const
     {
         assert(memoryProperties_ & (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent));
         auto mapOffset = offset.z * layout.depthPitch + offsetToTexture;

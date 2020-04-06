@@ -12,6 +12,8 @@
 
 #include <glm/vec2.hpp>
 
+#include <core/function_view.h>
+
 namespace vkfw_core::cfg {
     class Configuration;
 
@@ -133,7 +135,7 @@ namespace vkfw_core {
         std::unique_ptr<gfx::LogicalDevice>
         CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const std::vector<std::string>& requiredDeviceExtensions,
                             const vk::SurfaceKHR& surface,
-                            const std::function<bool(const vk::PhysicalDevice&)>& additionalDeviceChecks) const;
+                            const function_view<bool(const vk::PhysicalDevice&)>& additionalDeviceChecks) const;
         [[nodiscard]] PFN_vkVoidFunction LoadVKInstanceFunction(const std::string& functionName,
                                                                 const std::string& extensionName,
                                                                 bool mandatory = false) const;

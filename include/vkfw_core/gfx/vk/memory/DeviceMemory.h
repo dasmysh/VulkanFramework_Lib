@@ -12,6 +12,8 @@
 
 #include <glm/gtc/type_precision.hpp>
 
+#include <core/function_view.h>
+
 namespace vkfw_core::gfx {
 
     class Buffer;
@@ -53,10 +55,11 @@ namespace vkfw_core::gfx {
     private:
         static bool CheckMemoryType(const vk::PhysicalDeviceMemoryProperties& memProperties, std::uint32_t typeToCheck,
                                     std::uint32_t typeFilter, const vk::MemoryPropertyFlags& properties);
-        void MapAndProcess(std::size_t offset, std::size_t size, const std::function<void(void* deviceMem, std::size_t size)>& processFunc) const;
+        void MapAndProcess(std::size_t offset, std::size_t size,
+                           const function_view<void(void* deviceMem, std::size_t size)>& processFunc) const;
         void MapAndProcess(std::size_t offsetToTexture, const glm::u32vec3& offset,
             const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize,
-            const std::function<void(void* deviceMem, std::size_t offset, std::size_t size)>& processFunc) const;
+            const function_view<void(void* deviceMem, std::size_t offset, std::size_t size)>& processFunc) const;
 
         /** Holds the device. */
         const LogicalDevice* device_;

@@ -80,7 +80,7 @@ namespace vkfw_core::gfx {
     Texture2D::~Texture2D() = default;
 
     void Texture2D::LoadTextureLDR(const std::string& filename, bool useSRGB,
-        const std::function<void(const glm::u32vec4& size, const TextureDescriptor& desc, void* data)>& loadFn)
+        const function_view<void(const glm::u32vec4& size, const TextureDescriptor& desc, void* data)>& loadFn)
     {
         auto imgWidth = 0;
         auto imgHeight = 0;
@@ -109,7 +109,7 @@ namespace vkfw_core::gfx {
     }
 
     void Texture2D::LoadTextureHDR(const std::string& filename,
-        const std::function<void(const glm::u32vec4& size, const TextureDescriptor& desc, void* data)>& loadFn)
+        const function_view<void(const glm::u32vec4& size, const TextureDescriptor& desc, void* data)>& loadFn)
     {
         auto imgWidth = 0;
         auto imgHeight = 0;

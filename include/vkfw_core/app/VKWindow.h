@@ -12,6 +12,8 @@
 
 #include <glm/vec2.hpp>
 
+#include <core/function_view.h>
+
 struct GLFWwindow;
 
 namespace vkfw_core::gfx {
@@ -70,7 +72,8 @@ namespace vkfw_core {
         void SubmitFrame();
 
         // for primary cmd buffer: dirty bit, update if needed. (start cmd buffer, begin render pass, execute other buffers, end pass, end buffer)
-        void UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer, std::size_t cmdBufferIndex)>& fillFunc) const;
+        void UpdatePrimaryCommandBuffers(const function_view<void(const vk::CommandBuffer& commandBuffer,
+                                                                  std::size_t cmdBufferIndex)>& fillFunc) const;
 
         [[nodiscard]] std::uint32_t GetCurrentlyRenderedImageIndex() const { return currentlyRenderedImage_; }
         [[nodiscard]] vk::Semaphore GetDataAvailableSemaphore() const { return *vkDataAvailableSemaphore_; }

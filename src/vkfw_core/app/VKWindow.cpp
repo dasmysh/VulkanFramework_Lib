@@ -661,7 +661,8 @@ namespace vkfw_core {
         ++frameCount_;
     }
 
-    void VKWindow::UpdatePrimaryCommandBuffers(const std::function<void(const vk::CommandBuffer& commandBuffer, std::size_t cmdBufferIndex)>& fillFunc) const
+    void VKWindow::UpdatePrimaryCommandBuffers(
+        const function_view<void(const vk::CommandBuffer& commandBuffer, std::size_t cmdBufferIndex)>& fillFunc) const
     {
         for (std::size_t i = 0U; i < vkCommandBuffers_.size(); ++i) {
             {

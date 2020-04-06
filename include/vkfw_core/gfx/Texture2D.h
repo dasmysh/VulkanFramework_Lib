@@ -12,6 +12,8 @@
 
 #include <glm/gtc/type_precision.hpp>
 
+#include <core/function_view.h>
+
 namespace vkfw_core::gfx {
 
     class QueuedDeviceTransfer;
@@ -53,9 +55,9 @@ namespace vkfw_core::gfx {
 
         Texture2D(const std::string& textureFilename, bool flipTexture, const LogicalDevice* device_);
         void LoadTextureLDR(const std::string& filename, bool useSRGB,
-            const std::function<void(const glm::u32vec4& size, const TextureDescriptor& desc, void* data)>& loadFn);
+            const function_view<void(const glm::u32vec4& size, const TextureDescriptor& desc, void* data)>& loadFn);
         void LoadTextureHDR(const std::string& filename,
-            const std::function<void(const glm::u32vec4& size, const TextureDescriptor& desc, void* data)>& loadFn);
+            const function_view<void(const glm::u32vec4& size, const TextureDescriptor& desc, void* data)>& loadFn);
         std::pair<unsigned int, vk::Format> FindFormat(const std::string& filename, int& imgChannels, FormatProperties fmtProps) const;
 
         /** Holds the texture file name. */
