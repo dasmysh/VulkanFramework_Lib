@@ -36,7 +36,7 @@ namespace vkfw_core::gfx {
 
         DeviceBuffer* GetBuffer(unsigned int bufferIdx) { return &deviceBuffers_[bufferIdx]; }
 
-        template<class T> std::enable_if_t<has_contiguous_memory<T>::value> AddBufferToGroup(const vk::BufferUsageFlags& usage, const T& data,
+        template<contiguous_memory T> void AddBufferToGroup(const vk::BufferUsageFlags& usage, const T& data,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
 
     private:
@@ -59,8 +59,8 @@ namespace vkfw_core::gfx {
         std::vector<std::pair<std::size_t, const void*>> bufferContents_;
     };
 
-    template <class T>
-    std::enable_if_t<has_contiguous_memory<T>::value> BufferGroup::AddBufferToGroup(const vk::BufferUsageFlags& usage,
+    template<contiguous_memory T>
+    void BufferGroup::AddBufferToGroup(const vk::BufferUsageFlags& usage,
         const T& data, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         AddBufferToGroup(usage, byteSizeOf(data), data.data(), queueFamilyIndices);

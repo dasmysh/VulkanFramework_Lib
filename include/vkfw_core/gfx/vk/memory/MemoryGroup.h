@@ -57,12 +57,12 @@ namespace vkfw_core::gfx {
         std::size_t GetHostBufferOffset(unsigned int bufferIdx) { return hostOffsets_[bufferIdx]; }
         std::size_t GetHostTextureOffset(unsigned int textureIdx) { return hostOffsets_[textureIdx + hostBuffers_.size()]; }
 
-
-        template<class T> std::enable_if_t<has_contiguous_memory<T>::value, unsigned int> AddBufferToGroup(
-            vk::BufferUsageFlags usage, const T& data,
-            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
-        template<class T> std::enable_if_t<has_contiguous_memory<T>::value> AddDataToBufferInGroup(
-            unsigned int bufferIdx, std::size_t offset, const T& data);
+        template<contiguous_memory T>
+        unsigned int
+        AddBufferToGroup(vk::BufferUsageFlags usage, const T& data,
+                         const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
+        template<contiguous_memory T>
+        void AddDataToBufferInGroup(unsigned int bufferIdx, std::size_t offset, const T& data);
 
     private:
         /** Holds the Vulkan device memory for the host objects. */
@@ -113,16 +113,15 @@ namespace vkfw_core::gfx {
         std::vector<ImageContentsDesc> imageContents_;
     };
 
-    template <class T>
-    std::enable_if_t<has_contiguous_memory<T>::value, unsigned int> MemoryGroup::AddBufferToGroup(
-        vk::BufferUsageFlags usage, const T& data, const std::vector<std::uint32_t>& queueFamilyIndices)
+    template<contiguous_memory T>
+    unsigned int MemoryGroup::AddBufferToGroup(vk::BufferUsageFlags usage, const T& data,
+                                               const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         return AddBufferToGroup(usage, byteSizeOf(data), data.data(), nullptr, queueFamilyIndices);
     }
 
-    template <class T>
-    std::enable_if_t<has_contiguous_memory<T>::value> MemoryGroup::AddDataToBufferInGroup(
-        unsigned int bufferIdx, std::size_t offset, const T& data)
+    template<contiguous_memory T>
+    void MemoryGroup::AddDataToBufferInGroup(unsigned int bufferIdx, std::size_t offset, const T& data)
     {
         AddDataToBufferInGroup(bufferIdx, offset, byteSizeOf(data), data.data());
     }
