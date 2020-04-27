@@ -69,8 +69,7 @@ namespace vkfw_core {
     }
 
 
-    ApplicationBase::GLFWInitObject::GLFWInitObject()
-    {
+    ApplicationBase::GLFWInitObject::GLFWInitObject() {
         glfwInit();
     }
 
@@ -215,8 +214,9 @@ namespace vkfw_core {
      * @param applicationVersion the applications version.
      * @param configFileName the configuration file to use.
      */
-    ApplicationBase::ApplicationBase(const std::string& applicationName, std::uint32_t applicationVersion,
-                                     const std::string& configFileName, const std::vector<std::string>& requiredInstanceExtensions,
+    ApplicationBase::ApplicationBase(const std::string_view& applicationName, std::uint32_t applicationVersion,
+                                     const std::string_view& configFileName,
+                                     const std::vector<std::string>& requiredInstanceExtensions,
                                      const std::vector<std::string>& requiredDeviceExtensions)
         :
         configFileName_{ configFileName },
@@ -227,7 +227,7 @@ namespace vkfw_core {
     {
         spdlog::debug("Trying to load configuration.");
         {
-            std::ifstream configFile(configFileName, std::ios::in);
+            std::ifstream configFile(configFileName.data(), std::ios::in);
             if (configFile.is_open()) {
                 auto ia = std::make_unique<cereal::XMLInputArchive>(configFile);
                 (*ia) >> cereal::make_nvp("configuration", config_);
@@ -238,7 +238,7 @@ namespace vkfw_core {
 
         {
             // always directly write configuration to update version.
-            std::ofstream ofs(configFileName, std::ios::out);
+            std::ofstream ofs(configFileName.data(), std::ios::out);
             auto oa = std::make_unique<cereal::XMLOutputArchive>(ofs);
             (*oa) << cereal::make_nvp("configuration", config_);
         }
@@ -448,7 +448,7 @@ namespace vkfw_core {
         }
     }
 
-    void ApplicationBase::InitVulkan(const std::string& applicationName, std::uint32_t applicationVersion,
+    void ApplicationBase::InitVulkan(const std::string_view& applicationName, std::uint32_t applicationVersion,
                                      const std::vector<std::string>& requiredInstanceExtensions)
     {
         spdlog::info("Initializing Vulkan...");
@@ -485,7 +485,7 @@ namespace vkfw_core {
         {
             // NOLINTNEXTLINE
             auto api_version = VK_API_VERSION_1_1;
-            vk::ApplicationInfo appInfo{applicationName.c_str(), applicationVersion, engineName, engineVersion,
+            vk::ApplicationInfo appInfo{applicationName.data(), applicationVersion, engineName.data(), engineVersion,
                                         static_cast<std::uint32_t>(api_version)};
             vk::InstanceCreateInfo createInfo{ vk::InstanceCreateFlags(), &appInfo, static_cast<std::uint32_t>(vkValidationLayers_.size()), vkValidationLayers_.data(),
                 static_cast<std::uint32_t>(enabledExtensions.size()), enabledExtensions.data() };

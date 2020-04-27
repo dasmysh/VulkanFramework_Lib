@@ -9,10 +9,11 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 
 namespace vkfw_core {
     /** The engine name. */
-    constexpr const char* engineName = "VKFW";
+    constexpr std::string_view engineName = "VKFW";
     /** The engine version. */
     constexpr std::uint32_t engineVersionMajor = 0;
     constexpr std::uint32_t engineVersionMinor = 1;

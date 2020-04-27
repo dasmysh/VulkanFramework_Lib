@@ -33,8 +33,8 @@ namespace vkfw_core {
     class ApplicationBase
     {
     public:
-        ApplicationBase(const std::string& applicationName, std::uint32_t applicationVersion,
-                        const std::string& configFileName,
+        ApplicationBase(const std::string_view& applicationName, std::uint32_t applicationVersion,
+                        const std::string_view& configFileName,
                         const std::vector<std::string>& requiredInstanceExtensions = {},
                         const std::vector<std::string>& requiredDeviceExtensions = {});
         ApplicationBase(const ApplicationBase&) = delete;
@@ -128,7 +128,7 @@ namespace vkfw_core {
         virtual void RenderGUI(const VKWindow* window) = 0;
 
     private:
-        void InitVulkan(const std::string& applicationName, std::uint32_t applicationVersion,
+        void InitVulkan(const std::string_view& applicationName, std::uint32_t applicationVersion,
                         const std::vector<std::string>& requiredInstanceExtensions);
         static unsigned int ScorePhysicalDevice(const vk::PhysicalDevice& device);
         static bool CheckDeviceExtensions(const vk::PhysicalDevice& device, const std::vector<std::string>& requiredExtensions);
