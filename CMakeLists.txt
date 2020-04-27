@@ -5,6 +5,7 @@ project(VKFWLib CXX)
 include(cmake/StandardProjectSettings.cmake)
 
 add_library(vkfw_options INTERFACE)
+set_project_options(vkfw_options)
 target_compile_features(vkfw_options INTERFACE cxx_std_20)
 
 add_library(vkfw_warnings INTERFACE)
@@ -32,7 +33,7 @@ if (ENABLE_PCH)
 endif()
 
 set(IMGUI_VERSION "1.75")
-set(GLM_VERSION "0.9.9.7")
+set(GLM_VERSION "0.9.9.8")
 
 set(CONAN_EXTRA_REQUIRES "")
 set(CONAN_EXTRA_OPTIONS "")
