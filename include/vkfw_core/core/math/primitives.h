@@ -38,38 +38,38 @@ namespace vkfw_core::math {
         explicit Frustum(const mat4& mat) noexcept;
 
         /** The six planes defining the frustum. */
-        std::array<vec4, NUM_FRUSTUM_PLANES> planes_;
+        std::array<vec4, NUM_FRUSTUM_PLANES> m_planes;
 
         /** Returns the left plane of the frustum. */
-        [[nodiscard]] vec4& left() { return planes_[0]; }
+        [[nodiscard]] vec4& left() { return m_planes[0]; }
         /** Returns the left plane of the frustum. */
-        [[nodiscard]] const vec4& left() const { return planes_[0]; }
+        [[nodiscard]] const vec4& left() const { return m_planes[0]; }
         /** Returns the right plane of the frustum. */
-        [[nodiscard]] vec4& right() { return planes_[1]; }
+        [[nodiscard]] vec4& right() { return m_planes[1]; }
         /** Returns the right plane of the frustum. */
-        [[nodiscard]] const vec4& right() const { return planes_[1]; }
+        [[nodiscard]] const vec4& right() const { return m_planes[1]; }
         /** Returns the top plane of the frustum. */
-        [[nodiscard]] vec4& top() { return planes_[2]; }
+        [[nodiscard]] vec4& top() { return m_planes[2]; }
         /** Returns the top plane of the frustum. */
-        [[nodiscard]] const vec4& top() const { return planes_[2]; }
+        [[nodiscard]] const vec4& top() const { return m_planes[2]; }
         /** Returns the bottom plane of the frustum. */
-        [[nodiscard]] vec4& bttm() { return planes_[3]; }
+        [[nodiscard]] vec4& bttm() { return m_planes[3]; }
         /** Returns the bottom plane of the frustum. */
-        [[nodiscard]] const vec4& bttm() const { return planes_[3]; }
+        [[nodiscard]] const vec4& bttm() const { return m_planes[3]; }
         /** Returns the near plane of the frustum. */
-        [[nodiscard]] vec4& npln() { return planes_[4]; }
+        [[nodiscard]] vec4& npln() { return m_planes[4]; }
         /** Returns the near plane of the frustum. */
-        [[nodiscard]] const vec4& npln() const { return planes_[4]; }
+        [[nodiscard]] const vec4& npln() const { return m_planes[4]; }
         /** Returns the far plane of the frustum. */
-        [[nodiscard]] vec4& fpln() { return planes_[5]; }
+        [[nodiscard]] vec4& fpln() { return m_planes[5]; }
         /** Returns the far plane of the frustum. */
-        [[nodiscard]] const vec4& fpln() const { return planes_[5]; }
+        [[nodiscard]] const vec4& fpln() const { return m_planes[5]; }
     };
 
     template<typename real>
     Frustum<real>::Frustum(const Frustum<real>::mat4& mat) noexcept
         :
-        planes_{
+        m_planes{
             glm::row(mat, 3) + glm::row(mat, 0), // left
             glm::row(mat, 3) - glm::row(mat, 0), // right
             glm::row(mat, 3) - glm::row(mat, 1), // top
@@ -112,31 +112,31 @@ namespace vkfw_core::math {
         void AddPoint(const V&);
         void FromPoints(const std::vector<V>&);
 
-        std::array<V, 2> minmax_;
+        std::array<V, 2> m_minmax;
     };
 
     template<typename real, int N, typename V>
     inline AABB<real, N, V>::AABB() noexcept :
-        minmax_{ V(std::numeric_limits<real>::max()), V(std::numeric_limits<real>::lowest()) }
+        m_minmax{ V(std::numeric_limits<real>::max()), V(std::numeric_limits<real>::lowest()) }
     {
     }
 
     template<typename real, int N, typename V>
     inline AABB<real, N, V>::AABB(const V& minValue, const V& maxValue) :
-        minmax_{ minValue, maxValue }
+        m_minmax{ minValue, maxValue }
     {
     }
 
     template<typename real, int N, typename V>
     inline void AABB<real, N, V>::SetMin(const V& v)
     {
-        minmax_[0] = v;
+        m_minmax[0] = v;
     }
 
     template<typename real, int N, typename V>
     inline void AABB<real, N, V>::SetMax(const V& v)
     {
-        minmax_[1] = v;
+        m_minmax[1] = v;
     }
 
     template<typename real, int N, typename V, int I> struct AABBInternal
@@ -148,9 +148,9 @@ namespace vkfw_core::math {
         static void permuteMultiply(std::vector<V>& result, const mat4& mat, const vec4& v, const AABB& aabb)
         {
             auto v0 = v;
-            v0[I] = aabb.minmax_[0][I];
+            v0[I] = aabb.m_minmax[0][I];
             auto v1 = v;
-            v1[I] = aabb.minmax_[1][I];
+            v1[I] = aabb.m_minmax[1][I];
             AABBInternal<real, N, V, I - 1>::permuteMultiply(result, mat, v0, aabb);
             AABBInternal<real, N, V, I - 1>::permuteMultiply(result, mat, v1, aabb);
         }
@@ -167,9 +167,9 @@ namespace vkfw_core::math {
                                     const AABB& aabb)
         {
             auto v0 = v;
-            v0[0] = aabb.minmax_[0][0];
+            v0[0] = aabb.m_minmax[0][0];
             auto v1 = v;
-            v1[0] = aabb.minmax_[1][0];
+            v1[0] = aabb.m_minmax[1][0];
             result.emplace_back(mat * v0);
             result.emplace_back(mat * v1);
         }
@@ -195,8 +195,8 @@ namespace vkfw_core::math {
     template<typename real, int N, typename V>
     inline AABB<real, N, V> AABB<real, N, V>::Union(const AABB& other) const
     {
-        const auto newMin = glm::min(minmax_[0], other.minmax_[0]);
-        const auto newMax = glm::max(minmax_[1], other.minmax_[1]);
+        const auto newMin = glm::min(m_minmax[0], other.m_minmax[0]);
+        const auto newMax = glm::max(m_minmax[1], other.m_minmax[1]);
 
         return AABB(newMin, newMax);
     }
@@ -204,8 +204,8 @@ namespace vkfw_core::math {
     template<typename real, int N, typename V>
     inline void AABB<real, N, V>::AddPoint(const V& point)
     {
-        minmax_[0] = glm::min(minmax_[0], point);
-        minmax_[1] = glm::max(minmax_[1], point);
+        m_minmax[0] = glm::min(m_minmax[0], point);
+        m_minmax[1] = glm::max(m_minmax[1], point);
     }
 
     template<typename real, int N, typename V>
@@ -213,8 +213,8 @@ namespace vkfw_core::math {
     {
         if (points.empty()) { return; }
 
-        minmax_[0] = glm::vec3(std::numeric_limits<float>::max());
-        minmax_[1] = glm::vec3(std::numeric_limits<float>::lowest());
+        m_minmax[0] = glm::vec3(std::numeric_limits<float>::max());
+        m_minmax[1] = glm::vec3(std::numeric_limits<float>::lowest());
 
         for (const auto& point : points) { AddPoint(point); }
     }

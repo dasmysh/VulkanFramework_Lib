@@ -17,7 +17,7 @@ namespace vkfw_core {
      * @param resourceId the resource id to use
      */
     Resource::Resource(std::string resourceId, const gfx::LogicalDevice* device)
-        : id_{std::move(resourceId)}, device_{device}
+        : m_id{std::move(resourceId)}, m_device{device}
     {
     }
 
@@ -28,15 +28,15 @@ namespace vkfw_core {
     Resource& Resource::operator=(const Resource&) = default;
 
     /** Move constructor. */
-    Resource::Resource(Resource&& orig) noexcept : id_{std::move(orig.id_)}, device_{orig.device_} {};
+    Resource::Resource(Resource&& orig) noexcept : m_id{std::move(orig.m_id)}, m_device{orig.m_device} {};
 
     /** Move assignment operator. */
     Resource& Resource::operator=(Resource&& orig) noexcept
     {
         if (this != &orig) {
             this->~Resource();
-            id_ = std::move(orig.id_);
-            device_ = orig.device_;
+            m_id = std::move(orig.m_id);
+            m_device = orig.m_device;
         }
         return *this;
     };
@@ -47,9 +47,9 @@ namespace vkfw_core {
     * Accessor to the resources id.
     * @return the resources id
     */
-    const std::string& Resource::getId() const
+    const std::string& Resource::GetId() const
     {
-        return id_;
+        return m_id;
     };
 
     /**
@@ -60,10 +60,10 @@ namespace vkfw_core {
      */
     std::string Resource::FindGeneralFileLocation(const std::string& localFilename, const std::string& resourceId)
     {
-        auto filename = ApplicationBase::instance().GetConfig().resourceBase_ + "/" + localFilename;
+        auto filename = ApplicationBase::instance().GetConfig().m_resourceBase + "/" + localFilename;
         if (std::filesystem::exists(filename)) { return filename; }
 
-        for (const auto& dir : ApplicationBase::instance().GetConfig().resourceDirs_) {
+        for (const auto& dir : ApplicationBase::instance().GetConfig().m_resourceDirs) {
             filename = dir;
             filename.append("/").append(localFilename);
             if (dir.empty()) { filename = localFilename; }
@@ -82,6 +82,6 @@ namespace vkfw_core {
      */
     std::string Resource::FindResourceLocation(const std::string& localFilename) const
     {
-        return Resource::FindGeneralFileLocation(localFilename, id_);
+        return Resource::FindGeneralFileLocation(localFilename, m_id);
     }
 }

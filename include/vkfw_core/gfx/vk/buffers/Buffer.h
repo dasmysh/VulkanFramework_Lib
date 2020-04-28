@@ -42,29 +42,29 @@ namespace vkfw_core::gfx {
                         vk::Fence fence = vk::Fence()) const;
         void CopyBufferSync(const Buffer& dstBuffer, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx) const;
 
-        [[nodiscard]] std::size_t GetSize() const { return size_; }
-        [[nodiscard]] vk::Buffer GetBuffer() const { return *buffer_; }
-        [[nodiscard]] const vk::Buffer* GetBufferPtr() const { return &(*buffer_); }
-        [[nodiscard]] const DeviceMemory& GetDeviceMemory() const { return bufferDeviceMemory_; }
+        [[nodiscard]] std::size_t GetSize() const { return m_size; }
+        [[nodiscard]] vk::Buffer GetBuffer() const { return *m_buffer; }
+        [[nodiscard]] const vk::Buffer* GetBufferPtr() const { return &(*m_buffer); }
+        [[nodiscard]] const DeviceMemory& GetDeviceMemory() const { return m_bufferDeviceMemory; }
 
     protected:
         [[nodiscard]] Buffer CopyWithoutData() const
         {
-            return Buffer{device_, usage_, bufferDeviceMemory_.GetMemoryProperties(), queueFamilyIndices_};
+            return Buffer{m_device, m_usage, m_bufferDeviceMemory.GetMemoryProperties(), m_queueFamilyIndices};
         }
 
     private:
         /** Holds the device. */
-        const LogicalDevice* device_;
+        const LogicalDevice* m_device;
         /** Holds the Vulkan buffer object. */
-        vk::UniqueBuffer buffer_;
+        vk::UniqueBuffer m_buffer;
         /** Holds the Vulkan device memory for the buffer. */
-        DeviceMemory bufferDeviceMemory_;
+        DeviceMemory m_bufferDeviceMemory;
         /** Holds the current size of the buffer in bytes. */
-        std::size_t size_;
+        std::size_t m_size;
         /** Holds the buffer usage. */
-        vk::BufferUsageFlags usage_;
+        vk::BufferUsageFlags m_usage;
         /** Holds the queue family indices. */
-        std::vector<std::uint32_t> queueFamilyIndices_;
+        std::vector<std::uint32_t> m_queueFamilyIndices;
     };
 }

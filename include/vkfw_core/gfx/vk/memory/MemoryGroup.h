@@ -51,11 +51,11 @@ namespace vkfw_core::gfx {
         void FillUploadBufferCmdBuffer(unsigned int bufferIdx, vk::CommandBuffer cmdBuffer,
             std::size_t offset, std::size_t dataSize);
 
-        HostBuffer* GetHostBuffer(unsigned int bufferIdx) { return &hostBuffers_[bufferIdx]; }
-        HostTexture* GetHostTexture(unsigned int textureIdx) { return &hostImages_[textureIdx]; }
-        DeviceMemory* GetHostMemory() { return &hostMemory_; }
-        std::size_t GetHostBufferOffset(unsigned int bufferIdx) { return hostOffsets_[bufferIdx]; }
-        std::size_t GetHostTextureOffset(unsigned int textureIdx) { return hostOffsets_[textureIdx + hostBuffers_.size()]; }
+        HostBuffer* GetHostBuffer(unsigned int bufferIdx) { return &m_hostBuffers[bufferIdx]; }
+        HostTexture* GetHostTexture(unsigned int textureIdx) { return &m_hostImages[textureIdx]; }
+        DeviceMemory* GetHostMemory() { return &m_hostMemory; }
+        std::size_t GetHostBufferOffset(unsigned int bufferIdx) { return m_hostOffsets[bufferIdx]; }
+        std::size_t GetHostTextureOffset(unsigned int textureIdx) { return m_hostOffsets[textureIdx + m_hostBuffers.size()]; }
 
         template<contiguous_memory T>
         unsigned int
@@ -66,51 +66,51 @@ namespace vkfw_core::gfx {
 
     private:
         /** Holds the Vulkan device memory for the host objects. */
-        DeviceMemory hostMemory_;
+        DeviceMemory m_hostMemory;
         /** Holds the host buffers. */
-        std::vector<HostBuffer> hostBuffers_;
+        std::vector<HostBuffer> m_hostBuffers;
         /** Holds the host images. */
-        std::vector<HostTexture> hostImages_;
+        std::vector<HostTexture> m_hostImages;
 
         struct BufferContentsDesc
         {
             /** The buffer index the contents belong to. */
-            unsigned int bufferIdx_ = 0;
+            unsigned int m_bufferIdx = 0;
             /** The offset to copy the data to (in bytes). */
-            std::size_t offset_ = 0;
+            std::size_t m_offset = 0;
             /** The size of the buffer data (in bytes). */
-            std::size_t size_ = 0;
+            std::size_t m_size = 0;
             /** Pointer to the data to copy. */
-            std::variant<void*, const void*> data_;
-            /** Deleter for the data_ element. */
-            std::function<void(void*)> deleter_;
+            std::variant<void*, const void*> m_data;
+            /** Deleter for the m_data element. */
+            std::function<void(void*)> m_deleter;
 
         };
 
         struct ImageContentsDesc
         {
             /** The image index the contents belong to. */
-            unsigned int imageIdx_ = 0;
+            unsigned int m_imageIdx = 0;
             /** The subresource aspect flags. */
-            vk::ImageAspectFlags aspectFlags_;
+            vk::ImageAspectFlags m_aspectFlags;
             /** The MipMap level of the image contents. */
-            std::uint32_t mipLevel_ = 0;
+            std::uint32_t m_mipLevel = 0;
             /** The array layer of the image contents. */
-            std::uint32_t arrayLayer_ = 0;
+            std::uint32_t m_arrayLayer = 0;
             /** The size of the image data (in bytes). */
-            glm::u32vec3 size_ = glm::u32vec3{0};
+            glm::u32vec3 m_size = glm::u32vec3{0};
             /** Pointer to the data to copy. */
-            std::variant<void*, const void*> data_;
-            /** Deleter for the data_ element. */
-            std::function<void(void*)> deleter_;
+            std::variant<void*, const void*> m_data;
+            /** Deleter for the m_data element. */
+            std::function<void(void*)> m_deleter;
         };
 
         /** Holds the offsets for the host memory objects. */
-        std::vector<std::size_t> hostOffsets_;
+        std::vector<std::size_t> m_hostOffsets;
         /** Holds the buffer contents that need to be transfered. */
-        std::vector<BufferContentsDesc> bufferContents_;
+        std::vector<BufferContentsDesc> m_bufferContents;
         /** Holds the image contents that need to be transfered. */
-        std::vector<ImageContentsDesc> imageContents_;
+        std::vector<ImageContentsDesc> m_imageContents;
     };
 
     template<contiguous_memory T>

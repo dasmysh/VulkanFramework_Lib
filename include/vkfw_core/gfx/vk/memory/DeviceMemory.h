@@ -45,7 +45,7 @@ namespace vkfw_core::gfx {
         void CopyFromHostMemory(std::size_t offsetToTexture, const glm::u32vec3& offset,
             const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize, void* data) const;
 
-        [[nodiscard]] vk::MemoryPropertyFlags GetMemoryProperties() const { return memoryProperties_; }
+        [[nodiscard]] vk::MemoryPropertyFlags GetMemoryProperties() const { return m_memoryProperties; }
 
         static std::uint32_t FindMemoryType(const LogicalDevice* device, std::uint32_t typeFilter,
                                             const vk::MemoryPropertyFlags& properties);
@@ -62,12 +62,12 @@ namespace vkfw_core::gfx {
             const function_view<void(void* deviceMem, std::size_t offset, std::size_t size)>& processFunc) const;
 
         /** Holds the device. */
-        const LogicalDevice* device_;
+        const LogicalDevice* m_device;
         /** Holds the Vulkan device memory. */
-        vk::UniqueDeviceMemory vkDeviceMemory_;
+        vk::UniqueDeviceMemory m_vkDeviceMemory;
         /** Holds the current size of the memory in bytes. */
-        std::size_t size_;
+        std::size_t m_size;
         /** Holds the memory properties. */
-        vk::MemoryPropertyFlags memoryProperties_;
+        vk::MemoryPropertyFlags m_memoryProperties;
     };
 }

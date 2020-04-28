@@ -19,16 +19,16 @@ namespace vkfw_core::gfx {
 
     Texture2D::Texture2D(const std::string& textureFilename, bool flipTexture, const LogicalDevice* device)
         : Resource{textureFilename, device},
-          textureFilename_{FindResourceLocation(textureFilename)},
-          textureIdx_{std::numeric_limits<unsigned int>::max()},
-          memoryGroup_{nullptr},
-          texture_{nullptr}
+          m_textureFilename{FindResourceLocation(textureFilename)},
+          m_textureIdx{std::numeric_limits<unsigned int>::max()},
+          m_memoryGroup{nullptr},
+          m_texture{nullptr}
     {
-        if (!std::filesystem::exists(textureFilename_)) {
+        if (!std::filesystem::exists(m_textureFilename)) {
             spdlog::error(
                 "Error while loading resource.\nResourceID: {}\nFilename: {}\nDescription: Cannot open texture file.",
-                getId(), textureFilename_);
-            throw file_not_found{textureFilename_};
+                GetId(), m_textureFilename);
+            throw file_not_found{m_textureFilename};
         }
 
         if (flipTexture) {
@@ -45,14 +45,14 @@ namespace vkfw_core::gfx {
     {
         auto loadFn = [this, &transfer, &queueFamilyIndices](const glm::u32vec4& size, const TextureDescriptor& desc,
                                                              void* data) {
-            texturePtr_ = transfer.CreateDeviceTextureWithData(desc, queueFamilyIndices, size, 1, data);
-            texture_ = texturePtr_.get();
+            m_texturePtr = transfer.CreateDeviceTextureWithData(desc, queueFamilyIndices, size, 1, data);
+            m_texture = m_texturePtr.get();
             stbi_image_free(data);
         };
-        if (stbi_is_hdr(textureFilename_.c_str()) != 0) {
-            LoadTextureHDR(textureFilename_, loadFn);
+        if (stbi_is_hdr(m_textureFilename.c_str()) != 0) {
+            LoadTextureHDR(m_textureFilename, loadFn);
         } else {
-            LoadTextureLDR(textureFilename_, useSRGB, loadFn);
+            LoadTextureLDR(m_textureFilename, useSRGB, loadFn);
         }
     }
 
@@ -62,18 +62,19 @@ namespace vkfw_core::gfx {
         :
         Texture2D{ textureFilename, flipTexture, device }
     {
-        memoryGroup_ = &memGroup;
+        m_memoryGroup = &memGroup;
         auto loadFn = [this, &memGroup, &queueFamilyIndices](const glm::u32vec4& size, const TextureDescriptor& desc, void* data)
         {
-            textureIdx_ = memGroup.AddTextureToGroup(desc, size, 1, queueFamilyIndices);
-            glm::u32vec3 dataSize(size.x * memGroup.GetHostTexture(textureIdx_)->GetDescriptor().bytesPP_, size.y, size.z);
-            memGroup.AddDataToTextureInGroup(textureIdx_, vk::ImageAspectFlagBits::eColor, 0, 0, dataSize, data, stbi_image_free);
-            texture_ = memGroup.GetTexture(textureIdx_);
+            m_textureIdx = memGroup.AddTextureToGroup(desc, size, 1, queueFamilyIndices);
+            glm::u32vec3 dataSize(size.x * memGroup.GetHostTexture(m_textureIdx)->GetDescriptor().m_bytesPP, size.y, size.z);
+            memGroup.AddDataToTextureInGroup(m_textureIdx, vk::ImageAspectFlagBits::eColor, 0, 0, dataSize, data,
+                                             stbi_image_free);
+            m_texture = memGroup.GetTexture(m_textureIdx);
         };
-        if (stbi_is_hdr(textureFilename_.c_str()) != 0) {
-            LoadTextureHDR(textureFilename_, loadFn);
+        if (stbi_is_hdr(m_textureFilename.c_str()) != 0) {
+            LoadTextureHDR(m_textureFilename, loadFn);
         } else {
-            LoadTextureLDR(textureFilename_, useSRGB, loadFn);
+            LoadTextureLDR(m_textureFilename, useSRGB, loadFn);
         }
     }
 
@@ -88,7 +89,7 @@ namespace vkfw_core::gfx {
         if (stbi_info(filename.c_str(), &imgWidth, &imgHeight, &imgChannels) == 0) {
             spdlog::error(
                 "Could not get information from texture (LDR).\nResourceID: {}\nFilename: {}\nDescription: STBI Error.",
-                getId(), filename);
+                GetId(), filename);
             throw stbi_error{};
         }
         unsigned int bytesPP = 4; vk::Format fmt = vk::Format::eR8G8B8A8Unorm;
@@ -99,7 +100,7 @@ namespace vkfw_core::gfx {
         auto image = stbi_load(filename.c_str(), &imgWidth, &imgHeight, &imgChannels, requestedChannels);
         if (image == nullptr) {
             spdlog::error("Could not load texture (LDR).\nResourceID: {}\nFilename: {}\nDescription: STBI Error.",
-                          getId(), filename);
+                          GetId(), filename);
             throw stbi_error{};
         }
 
@@ -117,7 +118,7 @@ namespace vkfw_core::gfx {
         if (stbi_info(filename.c_str(), &imgWidth, &imgHeight, &imgChannels) == 0) {
             spdlog::error(
                 "Could not get information from texture (HDR).\nResourceID: {}\nFilename: {}\nDescription: STBI Error.",
-                getId(), filename);
+                GetId(), filename);
             throw stbi_error{};
         }
 
@@ -129,7 +130,7 @@ namespace vkfw_core::gfx {
         auto image = stbi_loadf(filename.c_str(), &imgWidth, &imgHeight, &imgChannels, requestedChannels);
         if (image ==  nullptr) {
             spdlog::error("Could not load texture (HDR).\nResourceID: {}\nFilename: {}\nDescription: STBI Error.",
-                          getId(), filename);
+                          GetId(), filename);
             throw stbi_error{};
         }
 

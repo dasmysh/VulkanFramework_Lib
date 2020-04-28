@@ -31,52 +31,52 @@ namespace vkfw_core::gfx {
         template<class Vertex> void ResetVertexInput() const;
         void ResetFramebuffer(const glm::uvec2& size, unsigned int numViewports, unsigned int numScissors) const;
         void CreatePipeline(bool keepState, vk::RenderPass renderPass, unsigned int subpass, vk::PipelineLayout pipelineLayout);
-        [[nodiscard]] vk::Pipeline GetPipeline() const { return *vkPipeline_; }
+        [[nodiscard]] vk::Pipeline GetPipeline() const { return *m_vkPipeline; }
 
         [[nodiscard]] vk::Viewport& GetViewport(unsigned int idx) const
         {
-            assert(state_);
-            return state_->viewports_[idx];
+            assert(m_state);
+            return m_state->m_viewports[idx];
         }
         [[nodiscard]] vk::Rect2D& GetScissor(unsigned int idx) const
         {
-            assert(state_);
-            return state_->scissors_[idx];
+            assert(m_state);
+            return m_state->m_scissors[idx];
         }
         [[nodiscard]] vk::PipelineMultisampleStateCreateInfo& GetMultisampling() const
         {
-            assert(state_);
-            return state_->multisampling_;
+            assert(m_state);
+            return m_state->m_multisampling;
         }
         [[nodiscard]] vk::PipelineRasterizationStateCreateInfo& GetRasterizer() const
         {
-            assert(state_);
-            return state_->rasterizer_;
+            assert(m_state);
+            return m_state->m_rasterizer;
         }
         [[nodiscard]] vk::PipelineDepthStencilStateCreateInfo& GetDepthStencil() const
         {
-            assert(state_);
-            return state_->depthStencil_;
+            assert(m_state);
+            return m_state->m_depthStencil;
         }
         [[nodiscard]] vk::PipelineTessellationStateCreateInfo& GetTesselation() const
         {
-            assert(state_);
-            return state_->tesselation_;
+            assert(m_state);
+            return m_state->m_tesselation;
         }
         [[nodiscard]] vk::PipelineColorBlendAttachmentState& GetColorBlendAttachment(unsigned int idx) const
         {
-            assert(state_);
-            return state_->colorBlendAttachments_[idx];
+            assert(m_state);
+            return m_state->m_colorBlendAttachments[idx];
         }
         [[nodiscard]] vk::PipelineColorBlendStateCreateInfo& GetColorBlending() const
         {
-            assert(state_);
-            return state_->colorBlending_;
+            assert(m_state);
+            return m_state->m_colorBlending;
         }
         [[nodiscard]] std::vector<vk::DynamicState>& GetDynamicStates() const
         {
-            assert(state_);
-            return state_->dynamicStates_;
+            assert(m_state);
+            return m_state->m_dynamicStates;
         }
 
     private:
@@ -84,48 +84,48 @@ namespace vkfw_core::gfx {
         struct State final
         {
             /** Holds the information about the shaders used. */
-            std::vector<vk::PipelineShaderStageCreateInfo> shaderStageInfos_;
+            std::vector<vk::PipelineShaderStageCreateInfo> m_shaderStageInfos;
             /** Holds the vertex input state. */
-            vk::PipelineVertexInputStateCreateInfo vertexInputCreateInfo_;
+            vk::PipelineVertexInputStateCreateInfo m_vertexInputCreateInfo;
             /** Holds the input assembly state. */
-            vk::PipelineInputAssemblyStateCreateInfo inputAssemblyCreateInfo_;
+            vk::PipelineInputAssemblyStateCreateInfo m_inputAssemblyCreateInfo;
             /** Holds the view-ports. */
-            std::vector<vk::Viewport> viewports_;
+            std::vector<vk::Viewport> m_viewports;
             /** Holds the scissors. */
-            std::vector<vk::Rect2D> scissors_;
+            std::vector<vk::Rect2D> m_scissors;
             /** Holds the viewport state */
-            vk::PipelineViewportStateCreateInfo viewportState_;
+            vk::PipelineViewportStateCreateInfo m_viewportState;
             /** Holds the multi-sampling state. */
-            vk::PipelineMultisampleStateCreateInfo multisampling_;
+            vk::PipelineMultisampleStateCreateInfo m_multisampling;
             /** Holds the depth stencil state. */
-            vk::PipelineDepthStencilStateCreateInfo depthStencil_;
+            vk::PipelineDepthStencilStateCreateInfo m_depthStencil;
             /** Holds the rasterizer state. */
-            vk::PipelineRasterizationStateCreateInfo rasterizer_;
+            vk::PipelineRasterizationStateCreateInfo m_rasterizer;
             /** Holds the tessellation state. */
-            vk::PipelineTessellationStateCreateInfo tesselation_;
+            vk::PipelineTessellationStateCreateInfo m_tesselation;
             /** Holds the color blend attachments. */
-            std::vector<vk::PipelineColorBlendAttachmentState> colorBlendAttachments_;
+            std::vector<vk::PipelineColorBlendAttachmentState> m_colorBlendAttachments;
             /** Holds the blend state. */
-            vk::PipelineColorBlendStateCreateInfo colorBlending_;
+            vk::PipelineColorBlendStateCreateInfo m_colorBlending;
             /** Holds the dynamic states. */
-            std::vector<vk::DynamicState> dynamicStates_;
+            std::vector<vk::DynamicState> m_dynamicStates;
         };
 
         /** Holds the device. */
-        const LogicalDevice* device_;
+        const LogicalDevice* m_device;
         /** Holds the shaders used in this pipeline. */
-        std::vector<std::shared_ptr<Shader>> shaders_;
+        std::vector<std::shared_ptr<Shader>> m_shaders;
         /** Holds the state. */
-        std::unique_ptr<State> state_;
+        std::unique_ptr<State> m_state;
         /** Holds the pipeline. */
-        vk::UniquePipeline vkPipeline_;
+        vk::UniquePipeline m_vkPipeline;
     };
 
     template <class Vertex>
     void GraphicsPipeline::ResetVertexInput() const
     {
-        state_->vertexInputCreateInfo_ = vk::PipelineVertexInputStateCreateInfo{ vk::PipelineVertexInputStateCreateFlags(), 1, &Vertex::bindingDescription_,
-            static_cast<std::uint32_t>(Vertex::attributeDescriptions_.size()), Vertex::attributeDescriptions_.data() };
+        m_state->m_vertexInputCreateInfo = vk::PipelineVertexInputStateCreateInfo{ vk::PipelineVertexInputStateCreateFlags(), 1, &Vertex::m_bindingDescription,
+            static_cast<std::uint32_t>(Vertex::m_attributeDescriptions.size()), Vertex::m_attributeDescriptions.data() };
     }
 }
 

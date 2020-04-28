@@ -27,13 +27,13 @@ namespace vkfw_core::gfx {
     FreeCamera::FreeCamera(const glm::vec3& position, const glm::quat& orientation,
         float fovY, float aspectRatio, float zNear, float zFar, double speed) noexcept :
         UserControlledCamera(position, orientation, glm::perspective(fovY, aspectRatio, zNear, zFar)),
-        currentPY_{ 0.0f, 0.0f },
-        currentMousePosition_{ 0.0f, 0.0f },
-        moveSpeed_{speed},
-        firstRun_{ true },
-        fovY_{ fovY },
-        zNear_{ zNear },
-        zFar_{ zFar }
+        m_currentPY{ 0.0f, 0.0f },
+        m_currentMousePosition{ 0.0f, 0.0f },
+        m_moveSpeed{speed},
+        m_firstRun{ true },
+        m_fovY{ fovY },
+        m_zNear{ zNear },
+        m_zFar{ zFar }
     {
     }
 
@@ -59,33 +59,34 @@ namespace vkfw_core::gfx {
 
         float moveLength = glm::length(camMove);
         if (moveLength > glm::epsilon<float>()) {
-            camMove = (camMove / moveLength) * static_cast<float>(moveSpeed_ * elapsedTime);
+            camMove = (camMove / moveLength) * static_cast<float>(m_moveSpeed * elapsedTime);
         }
         auto camPos = GetPosition() + glm::inverse(GetOrientation()) * camMove;
 
 
         const double rotSpeed = 60.0;
 
-        if (firstRun_) {
-            currentMousePosition_ = sender->GetMousePositionNormalized();
-            firstRun_ = false;
+        if (m_firstRun) {
+            m_currentMousePosition = sender->GetMousePositionNormalized();
+            m_firstRun = false;
         }
 
-        auto previousMousePosition = currentMousePosition_;
-        currentMousePosition_ = sender->GetMousePositionNormalized();
-        auto mouseDiff = currentMousePosition_ - previousMousePosition;
+        auto previousMousePosition = m_currentMousePosition;
+        m_currentMousePosition = sender->GetMousePositionNormalized();
+        auto mouseDiff = m_currentMousePosition - previousMousePosition;
 
         auto pitch_delta = -static_cast<float>(mouseDiff.y * rotSpeed * elapsedTime);
         auto yaw_delta = static_cast<float>(mouseDiff.x * rotSpeed * elapsedTime);
 
-        currentPY_ += glm::vec2(pitch_delta, yaw_delta);
+        m_currentPY += glm::vec2(pitch_delta, yaw_delta);
         constexpr float ONE_MINUS_DELTA = 0.99f;
-        currentPY_.x =
-            glm::clamp(currentPY_.x, -glm::half_pi<float>() * ONE_MINUS_DELTA, glm::half_pi<float>() * ONE_MINUS_DELTA);
-        auto newOrientation = glm::quat(glm::vec3(currentPY_.x, 0.0f, 0.0f)) * glm::quat(glm::vec3(0.0f, currentPY_.y, 0.0f));
+        m_currentPY.x = glm::clamp(m_currentPY.x, -glm::half_pi<float>() * ONE_MINUS_DELTA,
+                                   glm::half_pi<float>() * ONE_MINUS_DELTA);
+        auto newOrientation =
+            glm::quat(glm::vec3(m_currentPY.x, 0.0f, 0.0f)) * glm::quat(glm::vec3(0.0f, m_currentPY.y, 0.0f));
 
         auto aspectRatio = static_cast<float>(sender->GetClientSize().x) / static_cast<float>(sender->GetClientSize().y);
-        SetPositionOrientationProj(camPos, newOrientation, glm::perspective(fovY_, aspectRatio, zNear_, zFar_));
+        SetPositionOrientationProj(camPos, newOrientation, glm::perspective(m_fovY, aspectRatio, m_zNear, m_zFar));
     }
 
     /**
@@ -94,7 +95,7 @@ namespace vkfw_core::gfx {
      */
     void FreeCamera::SetMoveSpeed(double speed)
     {
-        moveSpeed_ = speed;
+        m_moveSpeed = speed;
     }
 
     /**
@@ -103,7 +104,7 @@ namespace vkfw_core::gfx {
      */
     double FreeCamera::GetMoveSpeed()
     {
-        return moveSpeed_;
+        return m_moveSpeed;
     }
 
 }

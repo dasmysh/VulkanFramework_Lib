@@ -17,61 +17,63 @@
 namespace vkfw_core::gfx {
 
     BufferGroup::BufferGroup(const LogicalDevice* device, const vk::MemoryPropertyFlags& memoryFlags) :
-        device_{ device },
-        memoryProperties_{ memoryFlags }
+        m_device{ device },
+        m_memoryProperties{ memoryFlags }
     {
     }
 
 
     BufferGroup::~BufferGroup()
     {
-        hostBuffers_.clear();
-        hostBufferMemory_.reset();
-        deviceBuffers_.clear();
-        deviceBufferMemory_.reset();
+        m_hostBuffers.clear();
+        m_hostBufferMemory.reset();
+        m_deviceBuffers.clear();
+        m_deviceBufferMemory.reset();
     }
 
     BufferGroup::BufferGroup(BufferGroup&& rhs) noexcept :
-    device_{ rhs.device_ },
-        deviceBufferMemory_{ std::move(rhs.deviceBufferMemory_) },
-        hostBufferMemory_{ std::move(rhs.hostBufferMemory_) },
-        deviceBuffers_{ std::move(rhs.deviceBuffers_) },
-        hostBuffers_{ std::move(rhs.hostBuffers_) },
-        memoryProperties_{ rhs.memoryProperties_ },
-        bufferContents_{ std::move(rhs.bufferContents_) }
+    m_device{ rhs.m_device },
+        m_deviceBufferMemory{ std::move(rhs.m_deviceBufferMemory) },
+        m_hostBufferMemory{ std::move(rhs.m_hostBufferMemory) },
+        m_deviceBuffers{ std::move(rhs.m_deviceBuffers) },
+        m_hostBuffers{ std::move(rhs.m_hostBuffers) },
+        m_memoryProperties{ rhs.m_memoryProperties },
+        m_bufferContents{ std::move(rhs.m_bufferContents) }
     {
     }
 
     BufferGroup& BufferGroup::operator=(BufferGroup&& rhs) noexcept
     {
         this->~BufferGroup();
-        device_ = rhs.device_;
-        deviceBufferMemory_ = std::move(rhs.deviceBufferMemory_);
-        hostBufferMemory_ = std::move(rhs.hostBufferMemory_);
-        deviceBuffers_ = std::move(rhs.deviceBuffers_);
-        hostBuffers_ = std::move(rhs.hostBuffers_);
-        memoryProperties_ = rhs.memoryProperties_;
-        bufferContents_ = std::move(rhs.bufferContents_);
+        m_device = rhs.m_device;
+        m_deviceBufferMemory = std::move(rhs.m_deviceBufferMemory);
+        m_hostBufferMemory = std::move(rhs.m_hostBufferMemory);
+        m_deviceBuffers = std::move(rhs.m_deviceBuffers);
+        m_hostBuffers = std::move(rhs.m_hostBuffers);
+        m_memoryProperties = rhs.m_memoryProperties;
+        m_bufferContents = std::move(rhs.m_bufferContents);
         return *this;
     }
 
     unsigned BufferGroup::AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
-        deviceBuffers_.emplace_back(device_, vk::BufferUsageFlagBits::eTransferDst | usage, memoryProperties_, queueFamilyIndices);
-        deviceBuffers_.back().InitializeBuffer(size, false);
+        m_deviceBuffers.emplace_back(m_device, vk::BufferUsageFlagBits::eTransferDst | usage, m_memoryProperties,
+                                     queueFamilyIndices);
+        m_deviceBuffers.back().InitializeBuffer(size, false);
 
-        hostBuffers_.emplace_back(device_, vk::BufferUsageFlagBits::eTransferSrc, memoryProperties_, queueFamilyIndices);
-        hostBuffers_.back().InitializeBuffer(size, false);
+        m_hostBuffers.emplace_back(m_device, vk::BufferUsageFlagBits::eTransferSrc, m_memoryProperties,
+                                   queueFamilyIndices);
+        m_hostBuffers.back().InitializeBuffer(size, false);
 
-        bufferContents_.emplace_back(0, nullptr);
-        return static_cast<unsigned int>(deviceBuffers_.size() - 1);
+        m_bufferContents.emplace_back(0, nullptr);
+        return static_cast<unsigned int>(m_deviceBuffers.size() - 1);
     }
 
     unsigned BufferGroup::AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size, const void* data, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         auto idx = AddBufferToGroup(usage, size, queueFamilyIndices);
-        bufferContents_.back().first = size;
-        bufferContents_.back().second = data;
+        m_bufferContents.back().first = size;
+        m_bufferContents.back().second = data;
         return idx;
     }
 
@@ -81,25 +83,25 @@ namespace vkfw_core::gfx {
         vk::MemoryAllocateInfo hostAllocInfo;
         std::vector<std::uint32_t> deviceSizes;
         std::vector<std::uint32_t> hostSizes;
-        for (auto i = 0U; i < deviceBuffers_.size(); ++i) {
-            FillAllocationInfo(&hostBuffers_[i], hostAllocInfo, hostSizes);
-            FillAllocationInfo(&deviceBuffers_[i], deviceAllocInfo, deviceSizes);
+        for (auto i = 0U; i < m_deviceBuffers.size(); ++i) {
+            FillAllocationInfo(&m_hostBuffers[i], hostAllocInfo, hostSizes);
+            FillAllocationInfo(&m_deviceBuffers[i], deviceAllocInfo, deviceSizes);
         }
-        hostBufferMemory_ = device_->GetDevice().allocateMemoryUnique(hostAllocInfo);
-        deviceBufferMemory_ = device_->GetDevice().allocateMemoryUnique(deviceAllocInfo);
+        m_hostBufferMemory = m_device->GetDevice().allocateMemoryUnique(hostAllocInfo);
+        m_deviceBufferMemory = m_device->GetDevice().allocateMemoryUnique(deviceAllocInfo);
 
         auto deviceOffset = 0U;
         auto hostOffset = 0U;
-        for (auto i = 0U; i < deviceBuffers_.size(); ++i) {
-            device_->GetDevice().bindBufferMemory(hostBuffers_[i].GetBuffer(), *hostBufferMemory_, hostOffset);
-            device_->GetDevice().bindBufferMemory(deviceBuffers_[i].GetBuffer(), *deviceBufferMemory_, deviceOffset);
+        for (auto i = 0U; i < m_deviceBuffers.size(); ++i) {
+            m_device->GetDevice().bindBufferMemory(m_hostBuffers[i].GetBuffer(), *m_hostBufferMemory, hostOffset);
+            m_device->GetDevice().bindBufferMemory(m_deviceBuffers[i].GetBuffer(), *m_deviceBufferMemory, deviceOffset);
             if (transfer != nullptr) {
-                auto deviceMem = device_->GetDevice().mapMemory(*hostBufferMemory_, hostOffset, bufferContents_[i].first, vk::MemoryMapFlags());
-                memcpy(deviceMem, bufferContents_[i].second, bufferContents_[i].first);
-                device_->GetDevice().unmapMemory(*hostBufferMemory_);
+                auto deviceMem = m_device->GetDevice().mapMemory(*m_hostBufferMemory, hostOffset, m_bufferContents[i].first, vk::MemoryMapFlags());
+                memcpy(deviceMem, m_bufferContents[i].second, m_bufferContents[i].first);
+                m_device->GetDevice().unmapMemory(*m_hostBufferMemory);
 
                 // hostBuffers_[i].UploadData(0, bufferContents_[i].first, bufferContents_[i].second);
-                transfer->AddTransferToQueue(hostBuffers_[i], deviceBuffers_[i]);
+                transfer->AddTransferToQueue(m_hostBuffers[i], m_deviceBuffers[i]);
             }
             hostOffset += hostSizes[i];
             deviceOffset += deviceSizes[i];
@@ -109,11 +111,12 @@ namespace vkfw_core::gfx {
 
     void BufferGroup::FillAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo, std::vector<std::uint32_t>& sizes) const
     {
-        auto memRequirements = device_->GetDevice().getBufferMemoryRequirements(buffer->GetBuffer());
+        auto memRequirements = m_device->GetDevice().getBufferMemoryRequirements(buffer->GetBuffer());
         if (allocInfo.allocationSize == 0) {
-            allocInfo.memoryTypeIndex = DeviceMemory::FindMemoryType(device_, memRequirements.memoryTypeBits,
+            allocInfo.memoryTypeIndex = DeviceMemory::FindMemoryType(m_device, memRequirements.memoryTypeBits,
                                                                      buffer->GetDeviceMemory().GetMemoryProperties());
-        } else if (!DeviceMemory::CheckMemoryType(device_, allocInfo.memoryTypeIndex, memRequirements.memoryTypeBits, buffer->GetDeviceMemory().GetMemoryProperties())) {
+        } else if (!DeviceMemory::CheckMemoryType(m_device, allocInfo.memoryTypeIndex, memRequirements.memoryTypeBits,
+                                                  buffer->GetDeviceMemory().GetMemoryProperties())) {
             spdlog::critical("BufferGroup memory type ({}) does not fit required memory type for buffer ({:#x}).", allocInfo.memoryTypeIndex, memRequirements.memoryTypeBits);
             throw std::runtime_error("BufferGroup memory type does not fit required memory type for buffer.");
         }

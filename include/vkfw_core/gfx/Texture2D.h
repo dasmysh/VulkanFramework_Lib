@@ -25,8 +25,8 @@ namespace vkfw_core::gfx {
         stbi_error() : std::exception{ "STBI Error." } {}
     };
     struct invalid_texture_channels final : public std::exception {
-        explicit invalid_texture_channels(int imgChannels) : std::exception{ "Invalid number of image channels." }, imgChannels_{ imgChannels } {}
-        int imgChannels_;
+        explicit invalid_texture_channels(int imgChannels) : std::exception{ "Invalid number of image channels." }, m_imgChannels{ imgChannels } {}
+        int m_imgChannels;
     };
 
     class Texture2D final : public Resource
@@ -44,7 +44,7 @@ namespace vkfw_core::gfx {
         Texture2D& operator=(Texture2D&&) = delete;
         ~Texture2D() override;
 
-        [[nodiscard]] const DeviceTexture& GetTexture() const { return *texture_; }
+        [[nodiscard]] const DeviceTexture& GetTexture() const { return *m_texture; }
 
     private:
         enum class FormatProperties {
@@ -53,7 +53,7 @@ namespace vkfw_core::gfx {
             USE_HDR
         };
 
-        Texture2D(const std::string& textureFilename, bool flipTexture, const LogicalDevice* device_);
+        Texture2D(const std::string& textureFilename, bool flipTexture, const LogicalDevice* device);
         void LoadTextureLDR(const std::string& filename, bool useSRGB,
             const function_view<void(const glm::u32vec4& size, const TextureDescriptor& desc, void* data)>& loadFn);
         void LoadTextureHDR(const std::string& filename,
@@ -61,14 +61,14 @@ namespace vkfw_core::gfx {
         std::pair<unsigned int, vk::Format> FindFormat(const std::string& filename, int& imgChannels, FormatProperties fmtProps) const;
 
         /** Holds the texture file name. */
-        std::string textureFilename_;
+        std::string m_textureFilename;
         /** Holds the unique pointer to the texture used. */
-        std::unique_ptr<DeviceTexture> texturePtr_;
+        std::unique_ptr<DeviceTexture> m_texturePtr;
         /** Holds the index in the memory group to the texture used. */
-        unsigned int textureIdx_;
+        unsigned int m_textureIdx;
         /** Holds the memory group containing the texture. */
-        MemoryGroup* memoryGroup_;
+        MemoryGroup* m_memoryGroup;
         /** Holds the pointer to the texture used. */
-        DeviceTexture* texture_;
+        DeviceTexture* m_texture;
     };
 }

@@ -36,80 +36,80 @@ namespace vkfw_core::gfx {
         inline void Render(vk::CommandBuffer cmdBuffer);
 
     private:
-        std::vector<RenderElement> opaqueElements_;
-        std::vector<RenderElement> transparentElements_;
+        std::vector<RenderElement> m_opaqueElements;
+        std::vector<RenderElement> m_transparentElements;
 
-        const CameraBase* camera_; // NOLINT(clang-diagnostic-unused-private-field)
-        UBOBinding cameraMatricesUBO_;
-        vk::PipelineLayout currentPipelineLayout_ = vk::PipelineLayout();
-        vk::Pipeline currentOpaquePipeline_ = vk::Pipeline();
-        vk::Pipeline currentTransparentPipeline_ = vk::Pipeline();
+        const CameraBase* m_camera; // NOLINT(clang-diagnostic-unused-private-field)
+        UBOBinding m_cameraMatricesUBO;
+        vk::PipelineLayout m_currentPipelineLayout = vk::PipelineLayout();
+        vk::Pipeline m_currentOpaquePipeline = vk::Pipeline();
+        vk::Pipeline m_currentTransparentPipeline = vk::Pipeline();
 
-        BufferReference currentVertexBuffer_ = BufferReference(nullptr, 0);
-        BufferReference currentIndexBuffer_ = BufferReference(nullptr, 0);
+        BufferReference m_currentVertexBuffer = BufferReference(nullptr, 0);
+        BufferReference m_currentIndexBuffer = BufferReference(nullptr, 0);
 
-        UBOBinding currentWorldMatrices_ = UBOBinding(nullptr, 0, 0);
+        UBOBinding m_currentWorldMatrices = UBOBinding(nullptr, 0, 0);
     };
 
     RenderList::RenderList(const CameraBase* camera, UBOBinding cameraUBO) :
-        camera_{ camera },
-        cameraMatricesUBO_{ std::move(cameraUBO) }
+        m_camera{ camera },
+        m_cameraMatricesUBO{ std::move(cameraUBO) }
     {
     }
 
     void RenderList::SetCurrentPipeline(vk::PipelineLayout currentPipelineLayout,
         vk::Pipeline currentOpaquePipeline, vk::Pipeline currentTransparentPipeline)
     {
-        currentPipelineLayout_ = currentPipelineLayout;
-        currentOpaquePipeline_ = currentOpaquePipeline;
-        currentTransparentPipeline_ = currentTransparentPipeline;
+        m_currentPipelineLayout = currentPipelineLayout;
+        m_currentOpaquePipeline = currentOpaquePipeline;
+        m_currentTransparentPipeline = currentTransparentPipeline;
     }
 
     void RenderList::SetCurrentGeometry(BufferReference currentVertexBuffer, BufferReference currentIndexBuffer)
     {
-        currentVertexBuffer_ = currentVertexBuffer;
-        currentIndexBuffer_ = currentIndexBuffer;
+        m_currentVertexBuffer = currentVertexBuffer;
+        m_currentIndexBuffer = currentIndexBuffer;
     }
 
     void RenderList::SetCurrentWorldMatrices(const UBOBinding& currentWorldMatrices)
     {
-        currentWorldMatrices_ = currentWorldMatrices;
+        m_currentWorldMatrices = currentWorldMatrices;
     }
 
     vkfw_core::gfx::RenderElement& RenderList::AddOpaqueElement(std::uint32_t indexCount, std::uint32_t instanceCount,
         std::uint32_t firstIndex, std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix,
         const math::AABB3<float>& boundingBox)
     {
-        auto& result = opaqueElements_.emplace_back(false, currentOpaquePipeline_, currentPipelineLayout_);
-        result.BindVertexBuffer(currentVertexBuffer_);
-        result.BindIndexBuffer(currentIndexBuffer_);
-        result.BindCameraMatricesUBO(cameraMatricesUBO_);
-        result.BindWorldMatricesUBO(currentWorldMatrices_);
+        auto& result = m_opaqueElements.emplace_back(false, m_currentOpaquePipeline, m_currentPipelineLayout);
+        result.BindVertexBuffer(m_currentVertexBuffer);
+        result.BindIndexBuffer(m_currentIndexBuffer);
+        result.BindCameraMatricesUBO(m_cameraMatricesUBO);
+        result.BindWorldMatricesUBO(m_currentWorldMatrices);
         result.DrawGeometry(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance, viewMatrix, boundingBox);
         return result;
     }
 
     vkfw_core::gfx::RenderElement& RenderList::AddTransparentElement(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex, std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix, const math::AABB3<float>& boundingBox)
     {
-        auto& result = transparentElements_.emplace_back(true, currentTransparentPipeline_, currentPipelineLayout_);
-        result.BindVertexBuffer(currentVertexBuffer_);
-        result.BindIndexBuffer(currentIndexBuffer_);
-        result.BindCameraMatricesUBO(cameraMatricesUBO_);
-        result.BindWorldMatricesUBO(currentWorldMatrices_);
+        auto& result = m_transparentElements.emplace_back(true, m_currentTransparentPipeline, m_currentPipelineLayout);
+        result.BindVertexBuffer(m_currentVertexBuffer);
+        result.BindIndexBuffer(m_currentIndexBuffer);
+        result.BindCameraMatricesUBO(m_cameraMatricesUBO);
+        result.BindWorldMatricesUBO(m_currentWorldMatrices);
         result.DrawGeometry(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance, viewMatrix, boundingBox);
         return result;
     }
 
     void RenderList::Render(vk::CommandBuffer cmdBuffer)
     {
-        std::sort(opaqueElements_.begin(), opaqueElements_.end());
-        std::sort(transparentElements_.begin(), transparentElements_.end());
+        std::sort(m_opaqueElements.begin(), m_opaqueElements.end());
+        std::sort(m_transparentElements.begin(), m_transparentElements.end());
 
         const RenderElement* lastElement = nullptr;
-        for (const auto& re : opaqueElements_) { lastElement = &re.DrawElement(cmdBuffer, lastElement); }
+        for (const auto& re : m_opaqueElements) { lastElement = &re.DrawElement(cmdBuffer, lastElement); }
 
         lastElement = nullptr;
-        for (const auto& re : transparentElements_) { lastElement = &re.DrawElement(cmdBuffer, lastElement); }
+        for (const auto& re : m_transparentElements) { lastElement = &re.DrawElement(cmdBuffer, lastElement); }
     }
 
 }

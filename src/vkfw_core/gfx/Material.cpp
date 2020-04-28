@@ -14,21 +14,21 @@ namespace vkfw_core::gfx {
 
 
     Material::Material() :
-        materialInfo_{ nullptr }
+        m_materialInfo{ nullptr }
     {
     }
 
     Material::Material(const MaterialInfo* materialInfo, const LogicalDevice* device,
         MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices) :
-        materialInfo_{ materialInfo }
+        m_materialInfo{ materialInfo }
     {
-        assert(materialInfo_ != nullptr);
-        if (!materialInfo_->diffuseTextureFilename_.empty()) {
-            diffuseTexture_ = device->GetTextureManager()->GetResource(materialInfo->diffuseTextureFilename_, true,
+        assert(m_materialInfo != nullptr);
+        if (!m_materialInfo->m_diffuseTextureFilename.empty()) {
+            m_diffuseTexture = device->GetTextureManager()->GetResource(materialInfo->m_diffuseTextureFilename, true,
                                                                        true, memoryGroup, queueFamilyIndices);
         }
-        if (!materialInfo_->bumpMapFilename_.empty()) {
-            bumpMap_ = device->GetTextureManager()->GetResource(materialInfo->bumpMapFilename_, true, true, memoryGroup,
+        if (!m_materialInfo->m_bumpMapFilename.empty()) {
+            m_bumpMap = device->GetTextureManager()->GetResource(materialInfo->m_bumpMapFilename, true, true, memoryGroup,
                                                                 queueFamilyIndices);
         }
     }
@@ -37,18 +37,18 @@ namespace vkfw_core::gfx {
     Material& Material::operator=(const Material& rhs) = default;
 
     Material::Material(Material&& rhs) noexcept :
-        materialInfo_{ rhs.materialInfo_ },
-        diffuseTexture_{ std::move(rhs.diffuseTexture_) },
-        bumpMap_{ std::move(rhs.bumpMap_) }
+        m_materialInfo{ rhs.m_materialInfo },
+        m_diffuseTexture{ std::move(rhs.m_diffuseTexture) },
+        m_bumpMap{ std::move(rhs.m_bumpMap) }
     {
     }
 
     Material& Material::operator=(Material&& rhs) noexcept
     {
         this->~Material();
-        materialInfo_ = rhs.materialInfo_;
-        diffuseTexture_ = std::move(rhs.diffuseTexture_);
-        bumpMap_ = std::move(rhs.bumpMap_);
+        m_materialInfo = rhs.m_materialInfo;
+        m_diffuseTexture = std::move(rhs.m_diffuseTexture);
+        m_bumpMap = std::move(rhs.m_bumpMap);
         return *this;
     }
 

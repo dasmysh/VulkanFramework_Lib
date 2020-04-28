@@ -43,7 +43,7 @@ namespace vkfw_core {
         ApplicationBase& operator=(ApplicationBase&&) = delete;
         virtual ~ApplicationBase() noexcept;
 
-        static ApplicationBase& instance() { return *instance_; };
+        static ApplicationBase& instance() { return *m_instance; };
 
         /** Starts the application. */
         void StartRun();
@@ -54,11 +54,11 @@ namespace vkfw_core {
         /** Called if the application is to end running. */
         void EndRun();
 
-        [[nodiscard]] bool IsPaused() const { return pause_; }
-        [[nodiscard]] bool IsGUIMode() const { return guiMode_; }
+        [[nodiscard]] bool IsPaused() const { return m_pause; }
+        [[nodiscard]] bool IsGUIMode() const { return m_guiMode; }
         VKWindow* GetFocusedWindow();
         VKWindow* GetWindow(unsigned int idx);
-        // VKUDllExport const SceneObjectManager& GetSceneObjectManager() const { return sceneObjectManager_; }
+        // VKUDllExport const SceneObjectManager& GetSceneObjectManager() const { return m_sceneObjectManager; }
 
         void SetPause(bool pause);
 
@@ -68,9 +68,9 @@ namespace vkfw_core {
         void OnResize(unsigned int width, unsigned int height, const VKWindow* window);
         virtual void Resize(const glm::uvec2& screenSize, const VKWindow* window);
 
-        [[nodiscard]] const cfg::Configuration& GetConfig() const { return config_; };
-        [[nodiscard]] const std::vector<const char*>& GetVKValidationLayers() const { return vkValidationLayers_; }
-        [[nodiscard]] const vk::Instance& GetVKInstance() const { return *vkInstance_; }
+        [[nodiscard]] const cfg::Configuration& GetConfig() const { return m_config; };
+        [[nodiscard]] const std::vector<const char*>& GetVKValidationLayers() const { return m_vkValidationLayers; }
+        [[nodiscard]] const vk::Instance& GetVKInstance() const { return *m_vkInstance; }
         [[nodiscard]] std::unique_ptr<gfx::LogicalDevice>
         CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const std::vector<std::string>& requiredDeviceExtensions,
             const vk::SurfaceKHR& surface = vk::SurfaceKHR()) const;
@@ -88,32 +88,32 @@ namespace vkfw_core {
             ~GLFWInitObject();
         };
 
-        GLFWInitObject forceGLFWInit_;
+        GLFWInitObject m_forceGLFWInit;
 
         /** Holds the applications instance. */
-        static ApplicationBase* instance_;
+        static ApplicationBase* m_instance;
 
         /** Holds the configuration file name. */
-        std::string configFileName_;
+        std::string m_configFileName;
         /** Holds the configuration for this application. */
-        cfg::Configuration config_;
+        cfg::Configuration m_config;
         /** Holds the windows. */
-        std::vector<VKWindow> windows_;
+        std::vector<VKWindow> m_windows;
 
         // application status
         /** <c>true</c> if application is paused. */
-        bool pause_;
+        bool m_pause;
         /**  <c>true</c> if the application has stopped (i.e. the last scene has finished). */
-        bool stopped_;
+        bool m_stopped;
         /** The (global) time of the application. */
-        double currentTime_;
+        double m_currentTime;
         /** Time elapsed in the frame. */
-        double elapsedTime_;
+        double m_elapsedTime;
         /** Hold whether GUI mode is switched on. */
-        bool guiMode_ = true;
+        bool m_guiMode = true;
 
         /** Holds the scene object manager. */
-        // SceneObjectManager sceneObjectManager_;
+        // SceneObjectManager m_sceneObjectManager;
 
     protected:
         /**
@@ -144,15 +144,15 @@ namespace vkfw_core {
         void CheckVKInstanceLayers();
 
         /** Holds the Vulkan validation layers. */
-        std::vector<const char*> vkValidationLayers_;
+        std::vector<const char*> m_vkValidationLayers;
         /** Holds the Vulkan instance. */
-        vk::UniqueInstance vkInstance_;
+        vk::UniqueInstance m_vkInstance;
         /** Holds the dispatch loader for the instance. */
         // vk::DispatchLoaderDynamic vkDispatchLoaderInst_;
         /** Holds the debug report callback. */
-        vk::UniqueHandle<vk::DebugReportCallbackEXT, vk::DispatchLoaderDynamic> vkDebugReportCB_;
+        vk::UniqueHandle<vk::DebugReportCallbackEXT, vk::DispatchLoaderDynamic> m_vkDebugReportCB;
         /** Holds the physical devices. */
-        std::map<unsigned int, vk::PhysicalDevice> vkPhysicalDevices_;
+        std::map<unsigned int, vk::PhysicalDevice> m_vkPhysicalDevices;
         /** Holds the physical device. */
         //vk::PhysicalDevice vkPhysicalDevice_;
         /** Holds the logical device. */

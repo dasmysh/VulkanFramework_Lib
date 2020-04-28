@@ -84,15 +84,15 @@ namespace vkfw_core::qf {
     int findQueueFamily(const vk::PhysicalDevice& device, const cfg::QueueCfg& desc, const vk::SurfaceKHR& surface = vk::SurfaceKHR())
     {
         vk::QueueFlags reqFlags;
-        if (!(desc.graphics_ || desc.compute_) && desc.transfer_) { reqFlags |= vk::QueueFlagBits::eTransfer; }
-        if (desc.graphics_) { reqFlags |= vk::QueueFlagBits::eGraphics; }
-        if (desc.compute_) { reqFlags |= vk::QueueFlagBits::eCompute; }
-        if (desc.sparseBinding_) { reqFlags |= vk::QueueFlagBits::eSparseBinding; }
+        if (!(desc.m_graphics || desc.m_compute) && desc.m_transfer) { reqFlags |= vk::QueueFlagBits::eTransfer; }
+        if (desc.m_graphics) { reqFlags |= vk::QueueFlagBits::eGraphics; }
+        if (desc.m_compute) { reqFlags |= vk::QueueFlagBits::eCompute; }
+        if (desc.m_sparseBinding) { reqFlags |= vk::QueueFlagBits::eSparseBinding; }
 
         auto queueProps = device.getQueueFamilyProperties();
         auto queueCount = static_cast<std::uint32_t>(queueProps.size());
         for (std::uint32_t i = 0; i < queueCount; i++) {
-            if (queueProps[i].queueCount < desc.priorities_.size()) { continue; }
+            if (queueProps[i].queueCount < desc.m_priorities.size()) { continue; }
 
             bool flagsFit = false;
             if (reqFlags == vk::QueueFlagBits::eTransfer
@@ -117,13 +117,13 @@ namespace vkfw_core::qf {
 
 
             if (flagsFit) {
-                if (surface && desc.graphics_ && (device.getSurfaceSupportKHR(i, surface) == 0U)) {
+                if (surface && desc.m_graphics && (device.getSurfaceSupportKHR(i, surface) == 0U)) {
                     continue;
                 }
                 return i;
             }
             /*if (queueProps[i].queueFlags & reqFlags) {
-                if (surface && desc.graphics_ && !device.getSurfaceSupportKHR(i, surface)) {
+                if (surface && desc.m_graphics && !device.getSurfaceSupportKHR(i, surface)) {
                     continue;
                 }
                 return i;
@@ -140,8 +140,8 @@ namespace vkfw_core::cfg {
     {
         std::vector<vk::SurfaceFormatKHR> result;
         vk::SurfaceFormatKHR fmt;
-        if (cfg.backbufferBits_ == 32) {
-            if (cfg.useSRGB_) {
+        if (cfg.m_backbufferBits == 32) {
+            if (cfg.m_useSRGB) {
                 fmt.format = vk::Format::eR8G8B8A8Srgb;
                 result.push_back(fmt);
                 fmt.format = vk::Format::eB8G8R8A8Srgb;
@@ -156,8 +156,8 @@ namespace vkfw_core::cfg {
         }
 
         constexpr std::size_t BITS_RGB8 = 24;
-        if (cfg.backbufferBits_ == BITS_RGB8) {
-            if (cfg.useSRGB_) {
+        if (cfg.m_backbufferBits == BITS_RGB8) {
+            if (cfg.m_useSRGB) {
                 fmt.format = vk::Format::eR8G8B8Srgb;
                 result.push_back(fmt);
                 fmt.format = vk::Format::eB8G8R8Srgb;
@@ -171,8 +171,8 @@ namespace vkfw_core::cfg {
             }
         }
 
-        if (cfg.backbufferBits_ == 16) {
-            if (!cfg.useSRGB_) {
+        if (cfg.m_backbufferBits == 16) {
+            if (!cfg.m_useSRGB) {
                 fmt.format = vk::Format::eR5G6B5UnormPack16;
                 result.push_back(fmt);
                 fmt.format = vk::Format::eR5G5B5A1UnormPack16;
@@ -190,22 +190,22 @@ namespace vkfw_core::cfg {
     vk::PresentModeKHR GetVulkanPresentModeFromConfig(const WindowCfg& cfg)
     {
         vk::PresentModeKHR presentMode = {};
-        if (cfg.swapOptions_ == cfg::SwapOptions::DOUBLE_BUFFERING) { presentMode = vk::PresentModeKHR::eImmediate; }
-        if (cfg.swapOptions_ == cfg::SwapOptions::DOUBLE_BUFFERING_VSYNC) { presentMode = vk::PresentModeKHR::eFifo; }
-        if (cfg.swapOptions_ == cfg::SwapOptions::TRIPLE_BUFFERING) { presentMode = vk::PresentModeKHR::eMailbox; }
+        if (cfg.m_swapOptions == cfg::SwapOptions::DOUBLE_BUFFERING) { presentMode = vk::PresentModeKHR::eImmediate; }
+        if (cfg.m_swapOptions == cfg::SwapOptions::DOUBLE_BUFFERING_VSYNC) { presentMode = vk::PresentModeKHR::eFifo; }
+        if (cfg.m_swapOptions == cfg::SwapOptions::TRIPLE_BUFFERING) { presentMode = vk::PresentModeKHR::eMailbox; }
         return presentMode;
     }
 
     std::uint32_t GetVulkanAdditionalImageCountFromConfig(const WindowCfg& cfg)
     {
-        if (cfg.swapOptions_ == SwapOptions::TRIPLE_BUFFERING) { return 1; }
+        if (cfg.m_swapOptions == SwapOptions::TRIPLE_BUFFERING) { return 1; }
         return 0;
     }
 }
 
 namespace vkfw_core {
 
-    ApplicationBase* ApplicationBase::instance_ = nullptr;
+    ApplicationBase* ApplicationBase::m_instance = nullptr;
 
 
     /**
@@ -219,18 +219,18 @@ namespace vkfw_core {
                                      const std::vector<std::string>& requiredInstanceExtensions,
                                      const std::vector<std::string>& requiredDeviceExtensions)
         :
-        configFileName_{ configFileName },
-        pause_(true),
-        stopped_(false),
-        currentTime_(0.0),
-        elapsedTime_(0.0)
+        m_configFileName{ configFileName },
+        m_pause(true),
+        m_stopped(false),
+        m_currentTime(0.0),
+        m_elapsedTime(0.0)
     {
         spdlog::debug("Trying to load configuration.");
         {
             std::ifstream configFile(configFileName.data(), std::ios::in);
             if (configFile.is_open()) {
                 auto ia = std::make_unique<cereal::XMLInputArchive>(configFile);
-                (*ia) >> cereal::make_nvp("configuration", config_);
+                (*ia) >> cereal::make_nvp("configuration", m_config);
             } else {
                 spdlog::debug("Configuration file not found. Using standard config.");
             }
@@ -240,34 +240,34 @@ namespace vkfw_core {
             // always directly write configuration to update version.
             std::ofstream ofs(configFileName.data(), std::ios::out);
             auto oa = std::make_unique<cereal::XMLOutputArchive>(ofs);
-            (*oa) << cereal::make_nvp("configuration", config_);
+            (*oa) << cereal::make_nvp("configuration", m_config);
         }
 
         InitVulkan(applicationName, applicationVersion, requiredInstanceExtensions);
-        instance_ = this;
+        m_instance = this;
 
         // TODO: Check if the GUI works with multiple windows. [10/19/2018 Sebastian Maisch]
         bool first = true;
-        for (auto& wc : config_.windows_) {
-            windows_.emplace_back(wc, first, requiredDeviceExtensions);
-            windows_.back().ShowWindow();
+        for (auto& wc : m_config.m_windows) {
+            m_windows.emplace_back(wc, first, requiredDeviceExtensions);
+            m_windows.back().ShowWindow();
             first = false;
         }
     }
 
     ApplicationBase::~ApplicationBase() noexcept
     {
-        windows_.clear();
-        vkDebugReportCB_.reset();
-        // if (vkDebugReportCB_) vk::DestroyDebugReportCallbackEXT(*vkInstance_, vkDebugReportCB_, nullptr);
-        vkInstance_.reset();
+        m_windows.clear();
+        m_vkDebugReportCB.reset();
+        // if (vkDebugReportCB_) vk::DestroyDebugReportCallbackEXT(*m_vkInstance, m_vkDebugReportCB, nullptr);
+        m_vkInstance.reset();
 
         spdlog::debug("Exiting application. Saving configuration to file.");
         try {
-            std::ofstream ofs(configFileName_, std::ios::out);
+            std::ofstream ofs(m_configFileName, std::ios::out);
             // NOLINTNEXTLINE
             auto oa = std::make_unique<cereal::XMLOutputArchive>(ofs);
-            (*oa) << cereal::make_nvp("configuration", config_);
+            (*oa) << cereal::make_nvp("configuration", m_config);
         } catch (...) {
             spdlog::critical("Could not write configuration. Unknown exception.");
         }
@@ -276,16 +276,13 @@ namespace vkfw_core {
     VKWindow* ApplicationBase::GetFocusedWindow()
     {
         VKWindow* focusWindow = nullptr;
-        for (auto& w : windows_) {
+        for (auto& w : m_windows) {
             if (w.IsFocused()) { focusWindow = &w; }
         }
         return focusWindow;
     }
 
-    VKWindow* ApplicationBase::GetWindow(unsigned int idx)
-    {
-        return &windows_[idx];
-    }
+    VKWindow* ApplicationBase::GetWindow(unsigned int idx) { return &m_windows[idx]; }
 
     void ApplicationBase::SetPause(bool pause)
     {
@@ -294,7 +291,7 @@ namespace vkfw_core {
         } else {
             spdlog::info("End pause");
         }
-        pause_ = pause;
+        m_pause = pause;
     }
 
     /**
@@ -313,14 +310,14 @@ namespace vkfw_core {
             {
             case GLFW_KEY_ESCAPE:
                 if ((static_cast<unsigned int>(mods) & static_cast<unsigned int>(GLFW_MOD_CONTROL)) != 0) {
-                    stopped_ = true;
+                    m_stopped = true;
                 } else {
                     sender->CloseWindow();
                 }
                 handled = true;
                 break;
             case GLFW_KEY_F2:
-                guiMode_ = !guiMode_;
+                m_guiMode = !m_guiMode;
                 handled = true;
                 break;
             case GLFW_KEY_F9:
@@ -369,39 +366,39 @@ namespace vkfw_core {
 
     void ApplicationBase::StartRun()
     {
-        stopped_ = false;
-        pause_ = false;
-        currentTime_ = glfwGetTime();
+        m_stopped = false;
+        m_pause = false;
+        m_currentTime = glfwGetTime();
     }
 
     bool ApplicationBase::IsRunning() const
     {
-        return !stopped_ && !windows_[0].IsClosing();
+        return !m_stopped && !m_windows[0].IsClosing();
     }
 
     void ApplicationBase::EndRun()
     {
-        stopped_ = true;
+        m_stopped = true;
     }
 
     void ApplicationBase::Step()
     {
-        if (stopped_) {
+        if (m_stopped) {
             constexpr int HALF_SECOND = 500;
             Sleep(HALF_SECOND);
             return;
         }
 
         auto currentTime = glfwGetTime();
-        elapsedTime_ = currentTime - currentTime_;
-        currentTime_ = currentTime;
+        m_elapsedTime = currentTime - m_currentTime;
+        m_currentTime = currentTime;
         glfwPollEvents();
 
-        for (auto& window : windows_) {
+        for (auto& window : m_windows) {
             window.PrepareFrame();
 
-            if (!this->pause_ && (!config_.pauseOnKillFocus_ || (GetFocusedWindow() != nullptr))) {
-                FrameMove(static_cast<float>(currentTime_), static_cast<float>(elapsedTime_), &window);
+            if (!this->m_pause && (!m_config.m_pauseOnKillFocus || (GetFocusedWindow() != nullptr))) {
+                FrameMove(static_cast<float>(m_currentTime), static_cast<float>(m_elapsedTime), &window);
             }
 
             RenderScene(&window);
@@ -438,7 +435,7 @@ namespace vkfw_core {
                          layer.implementationVersion);
         }
 
-        for (const auto& enabledLayer : vkValidationLayers_) {
+        for (const auto& enabledLayer : m_vkValidationLayers) {
             auto found = std::find_if(layers.begin(), layers.end(),
                                       [&enabledLayer](const vk::LayerProperties& layerProps) { return std::strcmp(enabledLayer, &layerProps.layerName[0]) == 0; });
             if (found == layers.end()) {
@@ -470,13 +467,13 @@ namespace vkfw_core {
         }
 
         // NOLINTNEXTLINE
-        auto useValidationLayers = config_.useValidationLayers_;
+        auto useValidationLayers = m_config.m_useValidationLayers;
 #ifndef NDEBUG
         useValidationLayers = true;
 #endif
         if (useValidationLayers) {
             enabledExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-            vkValidationLayers_.push_back("VK_LAYER_LUNARG_standard_validation");
+            m_vkValidationLayers.push_back("VK_LAYER_LUNARG_standard_validation");
         }
 
         CheckVKInstanceExtensions(enabledExtensions);
@@ -487,11 +484,11 @@ namespace vkfw_core {
             auto api_version = VK_API_VERSION_1_1;
             vk::ApplicationInfo appInfo{applicationName.data(), applicationVersion, engineName.data(), engineVersion,
                                         static_cast<std::uint32_t>(api_version)};
-            vk::InstanceCreateInfo createInfo{ vk::InstanceCreateFlags(), &appInfo, static_cast<std::uint32_t>(vkValidationLayers_.size()), vkValidationLayers_.data(),
+            vk::InstanceCreateInfo createInfo{ vk::InstanceCreateFlags(), &appInfo, static_cast<std::uint32_t>(m_vkValidationLayers.size()), m_vkValidationLayers.data(),
                 static_cast<std::uint32_t>(enabledExtensions.size()), enabledExtensions.data() };
 
-            vkInstance_ = vk::createInstanceUnique(createInfo);
-            VULKAN_HPP_DEFAULT_DISPATCHER.init(vkInstance_.get());
+            m_vkInstance = vk::createInstanceUnique(createInfo);
+            VULKAN_HPP_DEFAULT_DISPATCHER.init(m_vkInstance.get());
         }
 
         vk::DebugReportFlagsEXT drFlags(vk::DebugReportFlagBitsEXT::eError);
@@ -504,7 +501,7 @@ namespace vkfw_core {
         vk::DebugReportCallbackCreateInfoEXT drCreateInfo{ drFlags, DebugOutputCallback, this };
 
         try {
-            vkDebugReportCB_ = vkInstance_->createDebugReportCallbackEXTUnique(drCreateInfo);
+            m_vkDebugReportCB = m_vkInstance->createDebugReportCallbackEXTUnique(drCreateInfo);
         }
         catch (vk::SystemError& e) {
             spdlog::critical("Could not create DebugReportCallback ({}).", e.what());
@@ -513,10 +510,10 @@ namespace vkfw_core {
         spdlog::info("Vulkan instance created.");
 
         {
-            auto physicalDeviceList = vkInstance_->enumeratePhysicalDevices();
+            auto physicalDeviceList = m_vkInstance->enumeratePhysicalDevices();
             for (const auto& device : physicalDeviceList) {
                 auto score = ScorePhysicalDevice(device);
-                vkPhysicalDevices_[score] = device;
+                m_vkPhysicalDevices[score] = device;
             }
         }
 
@@ -532,23 +529,23 @@ namespace vkfw_core {
         std::vector<std::string> requiredDeviceExtensionsInternal = requiredDeviceExtensions;
         if (surface) { requiredDeviceExtensionsInternal.emplace_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME); }
         auto foundDevice = false;
-        for (const auto& device : vkPhysicalDevices_) {
+        for (const auto& device : m_vkPhysicalDevices) {
             deviceQueueDesc.clear();
 
             if (!CheckDeviceExtensions(device.second, requiredDeviceExtensions)) { continue; }
             if (!additionalDeviceChecks(device.second)) { continue; }
 
-            for (const auto& queueDesc : windowCfg.queues_) {
+            for (const auto& queueDesc : windowCfg.m_queues) {
                 auto queueFamilyIndex = qf::findQueueFamily(device.second, queueDesc, surface);
                 if (queueFamilyIndex != -1) {
-                    deviceQueueDesc.emplace_back(queueFamilyIndex, queueDesc.priorities_);
+                    deviceQueueDesc.emplace_back(queueFamilyIndex, queueDesc.m_priorities);
                 }
                 else {
                     break;
                 }
             }
 
-            if (deviceQueueDesc.size() == windowCfg.queues_.size()) {
+            if (deviceQueueDesc.size() == windowCfg.m_queues.size()) {
                 physicalDevice = device.second;
                 foundDevice = true;
                 break;
@@ -556,14 +553,14 @@ namespace vkfw_core {
         }
 
         if constexpr (use_debug_pipeline) {
-            if (vkPhysicalDevices_.size() == 1) {
-                auto devProps = (*vkPhysicalDevices_.begin()).second.getProperties();
+            if (m_vkPhysicalDevices.size() == 1) {
+                auto devProps = (*m_vkPhysicalDevices.begin()).second.getProperties();
                 if (devProps.pipelineCacheUUID[0] == 'r' && devProps.pipelineCacheUUID[1] == 'd'
                     && devProps.pipelineCacheUUID[2] == 'o' && devProps.pipelineCacheUUID[3] == 'c') {
-                    physicalDevice = (*vkPhysicalDevices_.begin()).second;
+                    physicalDevice = (*m_vkPhysicalDevices.begin()).second;
                     foundDevice = true;
-                    while (deviceQueueDesc.size() < windowCfg.queues_.size()) {
-                        deviceQueueDesc.emplace_back(0, windowCfg.queues_[deviceQueueDesc.size()].priorities_);
+                    while (deviceQueueDesc.size() < windowCfg.m_queues.size()) {
+                        deviceQueueDesc.emplace_back(0, windowCfg.m_queues[deviceQueueDesc.size()].m_priorities);
                     }
                 }
             }
@@ -595,7 +592,7 @@ namespace vkfw_core {
         std::sort(requestedFormats.begin(), requestedFormats.end(), [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0.format < f1.format; });
         auto requestedPresentMode = cfg::GetVulkanPresentModeFromConfig(windowCfg);
         auto requestedAdditionalImgCnt = cfg::GetVulkanAdditionalImageCountFromConfig(windowCfg);
-        glm::uvec2 requestedExtend(windowCfg.windowWidth_, windowCfg.windowHeight_);
+        glm::uvec2 requestedExtend(windowCfg.m_windowWidth, windowCfg.m_windowHeight);
 
         // NOLINTNEXTLINE
         return CreateLogicalDevice(windowCfg, requiredDeviceExtensions, surface, [&surface, &requestedFormats, &requestedPresentMode, &requestedAdditionalImgCnt, &requestedExtend](const vk::PhysicalDevice& device) {
@@ -684,7 +681,7 @@ namespace vkfw_core {
 
     PFN_vkVoidFunction ApplicationBase::LoadVKInstanceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory) const
     {
-        auto func = vkGetInstanceProcAddr(*vkInstance_, functionName.c_str());
+        auto func = vkGetInstanceProcAddr(*m_vkInstance, functionName.c_str());
         if (func == nullptr) {
             if (mandatory) {
                 spdlog::critical("Could not load instance function '{}' [{}].", functionName, extensionName);

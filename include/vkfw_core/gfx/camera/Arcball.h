@@ -32,13 +32,13 @@ namespace vkfw_core::gfx {
         [[nodiscard]] static glm::vec3 MousePositionToArcball(const glm::vec2& mousePosition);
 
         /** Holds the button to use. */
-        const int button_;
+        const int m_button;
         /** Holds whether the arc-ball is currently rotated. */
-        bool arcballOn_;
+        bool m_arcballOn;
         /** holds the current arc-ball position in normalized device coordinates. */
-        glm::vec3 currentScreen_;
+        glm::vec3 m_currentScreen;
         /** holds the last arc-ball position in normalized device coordinates. */
-        glm::vec3 lastScreen_;
+        glm::vec3 m_lastScreen;
 
     };
 }

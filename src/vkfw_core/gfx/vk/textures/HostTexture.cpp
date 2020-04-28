@@ -67,7 +67,7 @@ namespace vkfw_core::gfx {
 
     void HostTexture::InitializeData(const glm::u32vec4& size, std::uint32_t mipLevels, const void* data)
     {
-        InitializeData(size, mipLevels, glm::u32vec4(size.x * GetDescriptor().bytesPP_, size.y, size.z, size.w), data);
+        InitializeData(size, mipLevels, glm::u32vec4(size.x * GetDescriptor().m_bytesPP, size.y, size.z, size.w), data);
     }
 
     void HostTexture::UploadData(std::uint32_t mipLevel, std::uint32_t arrayLayer,

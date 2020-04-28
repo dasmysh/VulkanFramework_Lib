@@ -19,41 +19,53 @@ namespace vkfw_core::gfx {
     struct TextureDescriptor final
     {
         /** Holds the bytes per pixel of the format. */
-        std::size_t bytesPP_;
+        std::size_t m_bytesPP;
         /** Holds the image create flags. */
-        vk::ImageCreateFlags createFlags_ = vk::ImageCreateFlags();
+        vk::ImageCreateFlags m_createFlags = vk::ImageCreateFlags();
         /** Holds the textures format. */
-        vk::Format format_ = vk::Format();
+        vk::Format m_format = vk::Format();
         /** Holds the number of samples. */
-        vk::SampleCountFlagBits samples_ = vk::SampleCountFlagBits::e1;
+        vk::SampleCountFlagBits m_samples = vk::SampleCountFlagBits::e1;
         /** Holds the image tiling. */
-        vk::ImageTiling imageTiling_ = vk::ImageTiling();
+        vk::ImageTiling m_imageTiling = vk::ImageTiling();
         /** Holds the images usage flags. */
-        vk::ImageUsageFlags imageUsage_ = vk::ImageUsageFlags();
+        vk::ImageUsageFlags m_imageUsage = vk::ImageUsageFlags();
         /** Holds the images sharing mode. */
-        vk::SharingMode sharingMode_ = vk::SharingMode();
+        vk::SharingMode m_sharingMode = vk::SharingMode();
         /** Holds the images layout. */
-        vk::ImageLayout imageLayout_ = vk::ImageLayout();
+        vk::ImageLayout m_imageLayout = vk::ImageLayout();
         /** Holds the memory properties. */
-        vk::MemoryPropertyFlags memoryProperties_ = vk::MemoryPropertyFlags();
+        vk::MemoryPropertyFlags m_memoryProperties = vk::MemoryPropertyFlags();
 
-        TextureDescriptor(const TextureDescriptor& desc, const vk::MemoryPropertyFlags& memProperties) :
-            bytesPP_{ desc.bytesPP_ }, createFlags_{ desc.createFlags_ },
-            format_{ desc.format_ }, samples_{ desc.samples_ },
-            imageTiling_{ desc.imageTiling_ }, imageUsage_{ desc.imageUsage_ },
-            sharingMode_{ desc.sharingMode_ }, imageLayout_{ desc.imageLayout_ },
-            memoryProperties_{ desc.memoryProperties_ | memProperties } {}
-        TextureDescriptor(const TextureDescriptor& desc, const vk::ImageUsageFlags& imageUsage) :
-            bytesPP_{ desc.bytesPP_ }, createFlags_{ desc.createFlags_ },
-            format_{ desc.format_ }, samples_{ desc.samples_ },
-            imageTiling_{ desc.imageTiling_ },
-            imageUsage_{ desc.imageUsage_ | imageUsage },
-            sharingMode_{ desc.sharingMode_ }, imageLayout_{ desc.imageLayout_ },
-            memoryProperties_{ desc.memoryProperties_ } {}
+        TextureDescriptor(const TextureDescriptor& desc, const vk::MemoryPropertyFlags& memProperties)
+            : m_bytesPP{desc.m_bytesPP},
+              m_createFlags{desc.m_createFlags},
+              m_format{desc.m_format},
+              m_samples{desc.m_samples},
+              m_imageTiling{desc.m_imageTiling},
+              m_imageUsage{desc.m_imageUsage},
+              m_sharingMode{desc.m_sharingMode},
+              m_imageLayout{desc.m_imageLayout},
+              m_memoryProperties{desc.m_memoryProperties | memProperties}
+        {
+        }
+        TextureDescriptor(const TextureDescriptor& desc, const vk::ImageUsageFlags& imageUsage)
+            : m_bytesPP{desc.m_bytesPP},
+              m_createFlags{desc.m_createFlags},
+              m_format{desc.m_format},
+              m_samples{desc.m_samples},
+              m_imageTiling{desc.m_imageTiling},
+              m_imageUsage{desc.m_imageUsage | imageUsage},
+              m_sharingMode{desc.m_sharingMode},
+              m_imageLayout{desc.m_imageLayout},
+              m_memoryProperties{desc.m_memoryProperties}
+        {
+        }
         TextureDescriptor(std::size_t bytesPP, vk::Format format,
                           vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1)
-            :
-            bytesPP_{ bytesPP }, format_{ format }, samples_{ samples } {}
+            : m_bytesPP{bytesPP}, m_format{format}, m_samples{samples}
+        {
+        }
 
         static TextureDescriptor StagingTextureDesc(std::size_t bytesPP, vk::Format format,
                                                     vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1);
@@ -100,40 +112,40 @@ namespace vkfw_core::gfx {
                        vk::Fence fence = vk::Fence()) const;
         void CopyImageSync(const Texture& dstImage, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx) const;
 
-        [[nodiscard]] const glm::u32vec4& GetSize() const { return size_; }
-        [[nodiscard]] std::uint32_t GetMipLevels() const { return mipLevels_; }
-        [[nodiscard]] vk::Image GetImage() const { return *vkImage_; }
-        [[nodiscard]] vk::ImageView GetImageView() const { return *vkImageView_; }
-        [[nodiscard]] const DeviceMemory& GetDeviceMemory() const { return imageDeviceMemory_; }
-        [[nodiscard]] const TextureDescriptor& GetDescriptor() const { return desc_; }
+        [[nodiscard]] const glm::u32vec4& GetSize() const { return m_size; }
+        [[nodiscard]] std::uint32_t GetMipLevels() const { return m_mipLevels; }
+        [[nodiscard]] vk::Image GetImage() const { return *m_vkImage; }
+        [[nodiscard]] vk::ImageView GetImageView() const { return *m_vkImageView; }
+        [[nodiscard]] const DeviceMemory& GetDeviceMemory() const { return m_imageDeviceMemory; }
+        [[nodiscard]] const TextureDescriptor& GetDescriptor() const { return m_desc; }
 
     protected:
-        [[nodiscard]] Texture CopyWithoutData() const { return Texture{device_, desc_, queueFamilyIndices_}; }
+        [[nodiscard]] Texture CopyWithoutData() const { return Texture{m_device, m_desc, m_queueFamilyIndices}; }
         [[nodiscard]] vk::ImageAspectFlags GetValidAspects() const;
-        [[nodiscard]] const vk::Device& GetDevice() const { return device_->GetDevice(); }
+        [[nodiscard]] const vk::Device& GetDevice() const { return m_device->GetDevice(); }
         static vk::AccessFlags GetAccessFlagsForLayout(vk::ImageLayout layout);
         static vk::PipelineStageFlags GetStageFlagsForLayout(vk::ImageLayout layout);
 
     private:
         /** Holds the device. */
-        const LogicalDevice* device_;
+        const LogicalDevice* m_device;
         /** Holds the Vulkan image object. */
-        vk::UniqueImage vkImage_;
+        vk::UniqueImage m_vkImage;
         /** Holds the Vulkan image view. */
-        vk::UniqueImageView vkImageView_;
+        vk::UniqueImageView m_vkImageView;
         /** Holds the Vulkan device memory for the image. */
-        DeviceMemory imageDeviceMemory_;
+        DeviceMemory m_imageDeviceMemory;
         /** Holds the current size of the texture (x: bytes of line, y: #lines, z: #depth slices, w: #array slices). */
-        glm::u32vec4 size_;
+        glm::u32vec4 m_size;
         /** Holds the number of MIP levels. */
-        std::uint32_t mipLevels_;
+        std::uint32_t m_mipLevels;
         /** Holds the texture description. */
-        TextureDescriptor desc_;
+        TextureDescriptor m_desc;
         /** Holds the queue family indices. */
-        std::vector<std::uint32_t> queueFamilyIndices_;
+        std::vector<std::uint32_t> m_queueFamilyIndices;
         /** Holds the image type. */
-        vk::ImageType type_ = vk::ImageType::e3D;
+        vk::ImageType m_type = vk::ImageType::e3D;
         /** Holds the image view type. */
-        vk::ImageViewType viewType_ = vk::ImageViewType::e3D;
+        vk::ImageViewType m_viewType = vk::ImageViewType::e3D;
     };
 }

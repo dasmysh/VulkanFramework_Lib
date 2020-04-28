@@ -13,12 +13,12 @@
 namespace vkfw_core::gfx {
 
     CommandBuffers::CommandBuffers(const LogicalDevice* device, unsigned int queueFamily, vk::CommandBufferLevel level, std::uint32_t numBuffers) :
-        device_{ device },
-        queueFamily_{ queueFamily }
+        m_device{ device },
+        m_queueFamily{ queueFamily }
     {
         spdlog::warn("Command buffers are not fully implemented at the moment.");
-        vk::CommandBufferAllocateInfo cmdBufferallocInfo{ device_->GetCommandPool(queueFamily_) , level, numBuffers };
-        vkCmdBuffers_ = device_->GetDevice().allocateCommandBuffersUnique(cmdBufferallocInfo);
+        vk::CommandBufferAllocateInfo cmdBufferallocInfo{ m_device->GetCommandPool(m_queueFamily) , level, numBuffers };
+        m_vkCmdBuffers = m_device->GetDevice().allocateCommandBuffersUnique(cmdBufferallocInfo);
     }
 
     vk::UniqueCommandBuffer CommandBuffers::beginSingleTimeSubmit(const LogicalDevice* device, unsigned int queueFamily)

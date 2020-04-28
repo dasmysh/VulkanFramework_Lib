@@ -29,7 +29,7 @@ struct ImGui_ImplVulkan_InitInfo
     VkPipelineCache PipelineCache = 0;
     VkDescriptorPool DescriptorPool = 0;
     const VkAllocationCallbacks* Allocator = nullptr;
-    ImGui_ImplVulkan_InternalInfo*  internal_ = nullptr;
+    ImGui_ImplVulkan_InternalInfo*  m_internal = nullptr;
 };
 
 // Called by user code

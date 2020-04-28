@@ -37,14 +37,13 @@ namespace vkfw_core {
 
     public:
         /** Constructor for resource managers. */
-        explicit ResourceManager(const gfx::LogicalDevice* device) : device_{ device } {}
+        explicit ResourceManager(const gfx::LogicalDevice* device) : m_device{ device } {}
 
         /** Copy constructor. */
-        ResourceManager(const ResourceManager& rhs) :
-            device_{ rhs.device_ }
+        ResourceManager(const ResourceManager& rhs) : m_device{rhs.m_device}
         {
-            for (const auto& res : rhs.resources_) {
-                resources_.emplace(res.first, std::weak_ptr<ResourceType>());
+            for (const auto& res : rhs.m_resources) {
+                m_resources.emplace(res.first, std::weak_ptr<ResourceType>());
             }
         }
 
@@ -54,20 +53,23 @@ namespace vkfw_core {
         {
             if (this == &rhs) { return *this; }
 
-            resources_ = rhs.resources_;
-            device_ = rhs.device_;
+            m_resources = rhs.m_resources;
+            m_device = rhs.m_device;
             return *this;
         }
 
         /** Move constructor. */
-        ResourceManager(ResourceManager&& rhs) noexcept : resources_{ std::move(rhs.resources_) }, device_{ rhs.device_ } {}
+        ResourceManager(ResourceManager&& rhs) noexcept
+            : m_resources{std::move(rhs.m_resources)}, m_device{rhs.m_device}
+        {
+        }
         /** Move assignment operator. */
         ResourceManager& operator=(ResourceManager&& rhs) noexcept
         {
             if (this != &rhs) {
                 this->~ResourceManager();
-                resources_ = std::move(rhs.resources_);
-                device_ = rhs.device_;
+                m_resources = std::move(rhs.m_resources);
+                m_device = rhs.m_device;
             }
             return *this;
         }
@@ -84,7 +86,7 @@ namespace vkfw_core {
         {
             std::weak_ptr<ResourceType> wpResource;
             try {
-                wpResource = resources_.at(resId);
+                wpResource = m_resources.at(resId);
             }
             catch (std::out_of_range&) {
                 spdlog::info("No resource with id \"{}\" found. Creating new one.", resId);
@@ -96,7 +98,7 @@ namespace vkfw_core {
                     while (!spResource) { LoadResource(resId, spResource, std::forward<Args>(args)...); }
                 }
                 wpResource = spResource;
-                resources_.insert(std::move(std::make_pair(resId, wpResource)));
+                m_resources.insert(std::move(std::make_pair(resId, wpResource)));
                 return std::move(spResource);
             }
             return wpResource.lock();
@@ -109,8 +111,8 @@ namespace vkfw_core {
          */
         [[nodiscard]] bool HasResource(const std::string& resId) const
         {
-            auto rit = resources_.find(resId);
-            return (rit != resources_.end()) && !rit->expired();
+            auto rit = m_resources.find(resId);
+            return (rit != m_resources.end()) && !rit->expired();
         }
 
 
@@ -123,7 +125,7 @@ namespace vkfw_core {
         template<typename... Args>
         void LoadResource(const std::string& resId, std::shared_ptr<ResourceType>& spResource, Args&&... args)
         {
-            spResource = std::make_shared<rType>(resId, device_, std::forward<Args>(args)...);
+            spResource = std::make_shared<rType>(resId, m_device, std::forward<Args>(args)...);
 
             /*catch (const resource_loading_error& loadingError) {
                 auto resid = boost::get_error_info<resid_info>(loadingError);
@@ -145,14 +147,14 @@ namespace vkfw_core {
          */
         std::shared_ptr<ResourceType> SetResource(const std::string& resourceName, std::shared_ptr<ResourceType>&& resource)
         {
-            resources_[resourceName] = std::move(resource);
-            return resources_[resourceName].lock();
+            m_resources[resourceName] = std::move(resource);
+            return m_resources[resourceName].lock();
         }
 
     private:
         /** Holds the resources managed. */
-        ResourceMap resources_;
+        ResourceMap m_resources;
         /** Holds the device for this resource. */
-        const gfx::LogicalDevice* device_;
+        const gfx::LogicalDevice* m_device;
     };
 }

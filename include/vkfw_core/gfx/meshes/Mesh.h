@@ -27,8 +27,8 @@ namespace vkfw_core::gfx {
 
     struct WorldMatrixUBO
     {
-        glm::mat4 model_;
-        glm::mat4 normalMatrix_;
+        glm::mat4 m_model;
+        glm::mat4 m_normalMatrix;
     };
 
     class Mesh
@@ -61,15 +61,15 @@ namespace vkfw_core::gfx {
         void CreateDescriptorSets(std::size_t numBackbuffers);
         [[nodiscard]] vk::DescriptorSetLayout GetMaterialTexturesDescriptorLayout() const
         {
-            return *materialTexturesDescriptorSetLayout_;
+            return *m_materialTexturesDescriptorSetLayout;
         }
         [[nodiscard]] vk::DescriptorSetLayout GetMaterialBufferDescriptorLayout() const
         {
-            return materialsUBO_.GetDescriptorLayout();
+            return m_materialsUBO.GetDescriptorLayout();
         }
         [[nodiscard]] vk::DescriptorSetLayout GetWorldMatricesDescriptorLayout() const
         {
-            return worldMatricesUBO_.GetDescriptorLayout();
+            return m_worldMatricesUBO.GetDescriptorLayout();
         }
 
         void TransferWorldMatrices(vk::CommandBuffer transferCmdBuffer, std::size_t backbufferIdx) const;
@@ -103,38 +103,38 @@ namespace vkfw_core::gfx {
         void SetIndexBuffer(const DeviceBuffer* idxBuffer, std::size_t offset);
 
         /** Holds the device. */
-        const LogicalDevice* device_;
+        const LogicalDevice* m_device;
         /** Holds the mesh info object containing vertex/index data. */
-        std::shared_ptr<const MeshInfo> meshInfo_;
+        std::shared_ptr<const MeshInfo> m_meshInfo;
         /** Holds the internal memory group. */
-        std::unique_ptr<MemoryGroup> internalMemoryGroup_;
+        std::unique_ptr<MemoryGroup> m_internalMemoryGroup;
         /** Holds the memory group used in this mesh. */
-        MemoryGroup* memoryGroup_;
+        MemoryGroup* m_memoryGroup;
         /** The index into the memory group. */
-        unsigned int bufferIdx_;
+        unsigned int m_bufferIdx;
         /** Holds a pointer to the vertex buffer and an offset to the vertex data. */
-        std::pair<const DeviceBuffer*, vk::DeviceSize> vertexBuffer_;
+        std::pair<const DeviceBuffer*, vk::DeviceSize> m_vertexBuffer;
         /** Holds a pointer to the index buffer and an offset to the index data. */
-        std::pair<const DeviceBuffer*, vk::DeviceSize> indexBuffer_;
+        std::pair<const DeviceBuffer*, vk::DeviceSize> m_indexBuffer;
 
         /** Holds the uniform buffer for the world matrices. */
-        UniformBufferObject worldMatricesUBO_;
+        UniformBufferObject m_worldMatricesUBO;
         /** Holds the uniform buffer for the materials. */
-        UniformBufferObject materialsUBO_;
+        UniformBufferObject m_materialsUBO;
 
         /** Holds the meshes materials. */
-        std::vector<Material> materials_;
+        std::vector<Material> m_materials;
         /** The sampler for the materials textures. */
-        vk::UniqueSampler textureSampler_;
+        vk::UniqueSampler m_textureSampler;
         /** The descriptor pool for mesh rendering. */
-        vk::UniqueDescriptorPool descriptorPool_;
+        vk::UniqueDescriptorPool m_descriptorPool;
         /** The descriptor set layout for materials in mesh rendering. */
-        vk::UniqueDescriptorSetLayout materialTexturesDescriptorSetLayout_;
+        vk::UniqueDescriptorSetLayout m_materialTexturesDescriptorSetLayout;
         /** Holds the material descriptor sets. */
-        std::vector<vk::DescriptorSet> materialTextureDescriptorSets_;
+        std::vector<vk::DescriptorSet> m_materialTextureDescriptorSets;
 
         /** Holds the vertex and material data while the mesh is constructed. */
-        std::vector<uint8_t> vertexMaterialData_;
+        std::vector<uint8_t> m_vertexMaterialData;
     };
 
     template<class VertexType, class MaterialType>
@@ -152,7 +152,7 @@ namespace vkfw_core::gfx {
         const LogicalDevice* device, MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         Mesh result{ device, meshInfo, UniformBufferObject::Create<MaterialType>(device, meshInfo->GetMaterials().size()),
-            numBackbuffers, memoryGroup, bufferIdx_, queueFamilyIndices };
+            numBackbuffers, memoryGroup, m_bufferIdx, queueFamilyIndices };
         result.CreateBuffersInMemoryGroup<VertexType, MaterialType>(0, numBackbuffers, queueFamilyIndices);
         return result;
     }
@@ -163,7 +163,7 @@ namespace vkfw_core::gfx {
         const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         Mesh result{ device, meshInfo, UniformBufferObject::Create<MaterialType>(device, meshInfo->GetMaterials().size()),
-            numBackbuffers, memoryGroup, bufferIdx_, queueFamilyIndices };
+            numBackbuffers, memoryGroup, m_bufferIdx, queueFamilyIndices };
         result.CreateBuffersInMemoryGroup<VertexType, MaterialType>(offset, numBackbuffers, queueFamilyIndices);
         return result;
     }
@@ -174,41 +174,41 @@ namespace vkfw_core::gfx {
     {
         // TODO: possible bug? numBackbuffers is not used currently. [3/28/2020 Sebastian Maisch]
         std::vector<VertexType> vertices;
-        meshInfo_->GetVertices(vertices);
+        m_meshInfo->GetVertices(vertices);
 
-        auto materialAlignment = device_->CalculateUniformBufferAlignment(sizeof(MaterialType));
-        aligned_vector<MaterialType> materialUBOContent{ materialAlignment }; materialUBOContent.reserve(materials_.size());
-        for (const auto& material : materials_) materialUBOContent.emplace_back(material);
+        auto materialAlignment = m_device->CalculateUniformBufferAlignment(sizeof(MaterialType));
+        aligned_vector<MaterialType> materialUBOContent{ materialAlignment }; materialUBOContent.reserve(m_materials.size());
+        for (const auto& material : m_materials) materialUBOContent.emplace_back(material);
 
         WorldMatrixUBO worldMatrices;
-        worldMatrices.model_ = glm::mat4{ 1.0f };
-        worldMatrices.normalMatrix_ = glm::mat4{ 1.0f };
+        worldMatrices.m_model = glm::mat4{ 1.0f };
+        worldMatrices.m_normalMatrix = glm::mat4{ 1.0f };
 
         auto vertexBufferSize = vkfw_core::byteSizeOf(vertices);
-        auto indexBufferSize = vkfw_core::byteSizeOf(meshInfo_->GetIndices());
-        auto materialBufferSize = device_->CalculateUniformBufferAlignment(byteSizeOf(materialUBOContent));
+        auto indexBufferSize = vkfw_core::byteSizeOf(m_meshInfo->GetIndices());
+        auto materialBufferSize = m_device->CalculateUniformBufferAlignment(byteSizeOf(materialUBOContent));
 
-        vertexMaterialData_.resize(vertexBufferSize + materialBufferSize + sizeof(WorldMatrixUBO));
-        memcpy(vertexMaterialData_.data(), vertices.data(), vertexBufferSize);
-        memcpy(vertexMaterialData_.data() + vertexBufferSize, materialUBOContent.data(), materialBufferSize);
-        memcpy(vertexMaterialData_.data() + vertexBufferSize + materialBufferSize, &worldMatrices, sizeof(WorldMatrixUBO));
+        m_vertexMaterialData.resize(vertexBufferSize + materialBufferSize + sizeof(WorldMatrixUBO));
+        memcpy(m_vertexMaterialData.data(), vertices.data(), vertexBufferSize);
+        memcpy(m_vertexMaterialData.data() + vertexBufferSize, materialUBOContent.data(), materialBufferSize);
+        memcpy(m_vertexMaterialData.data() + vertexBufferSize + materialBufferSize, &worldMatrices, sizeof(WorldMatrixUBO));
 
-        auto materialBufferAlignment = device_->CalculateUniformBufferAlignment(offset + vertexBufferSize + indexBufferSize);
-        auto worldMatricesBufferAlignment = device_->CalculateUniformBufferAlignment(materialBufferAlignment + materialBufferSize);
+        auto materialBufferAlignment = m_device->CalculateUniformBufferAlignment(offset + vertexBufferSize + indexBufferSize);
+        auto worldMatricesBufferAlignment = m_device->CalculateUniformBufferAlignment(materialBufferAlignment + materialBufferSize);
 
-        if (bufferIdx_ == DeviceMemoryGroup::INVALID_INDEX) bufferIdx_ = memoryGroup_->AddBufferToGroup(
+        if (m_bufferIdx == DeviceMemoryGroup::INVALID_INDEX) m_bufferIdx = m_memoryGroup->AddBufferToGroup(
             vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eUniformBuffer,
-            worldMatricesBufferAlignment + worldMatricesUBO_.GetCompleteSize(), queueFamilyIndices);
+            worldMatricesBufferAlignment + m_worldMatricesUBO.GetCompleteSize(), queueFamilyIndices);
 
-        memoryGroup_->AddDataToBufferInGroup(bufferIdx_, offset, vertexBufferSize, vertexMaterialData_.data());
-        memoryGroup_->AddDataToBufferInGroup(bufferIdx_, offset + vertexBufferSize, meshInfo_->GetIndices());
+        m_memoryGroup->AddDataToBufferInGroup(m_bufferIdx, offset, vertexBufferSize, m_vertexMaterialData.data());
+        m_memoryGroup->AddDataToBufferInGroup(m_bufferIdx, offset + vertexBufferSize, m_meshInfo->GetIndices());
 
-        materialsUBO_.AddUBOToBufferPrefill(memoryGroup_, bufferIdx_, materialBufferAlignment,
-            materialBufferSize, vertexMaterialData_.data() + vertexBufferSize);
-        worldMatricesUBO_.AddUBOToBuffer(memoryGroup_, bufferIdx_, worldMatricesBufferAlignment,
-            *reinterpret_cast<const WorldMatrixUBO*>(vertexMaterialData_.data() + vertexBufferSize + materialBufferSize));
+        m_materialsUBO.AddUBOToBufferPrefill(m_memoryGroup, m_bufferIdx, materialBufferAlignment,
+            materialBufferSize, m_vertexMaterialData.data() + vertexBufferSize);
+        m_worldMatricesUBO.AddUBOToBuffer(m_memoryGroup, m_bufferIdx, worldMatricesBufferAlignment,
+            *reinterpret_cast<const WorldMatrixUBO*>(m_vertexMaterialData.data() + vertexBufferSize + materialBufferSize));
 
-        auto buffer = memoryGroup_->GetBuffer(bufferIdx_);
+        auto buffer = m_memoryGroup->GetBuffer(m_bufferIdx);
         SetVertexBuffer(buffer, offset);
         SetIndexBuffer(buffer, offset + vertexBufferSize);
     }
@@ -222,7 +222,7 @@ namespace vkfw_core::gfx {
         auto vertexBufferSize = meshInfo->GetVertices().size() * sizeof(VertexType);
         auto indexBufferSize = meshInfo->GetIndices().size() * sizeof(std::uint32_t);
         auto materialBufferSize = device->CalculateUniformBufferAlignment(meshInfo->GetMaterials().size() * materialAlignment);
-        auto localMatricesBufferSize = device_->CalculateUniformBufferAlignment(meshInfo->GetNodes().size() * localMatricesAlignment);
+        auto localMatricesBufferSize = device->CalculateUniformBufferAlignment(meshInfo->GetNodes().size() * localMatricesAlignment);
 
         auto materialBufferAlignment = device->CalculateUniformBufferAlignment(offset + vertexBufferSize + indexBufferSize);
         auto localMatricesBufferAlignment = device->CalculateUniformBufferAlignment(materialBufferAlignment + materialBufferSize);

@@ -22,23 +22,24 @@ namespace vkfw_core::gfx {
     AnimationState::AnimationState(const MeshInfo* mesh, const SubAnimationMapping& mappings,
                                    std::size_t startingAnimationIndex, bool isRepeating)
         :
-        mesh_{ mesh },
-        animationIndex_{ startingAnimationIndex },
-        isRepeating_{ isRepeating }
+        m_mesh{ mesh },
+        m_animationIndex{ startingAnimationIndex },
+        m_isRepeating{ isRepeating }
     {
-        assert(mappings.size() > animationIndex_ && "there is no mapping for the starting-state");
+        assert(mappings.size() > m_animationIndex && "there is no mapping for the starting-state");
 
-        skinned_.resize(mesh_->GetNumberOfBones());
+        m_skinned.resize(m_mesh->GetNumberOfBones());
 
         for (const auto& mapping : mappings) {
-            animations_.emplace_back(mesh_->GetAnimations()[mapping.animationIndex_].GetSubSequence(mapping.name_, mapping.startTime_, mapping.endTime_));
-            animationPlaybackSpeed_.emplace_back(mapping.playbackSpeed_);
+            m_animations.emplace_back(m_mesh->GetAnimations()[mapping.m_animationIndex].GetSubSequence(
+                mapping.m_name, mapping.m_startTime, mapping.m_endTime));
+            m_animationPlaybackSpeed.emplace_back(mapping.m_playbackSpeed);
         }
 
-        localBonePoses_.resize(mesh_->GetNodes().size());
-        globalBonePoses_.resize(mesh_->GetNodes().size());
-        for (auto i = 0U; i < localBonePoses_.size(); ++i) {
-            localBonePoses_[i] = mesh_->GetNodes()[i]->GetLocalTransform();
+        m_localBonePoses.resize(m_mesh->GetNodes().size());
+        m_globalBonePoses.resize(m_mesh->GetNodes().size());
+        for (auto i = 0U; i < m_localBonePoses.size(); ++i) {
+            m_localBonePoses[i] = m_mesh->GetNodes()[i]->GetLocalTransform();
         }
 
     }
@@ -49,14 +50,14 @@ namespace vkfw_core::gfx {
      */
     void AnimationState::Play(double currentTime)
     {
-        isPlaying_ = true;
-        if (pauseTime_ != 0.0f) {
-            startTime_ += static_cast<float>(currentTime) - pauseTime_;
+        m_isPlaying = true;
+        if (m_pauseTime != 0.0f) {
+            m_startTime += static_cast<float>(currentTime) - m_pauseTime;
         }
         else {
-            startTime_ = static_cast<float>(currentTime);
+            m_startTime = static_cast<float>(currentTime);
         }
-        pauseTime_ = 0.0f;
+        m_pauseTime = 0.0f;
     }
 
     /**
@@ -65,31 +66,30 @@ namespace vkfw_core::gfx {
      */
     bool AnimationState::UpdateTime(double currentTime)
     {
-        if (!isPlaying_) { return false; }
+        if (!m_isPlaying) { return false; }
 
         // Advance time
-        currentPlayTime_ = (static_cast<float>(currentTime) - startTime_) * GetFramesPerSecond() * GetSpeed();
+        m_currentPlayTime = (static_cast<float>(currentTime) - m_startTime) * GetFramesPerSecond() * GetSpeed();
 
         bool didAnimationStopOrRepeat = false;
         // Modulate time to fit within the interval of the animation
-        if (currentPlayTime_ < 0.0f) {
+        if (m_currentPlayTime < 0.0f) {
             if (IsRepeating()) {
-                auto time = currentPlayTime_ / GetDuration();
-                currentPlayTime_ = (time - glm::floor(time)) * GetDuration();
+                auto time = m_currentPlayTime / GetDuration();
+                m_currentPlayTime = (time - glm::floor(time)) * GetDuration();
             }
             else {
-                currentPlayTime_ = 0.0f;
+                m_currentPlayTime = 0.0f;
                 Pause(currentTime);
             }
             didAnimationStopOrRepeat = true;
-        }
-        else if (currentPlayTime_ > GetDuration()) {
+        } else if (m_currentPlayTime > GetDuration()) {
 
             if (IsRepeating()) {
-                currentPlayTime_ = glm::mod(currentPlayTime_, GetDuration());
+                m_currentPlayTime = glm::mod(m_currentPlayTime, GetDuration());
             }
             else {
-                currentPlayTime_ = GetDuration();
+                m_currentPlayTime = GetDuration();
                 Pause(currentTime);
             }
             didAnimationStopOrRepeat = true;
@@ -102,21 +102,21 @@ namespace vkfw_core::gfx {
      */
     void AnimationState::ComputeAnimationsFinalBonePoses()
     {
-        const auto& currentAnimation = animations_[animationIndex_];
-        const auto& invBindPoseMatrices = mesh_->GetInverseBindPoseMatrices();
+        const auto& currentAnimation = m_animations[m_animationIndex];
+        const auto& invBindPoseMatrices = m_mesh->GetInverseBindPoseMatrices();
 
-        for (auto i = 0U; i < mesh_->GetNodes().size(); ++i) {
+        for (auto i = 0U; i < m_mesh->GetNodes().size(); ++i) {
             glm::mat4 pose;
-            if (currentAnimation.ComputePoseAtTime(i, currentPlayTime_, pose)) { localBonePoses_[i] = pose; }
+            if (currentAnimation.ComputePoseAtTime(i, m_currentPlayTime, pose)) { m_localBonePoses[i] = pose; }
         }
 
-        ComputeGlobalBonePose(mesh_->GetRootNode());
+        ComputeGlobalBonePose(m_mesh->GetRootNode());
 
-        for (const auto& node : mesh_->GetNodes()) {
+        for (const auto& node : m_mesh->GetNodes()) {
             if (node->GetBoneIndex() == -1) {
                 continue;
             }
-            skinned_[static_cast<std::size_t>(node->GetBoneIndex())] = globalBonePoses_[node->GetNodeIndex()] * invBindPoseMatrices[static_cast<std::size_t>(node->GetBoneIndex())];
+            m_skinned[static_cast<std::size_t>(node->GetBoneIndex())] = m_globalBonePoses[node->GetNodeIndex()] * invBindPoseMatrices[static_cast<std::size_t>(node->GetBoneIndex())];
         }
     }
 
@@ -128,11 +128,11 @@ namespace vkfw_core::gfx {
         }
 
         if (nodeParent == nullptr) {
-            globalBonePoses_[node->GetNodeIndex()] = localBonePoses_[node->GetNodeIndex()];
+            m_globalBonePoses[node->GetNodeIndex()] = m_localBonePoses[node->GetNodeIndex()];
         }
         else {
-            globalBonePoses_[node->GetNodeIndex()] =
-                globalBonePoses_[nodeParent->GetNodeIndex()] * localBonePoses_[node->GetNodeIndex()];
+            m_globalBonePoses[node->GetNodeIndex()] =
+                m_globalBonePoses[nodeParent->GetNodeIndex()] * m_localBonePoses[node->GetNodeIndex()];
         }
 
         for (auto i = 0U; i < node->GetNumberOfNodes(); ++i) {

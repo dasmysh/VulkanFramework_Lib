@@ -175,7 +175,8 @@ static void CreateOrResizeBuffer(ImGui_ImplVulkan_InitInfo* vkinfo, VkBuffer& bu
     if (buffer != VK_NULL_HANDLE) { vkDestroyBuffer(vkinfo->Device, buffer, vkinfo->Allocator); }
     if (buffer_memory != 0) { vkFreeMemory(vkinfo->Device, buffer_memory, vkinfo->Allocator); }
 
-    VkDeviceSize vertex_buffer_size_aligned = ((new_size - 1) / vkinfo->internal_->g_BufferMemoryAlignment + 1) * vkinfo->internal_->g_BufferMemoryAlignment;
+    VkDeviceSize vertex_buffer_size_aligned = ((new_size - 1) / vkinfo->m_internal->g_BufferMemoryAlignment + 1)
+                                              * vkinfo->m_internal->g_BufferMemoryAlignment;
     VkBufferCreateInfo buffer_info = {};
     buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     buffer_info.size = vertex_buffer_size_aligned;
@@ -186,7 +187,9 @@ static void CreateOrResizeBuffer(ImGui_ImplVulkan_InitInfo* vkinfo, VkBuffer& bu
 
     VkMemoryRequirements req;
     vkGetBufferMemoryRequirements(vkinfo->Device, buffer, &req);
-    vkinfo->internal_->g_BufferMemoryAlignment = (vkinfo->internal_->g_BufferMemoryAlignment > req.alignment) ? vkinfo->internal_->g_BufferMemoryAlignment : req.alignment;
+    vkinfo->m_internal->g_BufferMemoryAlignment = (vkinfo->m_internal->g_BufferMemoryAlignment > req.alignment)
+                                                     ? vkinfo->m_internal->g_BufferMemoryAlignment
+                                                     : req.alignment;
     VkMemoryAllocateInfo alloc_info = {};
     alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
     alloc_info.allocationSize = req.size;
@@ -206,8 +209,10 @@ void ImGui_ImplVulkan_RenderDrawData(ImGui_ImplVulkan_InitInfo* vkinfo, ImDrawDa
     VkResult err;
     if (draw_data->TotalVtxCount == 0) { return; }
 
-    FrameDataForRender* fd = &vkinfo->internal_->g_FramesDataBuffers[vkinfo->internal_->g_FrameIndex];
-    vkinfo->internal_->g_FrameIndex = ((static_cast<int>(static_cast<std::size_t>(vkinfo->internal_->g_FrameIndex) + 1)) % vkinfo->internal_->g_FramesDataBuffers.size());
+    FrameDataForRender* fd = &vkinfo->m_internal->g_FramesDataBuffers[vkinfo->m_internal->g_FrameIndex];
+    vkinfo->m_internal->g_FrameIndex =
+        ((static_cast<int>(static_cast<std::size_t>(vkinfo->m_internal->g_FrameIndex) + 1))
+         % vkinfo->m_internal->g_FramesDataBuffers.size());
 
     // Create the Vertex and Index buffers:
     size_t vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
@@ -252,9 +257,10 @@ void ImGui_ImplVulkan_RenderDrawData(ImGui_ImplVulkan_InitInfo* vkinfo, ImDrawDa
 
     // Bind pipeline and descriptor sets:
     {
-        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkinfo->internal_->g_Pipeline);
-        std::array<VkDescriptorSet, 1> desc_set = {vkinfo->internal_->g_DescriptorSet};
-        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkinfo->internal_->g_PipelineLayout, 0, 1, desc_set.data(), 0, nullptr);
+        vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkinfo->m_internal->g_Pipeline);
+        std::array<VkDescriptorSet, 1> desc_set = {vkinfo->m_internal->g_DescriptorSet};
+        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, vkinfo->m_internal->g_PipelineLayout,
+                                0, 1, desc_set.data(), 0, nullptr);
     }
 
     // Bind Vertex And Index Buffer:
@@ -286,8 +292,10 @@ void ImGui_ImplVulkan_RenderDrawData(ImGui_ImplVulkan_InitInfo* vkinfo, ImDrawDa
         std::array<float, 2> translate = {};
         translate[0] = -1.0f - draw_data->DisplayPos.x * scale[0];
         translate[1] = -1.0f - draw_data->DisplayPos.y * scale[1];
-        vkCmdPushConstants(command_buffer, vkinfo->internal_->g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 0, sizeof(float) * 2, scale.data());
-        vkCmdPushConstants(command_buffer, vkinfo->internal_->g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 2, sizeof(float) * 2, translate.data());
+        vkCmdPushConstants(command_buffer, vkinfo->m_internal->g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,
+                           sizeof(float) * 0, sizeof(float) * 2, scale.data());
+        vkCmdPushConstants(command_buffer, vkinfo->m_internal->g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT,
+                           sizeof(float) * 2, sizeof(float) * 2, translate.data());
     }
 
     // Render the command lists:
@@ -352,17 +360,17 @@ bool ImGui_ImplVulkan_CreateFontsTexture(ImGui_ImplVulkan_InitInfo* vkinfo, VkCo
         info.usage = static_cast<unsigned int>(VK_IMAGE_USAGE_SAMPLED_BIT) | static_cast<unsigned int>(VK_IMAGE_USAGE_TRANSFER_DST_BIT);
         info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
         info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        err = vkCreateImage(vkinfo->Device, &info, vkinfo->Allocator, &vkinfo->internal_->g_FontImage);
+        err = vkCreateImage(vkinfo->Device, &info, vkinfo->Allocator, &vkinfo->m_internal->g_FontImage);
         check_vk_result(err);
         VkMemoryRequirements req;
-        vkGetImageMemoryRequirements(vkinfo->Device, vkinfo->internal_->g_FontImage, &req);
+        vkGetImageMemoryRequirements(vkinfo->Device, vkinfo->m_internal->g_FontImage, &req);
         VkMemoryAllocateInfo alloc_info = {};
         alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         alloc_info.allocationSize = req.size;
         alloc_info.memoryTypeIndex = ImGui_ImplVulkan_MemoryType(vkinfo, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT, req.memoryTypeBits);
-        err = vkAllocateMemory(vkinfo->Device, &alloc_info, vkinfo->Allocator, &vkinfo->internal_->g_FontMemory);
+        err = vkAllocateMemory(vkinfo->Device, &alloc_info, vkinfo->Allocator, &vkinfo->m_internal->g_FontMemory);
         check_vk_result(err);
-        err = vkBindImageMemory(vkinfo->Device, vkinfo->internal_->g_FontImage, vkinfo->internal_->g_FontMemory, 0);
+        err = vkBindImageMemory(vkinfo->Device, vkinfo->m_internal->g_FontImage, vkinfo->m_internal->g_FontMemory, 0);
         check_vk_result(err);
     }
 
@@ -370,25 +378,25 @@ bool ImGui_ImplVulkan_CreateFontsTexture(ImGui_ImplVulkan_InitInfo* vkinfo, VkCo
     {
         VkImageViewCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        info.image = vkinfo->internal_->g_FontImage;
+        info.image = vkinfo->m_internal->g_FontImage;
         info.viewType = VK_IMAGE_VIEW_TYPE_2D;
         info.format = VK_FORMAT_R8G8B8A8_UNORM;
         info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         info.subresourceRange.levelCount = 1;
         info.subresourceRange.layerCount = 1;
-        err = vkCreateImageView(vkinfo->Device, &info, vkinfo->Allocator, &vkinfo->internal_->g_FontView);
+        err = vkCreateImageView(vkinfo->Device, &info, vkinfo->Allocator, &vkinfo->m_internal->g_FontView);
         check_vk_result(err);
     }
 
     // Update the Descriptor Set:
     {
         std::array<VkDescriptorImageInfo, 1> desc_image = {};
-        desc_image[0].sampler = vkinfo->internal_->g_FontSampler;
-        desc_image[0].imageView = vkinfo->internal_->g_FontView;
+        desc_image[0].sampler = vkinfo->m_internal->g_FontSampler;
+        desc_image[0].imageView = vkinfo->m_internal->g_FontView;
         desc_image[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         std::array<VkWriteDescriptorSet, 1> write_desc = {};
         write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write_desc[0].dstSet = vkinfo->internal_->g_DescriptorSet;
+        write_desc[0].dstSet = vkinfo->m_internal->g_DescriptorSet;
         write_desc[0].descriptorCount = 1;
         write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         write_desc[0].pImageInfo = desc_image.data();
@@ -402,34 +410,39 @@ bool ImGui_ImplVulkan_CreateFontsTexture(ImGui_ImplVulkan_InitInfo* vkinfo, VkCo
         buffer_info.size = upload_size;
         buffer_info.usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT;
         buffer_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        err = vkCreateBuffer(vkinfo->Device, &buffer_info, vkinfo->Allocator, &vkinfo->internal_->g_UploadBuffer);
+        err = vkCreateBuffer(vkinfo->Device, &buffer_info, vkinfo->Allocator, &vkinfo->m_internal->g_UploadBuffer);
         check_vk_result(err);
         VkMemoryRequirements req;
-        vkGetBufferMemoryRequirements(vkinfo->Device, vkinfo->internal_->g_UploadBuffer, &req);
-        vkinfo->internal_->g_BufferMemoryAlignment = (vkinfo->internal_->g_BufferMemoryAlignment > req.alignment) ? vkinfo->internal_->g_BufferMemoryAlignment : req.alignment;
+        vkGetBufferMemoryRequirements(vkinfo->Device, vkinfo->m_internal->g_UploadBuffer, &req);
+        vkinfo->m_internal->g_BufferMemoryAlignment = (vkinfo->m_internal->g_BufferMemoryAlignment > req.alignment)
+                                                         ? vkinfo->m_internal->g_BufferMemoryAlignment
+                                                         : req.alignment;
         VkMemoryAllocateInfo alloc_info = {};
         alloc_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
         alloc_info.allocationSize = req.size;
         alloc_info.memoryTypeIndex = ImGui_ImplVulkan_MemoryType(vkinfo, VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT, req.memoryTypeBits);
-        err = vkAllocateMemory(vkinfo->Device, &alloc_info, vkinfo->Allocator, &vkinfo->internal_->g_UploadBufferMemory);
+        err =
+            vkAllocateMemory(vkinfo->Device, &alloc_info, vkinfo->Allocator, &vkinfo->m_internal->g_UploadBufferMemory);
         check_vk_result(err);
-        err = vkBindBufferMemory(vkinfo->Device, vkinfo->internal_->g_UploadBuffer, vkinfo->internal_->g_UploadBufferMemory, 0);
+        err = vkBindBufferMemory(vkinfo->Device, vkinfo->m_internal->g_UploadBuffer,
+                                 vkinfo->m_internal->g_UploadBufferMemory, 0);
         check_vk_result(err);
     }
 
     // Upload to Buffer:
     {
         char* map = nullptr;
-        err = vkMapMemory(vkinfo->Device, vkinfo->internal_->g_UploadBufferMemory, 0, upload_size, 0, (void**)(&map)); // NOLINT
+        err = vkMapMemory(vkinfo->Device, vkinfo->m_internal->g_UploadBufferMemory, 0, upload_size, 0,
+                          (void**)(&map)); // NOLINT
         check_vk_result(err);
         memcpy(map, pixels, upload_size);
         std::array<VkMappedMemoryRange, 1> range = {};
         range[0].sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-        range[0].memory = vkinfo->internal_->g_UploadBufferMemory;
+        range[0].memory = vkinfo->m_internal->g_UploadBufferMemory;
         range[0].size = upload_size;
         err = vkFlushMappedMemoryRanges(vkinfo->Device, 1, range.data());
         check_vk_result(err);
-        vkUnmapMemory(vkinfo->Device, vkinfo->internal_->g_UploadBufferMemory);
+        vkUnmapMemory(vkinfo->Device, vkinfo->m_internal->g_UploadBufferMemory);
     }
 
     // Copy to Image:
@@ -441,7 +454,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture(ImGui_ImplVulkan_InitInfo* vkinfo, VkCo
         copy_barrier[0].newLayout = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
         copy_barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         copy_barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        copy_barrier[0].image = vkinfo->internal_->g_FontImage;
+        copy_barrier[0].image = vkinfo->m_internal->g_FontImage;
         copy_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         copy_barrier[0].subresourceRange.levelCount = 1;
         copy_barrier[0].subresourceRange.layerCount = 1;
@@ -454,7 +467,8 @@ bool ImGui_ImplVulkan_CreateFontsTexture(ImGui_ImplVulkan_InitInfo* vkinfo, VkCo
         region.imageExtent.width = width;
         region.imageExtent.height = height;
         region.imageExtent.depth = 1;
-        vkCmdCopyBufferToImage(command_buffer, vkinfo->internal_->g_UploadBuffer, vkinfo->internal_->g_FontImage, VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
+        vkCmdCopyBufferToImage(command_buffer, vkinfo->m_internal->g_UploadBuffer, vkinfo->m_internal->g_FontImage,
+                               VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL, 1, &region);
 
         std::array<VkImageMemoryBarrier, 1> use_barrier = {};
         use_barrier[0].sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -464,7 +478,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture(ImGui_ImplVulkan_InitInfo* vkinfo, VkCo
         use_barrier[0].newLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
         use_barrier[0].srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
         use_barrier[0].dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-        use_barrier[0].image = vkinfo->internal_->g_FontImage;
+        use_barrier[0].image = vkinfo->m_internal->g_FontImage;
         use_barrier[0].subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
         use_barrier[0].subresourceRange.levelCount = 1;
         use_barrier[0].subresourceRange.layerCount = 1;
@@ -473,7 +487,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture(ImGui_ImplVulkan_InitInfo* vkinfo, VkCo
     }
 
     // Store our identifier
-    io.Fonts->TexID = (ImTextureID)(intptr_t)vkinfo->internal_->g_FontImage; // NOLINT
+    io.Fonts->TexID = (ImTextureID)(intptr_t)vkinfo->m_internal->g_FontImage; // NOLINT
 
     return true;
 }
@@ -500,7 +514,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects(ImGui_ImplVulkan_InitInfo* vkinfo)
         check_vk_result(err);
     }
 
-    if (vkinfo->internal_->g_FontSampler == 0)
+    if (vkinfo->m_internal->g_FontSampler == 0)
     {
         VkSamplerCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
@@ -513,13 +527,13 @@ bool ImGui_ImplVulkan_CreateDeviceObjects(ImGui_ImplVulkan_InitInfo* vkinfo)
         info.minLod = -1000;
         info.maxLod = 1000;
         info.maxAnisotropy = 1.0f;
-        err = vkCreateSampler(vkinfo->Device, &info, vkinfo->Allocator, &vkinfo->internal_->g_FontSampler);
+        err = vkCreateSampler(vkinfo->Device, &info, vkinfo->Allocator, &vkinfo->m_internal->g_FontSampler);
         check_vk_result(err);
     }
 
-    if (vkinfo->internal_->g_DescriptorSetLayout == 0)
+    if (vkinfo->m_internal->g_DescriptorSetLayout == 0)
     {
-        std::array<VkSampler, 1> sampler = { vkinfo->internal_->g_FontSampler};
+        std::array<VkSampler, 1> sampler = {vkinfo->m_internal->g_FontSampler};
         std::array<VkDescriptorSetLayoutBinding, 1> binding = {};
         binding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
         binding[0].descriptorCount = 1;
@@ -529,7 +543,8 @@ bool ImGui_ImplVulkan_CreateDeviceObjects(ImGui_ImplVulkan_InitInfo* vkinfo)
         info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
         info.bindingCount = 1;
         info.pBindings = binding.data();
-        err = vkCreateDescriptorSetLayout(vkinfo->Device, &info, vkinfo->Allocator, &vkinfo->internal_->g_DescriptorSetLayout);
+        err = vkCreateDescriptorSetLayout(vkinfo->Device, &info, vkinfo->Allocator,
+                                          &vkinfo->m_internal->g_DescriptorSetLayout);
         check_vk_result(err);
     }
 
@@ -539,26 +554,27 @@ bool ImGui_ImplVulkan_CreateDeviceObjects(ImGui_ImplVulkan_InitInfo* vkinfo)
         alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         alloc_info.descriptorPool = vkinfo->DescriptorPool;
         alloc_info.descriptorSetCount = 1;
-        alloc_info.pSetLayouts = &vkinfo->internal_->g_DescriptorSetLayout;
-        err = vkAllocateDescriptorSets(vkinfo->Device, &alloc_info, &vkinfo->internal_->g_DescriptorSet);
+        alloc_info.pSetLayouts = &vkinfo->m_internal->g_DescriptorSetLayout;
+        err = vkAllocateDescriptorSets(vkinfo->Device, &alloc_info, &vkinfo->m_internal->g_DescriptorSet);
         check_vk_result(err);
     }
 
-    if (vkinfo->internal_->g_PipelineLayout == 0)
+    if (vkinfo->m_internal->g_PipelineLayout == 0)
     {
         // Constants: we are using 'vec2 offset' and 'vec2 scale' instead of a full 3d projection matrix
         std::array<VkPushConstantRange, 1> push_constants = {};
         push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
         push_constants[0].offset = sizeof(float) * 0;
         push_constants[0].size = sizeof(float) * 4;
-        std::array<VkDescriptorSetLayout, 1> set_layout = { vkinfo->internal_->g_DescriptorSetLayout };
+        std::array<VkDescriptorSetLayout, 1> set_layout = {vkinfo->m_internal->g_DescriptorSetLayout};
         VkPipelineLayoutCreateInfo layout_info = {};
         layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
         layout_info.setLayoutCount = 1;
         layout_info.pSetLayouts = set_layout.data();
         layout_info.pushConstantRangeCount = 1;
         layout_info.pPushConstantRanges = push_constants.data();
-        err = vkCreatePipelineLayout(vkinfo->Device, &layout_info, vkinfo->Allocator, &vkinfo->internal_->g_PipelineLayout);
+        err = vkCreatePipelineLayout(vkinfo->Device, &layout_info, vkinfo->Allocator,
+                                     &vkinfo->m_internal->g_PipelineLayout);
         check_vk_result(err);
     }
 
@@ -645,7 +661,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects(ImGui_ImplVulkan_InitInfo* vkinfo)
 
     VkGraphicsPipelineCreateInfo info = {};
     info.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
-    info.flags = vkinfo->internal_->g_PipelineCreateFlags;
+    info.flags = vkinfo->m_internal->g_PipelineCreateFlags;
     info.stageCount = 2;
     info.pStages = &stage[0];
     info.pVertexInputState = &vertex_info;
@@ -656,9 +672,10 @@ bool ImGui_ImplVulkan_CreateDeviceObjects(ImGui_ImplVulkan_InitInfo* vkinfo)
     info.pDepthStencilState = &depth_info;
     info.pColorBlendState = &blend_info;
     info.pDynamicState = &dynamic_state;
-    info.layout = vkinfo->internal_->g_PipelineLayout;
-    info.renderPass = vkinfo->internal_->g_RenderPass;
-    err = vkCreateGraphicsPipelines(vkinfo->Device, vkinfo->PipelineCache, 1, &info, vkinfo->Allocator, &vkinfo->internal_->g_Pipeline);
+    info.layout = vkinfo->m_internal->g_PipelineLayout;
+    info.renderPass = vkinfo->m_internal->g_RenderPass;
+    err = vkCreateGraphicsPipelines(vkinfo->Device, vkinfo->PipelineCache, 1, &info, vkinfo->Allocator,
+                                    &vkinfo->m_internal->g_Pipeline);
     check_vk_result(err);
 
     vkDestroyShaderModule(vkinfo->Device, vert_module, vkinfo->Allocator);
@@ -669,15 +686,15 @@ bool ImGui_ImplVulkan_CreateDeviceObjects(ImGui_ImplVulkan_InitInfo* vkinfo)
 
 void    ImGui_ImplVulkan_InvalidateFontUploadObjects(ImGui_ImplVulkan_InitInfo* info)
 {
-    if ((info->internal_->g_UploadBuffer) != 0)
+    if ((info->m_internal->g_UploadBuffer) != 0)
     {
-        vkDestroyBuffer(info->Device, info->internal_->g_UploadBuffer, info->Allocator);
-        info->internal_->g_UploadBuffer = VK_NULL_HANDLE;
+        vkDestroyBuffer(info->Device, info->m_internal->g_UploadBuffer, info->Allocator);
+        info->m_internal->g_UploadBuffer = VK_NULL_HANDLE;
     }
-    if ((info->internal_->g_UploadBufferMemory) != 0)
+    if ((info->m_internal->g_UploadBufferMemory) != 0)
     {
-        vkFreeMemory(info->Device, info->internal_->g_UploadBufferMemory, info->Allocator);
-        info->internal_->g_UploadBufferMemory = VK_NULL_HANDLE;
+        vkFreeMemory(info->Device, info->m_internal->g_UploadBufferMemory, info->Allocator);
+        info->m_internal->g_UploadBufferMemory = VK_NULL_HANDLE;
     }
 }
 
@@ -685,7 +702,7 @@ void    ImGui_ImplVulkan_InvalidateDeviceObjects(ImGui_ImplVulkan_InitInfo* info
 {
     ImGui_ImplVulkan_InvalidateFontUploadObjects(info);
 
-    for (auto& fd : info->internal_->g_FramesDataBuffers)
+    for (auto& fd : info->m_internal->g_FramesDataBuffers)
     {
         if ((fd.VertexBuffer) != 0) { vkDestroyBuffer(info->Device, fd.VertexBuffer, info->Allocator); fd.VertexBuffer = VK_NULL_HANDLE; }
         if ((fd.VertexBufferMemory) != 0) { vkFreeMemory(info->Device, fd.VertexBufferMemory, info->Allocator); fd.VertexBufferMemory = VK_NULL_HANDLE; }
@@ -693,13 +710,34 @@ void    ImGui_ImplVulkan_InvalidateDeviceObjects(ImGui_ImplVulkan_InitInfo* info
         if ((fd.IndexBufferMemory) != 0) { vkFreeMemory(info->Device, fd.IndexBufferMemory, info->Allocator); fd.IndexBufferMemory = VK_NULL_HANDLE; }
     }
 
-    if ((info->internal_->g_FontView) != 0)             { vkDestroyImageView(info->Device, info->internal_->g_FontView, info->Allocator); info->internal_->g_FontView = VK_NULL_HANDLE; }
-    if ((info->internal_->g_FontImage) != 0)            { vkDestroyImage(info->Device, info->internal_->g_FontImage, info->Allocator); info->internal_->g_FontImage = VK_NULL_HANDLE; }
-    if ((info->internal_->g_FontMemory) != 0)           { vkFreeMemory(info->Device, info->internal_->g_FontMemory, info->Allocator); info->internal_->g_FontMemory = VK_NULL_HANDLE; }
-    if ((info->internal_->g_FontSampler) != 0)          { vkDestroySampler(info->Device, info->internal_->g_FontSampler, info->Allocator); info->internal_->g_FontSampler = VK_NULL_HANDLE; }
-    if ((info->internal_->g_DescriptorSetLayout) != 0)  { vkDestroyDescriptorSetLayout(info->Device, info->internal_->g_DescriptorSetLayout, info->Allocator); info->internal_->g_DescriptorSetLayout = VK_NULL_HANDLE; }
-    if ((info->internal_->g_PipelineLayout) != 0)       { vkDestroyPipelineLayout(info->Device, info->internal_->g_PipelineLayout, info->Allocator); info->internal_->g_PipelineLayout = VK_NULL_HANDLE; }
-    if ((info->internal_->g_Pipeline) != 0)             { vkDestroyPipeline(info->Device, info->internal_->g_Pipeline, info->Allocator); info->internal_->g_Pipeline = VK_NULL_HANDLE; }
+    if ((info->m_internal->g_FontView) != 0) {
+        vkDestroyImageView(info->Device, info->m_internal->g_FontView, info->Allocator);
+        info->m_internal->g_FontView = VK_NULL_HANDLE;
+    }
+    if ((info->m_internal->g_FontImage) != 0) {
+        vkDestroyImage(info->Device, info->m_internal->g_FontImage, info->Allocator);
+        info->m_internal->g_FontImage = VK_NULL_HANDLE;
+    }
+    if ((info->m_internal->g_FontMemory) != 0) {
+        vkFreeMemory(info->Device, info->m_internal->g_FontMemory, info->Allocator);
+        info->m_internal->g_FontMemory = VK_NULL_HANDLE;
+    }
+    if ((info->m_internal->g_FontSampler) != 0) {
+        vkDestroySampler(info->Device, info->m_internal->g_FontSampler, info->Allocator);
+        info->m_internal->g_FontSampler = VK_NULL_HANDLE;
+    }
+    if ((info->m_internal->g_DescriptorSetLayout) != 0) {
+        vkDestroyDescriptorSetLayout(info->Device, info->m_internal->g_DescriptorSetLayout, info->Allocator);
+        info->m_internal->g_DescriptorSetLayout = VK_NULL_HANDLE;
+    }
+    if ((info->m_internal->g_PipelineLayout) != 0) {
+        vkDestroyPipelineLayout(info->Device, info->m_internal->g_PipelineLayout, info->Allocator);
+        info->m_internal->g_PipelineLayout = VK_NULL_HANDLE;
+    }
+    if ((info->m_internal->g_Pipeline) != 0) {
+        vkDestroyPipeline(info->Device, info->m_internal->g_Pipeline, info->Allocator);
+        info->m_internal->g_Pipeline = VK_NULL_HANDLE;
+    }
 }
 
 bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass, std::size_t numBackbuffers)
@@ -711,9 +749,9 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
     IM_ASSERT(info->DescriptorPool != VK_NULL_HANDLE);
     IM_ASSERT(render_pass != VK_NULL_HANDLE);
 
-    info->internal_ = new ImGui_ImplVulkan_InternalInfo; // NOLINT
-    info->internal_->g_FramesDataBuffers.resize(numBackbuffers);
-    info->internal_->g_RenderPass = render_pass;
+    info->m_internal = new ImGui_ImplVulkan_InternalInfo; // NOLINT
+    info->m_internal->g_FramesDataBuffers.resize(numBackbuffers);
+    info->m_internal->g_RenderPass = render_pass;
     ImGui_ImplVulkan_CreateDeviceObjects(info);
 
     return true;
@@ -722,7 +760,7 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
 void ImGui_ImplVulkan_Shutdown(ImGui_ImplVulkan_InitInfo* info)
 {
     ImGui_ImplVulkan_InvalidateDeviceObjects(info);
-    delete info->internal_; // NOLINT
+    delete info->m_internal; // NOLINT
 }
 
 void ImGui_ImplVulkan_NewFrame(ImGui_ImplVulkan_InitInfo*)

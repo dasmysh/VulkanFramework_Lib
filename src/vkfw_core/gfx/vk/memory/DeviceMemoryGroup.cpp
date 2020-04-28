@@ -14,8 +14,8 @@
 namespace vkfw_core::gfx {
 
     DeviceMemoryGroup::DeviceMemoryGroup(const LogicalDevice* device, const vk::MemoryPropertyFlags& memoryFlags) :
-        device_{ device },
-        deviceMemory_{ device, memoryFlags | vk::MemoryPropertyFlagBits::eDeviceLocal }
+        m_device{ device },
+        m_deviceMemory{ device, memoryFlags | vk::MemoryPropertyFlagBits::eDeviceLocal }
     {
     }
 
@@ -23,46 +23,48 @@ namespace vkfw_core::gfx {
     DeviceMemoryGroup::~DeviceMemoryGroup() = default;
 
     DeviceMemoryGroup::DeviceMemoryGroup(DeviceMemoryGroup&& rhs) noexcept :
-        device_{ rhs.device_ },
-        deviceMemory_{ std::move(rhs.deviceMemory_) },
-        deviceBuffers_{ std::move(rhs.deviceBuffers_) },
-        deviceImages_{ std::move(rhs.deviceImages_) },
-        deviceOffsets_{ std::move(rhs.deviceOffsets_) }
+        m_device{ rhs.m_device },
+        m_deviceMemory{ std::move(rhs.m_deviceMemory) },
+        m_deviceBuffers{ std::move(rhs.m_deviceBuffers) },
+        m_deviceImages{ std::move(rhs.m_deviceImages) },
+        m_deviceOffsets{ std::move(rhs.m_deviceOffsets) }
     {
     }
 
     DeviceMemoryGroup& DeviceMemoryGroup::operator=(DeviceMemoryGroup&& rhs) noexcept
     {
         this->~DeviceMemoryGroup();
-        device_ = rhs.device_;
-        deviceMemory_ = std::move(rhs.deviceMemory_);
-        deviceBuffers_ = std::move(rhs.deviceBuffers_);
-        deviceImages_ = std::move(rhs.deviceImages_);
-        deviceOffsets_ = std::move(rhs.deviceOffsets_);
+        m_device = rhs.m_device;
+        m_deviceMemory = std::move(rhs.m_deviceMemory);
+        m_deviceBuffers = std::move(rhs.m_deviceBuffers);
+        m_deviceImages = std::move(rhs.m_deviceImages);
+        m_deviceOffsets = std::move(rhs.m_deviceOffsets);
         return *this;
     }
 
     unsigned int DeviceMemoryGroup::AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
-        deviceBuffers_.emplace_back(device_, vk::BufferUsageFlagBits::eTransferDst | usage, vk::MemoryPropertyFlags(), queueFamilyIndices);
-        deviceBuffers_.back().InitializeBuffer(size, false);
+        m_deviceBuffers.emplace_back(m_device, vk::BufferUsageFlagBits::eTransferDst | usage, vk::MemoryPropertyFlags(),
+                                     queueFamilyIndices);
+        m_deviceBuffers.back().InitializeBuffer(size, false);
 
-        return static_cast<unsigned int>(deviceBuffers_.size() - 1);
+        return static_cast<unsigned int>(m_deviceBuffers.size() - 1);
     }
 
     unsigned int DeviceMemoryGroup::AddTextureToGroup(const TextureDescriptor& desc, const glm::u32vec4& size,
         std::uint32_t mipLevels, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
-        deviceImages_.emplace_back(device_, TextureDescriptor(desc, vk::ImageUsageFlagBits::eTransferDst), queueFamilyIndices);
-        deviceImages_.back().InitializeImage(size, mipLevels, false);
+        m_deviceImages.emplace_back(m_device, TextureDescriptor(desc, vk::ImageUsageFlagBits::eTransferDst),
+                                    queueFamilyIndices);
+        m_deviceImages.back().InitializeImage(size, mipLevels, false);
 
-        return static_cast<unsigned int>(deviceImages_.size() - 1);
+        return static_cast<unsigned int>(m_deviceImages.size() - 1);
     }
 
     void DeviceMemoryGroup::FinalizeDeviceGroup()
     {
-        InitializeDeviceMemory(device_, deviceOffsets_, deviceBuffers_, deviceImages_, deviceMemory_);
-        BindDeviceObjects(deviceOffsets_, deviceBuffers_, deviceImages_, deviceMemory_);
+        InitializeDeviceMemory(m_device, m_deviceOffsets, m_deviceBuffers, m_deviceImages, m_deviceMemory);
+        BindDeviceObjects(m_deviceOffsets, m_deviceBuffers, m_deviceImages, m_deviceMemory);
     }
 
     template<class B, class T> void DeviceMemoryGroup::InitializeMemory(const LogicalDevice* device,

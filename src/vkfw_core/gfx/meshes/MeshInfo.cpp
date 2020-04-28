@@ -22,28 +22,28 @@ namespace vkfw_core::gfx {
 
     /** Copy constructor. */
     MeshInfo::MeshInfo(const MeshInfo& rhs) :
-        vertices_(rhs.vertices_),
-        normals_(rhs.normals_),
-        texCoords_(rhs.texCoords_),
-        tangents_(rhs.tangents_),
-        binormals_(rhs.binormals_),
-        colors_(rhs.colors_),
-        boneOffsetMatrixIndices_(rhs.boneOffsetMatrixIndices_),
-        boneWeights_(rhs.boneWeights_),
-        indexVectors_(rhs.indexVectors_),
-        inverseBindPoseMatrices_(rhs.inverseBindPoseMatrices_),
-        boneParent_(rhs.boneParent_),
-        indices_(rhs.indices_),
-        materials_(rhs.materials_),
-        animations_(rhs.animations_),
-        rootNode_(std::make_unique<SceneMeshNode>(*rhs.rootNode_)),
-        globalInverse_(rhs.globalInverse_),
-        boneBoundingBoxes_(rhs.boneBoundingBoxes_)
+        m_vertices(rhs.m_vertices),
+        m_normals(rhs.m_normals),
+        m_texCoords(rhs.m_texCoords),
+        m_tangents(rhs.m_tangents),
+        m_binormals(rhs.m_binormals),
+        m_colors(rhs.m_colors),
+        m_boneOffsetMatrixIndices(rhs.m_boneOffsetMatrixIndices),
+        m_boneWeights(rhs.m_boneWeights),
+        m_indexVectors(rhs.m_indexVectors),
+        m_inverseBindPoseMatrices(rhs.m_inverseBindPoseMatrices),
+        m_boneParent(rhs.m_boneParent),
+        m_indices(rhs.m_indices),
+        m_materials(rhs.m_materials),
+        m_animations(rhs.m_animations),
+        m_rootNode(std::make_unique<SceneMeshNode>(*rhs.m_rootNode)),
+        m_globalInverse(rhs.m_globalInverse),
+        m_boneBoundingBoxes(rhs.m_boneBoundingBoxes)
     {
-        for (const auto& submesh : rhs.subMeshes_) {
-            subMeshes_.emplace_back(submesh);
+        for (const auto& submesh : rhs.m_subMeshes) {
+            m_subMeshes.emplace_back(submesh);
         }
-        rootNode_->FlattenNodeTree(nodes_);
+        m_rootNode->FlattenNodeTree(m_nodes);
     }
 
     /** Copy assignment operator. */
@@ -58,25 +58,25 @@ namespace vkfw_core::gfx {
 
     /** Default move constructor. */
     MeshInfo::MeshInfo(MeshInfo&& rhs) noexcept
-        : vertices_(std::move(rhs.vertices_)),
-          normals_(std::move(rhs.normals_)),
-          texCoords_(std::move(rhs.texCoords_)),
-          tangents_(std::move(rhs.tangents_)),
-          binormals_(std::move(rhs.binormals_)),
-          colors_(std::move(rhs.colors_)),
-          boneOffsetMatrixIndices_(std::move(rhs.boneOffsetMatrixIndices_)),
-          boneWeights_(std::move(rhs.boneWeights_)),
-          indexVectors_(std::move(rhs.indexVectors_)),
-          inverseBindPoseMatrices_(std::move(rhs.inverseBindPoseMatrices_)),
-          boneParent_(std::move(rhs.boneParent_)),
-          indices_(std::move(rhs.indices_)),
-          materials_(std::move(rhs.materials_)),
-          subMeshes_(std::move(rhs.subMeshes_)),
-          nodes_(std::move(rhs.nodes_)),
-          animations_(std::move(rhs.animations_)),
-          rootNode_(std::move(rhs.rootNode_)),
-          globalInverse_(rhs.globalInverse_),
-          boneBoundingBoxes_(std::move(rhs.boneBoundingBoxes_))
+        : m_vertices(std::move(rhs.m_vertices)),
+          m_normals(std::move(rhs.m_normals)),
+          m_texCoords(std::move(rhs.m_texCoords)),
+          m_tangents(std::move(rhs.m_tangents)),
+          m_binormals(std::move(rhs.m_binormals)),
+          m_colors(std::move(rhs.m_colors)),
+          m_boneOffsetMatrixIndices(std::move(rhs.m_boneOffsetMatrixIndices)),
+          m_boneWeights(std::move(rhs.m_boneWeights)),
+          m_indexVectors(std::move(rhs.m_indexVectors)),
+          m_inverseBindPoseMatrices(std::move(rhs.m_inverseBindPoseMatrices)),
+          m_boneParent(std::move(rhs.m_boneParent)),
+          m_indices(std::move(rhs.m_indices)),
+          m_materials(std::move(rhs.m_materials)),
+          m_subMeshes(std::move(rhs.m_subMeshes)),
+          m_nodes(std::move(rhs.m_nodes)),
+          m_animations(std::move(rhs.m_animations)),
+          m_rootNode(std::move(rhs.m_rootNode)),
+          m_globalInverse(rhs.m_globalInverse),
+          m_boneBoundingBoxes(std::move(rhs.m_boneBoundingBoxes))
     {
     }
 
@@ -84,25 +84,25 @@ namespace vkfw_core::gfx {
     MeshInfo& MeshInfo::operator=(MeshInfo&& rhs) noexcept
     {
         this->~MeshInfo();
-        vertices_ = std::move(rhs.vertices_);
-        normals_ = std::move(rhs.normals_);
-        texCoords_ = std::move(rhs.texCoords_);
-        tangents_ = std::move(rhs.tangents_);
-        binormals_ = std::move(rhs.binormals_);
-        colors_ = std::move(rhs.colors_);
-        boneOffsetMatrixIndices_ = std::move(rhs.boneOffsetMatrixIndices_);
-        boneWeights_ = std::move(rhs.boneWeights_);
-        indexVectors_ = std::move(rhs.indexVectors_);
-        inverseBindPoseMatrices_ = std::move(rhs.inverseBindPoseMatrices_);
-        boneParent_ = std::move(rhs.boneParent_);
-        indices_ = std::move(rhs.indices_);
-        materials_ = std::move(rhs.materials_);
-        subMeshes_ = std::move(rhs.subMeshes_);
-        nodes_ = std::move(rhs.nodes_);
-        animations_ = std::move(rhs.animations_);
-        rootNode_ = std::move(rhs.rootNode_);
-        globalInverse_ = rhs.globalInverse_;
-        boneBoundingBoxes_ = std::move(rhs.boneBoundingBoxes_);
+        m_vertices = std::move(rhs.m_vertices);
+        m_normals = std::move(rhs.m_normals);
+        m_texCoords = std::move(rhs.m_texCoords);
+        m_tangents = std::move(rhs.m_tangents);
+        m_binormals = std::move(rhs.m_binormals);
+        m_colors = std::move(rhs.m_colors);
+        m_boneOffsetMatrixIndices = std::move(rhs.m_boneOffsetMatrixIndices);
+        m_boneWeights = std::move(rhs.m_boneWeights);
+        m_indexVectors = std::move(rhs.m_indexVectors);
+        m_inverseBindPoseMatrices = std::move(rhs.m_inverseBindPoseMatrices);
+        m_boneParent = std::move(rhs.m_boneParent);
+        m_indices = std::move(rhs.m_indices);
+        m_materials = std::move(rhs.m_materials);
+        m_subMeshes = std::move(rhs.m_subMeshes);
+        m_nodes = std::move(rhs.m_nodes);
+        m_animations = std::move(rhs.m_animations);
+        m_rootNode = std::move(rhs.m_rootNode);
+        m_globalInverse = rhs.m_globalInverse;
+        m_boneBoundingBoxes = std::move(rhs.m_boneBoundingBoxes);
         return *this;
     }
 
@@ -119,31 +119,31 @@ namespace vkfw_core::gfx {
     void MeshInfo::ReserveMesh(unsigned int maxUVChannels, unsigned int maxColorChannels, bool hasTangentSpace,
         unsigned int numVertices, unsigned int numIndices, unsigned int numMaterials)
     {
-        vertices_.resize(numVertices);
-        normals_.resize(numVertices);
-        texCoords_.resize(maxUVChannels);
-        for (auto& texCoords : texCoords_) { texCoords.resize(numVertices); }
+        m_vertices.resize(numVertices);
+        m_normals.resize(numVertices);
+        m_texCoords.resize(maxUVChannels);
+        for (auto& texCoords : m_texCoords) { texCoords.resize(numVertices); }
         if (hasTangentSpace) {
-            tangents_.resize(numVertices);
-            binormals_.resize(numVertices);
+            m_tangents.resize(numVertices);
+            m_binormals.resize(numVertices);
         }
-        colors_.resize(maxColorChannels);
-        for (auto& colors : colors_) { colors.resize(numVertices); }
-        indices_.resize(numIndices);
-        materials_.resize(numMaterials);
+        m_colors.resize(maxColorChannels);
+        for (auto& colors : m_colors) { colors.resize(numVertices); }
+        m_indices.resize(numIndices);
+        m_materials.resize(numMaterials);
     }
 
     void MeshInfo::AddSubMesh(const std::string& name, unsigned int idxOffset, unsigned int numIndices, unsigned int materialID)
     {
-        subMeshes_.emplace_back(this, name, idxOffset, numIndices, materialID);
+        m_subMeshes.emplace_back(this, name, idxOffset, numIndices, materialID);
     }
 
     void MeshInfo::CreateSceneNodes(aiNode* rootNode, const std::map<std::string, unsigned int>& boneMap)
     {
-        rootNode_ = std::make_unique<SceneMeshNode>(rootNode, nullptr, boneMap);
-        rootNode_->GenerateBoundingBoxes(*this);
+        m_rootNode = std::make_unique<SceneMeshNode>(rootNode, nullptr, boneMap);
+        m_rootNode->GenerateBoundingBoxes(*this);
         GenerateBoneBoundingBoxes();
-        globalInverse_ = glm::inverse(rootNode_->GetLocalTransform());
+        m_globalInverse = glm::inverse(m_rootNode->GetLocalTransform());
     }
 
     ///
@@ -151,25 +151,25 @@ namespace vkfw_core::gfx {
     ///
     void MeshInfo::GenerateBoneBoundingBoxes()
     {
-        if (inverseBindPoseMatrices_.empty()) {
+        if (m_inverseBindPoseMatrices.empty()) {
             return;
         }
 
-        boneBoundingBoxes_.resize(inverseBindPoseMatrices_.size());
+        m_boneBoundingBoxes.resize(m_inverseBindPoseMatrices.size());
 
         bool hasVertexWithoutBone = false;
 
-        for (auto i = 0U; i < boneOffsetMatrixIndices_.size(); i++) {
+        for (auto i = 0U; i < m_boneOffsetMatrixIndices.size(); i++) {
 
             bool vertexHasBone = false;
 
             for (auto b = 0; b < 4; b++) {
-                auto boneI = boneOffsetMatrixIndices_[i][b];
-                auto boneW = boneWeights_[i][b];
+                auto boneI = m_boneOffsetMatrixIndices[i][b];
+                auto boneW = m_boneWeights[i][b];
                 if (boneW > 0) {
                     vertexHasBone = true;
-                    math::AABB3<float>& box = boneBoundingBoxes_[boneI];
-                    box.AddPoint(vertices_[i]);
+                    math::AABB3<float>& box = m_boneBoundingBoxes[boneI];
+                    box.AddPoint(m_vertices[i]);
                 }
             }
             if (!vertexHasBone) {
@@ -186,10 +186,10 @@ namespace vkfw_core::gfx {
 
     void MeshInfo::FlattenHierarchies()
     {
-        rootNode_->FlattenNodeTree(nodes_);
+        m_rootNode->FlattenNodeTree(m_nodes);
         std::map<std::string, std::size_t> nodeIndexMap;
-        for (const auto& node : nodes_) { nodeIndexMap[node->GetName()] = node->GetNodeIndex(); }
+        for (const auto& node : m_nodes) { nodeIndexMap[node->GetName()] = node->GetNodeIndex(); }
 
-        for (auto& animation : animations_) { animation.FlattenHierarchy(nodes_.size(), nodeIndexMap); }
+        for (auto& animation : m_animations) { animation.FlattenHierarchy(m_nodes.size(), nodeIndexMap); }
     }
 }

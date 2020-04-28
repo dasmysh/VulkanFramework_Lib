@@ -19,6 +19,6 @@ namespace vkfw_core::gfx {
 
       private:
         /** Holds the Vulkan sampler. */
-        vk::Sampler vkSampler_;
+        vk::Sampler m_vkSampler;
     };
 }

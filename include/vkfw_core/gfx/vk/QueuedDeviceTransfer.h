@@ -69,15 +69,15 @@ namespace vkfw_core::gfx {
             const TextureDescriptor& textureDesc, const void* data);
 
         /** Holds the device. */
-        const LogicalDevice* device_;
+        const LogicalDevice* m_device;
         /** Holds the transfer queue used. */
-        std::pair<std::uint32_t, std::uint32_t> transferQueue_;
+        std::pair<std::uint32_t, std::uint32_t> m_transferQueue;
         /** Holds all staging buffers. */
-        std::vector<HostBuffer> stagingBuffers_;
+        std::vector<HostBuffer> m_stagingBuffers;
         /** Holds all staging textures. */
-        std::vector<HostTexture> stagingTextures_;
+        std::vector<HostTexture> m_stagingTextures;
         /** Holds all command buffers for transfer. */
-        std::vector<vk::UniqueCommandBuffer> transferCmdBuffers_;
+        std::vector<vk::UniqueCommandBuffer> m_transferCmdBuffers;
     };
 
     template <class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> QueuedDeviceTransfer::CreateDeviceBufferWithData(

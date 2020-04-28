@@ -39,30 +39,30 @@ namespace vkfw_core {
         VKWindow& operator=(VKWindow&&) noexcept;
         ~VKWindow() noexcept;
 
-        [[nodiscard]] bool IsFocused() const { return focused_; }
+        [[nodiscard]] bool IsFocused() const { return m_focused; }
         [[nodiscard]] bool IsClosing() const;
         void ShowWindow() const;
         void CloseWindow() const;
         [[nodiscard]] bool MessageBoxQuestion(const std::string& title, const std::string& content) const;
 
-        [[nodiscard]] cfg::WindowCfg& GetConfig() const { return *config_; };
-        [[nodiscard]] gfx::LogicalDevice& GetDevice() const { return *logicalDevice_; }
-        [[nodiscard]] const std::vector<gfx::Framebuffer>& GetFramebuffers() const { return swapchainFramebuffers_; }
-        [[nodiscard]] vk::RenderPass GetRenderPass() const { return *vkSwapchainRenderPass_; }
+        [[nodiscard]] cfg::WindowCfg& GetConfig() const { return *m_config; };
+        [[nodiscard]] gfx::LogicalDevice& GetDevice() const { return *m_logicalDevice; }
+        [[nodiscard]] const std::vector<gfx::Framebuffer>& GetFramebuffers() const { return m_swapchainFramebuffers; }
+        [[nodiscard]] vk::RenderPass GetRenderPass() const { return *m_vkSwapchainRenderPass; }
 
         [[nodiscard]] bool IsMouseButtonPressed(int button) const;
         [[nodiscard]] bool IsKeyPressed(int key) const;
-        [[nodiscard]] glm::vec2 GetMousePosition() const { return currMousePosition_; }
-        [[nodiscard]] glm::vec2 GetMousePositionNormalized() const { return currMousePositionNormalized_; }
+        [[nodiscard]] glm::vec2 GetMousePosition() const { return m_currMousePosition; }
+        [[nodiscard]] glm::vec2 GetMousePositionNormalized() const { return m_currMousePositionNormalized; }
 
         /** Returns the windows width. */
-        [[nodiscard]] unsigned int GetWidth() const { return vkSurfaceExtend_.width; }
+        [[nodiscard]] unsigned int GetWidth() const { return m_vkSurfaceExtend.width; }
         /** Returns the windows height. */
-        [[nodiscard]] unsigned int GetHeight() const { return vkSurfaceExtend_.height; }
+        [[nodiscard]] unsigned int GetHeight() const { return m_vkSurfaceExtend.height; }
         /** Returns the windows client size. */
         [[nodiscard]] glm::vec2 GetClientSize() const
         {
-            return glm::vec2(static_cast<float>(vkSurfaceExtend_.width), static_cast<float>(vkSurfaceExtend_.height));
+            return glm::vec2(static_cast<float>(m_vkSurfaceExtend.width), static_cast<float>(m_vkSurfaceExtend.height));
         }
 
 
@@ -75,8 +75,8 @@ namespace vkfw_core {
         void UpdatePrimaryCommandBuffers(const function_view<void(const vk::CommandBuffer& commandBuffer,
                                                                   std::size_t cmdBufferIndex)>& fillFunc) const;
 
-        [[nodiscard]] std::uint32_t GetCurrentlyRenderedImageIndex() const { return currentlyRenderedImage_; }
-        [[nodiscard]] vk::Semaphore GetDataAvailableSemaphore() const { return *vkDataAvailableSemaphore_; }
+        [[nodiscard]] std::uint32_t GetCurrentlyRenderedImageIndex() const { return m_currentlyRenderedImage; }
+        [[nodiscard]] vk::Semaphore GetDataAvailableSemaphore() const { return *m_vkDataAvailableSemaphore; }
 
     private:
         void WindowPosCallback(int xpos, int ypos) const;
@@ -98,78 +98,78 @@ namespace vkfw_core {
         void SetMousePosition(double xpos, double ypos);
 
         /** Holds the GLFW window. */
-        GLFWwindow* window_;
+        GLFWwindow* m_window;
         /** Holds the configuration for this window. */
-        cfg::WindowCfg* config_;
+        cfg::WindowCfg* m_config;
 
         /** Holds the Vulkan surface. */
-        vk::UniqueSurfaceKHR vkSurface_;
+        vk::UniqueSurfaceKHR m_vkSurface;
         /** Holds the size of the surface. */
-        vk::Extent2D vkSurfaceExtend_;
+        vk::Extent2D m_vkSurfaceExtend;
         /** Holds the logical device. */
-        std::unique_ptr<gfx::LogicalDevice> logicalDevice_;
+        std::unique_ptr<gfx::LogicalDevice> m_logicalDevice;
         /** Holds the queue number used for graphics output. */
-        unsigned int graphicsQueue_ = 0;
+        unsigned int m_graphicsQueue = 0;
         /** Holds the swap chain. */
-        vk::UniqueSwapchainKHR vkSwapchain_;
+        vk::UniqueSwapchainKHR m_vkSwapchain;
         /** Holds the swap chain render pass. */
-        vk::UniqueRenderPass vkSwapchainRenderPass_;
+        vk::UniqueRenderPass m_vkSwapchainRenderPass;
         /** Render pass for ImGui. */
-        vk::UniqueRenderPass vkImGuiRenderPass_;
+        vk::UniqueRenderPass m_vkImGuiRenderPass;
         /** Holds the swap chain frame buffers. */
-        std::vector<gfx::Framebuffer> swapchainFramebuffers_;
+        std::vector<gfx::Framebuffer> m_swapchainFramebuffers;
         /** Command pools for the swap chain cmd buffers (later: not only primary). */
-        std::vector<vk::UniqueCommandPool> vkCommandPools_;
+        std::vector<vk::UniqueCommandPool> m_vkCommandPools;
         /** Holds the swap chain command buffers. */
-        std::vector<vk::UniqueCommandBuffer> vkCommandBuffers_;
+        std::vector<vk::UniqueCommandBuffer> m_vkCommandBuffers;
         /** Command pools for the ImGui cmd buffers. */
-        std::vector<vk::UniqueCommandPool> vkImGuiCommandPools_;
+        std::vector<vk::UniqueCommandPool> m_vkImGuiCommandPools;
         /** Holds the command buffers for ImGui. */
-        std::vector<vk::UniqueCommandBuffer> vkImGuiCommandBuffers_;
+        std::vector<vk::UniqueCommandBuffer> m_vkImGuiCommandBuffers;
         /** Hold a fence for each command buffer to signal it is processed. */
-        std::vector<vk::UniqueFence> vkCmdBufferUFences_;
-        std::vector<vk::Fence> vkCmdBufferFences_;
+        std::vector<vk::UniqueFence> m_vkCmdBufferUFences;
+        std::vector<vk::Fence> m_vkCmdBufferFences;
         /** Holds the semaphore to notify when a new swap image is available. */
-        vk::UniqueSemaphore vkImageAvailableSemaphore_;
+        vk::UniqueSemaphore m_vkImageAvailableSemaphore;
         /** Holds the semaphore to notify when the data for that frame is uploaded to the GPU. */
-        vk::UniqueSemaphore vkDataAvailableSemaphore_;
+        vk::UniqueSemaphore m_vkDataAvailableSemaphore;
         /** Holds the semaphore to notify when rendering is finished. */
-        vk::UniqueSemaphore vkRenderingFinishedSemaphore_;
+        vk::UniqueSemaphore m_vkRenderingFinishedSemaphore;
         /** Holds the currently rendered image. */
-        std::uint32_t currentlyRenderedImage_ = 0;
+        std::uint32_t m_currentlyRenderedImage = 0;
 
         /** The descriptor pool for ImGUI. */
-        vk::UniqueDescriptorPool vkImguiDescPool_;
+        vk::UniqueDescriptorPool m_vkImguiDescPool;
         /** ImGui window data. */
-        std::unique_ptr<ImGui_ImplVulkanH_WindowData> windowData_;
+        std::unique_ptr<ImGui_ImplVulkanH_WindowData> m_windowData;
         /** ImGui GLFW window data. */
-        ImGui_GLFWWindow* glfwWindowData_ = nullptr;
+        ImGui_GLFWWindow* m_glfwWindowData = nullptr;
         /** ImGui vulkan data. */
-        std::unique_ptr<ImGui_ImplVulkan_InitInfo> imguiVulkanData_;
+        std::unique_ptr<ImGui_ImplVulkan_InitInfo> m_imguiVulkanData;
 
 
         /** Holds the current mouse position. */
-        glm::vec2 currMousePosition_;
+        glm::vec2 m_currMousePosition;
         /** Holds the current normalized (in [-1,1]) mouse position. */
-        glm::vec2 currMousePositionNormalized_ = glm::vec2{0.0f};
+        glm::vec2 m_currMousePositionNormalized = glm::vec2{0.0f};
         /** Holds the last mouse position. */
-        glm::vec2 prevMousePosition_;
+        glm::vec2 m_prevMousePosition;
         /** Holds the relative mouse position. */
-        glm::vec2 relativeMousePosition_;
+        glm::vec2 m_relativeMousePosition;
         /** Holds whether the mouse is inside the client window. */
-        bool mouseInWindow_;
+        bool m_mouseInWindow;
 
         // window status
         /** <c>true</c> if the framebuffer was resized but resize was not handled. */
-        bool frameBufferResize_ = false;
+        bool m_frameBufferResize = false;
         /** <c>true</c> if minimized. */
-        bool minimized_;
+        bool m_minimized;
         /** <c>true</c> if maximized. */
-        bool maximized_;
+        bool m_maximized;
         /** Holds whether the window is in focus. */
-        bool focused_ = false;
+        bool m_focused = false;
         /** The number (id) of the current frame. */
-        std::uint64_t frameCount_;
+        std::uint64_t m_frameCount;
 
         void InitWindow();
         void InitVulkan(const std::vector<std::string>& requiredDeviceExtensions);

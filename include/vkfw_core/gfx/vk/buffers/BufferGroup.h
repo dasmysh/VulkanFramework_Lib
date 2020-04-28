@@ -34,7 +34,7 @@ namespace vkfw_core::gfx {
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         void FinalizeGroup(QueuedDeviceTransfer* transfer = nullptr);
 
-        DeviceBuffer* GetBuffer(unsigned int bufferIdx) { return &deviceBuffers_[bufferIdx]; }
+        DeviceBuffer* GetBuffer(unsigned int bufferIdx) { return &m_deviceBuffers[bufferIdx]; }
 
         template<contiguous_memory T> void AddBufferToGroup(const vk::BufferUsageFlags& usage, const T& data,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
@@ -43,20 +43,20 @@ namespace vkfw_core::gfx {
         void FillAllocationInfo(Buffer* buffer, vk::MemoryAllocateInfo& allocInfo, std::vector<std::uint32_t>& sizes) const;
 
         /** Holds the device. */
-        const LogicalDevice* device_;
+        const LogicalDevice* m_device;
         /** Holds the Vulkan device memory for the device buffers. */
-        vk::UniqueDeviceMemory deviceBufferMemory_;
+        vk::UniqueDeviceMemory m_deviceBufferMemory;
         /** Holds the Vulkan device memory for the host buffers. */
-        vk::UniqueDeviceMemory hostBufferMemory_;
+        vk::UniqueDeviceMemory m_hostBufferMemory;
         /** Holds the device buffers. */
-        std::vector<DeviceBuffer> deviceBuffers_;
+        std::vector<DeviceBuffer> m_deviceBuffers;
         /** Holds the host buffers. */
-        std::vector<HostBuffer> hostBuffers_;
+        std::vector<HostBuffer> m_hostBuffers;
         /** Holds the memory properties. */
-        vk::MemoryPropertyFlags memoryProperties_;
+        vk::MemoryPropertyFlags m_memoryProperties;
 
         /** Holds the buffer contents that need to be transfered. */
-        std::vector<std::pair<std::size_t, const void*>> bufferContents_;
+        std::vector<std::pair<std::size_t, const void*>> m_bufferContents;
     };
 
     template<contiguous_memory T>

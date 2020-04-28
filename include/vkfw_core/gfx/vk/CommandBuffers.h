@@ -27,10 +27,10 @@ namespace vkfw_core::gfx {
 
     private:
         /** Holds the device. */
-        const LogicalDevice* device_;
+        const LogicalDevice* m_device;
         /** Holds the queue family for this buffers. */
-        unsigned int queueFamily_;
+        unsigned int m_queueFamily;
         /** Holds the vulkan command buffer objects. */
-        std::vector<vk::UniqueCommandBuffer> vkCmdBuffers_;
+        std::vector<vk::UniqueCommandBuffer> m_vkCmdBuffers;
     };
 }

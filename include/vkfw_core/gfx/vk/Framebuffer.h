@@ -19,9 +19,9 @@ namespace vkfw_core::gfx {
     struct FramebufferDescriptor final
     {
         /** Holds the texture descriptors. */
-        std::vector<TextureDescriptor> tex_;
+        std::vector<TextureDescriptor> m_tex;
         /** Holds the textures image type. */
-        vk::ImageViewType type_ = vk::ImageViewType::e2D;
+        vk::ImageViewType m_type = vk::ImageViewType::e2D;
     };
 
     class Framebuffer final
@@ -40,32 +40,33 @@ namespace vkfw_core::gfx {
         Framebuffer& operator=(Framebuffer&&) noexcept;
         ~Framebuffer();
 
-        [[nodiscard]] glm::uvec2 GetSize() const { return size_; }
-        [[nodiscard]] unsigned int GetWidth() const { return size_.x; }
-        [[nodiscard]] unsigned int GetHeight() const { return size_.y; }
-        [[nodiscard]] const vk::Framebuffer& GetFramebuffer() const { return *vkFramebuffer_; }
+        [[nodiscard]] glm::uvec2 GetSize() const { return m_size; }
+        [[nodiscard]] unsigned int GetWidth() const { return m_size.x; }
+        [[nodiscard]] unsigned int GetHeight() const { return m_size.y; }
+        [[nodiscard]] const vk::Framebuffer& GetFramebuffer() const { return *m_vkFramebuffer; }
+        [[nodiscard]] const FramebufferDescriptor& GetDescriptor() const { return m_desc; }
 
     private:
         void CreateImages(vk::CommandBuffer cmdBuffer);
         void CreateFB();
 
         /** Holds the logical device. */
-        const LogicalDevice* device_;
+        const LogicalDevice* m_device;
         /** Holds the framebuffer size. */
-        glm::uvec2 size_;
+        glm::uvec2 m_size;
         /** Holds the render pass. */
-        vk::RenderPass renderPass_;
+        vk::RenderPass m_renderPass;
         /** Holds the framebuffer descriptor. */
-        FramebufferDescriptor desc_;
+        FramebufferDescriptor m_desc;
         /** Holds the device memory group for the owned images. */
-        DeviceMemoryGroup memoryGroup_;
+        DeviceMemoryGroup m_memoryGroup;
         /** Holds the externally owned images in this framebuffer. */
-        std::vector<vk::Image> extImages_;
+        std::vector<vk::Image> m_extImages;
         /** Holds the image view for the external attachments. */
-        std::vector<vk::UniqueImageView> vkExternalAttachmentsImageView_;
+        std::vector<vk::UniqueImageView> m_vkExternalAttachmentsImageView;
         /** Holds the Vulkan framebuffer object. */
-        vk::UniqueFramebuffer vkFramebuffer_;
+        vk::UniqueFramebuffer m_vkFramebuffer;
         /** Holds the queue family indices. */
-        std::vector<std::uint32_t> queueFamilyIndices_;
+        std::vector<std::uint32_t> m_queueFamilyIndices;
     };
 }

@@ -29,12 +29,12 @@ namespace vkfw_core::gfx {
         void LoadCompiledShaderFromFile();
 
         /** Holds the shader filename. */
-        std::string shaderFilename_;
+        std::string m_shaderFilename;
         /** Holds the compiled shader. */
-        vk::UniqueShaderModule shaderModule_;
+        vk::UniqueShaderModule m_shaderModule;
         /** Holds the shaders type. */
-        vk::ShaderStageFlagBits type_;
+        vk::ShaderStageFlagBits m_type;
         /** Holds the shaders type as a string. */
-        std::string strType_;
+        std::string m_strType;
     };
 }

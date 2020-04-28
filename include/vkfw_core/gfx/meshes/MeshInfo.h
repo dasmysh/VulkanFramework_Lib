@@ -43,74 +43,74 @@ namespace vkfw_core::gfx {
          *  Accessor to the meshes sub-meshes. This can be used to render more complicated meshes (with multiple sets
          *  of texture coordinates).
          */
-        std::vector<SubMesh>& GetSubMeshes() noexcept { return subMeshes_; }
+        std::vector<SubMesh>& GetSubMeshes() noexcept { return m_subMeshes; }
         /** Const accessor to the meshes sub-meshes. */
-        [[nodiscard]] const std::vector<SubMesh>& GetSubMeshes() const noexcept { return subMeshes_; }
+        [[nodiscard]] const std::vector<SubMesh>& GetSubMeshes() const noexcept { return m_subMeshes; }
         /** Accessor to the nodes of the mesh. */
-        [[nodiscard]] const std::vector<const SceneMeshNode*>& GetNodes() const noexcept { return nodes_; }
+        [[nodiscard]] const std::vector<const SceneMeshNode*>& GetNodes() const noexcept { return m_nodes; }
         /** Returns the root node of the mesh. */
-        [[nodiscard]] const SceneMeshNode* GetRootNode() const noexcept { return rootNode_.get(); }
+        [[nodiscard]] const SceneMeshNode* GetRootNode() const noexcept { return m_rootNode.get(); }
 
-        [[nodiscard]] const std::vector<glm::vec3>& GetVertices() const { return vertices_; }
-        [[nodiscard]] const std::vector<glm::vec3>& GetNormals() const { return normals_; }
-        [[nodiscard]] const std::vector<std::vector<glm::vec3>>& GetTexCoords() const { return texCoords_; }
-        [[nodiscard]] const std::vector<glm::vec3>& GetTangents() const { return tangents_; }
-        [[nodiscard]] const std::vector<glm::vec3>& GetBinormals() const { return binormals_; }
-        [[nodiscard]] const std::vector<std::vector<glm::vec4>>& GetColors() const { return colors_; }
-        [[nodiscard]] const std::vector<std::vector<glm::uvec4>>& GetIndexVectors() const { return indexVectors_; }
+        [[nodiscard]] const std::vector<glm::vec3>& GetVertices() const { return m_vertices; }
+        [[nodiscard]] const std::vector<glm::vec3>& GetNormals() const { return m_normals; }
+        [[nodiscard]] const std::vector<std::vector<glm::vec3>>& GetTexCoords() const { return m_texCoords; }
+        [[nodiscard]] const std::vector<glm::vec3>& GetTangents() const { return m_tangents; }
+        [[nodiscard]] const std::vector<glm::vec3>& GetBinormals() const { return m_binormals; }
+        [[nodiscard]] const std::vector<std::vector<glm::vec4>>& GetColors() const { return m_colors; }
+        [[nodiscard]] const std::vector<std::vector<glm::uvec4>>& GetIndexVectors() const { return m_indexVectors; }
 
-        [[nodiscard]] const std::vector<std::uint32_t>& GetIndices() const noexcept { return indices_; }
+        [[nodiscard]] const std::vector<std::uint32_t>& GetIndices() const noexcept { return m_indices; }
 
-        [[nodiscard]] const std::vector<Animation>& GetAnimations() const noexcept { return animations_; }
+        [[nodiscard]] const std::vector<Animation>& GetAnimations() const noexcept { return m_animations; }
 
         /** Returns the offset matrices for all bones. */
         [[nodiscard]] const std::vector<glm::mat4>& GetInverseBindPoseMatrices() const noexcept
         {
-            return inverseBindPoseMatrices_;
+            return m_inverseBindPoseMatrices;
         }
         /** Returns the AABB for all bones. */
         [[nodiscard]] const std::vector<math::AABB3<float>>& GetBoneBoundingBoxes() const noexcept
         {
-            return boneBoundingBoxes_;
+            return m_boneBoundingBoxes;
         }
         /**
          *  Returns the parent bone of any given bone.
          *  @param boneIndex index of the child bone.
          */
-        [[nodiscard]] std::size_t GetParentBone(std::size_t boneIndex) const { return boneParent_[boneIndex]; }
+        [[nodiscard]] std::size_t GetParentBone(std::size_t boneIndex) const { return m_boneParent[boneIndex]; }
         /** Returns the number of bones used by the mesh. */
-        [[nodiscard]] std::size_t GetNumberOfBones() const noexcept { return inverseBindPoseMatrices_.size(); }
+        [[nodiscard]] std::size_t GetNumberOfBones() const noexcept { return m_inverseBindPoseMatrices.size(); }
 
         /** Returns the global inverse matrix of the mesh. */
-        [[nodiscard]] glm::mat4 GetGlobalInverse() const { return globalInverse_; }
+        [[nodiscard]] glm::mat4 GetGlobalInverse() const { return m_globalInverse; }
 
-        [[nodiscard]] const std::vector<MaterialInfo>& GetMaterials() const { return materials_; }
-        [[nodiscard]] const MaterialInfo* GetMaterial(unsigned int id) const { return &materials_[id]; }
+        [[nodiscard]] const std::vector<MaterialInfo>& GetMaterials() const { return m_materials; }
+        [[nodiscard]] const MaterialInfo* GetMaterial(unsigned int id) const { return &m_materials[id]; }
 
         template<class VertexType>
         void GetVertices(std::vector<VertexType>& vertices) const;
 
     protected:
-        std::vector<glm::vec3>& GetVertices() { return vertices_; }
-        std::vector<glm::vec3>& GetNormals() { return normals_; }
-        std::vector<std::vector<glm::vec3>>& GetTexCoords() { return texCoords_; }
-        std::vector<glm::vec3>& GetTangents() { return tangents_; }
-        std::vector<glm::vec3>& GetBinormals() { return binormals_; }
-        std::vector<std::vector<glm::vec4>>& GetColors() { return colors_; }
-        std::vector<std::vector<glm::uvec4>>& GetIndexVectors() { return indexVectors_; }
-        std::vector<std::uint32_t>& GetIndices() { return indices_; }
-        std::vector<glm::uvec4>& GetBoneOffsetMatrixIndices() noexcept { return boneOffsetMatrixIndices_; }
-        std::vector<glm::vec4>& GetBoneWeigths() noexcept { return boneWeights_; }
+        std::vector<glm::vec3>& GetVertices() { return m_vertices; }
+        std::vector<glm::vec3>& GetNormals() { return m_normals; }
+        std::vector<std::vector<glm::vec3>>& GetTexCoords() { return m_texCoords; }
+        std::vector<glm::vec3>& GetTangents() { return m_tangents; }
+        std::vector<glm::vec3>& GetBinormals() { return m_binormals; }
+        std::vector<std::vector<glm::vec4>>& GetColors() { return m_colors; }
+        std::vector<std::vector<glm::uvec4>>& GetIndexVectors() { return m_indexVectors; }
+        std::vector<std::uint32_t>& GetIndices() { return m_indices; }
+        std::vector<glm::uvec4>& GetBoneOffsetMatrixIndices() noexcept { return m_boneOffsetMatrixIndices; }
+        std::vector<glm::vec4>& GetBoneWeigths() noexcept { return m_boneWeights; }
 
-        std::vector<glm::mat4>& GetInverseBindPoseMatrices() noexcept { return inverseBindPoseMatrices_; }
-        std::vector<std::size_t>& GetBoneParents() noexcept { return boneParent_; }
-        std::vector<Animation>& GetAnimations() noexcept { return animations_; }
+        std::vector<glm::mat4>& GetInverseBindPoseMatrices() noexcept { return m_inverseBindPoseMatrices; }
+        std::vector<std::size_t>& GetBoneParents() noexcept { return m_boneParent; }
+        std::vector<Animation>& GetAnimations() noexcept { return m_animations; }
         /** Returns the AABB for all bones. */
-        std::vector<math::AABB3<float>>& GetBoneBoundingBoxes() noexcept { return boneBoundingBoxes_; }
+        std::vector<math::AABB3<float>>& GetBoneBoundingBoxes() noexcept { return m_boneBoundingBoxes; }
 
         void ReserveMesh(unsigned int maxUVChannels, unsigned int maxColorChannels, bool hasTangentSpace,
             unsigned int numVertices, unsigned int numIndices, unsigned int numMaterials);
-        MaterialInfo* GetMaterial(std::size_t id) { return &materials_[id]; }
+        MaterialInfo* GetMaterial(std::size_t id) { return &m_materials[id]; }
         void AddSubMesh(const std::string& name, unsigned int idxOffset, unsigned int numIndices, unsigned int materialID);
         // void CreateIndexBuffer();
 
@@ -127,99 +127,99 @@ namespace vkfw_core::gfx {
 
         template<class Archive> void save(Archive& ar, const std::uint32_t) const // NOLINT
         {
-            ar(cereal::make_nvp("vertices", vertices_),
-                cereal::make_nvp("normals", normals_),
-                cereal::make_nvp("texCoords", texCoords_),
-                cereal::make_nvp("tangents", tangents_),
-                cereal::make_nvp("binormals", binormals_),
-                cereal::make_nvp("colors", colors_),
-                cereal::make_nvp("boneOffsetMatrixIndices", boneOffsetMatrixIndices_),
-                cereal::make_nvp("boneWeigths", boneWeights_),
-                cereal::make_nvp("indexVectors", indexVectors_),
-                cereal::make_nvp("inverseBindPoseMatrices", inverseBindPoseMatrices_),
-                cereal::make_nvp("boneParents", boneParent_),
-                cereal::make_nvp("indices", indices_),
-                cereal::make_nvp("materials", materials_),
-                cereal::make_nvp("subMeshes", subMeshes_),
-                cereal::make_nvp("animations", animations_),
-                cereal::make_nvp("rootNode", rootNode_),
-                cereal::make_nvp("globalInverse", globalInverse_),
-                cereal::make_nvp("boneBoundingBoxes", boneBoundingBoxes_));
+            ar(cereal::make_nvp("vertices", m_vertices),
+                cereal::make_nvp("normals", m_normals),
+                cereal::make_nvp("texCoords", m_texCoords),
+                cereal::make_nvp("tangents", m_tangents),
+                cereal::make_nvp("binormals", m_binormals),
+                cereal::make_nvp("colors", m_colors),
+                cereal::make_nvp("boneOffsetMatrixIndices", m_boneOffsetMatrixIndices),
+                cereal::make_nvp("boneWeigths", m_boneWeights),
+                cereal::make_nvp("indexVectors", m_indexVectors),
+                cereal::make_nvp("inverseBindPoseMatrices", m_inverseBindPoseMatrices),
+                cereal::make_nvp("boneParents", m_boneParent),
+                cereal::make_nvp("indices", m_indices),
+                cereal::make_nvp("materials", m_materials),
+                cereal::make_nvp("subMeshes", m_subMeshes),
+                cereal::make_nvp("animations", m_animations),
+                cereal::make_nvp("rootNode", m_rootNode),
+                cereal::make_nvp("globalInverse", m_globalInverse),
+                cereal::make_nvp("boneBoundingBoxes", m_boneBoundingBoxes));
         }
 
         template<class Archive> void load(Archive& ar, const std::uint32_t) // NOLINT
         {
-            ar(cereal::make_nvp("vertices", vertices_),
-                cereal::make_nvp("normals", normals_),
-                cereal::make_nvp("texCoords", texCoords_),
-                cereal::make_nvp("tangents", tangents_),
-                cereal::make_nvp("binormals", binormals_),
-                cereal::make_nvp("colors", colors_),
-                cereal::make_nvp("boneOffsetMatrixIndices", boneOffsetMatrixIndices_),
-                cereal::make_nvp("boneWeigths", boneWeights_),
-                cereal::make_nvp("indexVectors", indexVectors_),
-                cereal::make_nvp("inverseBindPoseMatrices", inverseBindPoseMatrices_),
-                cereal::make_nvp("boneParents", boneParent_),
-                cereal::make_nvp("indices", indices_),
-                cereal::make_nvp("materials", materials_),
-                cereal::make_nvp("subMeshes", subMeshes_),
-                cereal::make_nvp("animations", animations_),
-                cereal::make_nvp("rootNode", rootNode_),
-                cereal::make_nvp("globalInverse", globalInverse_),
-                cereal::make_nvp("boneBoundingBoxes", boneBoundingBoxes_));
-            rootNode_->FlattenNodeTree(nodes_);
+            ar(cereal::make_nvp("vertices", m_vertices),
+                cereal::make_nvp("normals", m_normals),
+                cereal::make_nvp("texCoords", m_texCoords),
+                cereal::make_nvp("tangents", m_tangents),
+                cereal::make_nvp("binormals", m_binormals),
+                cereal::make_nvp("colors", m_colors),
+                cereal::make_nvp("boneOffsetMatrixIndices", m_boneOffsetMatrixIndices),
+                cereal::make_nvp("boneWeigths", m_boneWeights),
+                cereal::make_nvp("indexVectors", m_indexVectors),
+                cereal::make_nvp("inverseBindPoseMatrices", m_inverseBindPoseMatrices),
+                cereal::make_nvp("boneParents", m_boneParent),
+                cereal::make_nvp("indices", m_indices),
+                cereal::make_nvp("materials", m_materials),
+                cereal::make_nvp("subMeshes", m_subMeshes),
+                cereal::make_nvp("animations", m_animations),
+                cereal::make_nvp("rootNode", m_rootNode),
+                cereal::make_nvp("globalInverse", m_globalInverse),
+                cereal::make_nvp("boneBoundingBoxes", m_boneBoundingBoxes));
+            m_rootNode->FlattenNodeTree(m_nodes);
         }
 
         /** Holds all the single points used by the mesh (and its sub-meshes) as points or in vertices. */
-        std::vector<glm::vec3> vertices_;
+        std::vector<glm::vec3> m_vertices;
         /** Holds all the single normals used by the mesh (and its sub-meshes). */
-        std::vector<glm::vec3> normals_;
+        std::vector<glm::vec3> m_normals;
         /** Holds all the single texture coordinates used by the mesh (and its sub-meshes). */
-        std::vector<std::vector<glm::vec3>> texCoords_;
+        std::vector<std::vector<glm::vec3>> m_texCoords;
         /** Holds all the single tangents used by the mesh (and its sub-meshes). */
-        std::vector<glm::vec3> tangents_;
+        std::vector<glm::vec3> m_tangents;
         /** Holds all the single bi-normals used by the mesh (and its sub-meshes). */
-        std::vector<glm::vec3> binormals_;
+        std::vector<glm::vec3> m_binormals;
         /** Holds all the single colors used by the mesh (and its sub-meshes). */
-        std::vector<std::vector<glm::vec4>> colors_;
-        /** The indices to bones influencing this vertex (corresponds to boneWeights_). */
-        std::vector<glm::uvec4> boneOffsetMatrixIndices_;
+        std::vector<std::vector<glm::vec4>> m_colors;
+        /** The indices to bones influencing this vertex (corresponds to m_boneWeights). */
+        std::vector<glm::uvec4> m_boneOffsetMatrixIndices;
         /** Weights, how strong a vertex is influenced by the matrix of the bone. */
-        std::vector<glm::vec4> boneWeights_;
-        /** Holds integer vectors to be used as indices (similar to boneOffsetMatrixIndices_ but more general). */
-        std::vector<std::vector<glm::uvec4>> indexVectors_;
+        std::vector<glm::vec4> m_boneWeights;
+        /** Holds integer vectors to be used as indices (similar to m_boneOffsetMatrixIndices but more general). */
+        std::vector<std::vector<glm::uvec4>> m_indexVectors;
 
         /** Offset matrices for each bone. */
-        std::vector<glm::mat4> inverseBindPoseMatrices_;
-        /** Parent of a bone. Stores the parent for each bone in boneOffsetMatrices_. */
-        std::vector<std::size_t> boneParent_;
+        std::vector<glm::mat4> m_inverseBindPoseMatrices;
+        /** Parent of a bone. Stores the parent for each bone in m_boneOffsetMatrices. */
+        std::vector<std::size_t> m_boneParent;
 
         /** Holds all the indices used by the sub-meshes. */
-        std::vector<std::uint32_t> indices_;
+        std::vector<std::uint32_t> m_indices;
 
         /** The meshes materials. */
-        std::vector<MaterialInfo> materials_;
+        std::vector<MaterialInfo> m_materials;
         /** Holds all the meshes sub-meshes. */
-        std::vector<SubMesh> subMeshes_;
+        std::vector<SubMesh> m_subMeshes;
         /** Holds all the meshes nodes. */
-        std::vector<const SceneMeshNode*> nodes_;
+        std::vector<const SceneMeshNode*> m_nodes;
         /** Animations of this mesh */
-        std::vector<Animation> animations_;
+        std::vector<Animation> m_animations;
 
         /** The root scene node. */
-        std::unique_ptr<SceneMeshNode> rootNode_;
+        std::unique_ptr<SceneMeshNode> m_rootNode;
         /** The global inverse of this mesh. */
-        glm::mat4 globalInverse_ = glm::mat4{1.0f};
+        glm::mat4 m_globalInverse = glm::mat4{1.0f};
         /** AABB for all bones */
-        std::vector<math::AABB3<float>> boneBoundingBoxes_;
+        std::vector<math::AABB3<float>> m_boneBoundingBoxes;
     };
 
     template <class VertexType>
     void MeshInfo::GetVertices(std::vector<VertexType>& vertices) const
     {
         assert(vertices.empty());
-        vertices.reserve(vertices_.size());
-        for (std::size_t i = 0; i < vertices_.size(); ++i) vertices.emplace_back(this, i);
+        vertices.reserve(m_vertices.size());
+        for (std::size_t i = 0; i < m_vertices.size(); ++i) vertices.emplace_back(this, i);
     }
 }
 

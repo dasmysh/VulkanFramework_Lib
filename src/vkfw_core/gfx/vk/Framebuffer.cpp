@@ -15,14 +15,14 @@ namespace vkfw_core::gfx {
     Framebuffer::Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size,
         std::vector<vk::Image> images, const vk::RenderPass& renderPass, const FramebufferDescriptor& desc,
         std::vector<std::uint32_t> queueFamilyIndices, vk::CommandBuffer cmdBuffer) :
-        device_{ logicalDevice },
-        size_{ size },
-        renderPass_{ renderPass },
-        desc_(desc),
-        memoryGroup_{ logicalDevice, vk::MemoryPropertyFlags() },
-        extImages_{ std::move(images) },
-        vkExternalAttachmentsImageView_{ desc.tex_.size() },
-        queueFamilyIndices_{ std::move(queueFamilyIndices) }
+        m_device{ logicalDevice },
+        m_size{ size },
+        m_renderPass{ renderPass },
+        m_desc(desc),
+        m_memoryGroup{ logicalDevice, vk::MemoryPropertyFlags() },
+        m_extImages{ std::move(images) },
+        m_vkExternalAttachmentsImageView{ desc.m_tex.size() },
+        m_queueFamilyIndices{ std::move(queueFamilyIndices) }
     {
         CreateImages(cmdBuffer);
         CreateFB();
@@ -36,7 +36,7 @@ namespace vkfw_core::gfx {
     }
 
     Framebuffer::Framebuffer(const Framebuffer& rhs) :
-        Framebuffer(rhs.device_, rhs.size_, rhs.extImages_, rhs.renderPass_, rhs.desc_, rhs.queueFamilyIndices_)
+        Framebuffer(rhs.m_device, rhs.m_size, rhs.m_extImages, rhs.m_renderPass, rhs.m_desc, rhs.m_queueFamilyIndices)
     {
     }
 
@@ -50,30 +50,30 @@ namespace vkfw_core::gfx {
     }
 
     Framebuffer::Framebuffer(Framebuffer&& rhs) noexcept
-        : device_{rhs.device_},
-          size_{rhs.size_},
-          renderPass_{rhs.renderPass_},
-          desc_(std::move(rhs.desc_)),
-          memoryGroup_{std::move(rhs.memoryGroup_)},
-          extImages_{std::move(rhs.extImages_)},
-          vkExternalAttachmentsImageView_{std::move(rhs.vkExternalAttachmentsImageView_)},
-          vkFramebuffer_{std::move(rhs.vkFramebuffer_)},
-          queueFamilyIndices_{std::move(rhs.queueFamilyIndices_)}
+        : m_device{rhs.m_device},
+          m_size{rhs.m_size},
+          m_renderPass{rhs.m_renderPass},
+          m_desc(std::move(rhs.m_desc)),
+          m_memoryGroup{std::move(rhs.m_memoryGroup)},
+          m_extImages{std::move(rhs.m_extImages)},
+          m_vkExternalAttachmentsImageView{std::move(rhs.m_vkExternalAttachmentsImageView)},
+          m_vkFramebuffer{std::move(rhs.m_vkFramebuffer)},
+          m_queueFamilyIndices{std::move(rhs.m_queueFamilyIndices)}
     {
     }
 
     Framebuffer& Framebuffer::operator=(Framebuffer&& rhs) noexcept
     {
         this->~Framebuffer();
-        device_ = rhs.device_;
-        size_ = rhs.size_;
-        renderPass_ = rhs.renderPass_;
-        desc_ = std::move(rhs.desc_);
-        memoryGroup_ = std::move(rhs.memoryGroup_);
-        extImages_ = std::move(rhs.extImages_);
-        vkExternalAttachmentsImageView_ = std::move(rhs.vkExternalAttachmentsImageView_);
-        vkFramebuffer_ = std::move(rhs.vkFramebuffer_);
-        queueFamilyIndices_ = std::move(rhs.queueFamilyIndices_);
+        m_device = rhs.m_device;
+        m_size = rhs.m_size;
+        m_renderPass = rhs.m_renderPass;
+        m_desc = std::move(rhs.m_desc);
+        m_memoryGroup = std::move(rhs.m_memoryGroup);
+        m_extImages = std::move(rhs.m_extImages);
+        m_vkExternalAttachmentsImageView = std::move(rhs.m_vkExternalAttachmentsImageView);
+        m_vkFramebuffer = std::move(rhs.m_vkFramebuffer);
+        m_queueFamilyIndices = std::move(rhs.m_queueFamilyIndices);
         return *this;
     }
 
@@ -81,50 +81,52 @@ namespace vkfw_core::gfx {
 
     void Framebuffer::CreateImages(vk::CommandBuffer cmdBuffer)
     {
-        for (auto i = extImages_.size(); i < desc_.tex_.size(); ++i) {
-            memoryGroup_.AddTextureToGroup(desc_.tex_[i], glm::u32vec4(size_, 1, 1), 1, queueFamilyIndices_);
+        for (auto i = m_extImages.size(); i < m_desc.m_tex.size(); ++i) {
+            m_memoryGroup.AddTextureToGroup(m_desc.m_tex[i], glm::u32vec4(m_size, 1, 1), 1, m_queueFamilyIndices);
         }
-        memoryGroup_.FinalizeDeviceGroup();
+        m_memoryGroup.FinalizeDeviceGroup();
 
         vk::UniqueCommandBuffer ucmdBuffer;
-        if (!cmdBuffer) {
-            ucmdBuffer = CommandBuffers::beginSingleTimeSubmit(device_, 0);
-        }
-        for (auto i = 0U; i < memoryGroup_.GetImagesInGroup(); ++i) {
-            memoryGroup_.GetTexture(i)->TransitionLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal,
+        if (!cmdBuffer) { ucmdBuffer = CommandBuffers::beginSingleTimeSubmit(m_device, 0); }
+        for (auto i = 0U; i < m_memoryGroup.GetImagesInGroup(); ++i) {
+            m_memoryGroup.GetTexture(i)->TransitionLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal,
                                                          cmdBuffer ? cmdBuffer : *ucmdBuffer);
         }
         if (!cmdBuffer) {
-            CommandBuffers::endSingleTimeSubmit(device_, *ucmdBuffer, 0, 0);
-            device_->GetQueue(0, 0).waitIdle();
+            CommandBuffers::endSingleTimeSubmit(m_device, *ucmdBuffer, 0, 0);
+            m_device->GetQueue(0, 0).waitIdle();
         }
 
     }
 
     void Framebuffer::CreateFB()
     {
-        assert(desc_.type_ == vk::ImageViewType::e2D || desc_.type_ == vk::ImageViewType::eCube);
-        assert(extImages_.size() + memoryGroup_.GetImagesInGroup() == desc_.tex_.size());
+        assert(m_desc.m_type == vk::ImageViewType::e2D || m_desc.m_type == vk::ImageViewType::eCube);
+        assert(m_extImages.size() + m_memoryGroup.GetImagesInGroup() == m_desc.m_tex.size());
         constexpr std::uint32_t CUBE_MAP_LAYERS = 6;
         std::uint32_t layerCount = 1;
-        if (desc_.type_ == vk::ImageViewType::eCube) { layerCount = CUBE_MAP_LAYERS; }
+        if (m_desc.m_type == vk::ImageViewType::eCube) { layerCount = CUBE_MAP_LAYERS; }
 
         // TODO: handle cube textures. [3/20/2017 Sebastian Maisch]
         std::vector<vk::ImageView> attachments;
-        for (auto i = 0U; i < extImages_.size(); ++i) {
+        for (auto i = 0U; i < m_extImages.size(); ++i) {
             vk::ImageSubresourceRange subresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, layerCount };
-            vk::ImageViewCreateInfo imgViewCreateInfo{ vk::ImageViewCreateFlags(), extImages_[i],
-                desc_.type_, desc_.tex_[i].format_, vk::ComponentMapping(), subresourceRange };
-            vkExternalAttachmentsImageView_[i] = device_->GetDevice().createImageViewUnique(imgViewCreateInfo);
-            attachments.push_back(*vkExternalAttachmentsImageView_[i]);
+            vk::ImageViewCreateInfo imgViewCreateInfo{ vk::ImageViewCreateFlags(), m_extImages[i],
+                m_desc.m_type, m_desc.m_tex[i].m_format, vk::ComponentMapping(), subresourceRange };
+            m_vkExternalAttachmentsImageView[i] = m_device->GetDevice().createImageViewUnique(imgViewCreateInfo);
+            attachments.push_back(*m_vkExternalAttachmentsImageView[i]);
         }
 
-        for (auto i = 0U; i < memoryGroup_.GetImagesInGroup(); ++i) {
-            attachments.push_back(memoryGroup_.GetTexture(i)->GetImageView());
+        for (auto i = 0U; i < m_memoryGroup.GetImagesInGroup(); ++i) {
+            attachments.push_back(m_memoryGroup.GetTexture(i)->GetImageView());
         }
 
-        vk::FramebufferCreateInfo fbCreateInfo{ vk::FramebufferCreateFlags(), renderPass_,
-            static_cast<std::uint32_t>(desc_.tex_.size()), attachments.data(), size_.x, size_.y, layerCount };
-        vkFramebuffer_ = device_->GetDevice().createFramebufferUnique(fbCreateInfo);
+        vk::FramebufferCreateInfo fbCreateInfo{ vk::FramebufferCreateFlags(), m_renderPass,
+                                               static_cast<std::uint32_t>(m_desc.m_tex.size()),
+                                               attachments.data(),
+                                               m_size.x,
+                                               m_size.y,
+                                               layerCount};
+        m_vkFramebuffer = m_device->GetDevice().createFramebufferUnique(fbCreateInfo);
     }
 }

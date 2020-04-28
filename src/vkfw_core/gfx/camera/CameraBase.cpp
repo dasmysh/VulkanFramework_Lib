@@ -22,13 +22,13 @@ namespace vkfw_core::gfx {
      *  @param projMatrix the cameras initial projection matrix.
      */
     CameraBase::CameraBase(const glm::vec3& position, const glm::quat& orientation, const glm::mat4& projMatrix) noexcept :
-        position_{ position },
-        orientation_{ orientation },
-        viewMatrix_{ 1.0f },
-        projMatrix_{ projMatrix },
-        viewFrustum_{ projMatrix_ * viewMatrix_ }
+        m_position{ position },
+        m_orientation{ orientation },
+        m_viewMatrix{ 1.0f },
+        m_projMatrix{ projMatrix },
+        m_viewFrustum{ m_projMatrix * m_viewMatrix }
     {
-        projMatrix_[1][1] *= -1.0f;
+        m_projMatrix[1][1] *= -1.0f;
         UpdateView();
     }
 
@@ -38,13 +38,13 @@ namespace vkfw_core::gfx {
      *  @param projMatrix the cameras initial projection matrix.
      */
     CameraBase::CameraBase(const glm::mat4& viewMatrix, const glm::mat4& projMatrix) noexcept :
-        position_{ 0.0f },
-        orientation_{ },
-        viewMatrix_{ viewMatrix },
-        projMatrix_{ projMatrix },
-        viewFrustum_{ projMatrix_ * viewMatrix_ }
+        m_position{ 0.0f },
+        m_orientation{ },
+        m_viewMatrix{ viewMatrix },
+        m_projMatrix{ projMatrix },
+        m_viewFrustum{ m_projMatrix * m_viewMatrix }
     {
-        projMatrix_[1][1] *= -1.0f;
+        m_projMatrix[1][1] *= -1.0f;
         UpdatePositionOrientation();
     }
 
@@ -52,59 +52,59 @@ namespace vkfw_core::gfx {
 
     void CameraBase::SetOrientation(const glm::quat& orientation)
     {
-        orientation_ = orientation;
+        m_orientation = orientation;
         UpdateView();
     }
 
     void CameraBase::SetPosition(const glm::vec3& position)
     {
-        position_ = position;
+        m_position = position;
         UpdateView();
     }
 
     void CameraBase::SetPositionOrientation(const glm::vec3& position, const glm::quat& orientation)
     {
-        position_ = position;
-        orientation_ = orientation;
+        m_position = position;
+        m_orientation = orientation;
         UpdateView();
     }
 
     void CameraBase::SetViewMatrix(const glm::mat4& view)
     {
-        viewMatrix_ = view;
+        m_viewMatrix = view;
         UpdatePositionOrientation();
     }
 
     void CameraBase::SetProjMatrix(const glm::mat4& proj)
     {
-        projMatrix_ = proj;
-        projMatrix_[1][1] *= -1.0f;
-        viewFrustum_ = math::Frustum(projMatrix_ * viewMatrix_);
+        m_projMatrix = proj;
+        m_projMatrix[1][1] *= -1.0f;
+        m_viewFrustum = math::Frustum(m_projMatrix * m_viewMatrix);
     }
 
     void CameraBase::UpdateView()
     {
-        viewMatrix_ = glm::mat4_cast(orientation_);
-        viewMatrix_ *= glm::translate(glm::mat4(1.0f), -position_);
+        m_viewMatrix = glm::mat4_cast(m_orientation);
+        m_viewMatrix *= glm::translate(glm::mat4(1.0f), -m_position);
 
-        viewFrustum_ = math::Frustum(projMatrix_ * viewMatrix_);
+        m_viewFrustum = math::Frustum(m_projMatrix * m_viewMatrix);
     }
 
     void CameraBase::UpdatePositionOrientation()
     {
-        auto viewInv = glm::inverse(viewMatrix_);
-        orientation_ = glm::quat_cast(viewInv);
-        position_ = glm::vec3(viewInv[3]);
+        auto viewInv = glm::inverse(m_viewMatrix);
+        m_orientation = glm::quat_cast(viewInv);
+        m_position = glm::vec3(viewInv[3]);
 
-        viewFrustum_ = math::Frustum(projMatrix_ * viewMatrix_);
+        m_viewFrustum = math::Frustum(m_projMatrix * m_viewMatrix);
     }
 
     void CameraBase::SetPositionOrientationProj(const glm::vec3& position, const glm::quat& orientation, const glm::mat4& proj)
     {
-        position_ = position;
-        orientation_ = orientation;
-        projMatrix_ = proj;
-        projMatrix_[1][1] *= -1.0f;
+        m_position = position;
+        m_orientation = orientation;
+        m_projMatrix = proj;
+        m_projMatrix[1][1] *= -1.0f;
         UpdateView();
     }
 

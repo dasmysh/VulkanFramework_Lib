@@ -17,8 +17,8 @@ namespace vkfw_core::gfx {
 namespace vkfw_core {
 
     struct file_not_found final : public std::exception {
-        explicit file_not_found(std::string filename) : std::exception{ "File not found." }, filename_{ std::move(filename) } {}
-        std::string filename_;
+        explicit file_not_found(std::string filename) : std::exception{ "File not found." }, m_filename{ std::move(filename) } {}
+        std::string m_filename;
     };
 
     /**
@@ -37,18 +37,18 @@ namespace vkfw_core {
         Resource& operator=(Resource&&) noexcept;
         virtual ~Resource();
 
-        [[nodiscard]] const std::string& getId() const;
+        [[nodiscard]] const std::string& GetId() const;
 
         static std::string FindGeneralFileLocation(const std::string& localFilename, const std::string& resourceId = "_no_resource_");
 
     protected:
-        [[nodiscard]] const gfx::LogicalDevice* GetDevice() const { return device_; }
+        [[nodiscard]] const gfx::LogicalDevice* GetDevice() const { return m_device; }
         [[nodiscard]] std::string FindResourceLocation(const std::string& localFilename) const;
 
     private:
         /** Holds the resources id. */
-        std::string id_;
+        std::string m_id;
         /** Holds the device object for dependencies. */
-        const gfx::LogicalDevice* device_ = nullptr;
+        const gfx::LogicalDevice* m_device = nullptr;
     };
 }

@@ -14,9 +14,9 @@
 namespace vkfw_core::gfx {
 
     DeviceMemory::DeviceMemory(const LogicalDevice* device, const vk::MemoryPropertyFlags& properties) :
-        device_{ device },
-        size_{ 0 },
-        memoryProperties_{ properties }
+        m_device{ device },
+        m_size{ 0 },
+        m_memoryProperties{ properties }
     {
     }
 
@@ -29,22 +29,22 @@ namespace vkfw_core::gfx {
     }
 
     DeviceMemory::DeviceMemory(DeviceMemory&& rhs) noexcept :
-        device_{ rhs.device_ },
-        vkDeviceMemory_{ std::move(rhs.vkDeviceMemory_) },
-        size_{ rhs.size_ },
-        memoryProperties_{ rhs.memoryProperties_ }
+        m_device{ rhs.m_device },
+        m_vkDeviceMemory{ std::move(rhs.m_vkDeviceMemory) },
+        m_size{ rhs.m_size },
+        m_memoryProperties{ rhs.m_memoryProperties }
     {
-        rhs.size_ = 0;
+        rhs.m_size = 0;
     }
 
     DeviceMemory& DeviceMemory::operator=(DeviceMemory&& rhs) noexcept
     {
         this->~DeviceMemory();
-        device_ = rhs.device_;
-        vkDeviceMemory_ = std::move(rhs.vkDeviceMemory_);
-        size_ = rhs.size_;
-        memoryProperties_ = rhs.memoryProperties_;
-        rhs.size_ = 0;
+        m_device = rhs.m_device;
+        m_vkDeviceMemory = std::move(rhs.m_vkDeviceMemory);
+        m_size = rhs.m_size;
+        m_memoryProperties = rhs.m_memoryProperties;
+        rhs.m_size = 0;
         return *this;
     }
 
@@ -53,35 +53,35 @@ namespace vkfw_core::gfx {
     void DeviceMemory::InitializeMemory(const vk::MemoryRequirements& memRequirements)
     {
         vk::MemoryAllocateInfo allocInfo{ memRequirements.size,
-            FindMemoryType(device_, memRequirements.memoryTypeBits, memoryProperties_) };
+            FindMemoryType(m_device, memRequirements.memoryTypeBits, m_memoryProperties) };
         InitializeMemory(allocInfo);
     }
 
     void DeviceMemory::InitializeMemory(const vk::MemoryAllocateInfo& memAllocateInfo)
     {
-        vkDeviceMemory_ = device_->GetDevice().allocateMemoryUnique(memAllocateInfo);
+        m_vkDeviceMemory = m_device->GetDevice().allocateMemoryUnique(memAllocateInfo);
     }
 
     void DeviceMemory::BindToBuffer(Buffer& buffer, std::size_t offset) const
     {
-        device_->GetDevice().bindBufferMemory(buffer.GetBuffer(), *vkDeviceMemory_, offset);
+        m_device->GetDevice().bindBufferMemory(buffer.GetBuffer(), *m_vkDeviceMemory, offset);
     }
 
     void DeviceMemory::BindToTexture(Texture& texture, std::size_t offset) const
     {
-        device_->GetDevice().bindImageMemory(texture.GetImage(), *vkDeviceMemory_, offset);
+        m_device->GetDevice().bindImageMemory(texture.GetImage(), *m_vkDeviceMemory, offset);
     }
 
     void DeviceMemory::CopyToHostMemory(std::size_t offset, std::size_t size, const void* data) const
     {
-        assert(vkDeviceMemory_ && "Device memory must be valid.");
+        assert(m_vkDeviceMemory && "Device memory must be valid.");
         MapAndProcess(offset, size, [data](void* deviceMem, std::size_t size) { memcpy(deviceMem, data, size); });
     }
 
     void DeviceMemory::CopyToHostMemory(std::size_t offsetToTexture, const glm::u32vec3& offset,
         const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize, const void* data) const
     {
-        assert(vkDeviceMemory_ && "Device memory must be valid.");
+        assert(m_vkDeviceMemory && "Device memory must be valid.");
         auto dataBytes = reinterpret_cast<const std::uint8_t*>(data); // NOLINT
         MapAndProcess(offsetToTexture, offset, layout, dataSize,
                       [dataBytes](void* deviceMem, std::size_t offset, std::size_t size) {
@@ -91,14 +91,14 @@ namespace vkfw_core::gfx {
 
     void DeviceMemory::CopyFromHostMemory(std::size_t offset, std::size_t size, void* data) const
     {
-        assert(vkDeviceMemory_ && "Device memory must be valid.");
+        assert(m_vkDeviceMemory && "Device memory must be valid.");
         MapAndProcess(offset, size, [data](void* deviceMem, std::size_t size) { memcpy(data, deviceMem, size); });
     }
 
     void DeviceMemory::CopyFromHostMemory(std::size_t offsetToTexture, const glm::u32vec3& offset,
         const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize, void* data) const
     {
-        assert(vkDeviceMemory_ && "Device memory must be valid.");
+        assert(m_vkDeviceMemory && "Device memory must be valid.");
         auto dataBytes = reinterpret_cast<std::uint8_t*>(data); // NOLINT
         MapAndProcess(offsetToTexture, offset, layout, dataSize,
                       [dataBytes](void* deviceMem, std::size_t offset, std::size_t size) {
@@ -135,19 +135,20 @@ namespace vkfw_core::gfx {
     void DeviceMemory::MapAndProcess(std::size_t offset, std::size_t size,
                                      const function_view<void(void* deviceMem, std::size_t size)>& processFunc) const
     {
-        assert(memoryProperties_ & (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent));
-        auto deviceMem = device_->GetDevice().mapMemory(*vkDeviceMemory_, offset, size, vk::MemoryMapFlags());
+        assert(m_memoryProperties & (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent));
+        auto deviceMem = m_device->GetDevice().mapMemory(*m_vkDeviceMemory, offset, size, vk::MemoryMapFlags());
         processFunc(deviceMem, size);
-        device_->GetDevice().unmapMemory(*vkDeviceMemory_);
+        m_device->GetDevice().unmapMemory(*m_vkDeviceMemory);
     }
 
     void DeviceMemory::MapAndProcess(std::size_t offsetToTexture, const glm::u32vec3& offset,
         const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize,
         const function_view<void(void* deviceMem, std::size_t offset, std::size_t size)>& processFunc) const
     {
-        assert(memoryProperties_ & (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent));
+        assert(m_memoryProperties
+               & (vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent));
         auto mapOffset = offset.z * layout.depthPitch + offsetToTexture;
-        auto deviceMem = device_->GetDevice().mapMemory(*vkDeviceMemory_, mapOffset + layout.offset, layout.size);
+        auto deviceMem = m_device->GetDevice().mapMemory(*m_vkDeviceMemory, mapOffset + layout.offset, layout.size);
         auto deviceBytes = reinterpret_cast<std::uint8_t*>(deviceMem); // NOLINT
 
         if (layout.rowPitch == dataSize.x && layout.depthPitch == dataSize.y
@@ -171,6 +172,6 @@ namespace vkfw_core::gfx {
             }
         }
 
-        device_->GetDevice().unmapMemory(*vkDeviceMemory_);
+        m_device->GetDevice().unmapMemory(*m_vkDeviceMemory);
     }
 }

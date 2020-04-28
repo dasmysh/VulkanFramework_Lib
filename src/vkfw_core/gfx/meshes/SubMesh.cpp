@@ -13,18 +13,18 @@ namespace vkfw_core::gfx {
 
     /** Constructor. */
     SubMesh::SubMesh(const MeshInfo* mesh, std::string objectName, unsigned int indexOffset, unsigned int numIndices, unsigned int materialID) :
-        objectName_(std::move(objectName)),
-        indexOffset_(indexOffset),
-        numIndices_(numIndices),
-        materialID_(materialID)
+        m_objectName(std::move(objectName)),
+        m_indexOffset(indexOffset),
+        m_numIndices(numIndices),
+        m_materialID(materialID)
     {
-        if (numIndices_ == 0) { return; }
+        if (m_numIndices == 0) { return; }
         auto& vertices = mesh->GetVertices();
         auto& indices = mesh->GetIndices();
-        aabb_.minmax_[0] = aabb_.minmax_[1] = vertices[indices[indexOffset_]];
-        for (auto i = indexOffset_; i < indexOffset_ + numIndices_; ++i) {
-            aabb_.minmax_[0] = glm::min(aabb_.minmax_[0], vertices[indices[i]]);
-            aabb_.minmax_[1] = glm::max(aabb_.minmax_[1], vertices[indices[i]]);
+        m_aabb.m_minmax[0] = m_aabb.m_minmax[1] = vertices[indices[m_indexOffset]];
+        for (auto i = m_indexOffset; i < m_indexOffset + m_numIndices; ++i) {
+            m_aabb.m_minmax[0] = glm::min(m_aabb.m_minmax[0], vertices[indices[i]]);
+            m_aabb.m_minmax[1] = glm::max(m_aabb.m_minmax[1], vertices[indices[i]]);
         }
     }
 
@@ -37,11 +37,11 @@ namespace vkfw_core::gfx {
 
     /** Default move constructor. */
     SubMesh::SubMesh(SubMesh&& rhs) noexcept :
-        objectName_(std::move(rhs.objectName_)),
-        indexOffset_(rhs.indexOffset_),
-        numIndices_(rhs.numIndices_),
-        aabb_(rhs.aabb_),
-        materialID_(rhs.materialID_)
+        m_objectName(std::move(rhs.m_objectName)),
+        m_indexOffset(rhs.m_indexOffset),
+        m_numIndices(rhs.m_numIndices),
+        m_aabb(rhs.m_aabb),
+        m_materialID(rhs.m_materialID)
     {
     }
 
@@ -50,11 +50,11 @@ namespace vkfw_core::gfx {
     {
         if (this != &rhs) {
             this->~SubMesh();
-            objectName_ = std::move(rhs.objectName_);
-            indexOffset_ = rhs.indexOffset_;
-            numIndices_ = rhs.numIndices_;
-            aabb_ = rhs.aabb_;
-            materialID_ = rhs.materialID_;
+            m_objectName = std::move(rhs.m_objectName);
+            m_indexOffset = rhs.m_indexOffset;
+            m_numIndices = rhs.m_numIndices;
+            m_aabb = rhs.m_aabb;
+            m_materialID = rhs.m_materialID;
         }
         return *this;
     }

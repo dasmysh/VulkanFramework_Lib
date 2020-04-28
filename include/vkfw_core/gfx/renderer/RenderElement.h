@@ -43,94 +43,94 @@ namespace vkfw_core::gfx {
 
         friend bool operator<(const RenderElement& l, const RenderElement& r)
         {
-            if (l.isTransparent_ && !r.isTransparent_) {
+            if (l.m_isTransparent && !r.m_isTransparent) {
                 return false;
             }
-            if (r.isTransparent_ && !l.isTransparent_) {
+            if (r.m_isTransparent && !l.m_isTransparent) {
                 return true;
             }
-            if (l.isTransparent_ && r.isTransparent_) {
-                return l.cameraDistance_ < r.cameraDistance_;
+            if (l.m_isTransparent && r.m_isTransparent) {
+                return l.m_cameraDistance < r.m_cameraDistance;
             }
 
-            if (l.pipeline_ < r.pipeline_) { return true; }
-            if (l.vertexBuffer_.first < r.vertexBuffer_.first) { return true; }
-            if (l.indexBuffer_.first < r.indexBuffer_.first) { return true; }
-            return l.cameraDistance_ > r.cameraDistance_;
+            if (l.m_pipeline < r.m_pipeline) { return true; }
+            if (l.m_vertexBuffer.first < r.m_vertexBuffer.first) { return true; }
+            if (l.m_indexBuffer.first < r.m_indexBuffer.first) { return true; }
+            return l.m_cameraDistance > r.m_cameraDistance;
         }
 
     private:
-        bool isTransparent_;
-        vk::Pipeline pipeline_;
-        vk::PipelineLayout pipelineLayout_;
+        bool m_isTransparent;
+        vk::Pipeline m_pipeline;
+        vk::PipelineLayout m_pipelineLayout;
 
-        BufferReference vertexBuffer_ = BufferReference(nullptr, 0);
-        BufferReference indexBuffer_ = BufferReference(nullptr, 0);
-        UBOBinding cameraMatricesUBO_ = UBOBinding(nullptr, 0, 0);
-        UBOBinding worldMatricesUBO_ = UBOBinding(nullptr, 0, 0);
-        std::vector<UBOBinding> generalUBOs_;
-        std::vector<DescSetBinding> generalDescSets_;
+        BufferReference m_vertexBuffer = BufferReference(nullptr, 0);
+        BufferReference m_indexBuffer = BufferReference(nullptr, 0);
+        UBOBinding m_cameraMatricesUBO = UBOBinding(nullptr, 0, 0);
+        UBOBinding m_worldMatricesUBO = UBOBinding(nullptr, 0, 0);
+        std::vector<UBOBinding> m_generalUBOs;
+        std::vector<DescSetBinding> m_generalDescSets;
 
-        std::uint32_t indexCount_ = 0;
-        std::uint32_t instanceCount_ = 0;
-        std::uint32_t firstIndex_ = 0;
-        std::uint32_t vertexOffset_ = 0;
-        std::uint32_t firstInstance_ = 0;
-        float cameraDistance_ = 0.0f;
+        std::uint32_t m_indexCount = 0;
+        std::uint32_t m_instanceCount = 0;
+        std::uint32_t m_firstIndex = 0;
+        std::uint32_t m_vertexOffset = 0;
+        std::uint32_t m_firstInstance = 0;
+        float m_cameraDistance = 0.0f;
 
     };
 
     RenderElement::RenderElement(bool isTransparent, vk::Pipeline pipeline, vk::PipelineLayout pipelineLayout) :
-        isTransparent_{ isTransparent },
-        pipeline_{ pipeline },
-        pipelineLayout_{ pipelineLayout }
+        m_isTransparent{ isTransparent },
+        m_pipeline{ pipeline },
+        m_pipelineLayout{ pipelineLayout }
     {
     }
 
     RenderElement::RenderElement(bool isTransparent, const RenderElement& referenceElement) :
-        isTransparent_{ isTransparent },
-        pipeline_{ referenceElement.pipeline_ },
-        pipelineLayout_{ referenceElement.pipelineLayout_ },
-        vertexBuffer_{ referenceElement.vertexBuffer_ },
-        indexBuffer_{ referenceElement.indexBuffer_ },
-        cameraMatricesUBO_{ referenceElement.cameraMatricesUBO_ },
-        worldMatricesUBO_{ referenceElement.worldMatricesUBO_ }
+        m_isTransparent{ isTransparent },
+        m_pipeline{ referenceElement.m_pipeline },
+        m_pipelineLayout{ referenceElement.m_pipelineLayout },
+        m_vertexBuffer{ referenceElement.m_vertexBuffer },
+        m_indexBuffer{ referenceElement.m_indexBuffer },
+        m_cameraMatricesUBO{ referenceElement.m_cameraMatricesUBO },
+        m_worldMatricesUBO{ referenceElement.m_worldMatricesUBO }
     {
     }
 
     RenderElement& RenderElement::BindVertexBuffer(BufferReference vtxBuffer)
     {
-        vertexBuffer_ = vtxBuffer;
+        m_vertexBuffer = vtxBuffer;
         return *this;
     }
 
     RenderElement& RenderElement::BindIndexBuffer(BufferReference idxBuffer)
     {
-        indexBuffer_ = idxBuffer;
+        m_indexBuffer = idxBuffer;
         return *this;
     }
 
     RenderElement& RenderElement::BindCameraMatricesUBO(UBOBinding cameraMatricesUBO)
     {
-        cameraMatricesUBO_ = std::move(cameraMatricesUBO);
+        m_cameraMatricesUBO = std::move(cameraMatricesUBO);
         return *this;
     }
 
     RenderElement& RenderElement::BindWorldMatricesUBO(UBOBinding worldMatricesUBO)
     {
-        worldMatricesUBO_ = std::move(worldMatricesUBO);
+        m_worldMatricesUBO = std::move(worldMatricesUBO);
         return *this;
     }
 
     RenderElement& RenderElement::BindUBO(UBOBinding ubo)
     {
-        generalUBOs_.emplace_back(std::move(ubo));
+        m_generalUBOs.emplace_back(std::move(ubo));
         return *this;
     }
 
     RenderElement& RenderElement::BindDescriptorSet(DescSetBinding descSet)
     {
-        generalDescSets_.emplace_back(std::move(descSet));
+        m_generalDescSets.emplace_back(std::move(descSet));
         return *this;
     }
 
@@ -138,46 +138,48 @@ namespace vkfw_core::gfx {
         std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix,
         const math::AABB3<float>& boundingBox)
     {
-        indexCount_ = indexCount;
-        instanceCount_ = instanceCount;
-        firstIndex_ = firstIndex;
-        vertexOffset_ = vertexOffset;
-        firstInstance_ = firstInstance;
+        m_indexCount = indexCount;
+        m_instanceCount = instanceCount;
+        m_firstIndex = firstIndex;
+        m_vertexOffset = vertexOffset;
+        m_firstInstance = firstInstance;
 
-        auto bbCenter = 0.5f * (boundingBox.minmax_[0] + boundingBox.minmax_[1]);
+        auto bbCenter = 0.5f * (boundingBox.m_minmax[0] + boundingBox.m_minmax[1]);
         auto viewAxis = glm::transpose(glm::mat3(viewMatrix))[2];
-        cameraDistance_ = glm::dot(viewAxis, bbCenter);
+        m_cameraDistance = glm::dot(viewAxis, bbCenter);
         return *this;
     }
 
     const RenderElement& RenderElement::DrawElement(vk::CommandBuffer cmdBuffer, const RenderElement* lastElement /*= nullptr*/) const
     {
-        if ((lastElement == nullptr) || lastElement->pipeline_ == pipeline_) {
-            cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, pipeline_);
+        if ((lastElement == nullptr) || lastElement->m_pipeline == m_pipeline) {
+            cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline);
         }
-        if ((lastElement == nullptr) || lastElement->vertexBuffer_ == vertexBuffer_) {
-            cmdBuffer.bindVertexBuffers(0, 1, vertexBuffer_.first->GetBufferPtr(), &vertexBuffer_.second);
+        if ((lastElement == nullptr) || lastElement->m_vertexBuffer == m_vertexBuffer) {
+            cmdBuffer.bindVertexBuffers(0, 1, m_vertexBuffer.first->GetBufferPtr(), &m_vertexBuffer.second);
         }
-        if ((lastElement == nullptr) || lastElement->indexBuffer_ == indexBuffer_) {
-            cmdBuffer.bindIndexBuffer(indexBuffer_.first->GetBuffer(), indexBuffer_.second, vk::IndexType::eUint32);
+        if ((lastElement == nullptr) || lastElement->m_indexBuffer == m_indexBuffer) {
+            cmdBuffer.bindIndexBuffer(m_indexBuffer.first->GetBuffer(), m_indexBuffer.second, vk::IndexType::eUint32);
         }
 
-        std::get<0>(cameraMatricesUBO_)->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, pipelineLayout_,
-            std::get<1>(cameraMatricesUBO_), std::get<2>(cameraMatricesUBO_));
-        std::get<0>(worldMatricesUBO_)->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, pipelineLayout_,
-            std::get<1>(worldMatricesUBO_), std::get<2>(worldMatricesUBO_));
+        std::get<0>(m_cameraMatricesUBO)
+            ->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, m_pipelineLayout, std::get<1>(m_cameraMatricesUBO),
+                   std::get<2>(m_cameraMatricesUBO));
+        std::get<0>(m_worldMatricesUBO)
+            ->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, m_pipelineLayout, std::get<1>(m_worldMatricesUBO),
+                   std::get<2>(m_worldMatricesUBO));
 
-        for (const auto& ubo : generalUBOs_) {
-            std::get<0>(ubo)->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, pipelineLayout_, std::get<1>(ubo),
+        for (const auto& ubo : m_generalUBOs) {
+            std::get<0>(ubo)->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, m_pipelineLayout, std::get<1>(ubo),
                                    std::get<2>(ubo));
         }
 
-        for (const auto& ds : generalDescSets_) {
-            cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout_, ds.second, ds.first,
+        for (const auto& ds : m_generalDescSets) {
+            cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout, ds.second, ds.first,
                                          nullptr);
         }
 
-        cmdBuffer.drawIndexed(indexCount_, instanceCount_, firstIndex_, vertexOffset_, firstInstance_);
+        cmdBuffer.drawIndexed(m_indexCount, m_instanceCount, m_firstIndex, m_vertexOffset, m_firstInstance);
         return *this;
     }
 

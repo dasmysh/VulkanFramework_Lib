@@ -35,12 +35,12 @@ namespace vkfw_core::gfx {
     struct DeviceQueueDesc
     {
         DeviceQueueDesc() = default;
-        DeviceQueueDesc(std::uint32_t familyIndex, std::vector<float> priorities) : familyIndex_(familyIndex), priorities_(std::move(priorities)) {}
+        DeviceQueueDesc(std::uint32_t familyIndex, std::vector<float> priorities) : m_familyIndex(familyIndex), m_priorities(std::move(priorities)) {}
 
         /** Holds the family index. */
-        std::uint32_t familyIndex_ = 0;
+        std::uint32_t m_familyIndex = 0;
         /** Holds the queues priorities. */
-        std::vector<float> priorities_;
+        std::vector<float> m_priorities;
     };
 
     class LogicalDevice final
@@ -57,19 +57,19 @@ namespace vkfw_core::gfx {
         ~LogicalDevice();
 
 
-        [[nodiscard]] const vk::PhysicalDevice& GetPhysicalDevice() const { return vkPhysicalDevice_; }
-        [[nodiscard]] const vk::Device& GetDevice() const { return *vkDevice_; }
+        [[nodiscard]] const vk::PhysicalDevice& GetPhysicalDevice() const { return m_vkPhysicalDevice; }
+        [[nodiscard]] const vk::Device& GetDevice() const { return *m_vkDevice; }
         [[nodiscard]] const vk::Queue& GetQueue(unsigned int familyIndex, unsigned int queueIndex) const
         {
-            return vkQueuesByRequestedFamily_[familyIndex][queueIndex];
+            return m_vkQueuesByRequestedFamily[familyIndex][queueIndex];
         }
         [[nodiscard]] const DeviceQueueDesc& GetQueueInfo(unsigned int familyIndex) const
         {
-            return queueDescriptions_[familyIndex];
+            return m_queueDescriptions[familyIndex];
         }
         [[nodiscard]] const vk::CommandPool& GetCommandPool(unsigned int familyIndex) const
         {
-            return vkCmdPoolsByRequestedQFamily_[familyIndex];
+            return m_vkCmdPoolsByRequestedQFamily[familyIndex];
         }
 
         [[nodiscard]] vk::UniqueCommandPool
@@ -84,10 +84,10 @@ namespace vkfw_core::gfx {
         void CmdDebugMarkerEndEXT(VkCommandBuffer cmdBuffer) const;
         void CmdDebugMarkerInsertEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const;
 
-        [[nodiscard]] const cfg::WindowCfg& GetWindowCfg() const { return windowCfg_; }
-        [[nodiscard]] ShaderManager* GetShaderManager() const { return shaderManager_.get(); }
-        [[nodiscard]] TextureManager* GetTextureManager() const { return textureManager_.get(); }
-        [[nodiscard]] Texture2D* GetDummyTexture() const { return dummyTexture_.get(); }
+        [[nodiscard]] const cfg::WindowCfg& GetWindowCfg() const { return m_windowCfg; }
+        [[nodiscard]] ShaderManager* GetShaderManager() const { return m_shaderManager.get(); }
+        [[nodiscard]] TextureManager* GetTextureManager() const { return m_textureManager.get(); }
+        [[nodiscard]] Texture2D* GetDummyTexture() const { return m_dummyTexture.get(); }
 
         [[nodiscard]] std::size_t CalculateUniformBufferAlignment(std::size_t size) const;
         [[nodiscard]] std::size_t CalculateBufferImageOffset(const Texture& second, std::size_t currentOffset) const;
@@ -104,27 +104,27 @@ namespace vkfw_core::gfx {
                                                               bool mandatory = false) const;
 
         /** Holds the configuration of the window associated with this device. */
-        const cfg::WindowCfg& windowCfg_;
+        const cfg::WindowCfg& m_windowCfg;
         /** Holds the physical device. */
-        vk::PhysicalDevice vkPhysicalDevice_;
+        vk::PhysicalDevice m_vkPhysicalDevice;
         /** Holds the physical device limits. */
-        vk::PhysicalDeviceLimits vkPhysicalDeviceLimits_;
+        vk::PhysicalDeviceLimits m_vkPhysicalDeviceLimits;
         /** Holds the actual device. */
-        vk::UniqueDevice vkDevice_;
+        vk::UniqueDevice m_vkDevice;
         /** Holds the queues by device queue family. */
-        std::map<std::uint32_t, std::vector<vk::Queue>> vkQueuesByDeviceFamily_;
+        std::map<std::uint32_t, std::vector<vk::Queue>> m_vkQueuesByDeviceFamily;
         /** Holds a command pool for each device queue family. */
-        std::map<std::uint32_t, vk::UniqueCommandPool> vkCmdPoolsByDeviceQFamily_;
+        std::map<std::uint32_t, vk::UniqueCommandPool> m_vkCmdPoolsByDeviceQFamily;
 
         /** Holds the queue descriptions. */
-        std::vector<DeviceQueueDesc> queueDescriptions_;
+        std::vector<DeviceQueueDesc> m_queueDescriptions;
         /** Holds the queues by requested queue family. */
-        std::vector<std::vector<vk::Queue>> vkQueuesByRequestedFamily_;
+        std::vector<std::vector<vk::Queue>> m_vkQueuesByRequestedFamily;
         /** Holds a command pool for each requested queue family. */
-        std::vector<vk::CommandPool> vkCmdPoolsByRequestedQFamily_;
+        std::vector<vk::CommandPool> m_vkCmdPoolsByRequestedQFamily;
 
         /** Holds whether debug markers are enabled. */
-        bool enableDebugMarkers_ = false;
+        bool m_enableDebugMarkers = false;
 
         // VK_EXT_debug_marker
         PFN_vkDebugMarkerSetObjectTagEXT fpDebugMarkerSetObjectTagEXT = nullptr;
@@ -134,15 +134,15 @@ namespace vkfw_core::gfx {
         PFN_vkCmdDebugMarkerInsertEXT fpCmdDebugMarkerInsertEXT = nullptr;
 
         /** Holds the shader manager. */
-        std::unique_ptr<ShaderManager> shaderManager_;
+        std::unique_ptr<ShaderManager> m_shaderManager;
         /** Holds the texture manager. */
-        std::unique_ptr<TextureManager> textureManager_;
+        std::unique_ptr<TextureManager> m_textureManager;
 
         /** The memory group holding all dummy objects. */
-        std::unique_ptr<MemoryGroup> dummyMemGroup_;
+        std::unique_ptr<MemoryGroup> m_dummyMemGroup;
         /** Holds the dummy texture. */
-        std::shared_ptr<Texture2D> dummyTexture_;
+        std::shared_ptr<Texture2D> m_dummyTexture;
 
-        bool singleQueueOnly_ = false;
+        bool m_singleQueueOnly = false;
     };
 }

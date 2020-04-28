@@ -35,8 +35,8 @@ namespace vkfw_core::gfx {
         void Bind(vk::CommandBuffer cmdBuffer, vk::PipelineBindPoint bindingPoint, vk::PipelineLayout pipelineLayout,
             std::uint32_t setIndex, std::size_t instanceIdx) const;
 
-        [[nodiscard]] std::size_t GetCompleteSize() const { return singleSize_ * numInstances_; }
-        [[nodiscard]] vk::DescriptorSetLayout GetDescriptorLayout() const { return descLayout_; }
+        [[nodiscard]] std::size_t GetCompleteSize() const { return m_singleSize * m_numInstances; }
+        [[nodiscard]] vk::DescriptorSetLayout GetDescriptorLayout() const { return m_descLayout; }
 
 
         //////////////////////////////////////////////////////////////////////////
@@ -57,29 +57,29 @@ namespace vkfw_core::gfx {
         void AllocateDescriptorSet(vk::DescriptorPool descPool);
 
         /** Holds the device. */
-        const LogicalDevice* device_;
+        const LogicalDevice* m_device;
         /** Holds the memory group is in. */
-        MemoryGroup* memoryGroup_ = nullptr;
+        MemoryGroup* m_memoryGroup = nullptr;
         /** The index into the memory group. */
-        unsigned int bufferIdx_ = MemoryGroup::INVALID_INDEX;
+        unsigned int m_bufferIdx = MemoryGroup::INVALID_INDEX;
         /** The offset into the buffer. */
-        std::size_t bufferOffset_ = 0;
+        std::size_t m_bufferOffset = 0;
         /** The size of a single instance of data. */
-        std::size_t singleSize_;
+        std::size_t m_singleSize;
         /** The number of instances. */
-        std::size_t numInstances_;
+        std::size_t m_numInstances;
         /** Contains the descriptor binding. */
-        std::uint32_t descBinding_ = 0;
+        std::uint32_t m_descBinding = 0;
         /** Contains weather the descriptor type. */
-        vk::DescriptorType descType_ = vk::DescriptorType::eUniformBuffer;
+        vk::DescriptorType m_descType = vk::DescriptorType::eUniformBuffer;
         /** The internal descriptor layout if created here. */
-        vk::UniqueDescriptorSetLayout internalDescLayout_;
+        vk::UniqueDescriptorSetLayout m_internalDescLayout;
         /** The descriptor layout used. */
-        vk::DescriptorSetLayout descLayout_ = vk::DescriptorSetLayout();
+        vk::DescriptorSetLayout m_descLayout = vk::DescriptorSetLayout();
         /** The descriptor set of this buffer. */
-        vk::DescriptorSet descSet_ = vk::DescriptorSet();
+        vk::DescriptorSet m_descSet = vk::DescriptorSet();
         /** The UBO descriptor info. */
-        vk::DescriptorBufferInfo descInfo_;
+        vk::DescriptorBufferInfo m_descInfo;
 
     };
 

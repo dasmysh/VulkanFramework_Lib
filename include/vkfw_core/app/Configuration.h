@@ -62,15 +62,15 @@ namespace vkfw_core::cfg {
         ~QueueCfg();
 
         /** Holds whether queue has graphics capabilities. */
-        bool graphics_ = true;
+        bool m_graphics = true;
         /** Holds whether queue has compute capabilities. */
-        bool compute_ = false;
+        bool m_compute = false;
         /** Holds whether queue has transfer capabilities. */
-        bool transfer_ = true;
+        bool m_transfer = true;
         /** Holds whether queue has sparse binding capabilities. */
-        bool sparseBinding_ = false;
+        bool m_sparseBinding = false;
         /** Holds the queues priorities. */
-        std::vector<float> priorities_ = {1.0};
+        std::vector<float> m_priorities = {1.0};
 
         /**
         * Saving method for cereal.
@@ -80,11 +80,11 @@ namespace vkfw_core::cfg {
         template<class Archive>
         void save(Archive & ar, std::uint32_t const) const
         {
-            ar(cereal::make_nvp("graphicsCaps", graphics_),
-                cereal::make_nvp("computeCaps", compute_),
-                cereal::make_nvp("transferCaps", transfer_),
-                cereal::make_nvp("sparseBindingCaps", sparseBinding_),
-                cereal::make_nvp("priorities", priorities_));
+            ar(cereal::make_nvp("graphicsCaps", m_graphics),
+                cereal::make_nvp("computeCaps", m_compute),
+                cereal::make_nvp("transferCaps", m_transfer),
+                cereal::make_nvp("sparseBindingCaps", m_sparseBinding),
+                cereal::make_nvp("priorities", m_priorities));
         }
 
         /**
@@ -95,11 +95,11 @@ namespace vkfw_core::cfg {
         template<class Archive>
         void load(Archive & ar, std::uint32_t const)
         {
-            ar(cereal::make_nvp("graphicsCaps", graphics_),
-                cereal::make_nvp("computeCaps", compute_),
-                cereal::make_nvp("transferCaps", transfer_),
-                cereal::make_nvp("sparseBindingCaps", sparseBinding_),
-                cereal::make_nvp("priorities", priorities_));
+            ar(cereal::make_nvp("graphicsCaps", m_graphics),
+                cereal::make_nvp("computeCaps", m_compute),
+                cereal::make_nvp("transferCaps", m_transfer),
+                cereal::make_nvp("sparseBindingCaps", m_sparseBinding),
+                cereal::make_nvp("priorities", m_priorities));
         }
     };
 
@@ -114,29 +114,29 @@ namespace vkfw_core::cfg {
         ~WindowCfg();
 
         /** Holds the window title. */
-        std::string windowTitle_ = "VKFW_Application";
+        std::string m_windowTitle = "VKFW_Application";
         /** Holds whether the main window is full screen. */
-        bool fullscreen_ = false;
+        bool m_fullscreen = false;
         /** Holds the windows left position. */
-        std::size_t windowLeft_ = 0;
+        std::size_t m_windowLeft = 0;
         /** Holds the windows top position. */
-        std::size_t windowTop_ = 0;
+        std::size_t m_windowTop = 0;
         /** Holds the windows width. */
-        std::size_t windowWidth_ = DEFAULT_SCREEN_SIZE_X;
+        std::size_t m_windowWidth = DEFAULT_SCREEN_SIZE_X;
         /** Holds the windows height. */
-        std::size_t windowHeight_ = DEFAULT_SCREEN_SIZE_Y;
+        std::size_t m_windowHeight = DEFAULT_SCREEN_SIZE_Y;
         /** Holds the bit depth of the back-buffer. */
-        std::size_t backbufferBits_ = 32;
+        std::size_t m_backbufferBits = 32;
         /** Holds the bit depth of the depth buffer. */
-        std::size_t depthBufferBits_ = 32;
+        std::size_t m_depthBufferBits = 32;
         /** Holds the bit depth of the stencil buffer. */
-        std::size_t stencilBufferBits_ = 0;
+        std::size_t m_stencilBufferBits = 0;
         /** Holds whether the back buffer should use sRGB. */
-        bool useSRGB_ = false;
+        bool m_useSRGB = false;
         /** Holds the swap options. */
-        SwapOptions swapOptions_ = SwapOptions::DOUBLE_BUFFERING_VSYNC;
+        SwapOptions m_swapOptions = SwapOptions::DOUBLE_BUFFERING_VSYNC;
         /** Holds the queues needed. */
-        std::vector<QueueCfg> queues_ = {QueueCfg{}};
+        std::vector<QueueCfg> m_queues = {QueueCfg{}};
 
         /**
         * Saving method for boost serialization.
@@ -146,18 +146,18 @@ namespace vkfw_core::cfg {
         template<class Archive>
         void save(Archive & ar, std::uint32_t const) const
         {
-            ar(cereal::make_nvp("title", windowTitle_),
-                cereal::make_nvp("fullScreen", fullscreen_),
-                cereal::make_nvp("positionLeft", windowLeft_),
-                cereal::make_nvp("positionTop", windowTop_),
-                cereal::make_nvp("width", windowWidth_),
-                cereal::make_nvp("height", windowHeight_),
-                cereal::make_nvp("backBufferBits", backbufferBits_),
-                cereal::make_nvp("depthBufferBits", depthBufferBits_),
-                cereal::make_nvp("stencilBufferBits", stencilBufferBits_),
-                cereal::make_nvp("useSRGB", useSRGB_),
-                cereal::make_nvp("swapOptions", swapOptions_),
-                cereal::make_nvp("queues", queues_));
+            ar(cereal::make_nvp("title", m_windowTitle),
+                cereal::make_nvp("fullScreen", m_fullscreen),
+                cereal::make_nvp("positionLeft", m_windowLeft),
+                cereal::make_nvp("positionTop", m_windowTop),
+                cereal::make_nvp("width", m_windowWidth),
+                cereal::make_nvp("height", m_windowHeight),
+                cereal::make_nvp("backBufferBits", m_backbufferBits),
+                cereal::make_nvp("depthBufferBits", m_depthBufferBits),
+                cereal::make_nvp("stencilBufferBits", m_stencilBufferBits),
+                cereal::make_nvp("useSRGB", m_useSRGB),
+                cereal::make_nvp("swapOptions", m_swapOptions),
+                cereal::make_nvp("queues", m_queues));
         }
 
         /**
@@ -168,18 +168,18 @@ namespace vkfw_core::cfg {
         template<class Archive>
         void load(Archive & ar, std::uint32_t const)
         {
-            ar(cereal::make_nvp("title", windowTitle_),
-                cereal::make_nvp("fullScreen", fullscreen_),
-                cereal::make_nvp("positionLeft", windowLeft_),
-                cereal::make_nvp("positionTop", windowTop_),
-                cereal::make_nvp("width", windowWidth_),
-                cereal::make_nvp("height", windowHeight_),
-                cereal::make_nvp("backBufferBits", backbufferBits_),
-                cereal::make_nvp("depthBufferBits", depthBufferBits_),
-                cereal::make_nvp("stencilBufferBits", stencilBufferBits_),
-                cereal::make_nvp("useSRGB", useSRGB_),
-                cereal::make_nvp("swapOptions", swapOptions_),
-                cereal::make_nvp("queues", queues_));
+            ar(cereal::make_nvp("title", m_windowTitle),
+                cereal::make_nvp("fullScreen", m_fullscreen),
+                cereal::make_nvp("positionLeft", m_windowLeft),
+                cereal::make_nvp("positionTop", m_windowTop),
+                cereal::make_nvp("width", m_windowWidth),
+                cereal::make_nvp("height", m_windowHeight),
+                cereal::make_nvp("backBufferBits", m_backbufferBits),
+                cereal::make_nvp("depthBufferBits", m_depthBufferBits),
+                cereal::make_nvp("stencilBufferBits", m_stencilBufferBits),
+                cereal::make_nvp("useSRGB", m_useSRGB),
+                cereal::make_nvp("swapOptions", m_swapOptions),
+                cereal::make_nvp("queues", m_queues));
         }
     };
 
@@ -195,17 +195,17 @@ namespace vkfw_core::cfg {
         ~Configuration();
 
         /** Holds configurations for each window. */
-        std::vector<WindowCfg> windows_ = {WindowCfg{}};
+        std::vector<WindowCfg> m_windows = {WindowCfg{}};
         /** Holds whether validation layers should be used (in release). */
-        bool useValidationLayers_ = true;
+        bool m_useValidationLayers = true;
         /** Holds whether the application should pause on focus loss of main (first) window. */
-        bool pauseOnKillFocus_ = false;
+        bool m_pauseOnKillFocus = false;
         /** Holds the resource base directory. */
-        std::string resourceBase_ = "resources";
+        std::string m_resourceBase = "resources";
         /** Holds the resource base directory. */
-        std::vector<std::string> resourceDirs_;
+        std::vector<std::string> m_resourceDirs;
         /** Holds the directory for evaluation results. */
-        std::string evalDirectory_ = "evaluation";
+        std::string m_evalDirectory = "evaluation";
 
         /**
          * Saving method for boost serialization.
@@ -215,12 +215,12 @@ namespace vkfw_core::cfg {
         template<class Archive>
         void save(Archive & ar, std::uint32_t const) const
         {
-            ar(cereal::make_nvp("windows", windows_),
-                cereal::make_nvp("useValidationLayers", useValidationLayers_),
-                cereal::make_nvp("pauseOnKillFocus", pauseOnKillFocus_),
-                cereal::make_nvp("resourceBase", resourceBase_),
-                cereal::make_nvp("resourceDirectories", resourceDirs_),
-                cereal::make_nvp("evalDirectory", evalDirectory_));
+            ar(cereal::make_nvp("windows", m_windows),
+                cereal::make_nvp("useValidationLayers", m_useValidationLayers),
+                cereal::make_nvp("pauseOnKillFocus", m_pauseOnKillFocus),
+                cereal::make_nvp("resourceBase", m_resourceBase),
+                cereal::make_nvp("resourceDirectories", m_resourceDirs),
+                cereal::make_nvp("evalDirectory", m_evalDirectory));
         }
 
         /**
@@ -231,12 +231,12 @@ namespace vkfw_core::cfg {
         template<class Archive>
         void load(Archive & ar, std::uint32_t const)
         {
-            ar(cereal::make_nvp("windows", windows_),
-                cereal::make_nvp("useValidationLayers", useValidationLayers_),
-                cereal::make_nvp("pauseOnKillFocus", pauseOnKillFocus_),
-                cereal::make_nvp("resourceBase", resourceBase_),
-                cereal::make_nvp("resourceDirectories", resourceDirs_),
-                cereal::make_nvp("evalDirectory", evalDirectory_));
+            ar(cereal::make_nvp("windows", m_windows),
+                cereal::make_nvp("useValidationLayers", m_useValidationLayers),
+                cereal::make_nvp("pauseOnKillFocus", m_pauseOnKillFocus),
+                cereal::make_nvp("resourceBase", m_resourceBase),
+                cereal::make_nvp("resourceDirectories", m_resourceDirs),
+                cereal::make_nvp("evalDirectory", m_evalDirectory));
         }
     };
 }

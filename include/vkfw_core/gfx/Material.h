@@ -21,41 +21,41 @@ namespace vkfw_core::gfx {
     struct MaterialInfo final
     {
         /** Holds the materials name. */
-        std::string materialName_;
+        std::string m_materialName;
         /** Holds the materials ambient color. */
-        glm::vec3 ambient_ = glm::vec3{1.0f};
+        glm::vec3 m_ambient = glm::vec3{1.0f};
         /** Holds the materials diffuse albedo. */
-        glm::vec3 diffuse_ = glm::vec3{1.0f};
+        glm::vec3 m_diffuse = glm::vec3{1.0f};
         /** Holds the materials specular albedo. */
-        glm::vec3 specular_ = glm::vec3{1.0f};
+        glm::vec3 m_specular = glm::vec3{1.0f};
         /** Holds the materials alpha value. */
-        float alpha_ = 1.0f;
+        float m_alpha = 1.0f;
         /** Holds the materials specular exponent. */
-        float specularExponent_ = 0.0f;
+        float m_specularExponent = 0.0f;
         /** Holds the materials index of refraction. */
-        float refraction_ = 1.0f;
+        float m_refraction = 1.0f;
         /** Holds the materials diffuse texture file name. */
-        std::string diffuseTextureFilename_;
+        std::string m_diffuseTextureFilename;
         /** Holds the materials bump map file name. */
-        std::string bumpMapFilename_;
+        std::string m_bumpMapFilename;
         /** Holds the materials bump multiplier. */
-        float bumpMultiplier_ = 1.0f;
+        float m_bumpMultiplier = 1.0f;
         /** Holds whether this material has an alpha channel. */
-        bool hasAlpha_ = false;
+        bool m_hasAlpha = false;
 
         template <class Archive>
         void serialize(Archive& ar, const std::uint32_t) // NOLINT
         {
-            ar(cereal::make_nvp("ambientColor", ambient_),
-                cereal::make_nvp("diffuseColor", diffuse_),
-                cereal::make_nvp("specularColor", specular_),
-                cereal::make_nvp("alpha", alpha_),
-                cereal::make_nvp("specularExponent", specularExponent_),
-                cereal::make_nvp("refractionIndex", refraction_),
-                cereal::make_nvp("diffuseTextureFilename", diffuseTextureFilename_),
-                cereal::make_nvp("bumpMapFilename", bumpMapFilename_),
-                cereal::make_nvp("bumpMultiplier", bumpMultiplier_),
-                cereal::make_nvp("hasAlpha", hasAlpha_));
+            ar(cereal::make_nvp("ambientColor", m_ambient),
+                cereal::make_nvp("diffuseColor", m_diffuse),
+                cereal::make_nvp("specularColor", m_specular),
+                cereal::make_nvp("alpha", m_alpha),
+                cereal::make_nvp("specularExponent", m_specularExponent),
+                cereal::make_nvp("refractionIndex", m_refraction),
+                cereal::make_nvp("diffuseTextureFilename", m_diffuseTextureFilename),
+                cereal::make_nvp("bumpMapFilename", m_bumpMapFilename),
+                cereal::make_nvp("bumpMultiplier", m_bumpMultiplier),
+                cereal::make_nvp("hasAlpha", m_hasAlpha));
         }
     };
 
@@ -71,11 +71,11 @@ namespace vkfw_core::gfx {
         ~Material();
 
         /** Holds the material information. */
-        const MaterialInfo* materialInfo_ = nullptr;
+        const MaterialInfo* m_materialInfo = nullptr;
         /** Holds the materials diffuse texture. */
-        std::shared_ptr<Texture2D> diffuseTexture_;
+        std::shared_ptr<Texture2D> m_diffuseTexture;
         /** Holds the materials bump map. */
-        std::shared_ptr<Texture2D> bumpMap_;
+        std::shared_ptr<Texture2D> m_bumpMap;
     };
 }
 
