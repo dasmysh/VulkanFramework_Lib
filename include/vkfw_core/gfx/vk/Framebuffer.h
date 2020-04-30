@@ -45,10 +45,12 @@ namespace vkfw_core::gfx {
         [[nodiscard]] unsigned int GetHeight() const { return m_size.y; }
         [[nodiscard]] const vk::Framebuffer& GetFramebuffer() const { return *m_vkFramebuffer; }
         [[nodiscard]] const FramebufferDescriptor& GetDescriptor() const { return m_desc; }
+        [[nodiscard]] Texture& GetTexture(std::size_t index);
 
     private:
         void CreateImages(vk::CommandBuffer cmdBuffer);
         void CreateFB();
+        bool IsDepthStencilFormat(vk::Format format);
 
         /** Holds the logical device. */
         const LogicalDevice* m_device;
@@ -61,9 +63,8 @@ namespace vkfw_core::gfx {
         /** Holds the device memory group for the owned images. */
         DeviceMemoryGroup m_memoryGroup;
         /** Holds the externally owned images in this framebuffer. */
-        std::vector<vk::Image> m_extImages;
-        /** Holds the image view for the external attachments. */
-        std::vector<vk::UniqueImageView> m_vkExternalAttachmentsImageView;
+        std::vector<Texture> m_extImages;
+        std::vector<vk::Image> m_vkExtImages;
         /** Holds the Vulkan framebuffer object. */
         vk::UniqueFramebuffer m_vkFramebuffer;
         /** Holds the queue family indices. */

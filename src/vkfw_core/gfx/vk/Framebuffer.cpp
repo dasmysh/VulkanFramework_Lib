@@ -12,18 +12,22 @@
 
 namespace vkfw_core::gfx {
 
-    Framebuffer::Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size,
-        std::vector<vk::Image> images, const vk::RenderPass& renderPass, const FramebufferDescriptor& desc,
-        std::vector<std::uint32_t> queueFamilyIndices, vk::CommandBuffer cmdBuffer) :
-        m_device{ logicalDevice },
-        m_size{ size },
-        m_renderPass{ renderPass },
-        m_desc(desc),
-        m_memoryGroup{ logicalDevice, vk::MemoryPropertyFlags() },
-        m_extImages{ std::move(images) },
-        m_vkExternalAttachmentsImageView{ desc.m_tex.size() },
-        m_queueFamilyIndices{ std::move(queueFamilyIndices) }
+    Framebuffer::Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size, std::vector<vk::Image> images,
+                             const vk::RenderPass& renderPass, const FramebufferDescriptor& desc,
+                             std::vector<std::uint32_t> queueFamilyIndices, vk::CommandBuffer cmdBuffer)
+        : m_device{logicalDevice},
+          m_size{size},
+          m_renderPass{renderPass},
+          m_desc(desc),
+          m_memoryGroup{logicalDevice, vk::MemoryPropertyFlags()},
+          m_vkExtImages{std::move(images)},
+          m_queueFamilyIndices{std::move(queueFamilyIndices)}
     {
+        for (std::size_t i = 0; i < m_vkExtImages.size(); ++i) {
+            m_extImages.emplace_back(m_device, desc.m_tex[i], m_queueFamilyIndices);
+            m_extImages.back().InitializeExternalImage(m_vkExtImages[i], glm::u32vec4(m_size, 1, 1), 1, false);
+        }
+
         CreateImages(cmdBuffer);
         CreateFB();
     }
@@ -35,8 +39,9 @@ namespace vkfw_core::gfx {
     {
     }
 
-    Framebuffer::Framebuffer(const Framebuffer& rhs) :
-        Framebuffer(rhs.m_device, rhs.m_size, rhs.m_extImages, rhs.m_renderPass, rhs.m_desc, rhs.m_queueFamilyIndices)
+    Framebuffer::Framebuffer(const Framebuffer& rhs)
+        : Framebuffer(rhs.m_device, rhs.m_size, rhs.m_vkExtImages, rhs.m_renderPass, rhs.m_desc,
+                      rhs.m_queueFamilyIndices)
     {
     }
 
@@ -55,8 +60,7 @@ namespace vkfw_core::gfx {
           m_renderPass{rhs.m_renderPass},
           m_desc(std::move(rhs.m_desc)),
           m_memoryGroup{std::move(rhs.m_memoryGroup)},
-          m_extImages{std::move(rhs.m_extImages)},
-          m_vkExternalAttachmentsImageView{std::move(rhs.m_vkExternalAttachmentsImageView)},
+          m_vkExtImages{std::move(rhs.m_vkExtImages)},
           m_vkFramebuffer{std::move(rhs.m_vkFramebuffer)},
           m_queueFamilyIndices{std::move(rhs.m_queueFamilyIndices)}
     {
@@ -71,7 +75,7 @@ namespace vkfw_core::gfx {
         m_desc = std::move(rhs.m_desc);
         m_memoryGroup = std::move(rhs.m_memoryGroup);
         m_extImages = std::move(rhs.m_extImages);
-        m_vkExternalAttachmentsImageView = std::move(rhs.m_vkExternalAttachmentsImageView);
+        m_vkExtImages = std::move(rhs.m_vkExtImages);
         m_vkFramebuffer = std::move(rhs.m_vkFramebuffer);
         m_queueFamilyIndices = std::move(rhs.m_queueFamilyIndices);
         return *this;
@@ -79,9 +83,24 @@ namespace vkfw_core::gfx {
 
     Framebuffer::~Framebuffer() = default;
 
+    Texture& Framebuffer::GetTexture(std::size_t index)
+    {
+        assert(index < m_desc.m_tex.size());
+        if (index < m_extImages.size()) {
+            return m_extImages[index];
+        } else {
+            return *m_memoryGroup.GetTexture(static_cast<unsigned int>(index - m_extImages.size()));
+        }
+    }
+
     void Framebuffer::CreateImages(vk::CommandBuffer cmdBuffer)
     {
+        std::vector<vk::ImageLayout> imageLayouts;
+        imageLayouts.resize(m_desc.m_tex.size() - m_extImages.size());
         for (auto i = m_extImages.size(); i < m_desc.m_tex.size(); ++i) {
+            imageLayouts[i - m_extImages.size()] = IsDepthStencilFormat(m_desc.m_tex[i].m_format)
+                                                       ? vk::ImageLayout::eDepthStencilAttachmentOptimal
+                                                       : vk::ImageLayout::eColorAttachmentOptimal;
             m_memoryGroup.AddTextureToGroup(m_desc.m_tex[i], glm::u32vec4(m_size, 1, 1), 1, m_queueFamilyIndices);
         }
         m_memoryGroup.FinalizeDeviceGroup();
@@ -89,7 +108,7 @@ namespace vkfw_core::gfx {
         vk::UniqueCommandBuffer ucmdBuffer;
         if (!cmdBuffer) { ucmdBuffer = CommandBuffers::beginSingleTimeSubmit(m_device, 0); }
         for (auto i = 0U; i < m_memoryGroup.GetImagesInGroup(); ++i) {
-            m_memoryGroup.GetTexture(i)->TransitionLayout(vk::ImageLayout::eDepthStencilAttachmentOptimal,
+            m_memoryGroup.GetTexture(i)->TransitionLayout(imageLayouts[i],
                                                          cmdBuffer ? cmdBuffer : *ucmdBuffer);
         }
         if (!cmdBuffer) {
@@ -109,12 +128,9 @@ namespace vkfw_core::gfx {
 
         // TODO: handle cube textures. [3/20/2017 Sebastian Maisch]
         std::vector<vk::ImageView> attachments;
-        for (auto i = 0U; i < m_extImages.size(); ++i) {
-            vk::ImageSubresourceRange subresourceRange{ vk::ImageAspectFlagBits::eColor, 0, 1, 0, layerCount };
-            vk::ImageViewCreateInfo imgViewCreateInfo{ vk::ImageViewCreateFlags(), m_extImages[i],
-                m_desc.m_type, m_desc.m_tex[i].m_format, vk::ComponentMapping(), subresourceRange };
-            m_vkExternalAttachmentsImageView[i] = m_device->GetDevice().createImageViewUnique(imgViewCreateInfo);
-            attachments.push_back(*m_vkExternalAttachmentsImageView[i]);
+        for (auto& tex : m_extImages) {
+            tex.InitializeImageView();
+            attachments.push_back(tex.GetImageView());
         }
 
         for (auto i = 0U; i < m_memoryGroup.GetImagesInGroup(); ++i) {
@@ -128,5 +144,25 @@ namespace vkfw_core::gfx {
                                                m_size.y,
                                                layerCount};
         m_vkFramebuffer = m_device->GetDevice().createFramebufferUnique(fbCreateInfo);
+    }
+
+    bool Framebuffer::IsDepthStencilFormat(vk::Format format)
+    {
+        if (format == vk::Format::eD16Unorm) {
+            return true;
+        } else if (format == vk::Format::eX8D24UnormPack32) {
+            return true;
+        } else if (format == vk::Format::eD32Sfloat) {
+            return true;
+        } else if (format == vk::Format::eS8Uint) {
+            return true;
+        } else if (format == vk::Format::eD16UnormS8Uint) {
+            return true;
+        } else if (format == vk::Format::eD24UnormS8Uint) {
+            return true;
+        } else if (format == vk::Format::eD32SfloatS8Uint) {
+            return true;
+        }
+        return false;
     }
 }
