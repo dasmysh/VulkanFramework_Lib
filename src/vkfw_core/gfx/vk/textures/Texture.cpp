@@ -71,17 +71,18 @@ namespace vkfw_core::gfx {
         assert(m_desc.m_bytesPP > 0);
     }
 
-    Texture::Texture(Texture&& rhs) noexcept :
-        m_device{ rhs.m_device },
-        m_vkImage{ std::move(rhs.m_vkImage) },
-        m_vkImageView{ std::move(rhs.m_vkImageView) },
-        m_imageDeviceMemory{ std::move(rhs.m_imageDeviceMemory) },
-        m_size{ rhs.m_size },
-        m_mipLevels{ rhs.m_mipLevels },
-        m_desc{ rhs.m_desc },
-        m_queueFamilyIndices{ std::move(rhs.m_queueFamilyIndices) },
-        m_type{ rhs.m_type },
-        m_viewType{ rhs.m_viewType }
+    Texture::Texture(Texture&& rhs) noexcept
+        : m_device{rhs.m_device},
+          m_vkInternalImage{std::move(rhs.m_vkInternalImage)},
+          m_vkImage{std::move(rhs.m_vkImage)},
+          m_vkImageView{std::move(rhs.m_vkImageView)},
+          m_imageDeviceMemory{std::move(rhs.m_imageDeviceMemory)},
+          m_size{rhs.m_size},
+          m_mipLevels{rhs.m_mipLevels},
+          m_desc{rhs.m_desc},
+          m_queueFamilyIndices{std::move(rhs.m_queueFamilyIndices)},
+          m_type{rhs.m_type},
+          m_viewType{rhs.m_viewType}
     {
         rhs.m_size = glm::u32vec4(0);
         rhs.m_mipLevels = 0;
@@ -91,6 +92,7 @@ namespace vkfw_core::gfx {
     {
         this->~Texture();
         m_device = rhs.m_device;
+        m_vkInternalImage = std::move(rhs.m_vkInternalImage);
         m_vkImage = std::move(rhs.m_vkImage);
         m_vkImageView = std::move(rhs.m_vkImageView);
         m_imageDeviceMemory = std::move(rhs.m_imageDeviceMemory);
@@ -109,22 +111,7 @@ namespace vkfw_core::gfx {
 
     void Texture::InitializeImage(const glm::u32vec4& size, std::uint32_t mipLevels, bool initMemory)
     {
-        assert(size.x > 0);
-        assert(size.y > 0);
-        assert(size.z > 0);
-        assert(size.w > 0);
-        assert(mipLevels > 0);
-
-        this->~Texture();
-
-        m_size = glm::u32vec4(size.x * m_desc.m_bytesPP, size.y, size.z, size.w);
-        m_mipLevels = mipLevels;
-        if (size.z == 1 && size.y == 1 && size.w == 1) { m_type = vk::ImageType::e1D; m_viewType = vk::ImageViewType::e1D; }
-        else if (size.z == 1 && size.y == 1) { m_type = vk::ImageType::e1D; m_viewType = vk::ImageViewType::e1DArray; }
-        else if (size.z == 1 && size.w == 1) { m_type = vk::ImageType::e2D; m_viewType = vk::ImageViewType::e2D; }
-        else if (size.z == 1) { m_type = vk::ImageType::e2D; m_viewType = vk::ImageViewType::e2DArray; }
-        // else if (size.z == 6 && size.w == 1) { m_type = vk::ImageType::e2D; m_viewType = vk::ImageViewType::eCubeMap; }
-        // TODO: Add cube map support later. [3/17/2017 Sebastian Maisch]
+        InitSize(size, mipLevels);
 
         vk::ImageCreateInfo imgCreateInfo{ m_desc.m_createFlags, m_type, m_desc.m_format,
             vk::Extent3D(size.x, m_size.y, m_size.z),
@@ -135,20 +122,32 @@ namespace vkfw_core::gfx {
             imgCreateInfo.setPQueueFamilyIndices(m_queueFamilyIndices.data());
         }
 
-        m_vkImage = m_device->GetDevice().createImageUnique(imgCreateInfo);
+        m_vkInternalImage = m_device->GetDevice().createImageUnique(imgCreateInfo);
+        m_vkImage = *m_vkInternalImage;
 
         if (initMemory) {
-            vk::MemoryRequirements memRequirements = m_device->GetDevice().getImageMemoryRequirements(*m_vkImage);
+            vk::MemoryRequirements memRequirements =
+                m_device->GetDevice().getImageMemoryRequirements(*m_vkInternalImage);
             m_imageDeviceMemory.InitializeMemory(memRequirements);
             m_imageDeviceMemory.BindToTexture(*this, 0);
             InitializeImageView();
         }
     }
 
+    void Texture::InitializeExternalImage(vk::Image externalImage, const glm::u32vec4& size, std::uint32_t mipLevels,
+                                          bool initView)
+    {
+        InitSize(size, mipLevels);
+        m_vkImage = externalImage;
+
+        if (initView) { InitializeImageView(); }
+    }
+
     void Texture::InitializeImageView()
     {
         vk::ImageSubresourceRange imgSubresourceRange{ GetValidAspects(), 0, m_mipLevels, 0, m_size.w };
-        vk::ImageViewCreateInfo imgViewCreateInfo{ vk::ImageViewCreateFlags(), *m_vkImage, m_viewType, m_desc.m_format, vk::ComponentMapping(), imgSubresourceRange };
+
+        vk::ImageViewCreateInfo imgViewCreateInfo{ vk::ImageViewCreateFlags(), m_vkImage, m_viewType, m_desc.m_format, vk::ComponentMapping(), imgSubresourceRange };
         m_vkImageView = m_device->GetDevice().createImageViewUnique(imgViewCreateInfo);
     }
 
@@ -156,7 +155,7 @@ namespace vkfw_core::gfx {
     {
         vk::ImageSubresourceRange subresourceRange{ GetValidAspects(), 0, m_mipLevels, 0, m_size.w };
         vk::ImageMemoryBarrier transitionBarrier{ vk::AccessFlags(), vk::AccessFlags(), m_desc.m_imageLayout,
-            newLayout, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, *m_vkImage, subresourceRange };
+            newLayout, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, m_vkImage, subresourceRange };
 
         transitionBarrier.srcAccessMask = GetAccessFlagsForLayout(m_desc.m_imageLayout);
         transitionBarrier.dstAccessMask = GetAccessFlagsForLayout(newLayout);
@@ -204,7 +203,7 @@ namespace vkfw_core::gfx {
             subresourceLayersDst,
             vk::Offset3D{ static_cast<std::int32_t>(dstOffset.x), static_cast<std::int32_t>(dstOffset.y), static_cast<std::int32_t>(dstOffset.z) },
             vk::Extent3D{size.x / static_cast<std::uint32_t>(m_desc.m_bytesPP), size.y, size.z}};
-        cmdBuffer.copyImage(*m_vkImage, m_desc.m_imageLayout, *dstImage.m_vkImage, dstImage.m_desc.m_imageLayout, copyRegion);
+        cmdBuffer.copyImage(m_vkImage, m_desc.m_imageLayout, dstImage.m_vkImage, dstImage.m_desc.m_imageLayout, copyRegion);
     }
 
     vk::UniqueCommandBuffer Texture::CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, const Texture& dstImage,
@@ -274,6 +273,35 @@ namespace vkfw_core::gfx {
         case vk::ImageLayout::eShaderReadOnlyOptimal: return vk::PipelineStageFlagBits::eFragmentShader;
         default: return vk::PipelineStageFlagBits::eTopOfPipe;
         }
+    }
+
+    void Texture::InitSize(const glm::u32vec4& size, std::uint32_t mipLevels)
+    {
+        assert(size.x > 0);
+        assert(size.y > 0);
+        assert(size.z > 0);
+        assert(size.w > 0);
+        assert(mipLevels > 0);
+
+        this->~Texture();
+
+        m_size = glm::u32vec4(size.x * m_desc.m_bytesPP, size.y, size.z, size.w);
+        m_mipLevels = mipLevels;
+        if (size.z == 1 && size.y == 1 && size.w == 1) {
+            m_type = vk::ImageType::e1D;
+            m_viewType = vk::ImageViewType::e1D;
+        } else if (size.z == 1 && size.y == 1) {
+            m_type = vk::ImageType::e1D;
+            m_viewType = vk::ImageViewType::e1DArray;
+        } else if (size.z == 1 && size.w == 1) {
+            m_type = vk::ImageType::e2D;
+            m_viewType = vk::ImageViewType::e2D;
+        } else if (size.z == 1) {
+            m_type = vk::ImageType::e2D;
+            m_viewType = vk::ImageViewType::e2DArray;
+        }
+        // else if (size.z == 6 && size.w == 1) { m_type = vk::ImageType::e2D; m_viewType = vk::ImageViewType::eCubeMap; }
+        // TODO: Add cube map support later. [3/17/2017 Sebastian Maisch]
     }
 
 }

@@ -80,6 +80,7 @@ namespace vkfw_core::gfx {
     class Texture
     {
     public:
+        /** Create image. */
         Texture(const LogicalDevice* device, const TextureDescriptor& desc,
             std::vector<std::uint32_t> queueFamilyIndices = std::vector<std::uint32_t>{});
         Texture(const Texture&) = delete;
@@ -89,6 +90,7 @@ namespace vkfw_core::gfx {
         virtual ~Texture();
 
         void InitializeImage(const glm::u32vec4& size, std::uint32_t mipLevels, bool initMemory = true);
+        void InitializeExternalImage(vk::Image externalImage, const glm::u32vec4& size, std::uint32_t mipLevels, bool initView = true);
         void InitializeImageView();
         void TransitionLayout(vk::ImageLayout newLayout, vk::CommandBuffer cmdBuffer);
         vk::UniqueCommandBuffer TransitionLayout(vk::ImageLayout newLayout,
@@ -114,7 +116,7 @@ namespace vkfw_core::gfx {
 
         [[nodiscard]] const glm::u32vec4& GetSize() const { return m_size; }
         [[nodiscard]] std::uint32_t GetMipLevels() const { return m_mipLevels; }
-        [[nodiscard]] vk::Image GetImage() const { return *m_vkImage; }
+        [[nodiscard]] vk::Image GetImage() const { return m_vkImage; }
         [[nodiscard]] vk::ImageView GetImageView() const { return *m_vkImageView; }
         [[nodiscard]] const DeviceMemory& GetDeviceMemory() const { return m_imageDeviceMemory; }
         [[nodiscard]] const TextureDescriptor& GetDescriptor() const { return m_desc; }
@@ -127,10 +129,14 @@ namespace vkfw_core::gfx {
         static vk::PipelineStageFlags GetStageFlagsForLayout(vk::ImageLayout layout);
 
     private:
+        void InitSize(const glm::u32vec4& size, std::uint32_t mipLevels);
+
         /** Holds the device. */
         const LogicalDevice* m_device;
-        /** Holds the Vulkan image object. */
-        vk::UniqueImage m_vkImage;
+        /** Holds the Vulkan internal image object. */
+        vk::UniqueImage m_vkInternalImage;
+        /** Holds the Vulkan image object for external and internal images. */
+        vk::Image m_vkImage = vk::Image{};
         /** Holds the Vulkan image view. */
         vk::UniqueImageView m_vkImageView;
         /** Holds the Vulkan device memory for the image. */
