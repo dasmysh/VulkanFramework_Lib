@@ -100,8 +100,8 @@ namespace vkfw_core::qf {
                     || queueProps[i].queueFlags == (vk::QueueFlagBits::eTransfer | vk::QueueFlagBits::eSparseBinding))) {
                 flagsFit = true;
             }
-            if (reqFlags == vk::QueueFlagBits::eTransfer
-                && (queueProps[i].queueFlags == vk::QueueFlagBits::eTransfer
+            if (reqFlags == vk::QueueFlagBits::eSparseBinding
+                && (queueProps[i].queueFlags == vk::QueueFlagBits::eSparseBinding
                     || queueProps[i].queueFlags == (vk::QueueFlagBits::eTransfer | vk::QueueFlagBits::eSparseBinding))) {
                 flagsFit = true;
             }
