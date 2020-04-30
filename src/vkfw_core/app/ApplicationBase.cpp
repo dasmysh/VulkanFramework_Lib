@@ -354,13 +354,13 @@ namespace vkfw_core {
     /**
      * Handles resize events.
      */
-    void ApplicationBase::OnResize(unsigned int width, unsigned int height, const VKWindow* window)
+    void ApplicationBase::OnResize(unsigned int width, unsigned int height, VKWindow* window)
     {
         glm::uvec2 screenSize(width, height);
         Resize(screenSize, window);
     }
 
-    void ApplicationBase::Resize(const glm::uvec2&, const VKWindow*)
+    void ApplicationBase::Resize(const glm::uvec2&, VKWindow*)
     {
     }
 

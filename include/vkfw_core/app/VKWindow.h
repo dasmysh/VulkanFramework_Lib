@@ -48,6 +48,7 @@ namespace vkfw_core {
         [[nodiscard]] cfg::WindowCfg& GetConfig() const { return *m_config; };
         [[nodiscard]] gfx::LogicalDevice& GetDevice() const { return *m_logicalDevice; }
         [[nodiscard]] const std::vector<gfx::Framebuffer>& GetFramebuffers() const { return m_swapchainFramebuffers; }
+        [[nodiscard]] std::vector<gfx::Framebuffer>& GetFramebuffers() { return m_swapchainFramebuffers; }
         [[nodiscard]] vk::RenderPass GetRenderPass() const { return *m_vkSwapchainRenderPass; }
 
         [[nodiscard]] bool IsMouseButtonPressed(int button) const;

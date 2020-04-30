@@ -65,8 +65,8 @@ namespace vkfw_core {
         virtual bool HandleKeyboard(int key, int scancode, int action, int mods, VKWindow* sender);
         bool HandleMouse(int button, int action, int mods, float mouseWheelDelta, VKWindow* sender);
         virtual bool HandleMouseApp(int button, int action, int mods, float mouseWheelDelta, VKWindow* sender) = 0;
-        void OnResize(unsigned int width, unsigned int height, const VKWindow* window);
-        virtual void Resize(const glm::uvec2& screenSize, const VKWindow* window);
+        void OnResize(unsigned int width, unsigned int height, VKWindow* window);
+        virtual void Resize(const glm::uvec2& screenSize, VKWindow* window);
 
         [[nodiscard]] const cfg::Configuration& GetConfig() const { return m_config; };
         [[nodiscard]] const std::vector<const char*>& GetVKValidationLayers() const { return m_vkValidationLayers; }
