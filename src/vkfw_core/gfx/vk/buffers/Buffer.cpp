@@ -24,13 +24,13 @@ namespace vkfw_core::gfx {
 
     Buffer::~Buffer() = default;
 
-    Buffer::Buffer(Buffer&& rhs) noexcept :
-        m_device{ rhs.m_device },
-        m_buffer{ std::move(rhs.m_buffer) },
-        m_bufferDeviceMemory{ std::move(rhs.m_bufferDeviceMemory) },
-        m_size{ rhs.m_size },
-        m_usage{ rhs.m_usage },
-        m_queueFamilyIndices{ std::move(rhs.m_queueFamilyIndices) }
+    Buffer::Buffer(Buffer&& rhs) noexcept
+        : m_device{rhs.m_device},
+          m_bufferDeviceMemory{std::move(rhs.m_bufferDeviceMemory)},
+          m_buffer{std::move(rhs.m_buffer)},
+          m_size{rhs.m_size},
+          m_usage{rhs.m_usage},
+          m_queueFamilyIndices{std::move(rhs.m_queueFamilyIndices)}
     {
         rhs.m_size = 0;
     }
@@ -39,8 +39,8 @@ namespace vkfw_core::gfx {
     {
         this->~Buffer();
         m_device = rhs.m_device;
-        m_buffer = std::move(rhs.m_buffer);
         m_bufferDeviceMemory = std::move(rhs.m_bufferDeviceMemory);
+        m_buffer = std::move(rhs.m_buffer);
         m_size = rhs.m_size;
         m_usage = rhs.m_usage;
         m_queueFamilyIndices = std::move(rhs.m_queueFamilyIndices);

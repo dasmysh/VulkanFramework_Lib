@@ -56,10 +56,10 @@ namespace vkfw_core::gfx {
     private:
         /** Holds the device. */
         const LogicalDevice* m_device;
-        /** Holds the Vulkan buffer object. */
-        vk::UniqueBuffer m_buffer;
         /** Holds the Vulkan device memory for the buffer. */
         DeviceMemory m_bufferDeviceMemory;
+        /** Holds the Vulkan buffer object. */
+        vk::UniqueBuffer m_buffer;
         /** Holds the current size of the buffer in bytes. */
         std::size_t m_size;
         /** Holds the buffer usage. */
