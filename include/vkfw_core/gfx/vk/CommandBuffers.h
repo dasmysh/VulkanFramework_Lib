@@ -24,6 +24,8 @@ namespace vkfw_core::gfx {
             const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
             const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
             vk::Fence fence = vk::Fence());
+        static void endSingleTimeSubmitAndWait(const LogicalDevice* device, vk::CommandBuffer cmdBuffer,
+                                               unsigned int queueFamily, unsigned int queueIndex);
 
     private:
         /** Holds the device. */

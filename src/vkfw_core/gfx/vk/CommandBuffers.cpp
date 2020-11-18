@@ -42,6 +42,18 @@ namespace vkfw_core::gfx {
         device->GetQueue(queueFamily, queueIndex).submit(submitInfo, fence);
     }
 
+    void CommandBuffers::endSingleTimeSubmitAndWait(const LogicalDevice* device, vk::CommandBuffer cmdBuffer,
+                                                    unsigned int queueFamily, unsigned int queueIndex)
+    {
+        vk::FenceCreateInfo fenceInfo{};
+        auto fence = device->GetDevice().createFenceUnique(fenceInfo);
+        endSingleTimeSubmit(device, cmdBuffer, queueFamily, queueIndex, {}, {}, fence.get());
+        if (auto r = device->GetDevice().waitForFences(fence.get(), VK_TRUE, vkfw_core::defaultFenceTimeout); r != vk::Result::eSuccess) {
+            spdlog::error("Error while waiting for fence: {}.", r);
+            throw std::runtime_error("Error while waiting for fence.");
+        }
+    }
+
     /*void CommandBuffers::beginSingleTimeSubmit(unsigned int bufferIdx)
     {
         vk::CommandBufferBeginInfo beginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
