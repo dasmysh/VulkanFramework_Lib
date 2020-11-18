@@ -135,6 +135,8 @@ namespace vkfw_core::cfg {
         bool m_useSRGB = false;
         /** Holds the swap options. */
         SwapOptions m_swapOptions = SwapOptions::DOUBLE_BUFFERING_VSYNC;
+        /** Indicates ray tracing support is needed for this window. */
+        bool m_useRayTracing = false;
         /** Holds the queues needed. */
         std::vector<QueueCfg> m_queues = {QueueCfg{}};
 
@@ -157,6 +159,7 @@ namespace vkfw_core::cfg {
                 cereal::make_nvp("stencilBufferBits", m_stencilBufferBits),
                 cereal::make_nvp("useSRGB", m_useSRGB),
                 cereal::make_nvp("swapOptions", m_swapOptions),
+                cereal::make_nvp("useRayTracing", m_useRayTracing),
                 cereal::make_nvp("queues", m_queues));
         }
 
@@ -166,20 +169,17 @@ namespace vkfw_core::cfg {
         * @param version the archives version.
         */
         template<class Archive>
-        void load(Archive & ar, std::uint32_t const)
+        void load(Archive & ar, std::uint32_t const version)
         {
-            ar(cereal::make_nvp("title", m_windowTitle),
-                cereal::make_nvp("fullScreen", m_fullscreen),
-                cereal::make_nvp("positionLeft", m_windowLeft),
-                cereal::make_nvp("positionTop", m_windowTop),
-                cereal::make_nvp("width", m_windowWidth),
-                cereal::make_nvp("height", m_windowHeight),
-                cereal::make_nvp("backBufferBits", m_backbufferBits),
-                cereal::make_nvp("depthBufferBits", m_depthBufferBits),
-                cereal::make_nvp("stencilBufferBits", m_stencilBufferBits),
-                cereal::make_nvp("useSRGB", m_useSRGB),
-                cereal::make_nvp("swapOptions", m_swapOptions),
-                cereal::make_nvp("queues", m_queues));
+            ar(cereal::make_nvp("title", m_windowTitle), cereal::make_nvp("fullScreen", m_fullscreen),
+               cereal::make_nvp("positionLeft", m_windowLeft), cereal::make_nvp("positionTop", m_windowTop),
+               cereal::make_nvp("width", m_windowWidth), cereal::make_nvp("height", m_windowHeight),
+               cereal::make_nvp("backBufferBits", m_backbufferBits),
+               cereal::make_nvp("depthBufferBits", m_depthBufferBits),
+               cereal::make_nvp("stencilBufferBits", m_stencilBufferBits), cereal::make_nvp("useSRGB", m_useSRGB),
+               cereal::make_nvp("swapOptions", m_swapOptions));
+            if (version >= 2) ar(cereal::make_nvp("useRayTracing", m_useRayTracing));
+            ar(cereal::make_nvp("queues", m_queues));
         }
     };
 
@@ -244,6 +244,6 @@ namespace vkfw_core::cfg {
 // NOLINTNEXTLINE(cert-err58-cpp,misc-definitions-in-headers)
 CEREAL_CLASS_VERSION(vkfw_core::cfg::QueueCfg, 1)
 // NOLINTNEXTLINE(cert-err58-cpp,misc-definitions-in-headers)
-CEREAL_CLASS_VERSION(vkfw_core::cfg::WindowCfg, 1)
+CEREAL_CLASS_VERSION(vkfw_core::cfg::WindowCfg, 2)
 // NOLINTNEXTLINE(cert-err58-cpp,misc-definitions-in-headers)
 CEREAL_CLASS_VERSION(vkfw_core::cfg::Configuration, 1)

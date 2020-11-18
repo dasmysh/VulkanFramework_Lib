@@ -41,7 +41,59 @@ namespace vkfw_core {
     {
         m_windowData = std::make_unique<ImGui_ImplVulkanH_WindowData>();
         this->InitWindow();
-        this->InitVulkan(requiredDeviceExtensions, deviceFeaturesNextChain);
+
+        vk::PhysicalDeviceBufferDeviceAddressFeatures enabledBufferDeviceAddresFeatures{VK_TRUE};
+        vk::PhysicalDeviceRayTracingFeaturesKHR enabledRayTracingFeatures{VK_TRUE};
+        std::vector<std::string> reqDeviceExtensions = requiredDeviceExtensions;
+        if (m_config->m_useRayTracing) {
+            if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
+                          VK_KHR_MAINTENANCE3_EXTENSION_NAME)
+                == requiredDeviceExtensions.end()) {
+                reqDeviceExtensions.emplace_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
+            }
+
+            if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
+                          VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME)
+                == requiredDeviceExtensions.end()) {
+                reqDeviceExtensions.emplace_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
+            }
+
+            if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
+                          VK_KHR_RAY_TRACING_EXTENSION_NAME)
+                == requiredDeviceExtensions.end()) {
+                reqDeviceExtensions.emplace_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);
+            }
+
+            if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
+                          VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME)
+                == requiredDeviceExtensions.end()) {
+                reqDeviceExtensions.emplace_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
+            }
+
+            if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
+                          VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME)
+                == requiredDeviceExtensions.end()) {
+                reqDeviceExtensions.emplace_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
+            }
+
+            if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
+                          VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)
+                == requiredDeviceExtensions.end()) {
+                reqDeviceExtensions.emplace_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
+            }
+
+            if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
+                          VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME)
+                == requiredDeviceExtensions.end()) {
+                reqDeviceExtensions.emplace_back(VK_KHR_PIPELINE_LIBRARY_EXTENSION_NAME);
+            }
+
+            // there is no way to check the next chain, so we just add and hope it is fine :).
+            enabledBufferDeviceAddresFeatures.pNext = deviceFeaturesNextChain;
+            enabledRayTracingFeatures.pNext = &enabledBufferDeviceAddresFeatures;
+        }
+
+        this->InitVulkan(reqDeviceExtensions, &enabledRayTracingFeatures);
         if (useGUI) { InitGUI(); }
     }
 
