@@ -63,7 +63,7 @@ namespace vkfw_core::gfx {
 
         if (initMemory) {
             auto memRequirements = m_device->GetDevice().getBufferMemoryRequirements(*m_buffer);
-            m_bufferDeviceMemory.InitializeMemory(memRequirements);
+            m_bufferDeviceMemory.InitializeMemory(memRequirements, IsShaderDeviceAddress());
             m_bufferDeviceMemory.BindToBuffer(*this, 0);
         }
     }
@@ -104,4 +104,19 @@ namespace vkfw_core::gfx {
         auto cmdBuffer = CopyBufferAsync(dstBuffer, copyQueueIdx);
         m_device->GetQueue(copyQueueIdx.first, copyQueueIdx.second).waitIdle();
     }
+
+    vk::DeviceOrHostAddressConstKHR Buffer::GetDeviceAddressConst() const
+    {
+        assert(IsShaderDeviceAddress());
+        vk::BufferDeviceAddressInfoKHR bufferAddressInfo{ m_buffer.get() };
+        return m_device->GetDevice().getBufferAddressKHR(bufferAddressInfo);
+    }
+
+    vk::DeviceOrHostAddressKHR Buffer::GetDeviceAddress()
+    {
+        assert(IsShaderDeviceAddress());
+        vk::BufferDeviceAddressInfoKHR bufferAddressInfo{m_buffer.get()};
+        return m_device->GetDevice().getBufferAddressKHR(bufferAddressInfo);
+    }
+
 }

@@ -46,6 +46,13 @@ namespace vkfw_core::gfx {
         [[nodiscard]] vk::Buffer GetBuffer() const { return *m_buffer; }
         [[nodiscard]] const vk::Buffer* GetBufferPtr() const { return &(*m_buffer); }
         [[nodiscard]] const DeviceMemory& GetDeviceMemory() const { return m_bufferDeviceMemory; }
+        [[nodiscard]] vk::DeviceOrHostAddressConstKHR GetDeviceAddressConst() const;
+        [[nodiscard]] vk::DeviceOrHostAddressKHR GetDeviceAddress();
+        [[nodiscard]] bool IsShaderDeviceAddress() const
+        {
+            return (m_usage & vk::BufferUsageFlagBits::eShaderDeviceAddress)
+                   == vk::BufferUsageFlagBits::eShaderDeviceAddress;
+        }
 
     protected:
         [[nodiscard]] Buffer CopyWithoutData() const

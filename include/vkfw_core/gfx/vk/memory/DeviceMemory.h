@@ -31,7 +31,7 @@ namespace vkfw_core::gfx {
         DeviceMemory& operator=(DeviceMemory&&) noexcept;
         ~DeviceMemory();
 
-        void InitializeMemory(const vk::MemoryRequirements& memRequirements);
+        void InitializeMemory(const vk::MemoryRequirements& memRequirements, bool shaderDeviceAddress = false);
         void InitializeMemory(const vk::MemoryAllocateInfo& memAllocateInfo);
 
         void BindToBuffer(Buffer& buffer, std::size_t offset) const;

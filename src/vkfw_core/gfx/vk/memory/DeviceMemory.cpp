@@ -50,10 +50,15 @@ namespace vkfw_core::gfx {
 
     DeviceMemory::~DeviceMemory() = default;
 
-    void DeviceMemory::InitializeMemory(const vk::MemoryRequirements& memRequirements)
+    void DeviceMemory::InitializeMemory(const vk::MemoryRequirements& memRequirements, bool shaderDeviceAddress)
     {
         vk::MemoryAllocateInfo allocInfo{ memRequirements.size,
             FindMemoryType(m_device, memRequirements.memoryTypeBits, m_memoryProperties) };
+        vk::MemoryAllocateFlagsInfoKHR allocateFlagsInfo{};
+        if (shaderDeviceAddress) {
+            allocateFlagsInfo.flags = vk::MemoryAllocateFlagBits::eDeviceAddress;
+            allocInfo.pNext = &allocateFlagsInfo;
+        }
         InitializeMemory(allocInfo);
     }
 

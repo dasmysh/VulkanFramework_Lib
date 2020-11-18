@@ -55,7 +55,7 @@ namespace vkfw_core::gfx {
         static void BindHostObjects(const std::vector<std::size_t>& hostOffsets, std::vector<HostBuffer>& hostBuffers,
             std::vector<HostTexture>& hostImages, DeviceMemory& hostMemory);
 
-        static std::size_t FillBufferAllocationInfo(const LogicalDevice* device, const Buffer& buffer, vk::MemoryAllocateInfo& allocInfo);
+        static std::size_t FillBufferAllocationInfo(const LogicalDevice* device, const Buffer& buffer, vk::MemoryAllocateInfo& allocInfo, bool& shaderDeviceAddress);
         static std::size_t FillImageAllocationInfo(const LogicalDevice* device, const Texture* lastImage,
             const Texture& image, std::size_t& imageOffset, vk::MemoryAllocateInfo& allocInfo);
         static std::size_t FillAllocationInfo(const LogicalDevice* device, const vk::MemoryRequirements& memRequirements,

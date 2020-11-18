@@ -71,17 +71,24 @@ namespace vkfw_core::gfx {
         std::vector<std::size_t>& offsets, const std::vector<B>& buffers, const std::vector<T>& images,
         DeviceMemory& memory)
     {
+        bool shaderDeviceAddress = false;
         vk::MemoryAllocateInfo allocInfo;
         offsets.resize(buffers.size() + images.size());
         std::size_t offset = 0U;
         for (auto i = 0U; i < buffers.size(); ++i) {
             offsets[i] = offset;
-            offset += FillBufferAllocationInfo(device, buffers[i], allocInfo);
+            offset += FillBufferAllocationInfo(device, buffers[i], allocInfo, shaderDeviceAddress);
         }
         for (auto i = 0U; i < images.size(); ++i) {
             offsets[i + buffers.size()] = offset;
             offset += FillImageAllocationInfo(device, (i == 0 ? nullptr : &images[i - 1]),
                 images[i], offsets[i + buffers.size()], allocInfo);
+        }
+
+        vk::MemoryAllocateFlagsInfoKHR allocateFlagsInfo{};
+        if (shaderDeviceAddress) {
+            allocateFlagsInfo.flags = vk::MemoryAllocateFlagBits::eDeviceAddress;
+            allocInfo.pNext = &allocateFlagsInfo;
         }
         memory.InitializeMemory(allocInfo);
     }
@@ -124,8 +131,11 @@ namespace vkfw_core::gfx {
         BindObjects(hostOffsets, hostBuffers, hostImages, hostMemory);
     }
 
-    std::size_t DeviceMemoryGroup::FillBufferAllocationInfo(const LogicalDevice* device, const Buffer& buffer, vk::MemoryAllocateInfo& allocInfo)
+    std::size_t DeviceMemoryGroup::FillBufferAllocationInfo(const LogicalDevice* device, const Buffer& buffer,
+                                                            vk::MemoryAllocateInfo& allocInfo,
+                                                            bool& shaderDeviceAddress)
     {
+        shaderDeviceAddress = shaderDeviceAddress || buffer.IsShaderDeviceAddress();
         auto memRequirements = device->GetDevice().getBufferMemoryRequirements(buffer.GetBuffer());
         return FillAllocationInfo(device, memRequirements, buffer.GetDeviceMemory().GetMemoryProperties(), allocInfo);
     }
