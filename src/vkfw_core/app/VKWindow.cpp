@@ -26,7 +26,8 @@ namespace vkfw_core {
      * Creates a new windows VKWindow.
      * @param conf the window configuration used
      */
-    VKWindow::VKWindow(cfg::WindowCfg& conf, bool useGUI, const std::vector<std::string>& requiredDeviceExtensions)
+    VKWindow::VKWindow(cfg::WindowCfg& conf, bool useGUI, const std::vector<std::string>& requiredDeviceExtensions,
+                       void* deviceFeaturesNextChain)
         :
         m_window{ nullptr },
         m_config(&conf),
@@ -40,7 +41,7 @@ namespace vkfw_core {
     {
         m_windowData = std::make_unique<ImGui_ImplVulkanH_WindowData>();
         this->InitWindow();
-        this->InitVulkan(requiredDeviceExtensions);
+        this->InitVulkan(requiredDeviceExtensions, deviceFeaturesNextChain);
         if (useGUI) { InitGUI(); }
     }
 
@@ -200,7 +201,7 @@ namespace vkfw_core {
     /**
      * Initializes OpenGL.
      */
-    void VKWindow::InitVulkan(const std::vector<std::string>& requiredDeviceExtensions)
+    void VKWindow::InitVulkan(const std::vector<std::string>& requiredDeviceExtensions, void* featuresNextChain)
     {
         spdlog::info("Initializing Vulkan surface...");
 
@@ -213,7 +214,7 @@ namespace vkfw_core {
             spdlog::critical("Could not create window surface ({}).", vk::to_string(vk::Result(result)));
             throw std::runtime_error("Could not create window surface.");
         }
-        m_logicalDevice = ApplicationBase::instance().CreateLogicalDevice(*m_config, requiredDeviceExtensions, *m_vkSurface);
+        m_logicalDevice = ApplicationBase::instance().CreateLogicalDevice(*m_config, requiredDeviceExtensions, featuresNextChain, *m_vkSurface);
         for (auto i = 0U; i < m_config->m_queues.size(); ++i) {
             if (m_config->m_queues[i].m_graphics) {
                 m_graphicsQueue = i;

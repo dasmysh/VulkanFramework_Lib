@@ -217,7 +217,8 @@ namespace vkfw_core {
     ApplicationBase::ApplicationBase(const std::string_view& applicationName, std::uint32_t applicationVersion,
                                      const std::string_view& configFileName,
                                      const std::vector<std::string>& requiredInstanceExtensions,
-                                     const std::vector<std::string>& requiredDeviceExtensions)
+                                     const std::vector<std::string>& requiredDeviceExtensions,
+                                     void* deviceFeaturesNextChain)
         :
         m_configFileName{ configFileName },
         m_pause(true),
@@ -249,7 +250,7 @@ namespace vkfw_core {
         // TODO: Check if the GUI works with multiple windows. [10/19/2018 Sebastian Maisch]
         bool first = true;
         for (auto& wc : m_config.m_windows) {
-            m_windows.emplace_back(wc, first, requiredDeviceExtensions);
+            m_windows.emplace_back(wc, first, requiredDeviceExtensions, deviceFeaturesNextChain);
             m_windows.back().ShowWindow();
             first = false;
         }
@@ -522,7 +523,7 @@ namespace vkfw_core {
 
     std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(
         const cfg::WindowCfg& windowCfg, const std::vector<std::string>& requiredDeviceExtensions,
-        const vk::SurfaceKHR& surface, const function_view<bool(const vk::PhysicalDevice&)>& additionalDeviceChecks) const
+        void* featuresNextChain, const vk::SurfaceKHR& surface, const function_view<bool(const vk::PhysicalDevice&)>& additionalDeviceChecks) const
     {
         vk::PhysicalDevice physicalDevice;
         std::vector<gfx::DeviceQueueDesc> deviceQueueDesc;
@@ -572,7 +573,7 @@ namespace vkfw_core {
         }
 
         auto logicalDevice = std::make_unique<gfx::LogicalDevice>(windowCfg, physicalDevice, deviceQueueDesc,
-                                                                  requiredDeviceExtensionsInternal, surface);
+                                                                  requiredDeviceExtensionsInternal, featuresNextChain, surface);
         VULKAN_HPP_DEFAULT_DISPATCHER.init(logicalDevice->GetDevice());
         return std::move(logicalDevice);
     }
@@ -586,6 +587,7 @@ namespace vkfw_core {
     std::unique_ptr<gfx::LogicalDevice>
     ApplicationBase::CreateLogicalDevice(const cfg::WindowCfg& windowCfg,
                                          const std::vector<std::string>& requiredDeviceExtensions,
+                                         void* featuresNextChain,
                                          const vk::SurfaceKHR& surface) const
     {
         auto requestedFormats = cfg::GetVulkanSurfaceFormatsFromConfig(windowCfg);
@@ -595,7 +597,7 @@ namespace vkfw_core {
         glm::uvec2 requestedExtend(windowCfg.m_windowWidth, windowCfg.m_windowHeight);
 
         // NOLINTNEXTLINE
-        return CreateLogicalDevice(windowCfg, requiredDeviceExtensions, surface, [&surface, &requestedFormats, &requestedPresentMode, &requestedAdditionalImgCnt, &requestedExtend](const vk::PhysicalDevice& device) {
+        return CreateLogicalDevice(windowCfg, requiredDeviceExtensions, featuresNextChain, surface, [&surface, &requestedFormats, &requestedPresentMode, &requestedAdditionalImgCnt, &requestedExtend](const vk::PhysicalDevice& device) {
             // NOLINTNEXTLINE
             auto deviceSurfaceCaps = device.getSurfaceCapabilitiesKHR(surface);
             auto deviceSurfaceFormats = device.getSurfaceFormatsKHR(surface);

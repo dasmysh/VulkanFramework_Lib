@@ -36,7 +36,8 @@ namespace vkfw_core {
         ApplicationBase(const std::string_view& applicationName, std::uint32_t applicationVersion,
                         const std::string_view& configFileName,
                         const std::vector<std::string>& requiredInstanceExtensions = {},
-                        const std::vector<std::string>& requiredDeviceExtensions = {});
+                        const std::vector<std::string>& requiredDeviceExtensions = {},
+                        void* deviceFeaturesNextChain = nullptr);
         ApplicationBase(const ApplicationBase&) = delete;
         ApplicationBase(ApplicationBase&&) = delete;
         ApplicationBase& operator=(const ApplicationBase&) = delete;
@@ -73,7 +74,7 @@ namespace vkfw_core {
         [[nodiscard]] const vk::Instance& GetVKInstance() const { return *m_vkInstance; }
         [[nodiscard]] std::unique_ptr<gfx::LogicalDevice>
         CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const std::vector<std::string>& requiredDeviceExtensions,
-            const vk::SurfaceKHR& surface = vk::SurfaceKHR()) const;
+                            void* featuresNextChain, const vk::SurfaceKHR& surface = vk::SurfaceKHR()) const;
         // std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const vk::SurfaceKHR& surface) const;
 
     private:
@@ -134,7 +135,7 @@ namespace vkfw_core {
         static bool CheckDeviceExtensions(const vk::PhysicalDevice& device, const std::vector<std::string>& requiredExtensions);
         std::unique_ptr<gfx::LogicalDevice>
         CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const std::vector<std::string>& requiredDeviceExtensions,
-                            const vk::SurfaceKHR& surface,
+                            void* featuresNextChain, const vk::SurfaceKHR& surface,
                             const function_view<bool(const vk::PhysicalDevice&)>& additionalDeviceChecks) const;
         [[nodiscard]] PFN_vkVoidFunction LoadVKInstanceFunction(const std::string& functionName,
                                                                 const std::string& extensionName,

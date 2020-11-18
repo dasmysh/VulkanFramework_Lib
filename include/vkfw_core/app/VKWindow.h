@@ -32,7 +32,8 @@ namespace vkfw_core {
     class VKWindow final
     {
     public:
-        explicit VKWindow(cfg::WindowCfg& conf, bool useGUI, const std::vector<std::string>& requiredDeviceExtensions);
+        explicit VKWindow(cfg::WindowCfg& conf, bool useGUI, const std::vector<std::string>& requiredDeviceExtensions,
+                          void* deviceFeaturesNextChain);
         VKWindow(const VKWindow&) = delete;
         VKWindow(VKWindow&&) noexcept;
         VKWindow& operator=(const VKWindow&) = delete;
@@ -173,7 +174,7 @@ namespace vkfw_core {
         std::uint64_t m_frameCount;
 
         void InitWindow();
-        void InitVulkan(const std::vector<std::string>& requiredDeviceExtensions);
+        void InitVulkan(const std::vector<std::string>& requiredDeviceExtensions, void* featuresNextChain);
         void InitGUI();
         void RecreateSwapChain();
         void DestroySwapchainImages();
