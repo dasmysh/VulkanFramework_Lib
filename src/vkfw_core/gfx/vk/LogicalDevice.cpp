@@ -20,7 +20,7 @@ namespace vkfw_core::gfx {
 
     LogicalDevice::LogicalDevice(const cfg::WindowCfg& windowCfg, const vk::PhysicalDevice& phDevice,
                                  std::vector<DeviceQueueDesc> queueDescs,
-                                 const std::vector<std::string>& requiredDeviceExtensions,
+                                 const std::vector<std::string>& requiredDeviceExtensions, void* featuresNextChain,
                                  const vk::SurfaceKHR& surface)
         :
         m_windowCfg(windowCfg),
@@ -97,6 +97,13 @@ namespace vkfw_core::gfx {
             static_cast<std::uint32_t>(ApplicationBase::instance().GetVKValidationLayers().size()), ApplicationBase::instance().GetVKValidationLayers().data(),
             static_cast<std::uint32_t>(enabledDeviceExtensions.size()), enabledDeviceExtensions.data(),
             &deviceFeatures };
+        vk::PhysicalDeviceFeatures2 physicalDeviceFeatures2;
+        if (featuresNextChain) {
+            physicalDeviceFeatures2.features = deviceFeatures;
+            physicalDeviceFeatures2.pNext = featuresNextChain;
+            deviceCreateInfo.pEnabledFeatures = nullptr;
+            deviceCreateInfo.pNext = &physicalDeviceFeatures2;
+        }
 
         m_vkDevice = m_vkPhysicalDevice.createDeviceUnique(deviceCreateInfo);
         m_vkQueuesByRequestedFamily.resize(m_queueDescriptions.size());
