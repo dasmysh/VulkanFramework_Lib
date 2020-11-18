@@ -308,6 +308,7 @@ namespace vkfw_core {
 
             ImGui_ImplVulkan_InvalidateFontUploadObjects(m_imguiVulkanData.get());
         }
+        m_imguiInitialized = true;
     }
 
     void VKWindow::RecreateSwapChain()
@@ -882,6 +883,7 @@ namespace vkfw_core {
         auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         ImGui_ImplGlfw_MouseButtonCallback(win->m_glfwWindowData, button, action, mods);
 
+        if (!win->m_imguiInitialized) return;
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureMouse) {
             win->MouseButtonCallback(button, action, mods);
@@ -893,6 +895,7 @@ namespace vkfw_core {
         auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         win->SetMousePosition(xpos, ypos);
 
+        if (!win->m_imguiInitialized) return;
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureMouse) {
             win->CursorPosCallback(xpos, ypos);
@@ -910,6 +913,7 @@ namespace vkfw_core {
         auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         ImGui_ImplGlfw_ScrollCallback(win->m_glfwWindowData, xoffset, yoffset);
 
+        if (!win->m_imguiInitialized) return;
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureMouse) {
             win->ScrollCallback(xoffset, yoffset);
@@ -921,6 +925,7 @@ namespace vkfw_core {
         auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         ImGui_ImplGlfw_KeyCallback(win->m_glfwWindowData, key, scancode, action, mods);
 
+        if (!win->m_imguiInitialized) return;
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureKeyboard) {
             win->KeyCallback(key, scancode, action, mods);
@@ -932,6 +937,7 @@ namespace vkfw_core {
         auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         ImGui_ImplGlfw_CharCallback(win->m_glfwWindowData, codepoint);
 
+        if (!win->m_imguiInitialized) return;
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureKeyboard) {
             win->CharCallback(codepoint);
@@ -940,9 +946,10 @@ namespace vkfw_core {
 
     void VKWindow::glfwCharModsCallback(GLFWwindow* window, unsigned int codepoint, int mods)
     {
+        auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
+        if (!win->m_imguiInitialized) return;
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureKeyboard) {
-            auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
             win->CharModsCallback(codepoint, mods);
         }
     }

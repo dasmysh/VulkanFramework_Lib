@@ -149,7 +149,8 @@ namespace vkfw_core {
         /** ImGui vulkan data. */
         std::unique_ptr<ImGui_ImplVulkan_InitInfo> m_imguiVulkanData;
 
-
+        /** Tracks if ImGui is initialized. */
+        bool m_imguiInitialized = false;
         /** Holds the current mouse position. */
         glm::vec2 m_currMousePosition;
         /** Holds the current normalized (in [-1,1]) mouse position. */
