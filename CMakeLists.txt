@@ -53,7 +53,7 @@ set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
 include(cmake/Conan.cmake)
 run_conan()
 
-find_package(Vulkan 1.1.126.0 REQUIRED)
+find_package(Vulkan 1.2.154.0 REQUIRED)
 target_compile_definitions(vkfw_options INTERFACE VULKAN_HPP_TYPESAFE_CONVERSION)
 include(cmake/CompileSpirvShader.cmake)
 

@@ -473,7 +473,7 @@ namespace vkfw_core {
 #endif
         if (useValidationLayers) {
             enabledExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
-            m_vkValidationLayers.push_back("VK_LAYER_LUNARG_standard_validation");
+            m_vkValidationLayers.push_back("VK_LAYER_KHRONOS_validation");
         }
 
         CheckVKInstanceExtensions(enabledExtensions);
@@ -481,7 +481,7 @@ namespace vkfw_core {
 
         {
             // NOLINTNEXTLINE
-            auto api_version = VK_API_VERSION_1_1;
+            auto api_version = VK_API_VERSION_1_2;
             vk::ApplicationInfo appInfo{applicationName.data(), applicationVersion, engineName.data(), engineVersion,
                                         static_cast<std::uint32_t>(api_version)};
             vk::InstanceCreateInfo createInfo{ vk::InstanceCreateFlags(), &appInfo, static_cast<std::uint32_t>(m_vkValidationLayers.size()), m_vkValidationLayers.data(),
