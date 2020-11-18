@@ -73,9 +73,11 @@ namespace vkfw_core {
         void DrawCurrentCommandBuffer() const;
         void SubmitFrame();
 
-        // for primary cmd buffer: dirty bit, update if needed. (start cmd buffer, begin render pass, execute other buffers, end pass, end buffer)
+        // for primary cmd buffer: dirty bit, update if needed. (start cmd buffer, end cmd buffer; render pass needs to be started and ended with BeginSwapchainRenderPass and EndSwapchainRenderpass.)
         void UpdatePrimaryCommandBuffers(const function_view<void(const vk::CommandBuffer& commandBuffer,
                                                                   std::size_t cmdBufferIndex)>& fillFunc) const;
+        void BeginSwapchainRenderPass(std::size_t cmdBufferIndex) const;
+        void EndSwapchainRenderPass(std::size_t cmdBufferIndex) const;
 
         [[nodiscard]] std::uint32_t GetCurrentlyRenderedImageIndex() const { return m_currentlyRenderedImage; }
         [[nodiscard]] vk::Semaphore GetDataAvailableSemaphore() const { return *m_vkDataAvailableSemaphore; }

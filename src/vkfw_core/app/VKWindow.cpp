@@ -407,7 +407,6 @@ namespace vkfw_core {
         }
 
         auto presentMode = cfg::GetVulkanPresentModeFromConfig(*m_config);
-        // auto surfaceCaps = logicalDevice_->GetPhysicalDevice().getSurfaceCapabilitiesKHR(*vkSurface_);
         glm::u32vec2 configSurfaceSize(static_cast<std::uint32_t>(width), static_cast<std::uint32_t>(height));
         glm::u32vec2 minSurfaceSize(surfaceCapabilities.minImageExtent.width,
                                     surfaceCapabilities.minImageExtent.height);
@@ -421,6 +420,16 @@ namespace vkfw_core {
             vk::SwapchainCreateInfoKHR swapChainCreateInfo{ vk::SwapchainCreateFlagsKHR(), *m_vkSurface, imageCount, surfaceFormat.format, surfaceFormat.colorSpace,
                 m_vkSurfaceExtend, 1, vk::ImageUsageFlagBits::eColorAttachment, vk::SharingMode::eExclusive, 0, nullptr, surfaceCapabilities.currentTransform,
                 vk::CompositeAlphaFlagBitsKHR::eOpaque, presentMode, static_cast<vk::Bool32>(true), *m_vkSwapchain };
+
+            // not sure if this is needed for anything else but ray tracing ...
+            if (surfaceCapabilities.supportedUsageFlags & vk::ImageUsageFlagBits::eTransferSrc) {
+                swapChainCreateInfo.imageUsage |= vk::ImageUsageFlagBits::eTransferSrc;
+            }
+
+            if (surfaceCapabilities.supportedUsageFlags & vk::ImageUsageFlagBits::eTransferDst) {
+                swapChainCreateInfo.imageUsage |= vk::ImageUsageFlagBits::eTransferDst;
+            }
+
             m_vkSwapchain = m_logicalDevice->GetDevice().createSwapchainKHRUnique(swapChainCreateInfo);
         }
         m_windowData->Width = m_vkSurfaceExtend.width;
@@ -490,6 +499,9 @@ namespace vkfw_core {
         // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
         gfx::FramebufferDescriptor fbDesc;
         fbDesc.m_tex.emplace_back(m_config->m_backbufferBits / 8, surfaceFormat.format, vk::SampleCountFlagBits::e1);
+        if (m_config->m_useRayTracing) {
+            fbDesc.m_tex.back().m_imageUsage |= vk::ImageUsageFlagBits::eTransferDst;
+        }
         fbDesc.m_tex.push_back(gfx::TextureDescriptor::DepthBufferTextureDesc(dsFormat.first, dsFormat.second, vk::SampleCountFlagBits::e1));
         m_swapchainFramebuffers.reserve(swapchainImages.size());
 
@@ -735,18 +747,27 @@ namespace vkfw_core {
             vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eSimultaneousUse };
             m_vkCommandBuffers[i]->begin(cmdBufferBeginInfo);
 
-            std::array<vk::ClearValue, 2> clearColor;
-            clearColor[0].setColor(vk::ClearColorValue{ std::array<float, 4>{ 0.0f, 0.0f, 0.0f, 1.0f } });
-            clearColor[1].setDepthStencil(vk::ClearDepthStencilValue{ 1.0f, 0 });
-            vk::RenderPassBeginInfo renderPassBeginInfo{ *m_vkSwapchainRenderPass, m_swapchainFramebuffers[i].GetFramebuffer(),
-                vk::Rect2D(vk::Offset2D(0, 0), m_vkSurfaceExtend), static_cast<std::uint32_t>(clearColor.size()), clearColor.data() };
-            m_vkCommandBuffers[i]->beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
-
             fillFunc(*m_vkCommandBuffers[i], i);
 
-            m_vkCommandBuffers[i]->endRenderPass();
             m_vkCommandBuffers[i]->end();
         }
+    }
+
+    void VKWindow::BeginSwapchainRenderPass(std::size_t cmdBufferIndex) const
+    {
+        std::array<vk::ClearValue, 2> clearColor;
+        clearColor[0].setColor(vk::ClearColorValue{std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f}});
+        clearColor[1].setDepthStencil(vk::ClearDepthStencilValue{1.0f, 0});
+        vk::RenderPassBeginInfo renderPassBeginInfo{*m_vkSwapchainRenderPass,
+                                                    m_swapchainFramebuffers[cmdBufferIndex].GetFramebuffer(),
+                                                    vk::Rect2D(vk::Offset2D(0, 0), m_vkSurfaceExtend),
+                                                    static_cast<std::uint32_t>(clearColor.size()), clearColor.data()};
+        m_vkCommandBuffers[cmdBufferIndex]->beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+    }
+
+    void VKWindow::EndSwapchainRenderPass(std::size_t cmdBufferIndex) const
+    {
+        m_vkCommandBuffers[cmdBufferIndex]->endRenderPass();
     }
 
     /**
