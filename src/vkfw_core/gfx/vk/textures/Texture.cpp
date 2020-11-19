@@ -285,6 +285,7 @@ namespace vkfw_core::gfx {
 
         this->~Texture();
 
+        m_pixelSize = size;
         m_size = glm::u32vec4(size.x * m_desc.m_bytesPP, size.y, size.z, size.w);
         m_mipLevels = mipLevels;
         if (size.z == 1 && size.y == 1 && size.w == 1) {

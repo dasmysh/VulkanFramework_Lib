@@ -115,6 +115,7 @@ namespace vkfw_core::gfx {
         void CopyImageSync(const Texture& dstImage, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx) const;
 
         [[nodiscard]] const glm::u32vec4& GetSize() const { return m_size; }
+        [[nodiscard]] const glm::u32vec4& GetPixelSize() const { return m_pixelSize; }
         [[nodiscard]] std::uint32_t GetMipLevels() const { return m_mipLevels; }
         [[nodiscard]] vk::Image GetImage() const { return m_vkImage; }
         [[nodiscard]] vk::ImageView GetImageView() const { return *m_vkImageView; }
@@ -143,6 +144,8 @@ namespace vkfw_core::gfx {
         DeviceMemory m_imageDeviceMemory;
         /** Holds the current size of the texture (x: bytes of line, y: #lines, z: #depth slices, w: #array slices). */
         glm::u32vec4 m_size;
+        /** Holds the current size of the texture in pixels. */
+        glm::u32vec4 m_pixelSize;
         /** Holds the number of MIP levels. */
         std::uint32_t m_mipLevels;
         /** Holds the texture description. */
