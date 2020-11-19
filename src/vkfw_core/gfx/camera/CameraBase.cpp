@@ -84,7 +84,7 @@ namespace vkfw_core::gfx {
 
     void CameraBase::UpdateView()
     {
-        m_viewMatrix = glm::mat4_cast(m_orientation);
+        m_viewMatrix = glm::mat4_cast(glm::inverse(m_orientation));
         m_viewMatrix *= glm::translate(glm::mat4(1.0f), -m_position);
 
         m_viewFrustum = math::Frustum(m_projMatrix * m_viewMatrix);

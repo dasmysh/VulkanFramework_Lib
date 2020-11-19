@@ -47,14 +47,14 @@ namespace vkfw_core::gfx {
 
         radius = glm::max(radius, 0.0f);
 
-        auto camOrient = glm::inverse(GetOrientation());
+        auto camOrient = GetOrientation();
         glm::quat camOrientStep = m_camArcball.GetWorldRotation(elapsedTime, camOrient);
         camOrient = camOrientStep * camOrient;
         glm::mat3 matOrient{ glm::mat3_cast(camOrient) };
         auto camPos = radius * (matOrient * glm::vec3(0.0f, 0.0f, 1.0f));
 
         auto aspectRatio = static_cast<float>(sender->GetClientSize().x) / static_cast<float>(sender->GetClientSize().y);
-        SetPositionOrientationProj(camPos, glm::inverse(camOrient),
+        SetPositionOrientationProj(camPos, camOrient,
                                    glm::perspective(m_fovY, aspectRatio, m_zNear, m_zFar));
     }
 
