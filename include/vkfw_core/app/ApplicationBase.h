@@ -122,11 +122,11 @@ namespace vkfw_core {
          * @param time the time elapsed since the application started
          * @param elapsed the time elapsed since the last frame
          */
-        virtual void FrameMove(float time, float elapsed, const VKWindow* window) = 0;
+        virtual void FrameMove(float time, float elapsed, VKWindow* window) = 0;
         /** Render the scene. */
-        virtual void RenderScene(const VKWindow* window) = 0;
+        virtual void RenderScene(VKWindow* window) = 0;
         /** Render the scenes GUI. */
-        virtual void RenderGUI(const VKWindow* window) = 0;
+        virtual void RenderGUI(VKWindow* window) = 0;
 
     private:
         void InitVulkan(const std::string_view& applicationName, std::uint32_t applicationVersion,
