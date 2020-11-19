@@ -954,9 +954,10 @@ namespace vkfw_core {
     void VKWindow::glfwMouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
     {
         auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
+        if (!win->m_imguiInitialized) return;
+
         ImGui_ImplGlfw_MouseButtonCallback(win->m_glfwWindowData, button, action, mods);
 
-        if (!win->m_imguiInitialized) return;
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureMouse) {
             win->MouseButtonCallback(button, action, mods);
@@ -984,9 +985,10 @@ namespace vkfw_core {
     void VKWindow::glfwScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
     {
         auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
+        if (!win->m_imguiInitialized) return;
+
         ImGui_ImplGlfw_ScrollCallback(win->m_glfwWindowData, xoffset, yoffset);
 
-        if (!win->m_imguiInitialized) return;
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureMouse) {
             win->ScrollCallback(xoffset, yoffset);
@@ -996,9 +998,10 @@ namespace vkfw_core {
     void VKWindow::glfwKeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
     {
         auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
+        if (!win->m_imguiInitialized) return;
+
         ImGui_ImplGlfw_KeyCallback(win->m_glfwWindowData, key, scancode, action, mods);
 
-        if (!win->m_imguiInitialized) return;
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureKeyboard) {
             win->KeyCallback(key, scancode, action, mods);
@@ -1008,9 +1011,10 @@ namespace vkfw_core {
     void VKWindow::glfwCharCallback(GLFWwindow* window, unsigned int codepoint)
     {
         auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
+        if (!win->m_imguiInitialized) return;
+
         ImGui_ImplGlfw_CharCallback(win->m_glfwWindowData, codepoint);
 
-        if (!win->m_imguiInitialized) return;
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureKeyboard) {
             win->CharCallback(codepoint);
