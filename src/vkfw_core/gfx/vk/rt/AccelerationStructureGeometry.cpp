@@ -81,18 +81,20 @@ namespace vkfw_core::gfx::rt {
         descWrite.setPNext(&m_descriptorSetAccStructure);
     }
 
-    void AccelerationStructureGeometry::AddTriangleGeometry(std::size_t primitiveCount, std::size_t vertexCount,
-                                                            std::size_t vertexSize,
-                                                            vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress,
-                                                            vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress)
+    void AccelerationStructureGeometry::AddTriangleGeometry(
+        std::size_t primitiveCount, std::size_t vertexCount, std::size_t vertexSize,
+        vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress,
+        vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress,
+        vk::DeviceOrHostAddressConstKHR transformDeviceAddress /*= nullptr*/)
     {
+        vk::Bool32 hasTransform = (transformDeviceAddress.hostAddress == nullptr) ? VK_FALSE : VK_TRUE;
         m_accelerationStructureCreateGeometryTypeInfo.emplace_back(
             vk::GeometryTypeKHR::eTriangles, static_cast<std::uint32_t>(primitiveCount), vk::IndexType::eUint32,
-            static_cast<std::uint32_t>(vertexCount), vk::Format::eR32G32B32Sfloat, VK_FALSE);
+            static_cast<std::uint32_t>(vertexCount), vk::Format::eR32G32B32Sfloat, hasTransform);
 
         vk::AccelerationStructureGeometryTrianglesDataKHR asGeometryDataTriangles{
             vk::Format::eR32G32B32Sfloat, vertexBufferDeviceAddress, vertexSize, vk::IndexType::eUint32,
-            indexBufferDeviceAddress};
+            indexBufferDeviceAddress, transformDeviceAddress};
         vk::AccelerationStructureGeometryDataKHR asGeometryData{asGeometryDataTriangles};
 
         m_accelerationStructureGeometries.emplace_back(vk::GeometryTypeKHR::eTriangles, asGeometryData,

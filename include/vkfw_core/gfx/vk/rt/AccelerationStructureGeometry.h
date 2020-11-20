@@ -25,7 +25,8 @@ namespace vkfw_core::gfx::rt {
 
         void AddTriangleGeometry(std::size_t primitiveCount, std::size_t vertexCount, std::size_t vertexSize,
                                  vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress,
-                                 vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress);
+                                 vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress,
+                                 vk::DeviceOrHostAddressConstKHR transformDeviceAddress = nullptr);
         void InitializeAccelerationStructure();
 
         void FillDescriptorLayoutBinding(vk::DescriptorSetLayoutBinding& asLayoutBinding,
