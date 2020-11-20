@@ -92,11 +92,23 @@ namespace vkfw_core::gfx {
         m_memoryGroup->FillUploadBufferCmdBuffer(m_bufferIdx, cmdBuffer, offset, size);
     }
 
+    void UniformBufferObject::FillDescriptorLayoutBinding(vk::DescriptorSetLayoutBinding& uboLayoutBinding,
+                                                          const vk::ShaderStageFlags& shaderFlags, bool isDynamicBuffer,
+                                                          std::uint32_t binding) const
+    {
+        auto descType = isDynamicBuffer ? vk::DescriptorType::eUniformBufferDynamic : vk::DescriptorType::eUniformBuffer;
+        uboLayoutBinding.setBinding(binding);
+        uboLayoutBinding.setDescriptorType(descType);
+        uboLayoutBinding.setDescriptorCount(1);
+        uboLayoutBinding.setStageFlags(shaderFlags);
+    }
+
     void UniformBufferObject::CreateLayout(vk::DescriptorPool descPool, const vk::ShaderStageFlags& shaderFlags, bool isDynamicBuffer, std::uint32_t binding)
     {
         m_descType = isDynamicBuffer ? vk::DescriptorType::eUniformBufferDynamic : vk::DescriptorType::eUniformBuffer;
         m_descBinding = binding;
-        vk::DescriptorSetLayoutBinding uboLayoutBinding{ m_descBinding, m_descType, 1, shaderFlags };
+        vk::DescriptorSetLayoutBinding uboLayoutBinding;
+        FillDescriptorLayoutBinding(uboLayoutBinding, shaderFlags, isDynamicBuffer, binding);
 
         vk::DescriptorSetLayoutCreateInfo uboLayoutCreateInfo{ vk::DescriptorSetLayoutCreateFlags(), 1, &uboLayoutBinding };
         m_internalDescLayout = m_device->GetDevice().createDescriptorSetLayoutUnique(uboLayoutCreateInfo);
@@ -110,6 +122,15 @@ namespace vkfw_core::gfx {
         m_descBinding = binding;
         m_descLayout = usedLayout;
         AllocateDescriptorSet(descPool);
+    }
+
+    void UniformBufferObject::UseDescriptorSet(vk::DescriptorSet descSet, vk::DescriptorSetLayout usedLayout,
+                                               bool isDynamicBuffer /*= false*/, std::uint32_t binding /*= 0*/)
+    {
+        m_descType = isDynamicBuffer ? vk::DescriptorType::eUniformBufferDynamic : vk::DescriptorType::eUniformBuffer;
+        m_descBinding = binding;
+        m_descLayout = usedLayout;
+        m_descSet = descSet;
     }
 
     void UniformBufferObject::AllocateDescriptorSet(vk::DescriptorPool descPool)

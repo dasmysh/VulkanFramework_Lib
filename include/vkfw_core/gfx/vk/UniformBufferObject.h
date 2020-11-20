@@ -27,8 +27,15 @@ namespace vkfw_core::gfx {
                             std::size_t size, const void* data);
         void AddUBOToBufferPrefill(MemoryGroup* memoryGroup, unsigned int bufferIndex, std::size_t bufferOffset,
                                    std::size_t size, const void* data);
+
+        void FillDescriptorLayoutBinding(vk::DescriptorSetLayoutBinding& uboLayoutBinding,
+                                         const vk::ShaderStageFlags& shaderFlags, bool isDynamicBuffer = false,
+                                         std::uint32_t binding = 0) const;
         void CreateLayout(vk::DescriptorPool descPool, const vk::ShaderStageFlags& shaderFlags, bool isDynamicBuffer = false, std::uint32_t binding = 0);
         void UseLayout(vk::DescriptorPool descPool, vk::DescriptorSetLayout usedLayout, bool isDynamicBuffer = false, std::uint32_t binding = 0);
+        void UseDescriptorSet(vk::DescriptorSet descSet, vk::DescriptorSetLayout usedLayout,
+                              bool isDynamicBuffer = false, std::uint32_t binding = 0);
+
         void FillUploadCmdBuffer(vk::CommandBuffer cmdBuffer, std::size_t instanceIdx, std::size_t size) const;
         void FillDescriptorSetWrite(vk::WriteDescriptorSet& descWrite) const;
         void UpdateInstanceData(std::size_t instanceIdx, std::size_t size, const void* data) const;
