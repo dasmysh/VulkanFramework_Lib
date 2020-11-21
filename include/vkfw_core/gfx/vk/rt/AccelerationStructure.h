@@ -20,23 +20,28 @@ namespace vkfw_core::gfx::rt {
     class AccelerationStructure
     {
     public:
-        AccelerationStructure(vkfw_core::gfx::LogicalDevice* device);
+        AccelerationStructure(vkfw_core::gfx::LogicalDevice* device, vk::AccelerationStructureTypeKHR type,
+                              vk::BuildAccelerationStructureFlagsKHR flags);
         ~AccelerationStructure();
 
-        void BuildAccelerationStructure(
-            vk::AccelerationStructureBuildGeometryInfoKHR buildInfo,
+        void BuildAccelerationStructure(const std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR>& geometryTypeInfos,
+            const std::vector<vk::AccelerationStructureGeometryKHR>& geometries,
             const vk::AccelerationStructureBuildOffsetInfoKHR* buildOffsets);
 
         const vk::AccelerationStructureKHR& GetAccelerationStructure() const { return m_vkAccelerationStructure.get(); }
         vk::DeviceAddress GetHandle() const { return m_handle; }
 
-        void CreateAccelerationStructure(const vk::AccelerationStructureCreateInfoKHR& info);
-
     private:
         std::unique_ptr<vkfw_core::gfx::DeviceBuffer> CreateAccelerationStructureScratchBuffer() const;
+        void CreateAccelerationStructure(const vk::AccelerationStructureCreateInfoKHR& info);
 
         /** The device to create the acceleration structures in. */
         vkfw_core::gfx::LogicalDevice* m_device;
+
+        /** The acceleration structure type. */
+        vk::AccelerationStructureTypeKHR m_type;
+        /** The acceleration structure flags. */
+        vk::BuildAccelerationStructureFlagsKHR m_flags;
 
         /** The actual vulkan acceleration structure object. */
         vk::UniqueAccelerationStructureKHR m_vkAccelerationStructure;

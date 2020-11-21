@@ -13,7 +13,10 @@
 
 namespace vkfw_core::gfx::rt {
 
-    AccelerationStructure::AccelerationStructure(vkfw_core::gfx::LogicalDevice* device) : m_device{device}
+    AccelerationStructure::AccelerationStructure(vkfw_core::gfx::LogicalDevice* device,
+                                                 vk::AccelerationStructureTypeKHR type,
+                                                 vk::BuildAccelerationStructureFlagsKHR flags)
+        : m_device{device}, m_type{type}, m_flags{flags}
     {
     }
 
@@ -58,13 +61,25 @@ namespace vkfw_core::gfx::rt {
     }
 
     void AccelerationStructure::BuildAccelerationStructure(
-        vk::AccelerationStructureBuildGeometryInfoKHR buildInfo,
+        const std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR>& geometryTypeInfos,
+        const std::vector<vk::AccelerationStructureGeometryKHR>& geometries,
         const vk::AccelerationStructureBuildOffsetInfoKHR* buildOffsets)
     {
+        vk::AccelerationStructureCreateInfoKHR blasCreateInfo{ 0, m_type, m_flags, static_cast<std::uint32_t>(geometryTypeInfos.size()), geometryTypeInfos.data()};
+
+        CreateAccelerationStructure(blasCreateInfo);
         auto scratchBuffer = CreateAccelerationStructureScratchBuffer();
 
-        buildInfo.dstAccelerationStructure = m_vkAccelerationStructure.get();
-        buildInfo.scratchData = scratchBuffer->GetDeviceAddress();
+        const vk::AccelerationStructureGeometryKHR* asGeometriesPtr = geometries.data();
+        vk::AccelerationStructureBuildGeometryInfoKHR buildInfo{m_type,
+                                                                m_flags,
+                                                                VK_FALSE,
+                                                                {},
+                                                                m_vkAccelerationStructure.get(),
+                                                                VK_FALSE,
+                                                                static_cast<std::uint32_t>(geometries.size()),
+                                                                &asGeometriesPtr,
+                                                                scratchBuffer->GetDeviceAddress()};
 
         if (m_device->GetDeviceRayTracingFeatures().rayTracingHostAccelerationStructureCommands) {
             if (m_device->GetDevice().buildAccelerationStructureKHR(
