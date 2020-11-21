@@ -86,6 +86,10 @@ namespace vkfw_core::gfx {
         void CmdDebugMarkerInsertEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const;
 
         [[nodiscard]] const cfg::WindowCfg& GetWindowCfg() const { return m_windowCfg; }
+        [[nodiscard]] const vk::PhysicalDeviceProperties& GetDeviceProperties() const { return m_deviceProperties; }
+        [[nodiscard]] const vk::PhysicalDeviceRayTracingPropertiesKHR& GetDeviceRayTracingProperties() const { assert(m_windowCfg.m_useRayTracing); return m_raytracingProperties; }
+        [[nodiscard]] const vk::PhysicalDeviceFeatures& GetDeviceFeatures() const { return m_deviceFeatures; }
+        [[nodiscard]] const vk::PhysicalDeviceRayTracingFeaturesKHR& GetDeviceRayTracingFeatures() const { assert(m_windowCfg.m_useRayTracing); return m_raytracingFeatures; }
         [[nodiscard]] ShaderManager* GetShaderManager() const { return m_shaderManager.get(); }
         [[nodiscard]] TextureManager* GetTextureManager() const { return m_textureManager.get(); }
         [[nodiscard]] Texture2D* GetDummyTexture() const { return m_dummyTexture.get(); }
@@ -116,6 +120,15 @@ namespace vkfw_core::gfx {
         std::map<std::uint32_t, std::vector<vk::Queue>> m_vkQueuesByDeviceFamily;
         /** Holds a command pool for each device queue family. */
         std::map<std::uint32_t, vk::UniqueCommandPool> m_vkCmdPoolsByDeviceQFamily;
+
+        /** The properties of the device. */
+        vk::PhysicalDeviceProperties m_deviceProperties;
+        /** The raytracing properties for the device. */
+        vk::PhysicalDeviceRayTracingPropertiesKHR m_raytracingProperties;
+        /** The features of the device. */
+        vk::PhysicalDeviceFeatures m_deviceFeatures;
+        /** The raytracing features of the device. */
+        vk::PhysicalDeviceRayTracingFeaturesKHR m_raytracingFeatures;
 
         /** Holds the queue descriptions. */
         std::vector<DeviceQueueDesc> m_queueDescriptions;

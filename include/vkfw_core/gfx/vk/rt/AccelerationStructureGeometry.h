@@ -9,6 +9,7 @@
 #pragma once
 
 #include "main.h"
+#include "gfx/vk/rt/AccelerationStructure.h"
 
 namespace vkfw_core::gfx {
     class LogicalDevice;
@@ -39,25 +40,14 @@ namespace vkfw_core::gfx::rt {
         void FillDescriptorSetWrite(vk::WriteDescriptorSet& descWrite) const;
 
     private:
-        struct AccelerationStructure
-        {
-            vk::UniqueAccelerationStructureKHR as;
-            vk::UniqueDeviceMemory memory;
-            vk::DeviceAddress handle = 0;
-        };
 
         void CreateBottomLevelAccelerationStructure();
         void CreateTopLevelAccelerationStructure();
 
         void AllocateDescriptorSet(vk::DescriptorPool descPool);
 
-        AccelerationStructure CreateAS(const vk::AccelerationStructureCreateInfoKHR& info);
-        std::unique_ptr<vkfw_core::gfx::DeviceBuffer> CreateASScratchBuffer(AccelerationStructure& as);
-
         /** The device to create the acceleration structures in. */
         vkfw_core::gfx::LogicalDevice* m_device;
-        /** The raytracing features of the selected device. */
-        vk::PhysicalDeviceRayTracingFeaturesKHR m_raytracingFeatures;
 
         /** The bottom level acceleration structure for the scene. */
         AccelerationStructure m_BLAS;
@@ -66,8 +56,6 @@ namespace vkfw_core::gfx::rt {
 
         /** Contains the descriptor binding. */
         std::uint32_t m_descBinding = 0;
-        /** Contains weather the descriptor type. */
-        vk::DescriptorType m_descType = vk::DescriptorType::eUniformBuffer;
         /** The internal descriptor layout if created here. */
         vk::UniqueDescriptorSetLayout m_internalDescLayout;
         /** The descriptor layout used. */

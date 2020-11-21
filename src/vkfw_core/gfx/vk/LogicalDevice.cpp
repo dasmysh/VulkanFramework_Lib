@@ -65,8 +65,18 @@ namespace vkfw_core::gfx {
             }
         }
 
-        auto deviceFeatures = m_vkPhysicalDevice.getFeatures();
+        m_deviceFeatures = m_vkPhysicalDevice.getFeatures();
+        m_deviceProperties = m_vkPhysicalDevice.getProperties();
         std::vector<const char*> enabledDeviceExtensions;
+
+        if (m_windowCfg.m_useRayTracing) {
+            auto features =
+                m_vkPhysicalDevice.getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceRayTracingFeaturesKHR>();
+            m_raytracingFeatures = features.get<vk::PhysicalDeviceRayTracingFeaturesKHR>();
+            auto properties =
+                m_vkPhysicalDevice.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPropertiesKHR>();
+            m_raytracingProperties = properties.get<vk::PhysicalDeviceRayTracingPropertiesKHR>();
+        }
 
         {
             spdlog::info("VK Device Extensions:");
@@ -96,10 +106,10 @@ namespace vkfw_core::gfx {
         vk::DeviceCreateInfo deviceCreateInfo{ vk::DeviceCreateFlags(), static_cast<std::uint32_t>(queueCreateInfo.size()), queueCreateInfo.data(),
             static_cast<std::uint32_t>(ApplicationBase::instance().GetVKValidationLayers().size()), ApplicationBase::instance().GetVKValidationLayers().data(),
             static_cast<std::uint32_t>(enabledDeviceExtensions.size()), enabledDeviceExtensions.data(),
-            &deviceFeatures };
+            &m_deviceFeatures};
         vk::PhysicalDeviceFeatures2 physicalDeviceFeatures2;
         if (featuresNextChain) {
-            physicalDeviceFeatures2.features = deviceFeatures;
+            physicalDeviceFeatures2.features = m_deviceFeatures;
             physicalDeviceFeatures2.pNext = featuresNextChain;
             deviceCreateInfo.pEnabledFeatures = nullptr;
             deviceCreateInfo.pNext = &physicalDeviceFeatures2;
