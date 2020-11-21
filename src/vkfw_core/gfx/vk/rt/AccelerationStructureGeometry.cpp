@@ -158,7 +158,8 @@ namespace vkfw_core::gfx::rt {
         m_TLAS = CreateAS(tlasCreateInfo);
 
         vk::TransformMatrixKHR transform_matrix{std::array<std::array<float, 4>, 3>{
-            std::array<float, 4>{1.0f, 0.0f, 0.0f, 0.0f}, std::array<float, 4>{0.0f, 1.0f, 0.0f, 0.0f},
+            std::array<float, 4>{1.0f, 0.0f, 0.0f, 0.0f},
+            std::array<float, 4>{0.0f, 1.0f, 0.0f, 0.0f},
             std::array<float, 4>{0.0f, 0.0f, 1.0f, 0.0f}}};
 
         vk::AccelerationStructureInstanceKHR tlasInstance{
