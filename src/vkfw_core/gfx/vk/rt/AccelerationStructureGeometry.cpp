@@ -87,32 +87,31 @@ namespace vkfw_core::gfx::rt {
         vk::DeviceOrHostAddressConstKHR transformDeviceAddress /*= nullptr*/)
     {
         vk::Bool32 hasTransform = (transformDeviceAddress.hostAddress == nullptr) ? VK_FALSE : VK_TRUE;
-        m_accelerationStructureCreateGeometryTypeInfo.emplace_back(
-            vk::GeometryTypeKHR::eTriangles, static_cast<std::uint32_t>(primitiveCount), vk::IndexType::eUint32,
-            static_cast<std::uint32_t>(vertexCount), vk::Format::eR32G32B32Sfloat, hasTransform);
+        vk::AccelerationStructureCreateGeometryTypeInfoKHR geometryTypeInfo{
+            vk::GeometryTypeKHR::eTriangles, static_cast<std::uint32_t>(primitiveCount),
+            vk::IndexType::eUint32,          static_cast<std::uint32_t>(vertexCount),
+            vk::Format::eR32G32B32Sfloat,    hasTransform};
 
         vk::AccelerationStructureGeometryTrianglesDataKHR asGeometryDataTriangles{
             vk::Format::eR32G32B32Sfloat, vertexBufferDeviceAddress, vertexSize, vk::IndexType::eUint32,
             indexBufferDeviceAddress, transformDeviceAddress};
         vk::AccelerationStructureGeometryDataKHR asGeometryData{asGeometryDataTriangles};
-
-        m_accelerationStructureGeometries.emplace_back(vk::GeometryTypeKHR::eTriangles, asGeometryData,
-                                                       vk::GeometryFlagBitsKHR::eOpaque);
-        m_accelerationStructureBuildOffsets.emplace_back(static_cast<std::uint32_t>(primitiveCount), 0x0, 0, 0x0);
+        vk::AccelerationStructureGeometryKHR asGeometry{vk::GeometryTypeKHR::eTriangles, asGeometryData,
+                                                        vk::GeometryFlagBitsKHR::eOpaque};
+        vk::AccelerationStructureBuildOffsetInfoKHR asBuildOffset{static_cast<std::uint32_t>(primitiveCount), 0x0, 0,
+                                                                  0x0};
+        m_BLAS.AddGeometry(geometryTypeInfo, asGeometry, asBuildOffset);
     }
 
     void AccelerationStructureGeometry::CreateBottomLevelAccelerationStructure()
     {
-        m_BLAS.BuildAccelerationStructure(m_accelerationStructureCreateGeometryTypeInfo,
-                                          m_accelerationStructureGeometries,
-                                          m_accelerationStructureBuildOffsets.data());
+        m_BLAS.BuildAccelerationStructure();
     }
 
     void AccelerationStructureGeometry::CreateTopLevelAccelerationStructure()
     {
-        std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR> geometryTypeInfos;
-        geometryTypeInfos.emplace_back(vk::GeometryTypeKHR::eInstances, 1, vk::IndexType::eUint32, 0,
-                                       vk::Format::eUndefined, VK_FALSE);
+        vk::AccelerationStructureCreateGeometryTypeInfoKHR geometryTypeInfo{
+            vk::GeometryTypeKHR::eInstances, 1, vk::IndexType::eUint32, 0, vk::Format::eUndefined, VK_FALSE};
 
         vk::TransformMatrixKHR transform_matrix{std::array<std::array<float, 4>, 3>{
             std::array<float, 4>{1.0f, 0.0f, 0.0f, 0.0f},
@@ -130,12 +129,13 @@ namespace vkfw_core::gfx::rt {
             VK_FALSE, instancesBuffer.GetDeviceAddressConst()};
         vk::AccelerationStructureGeometryDataKHR asGeometryData{asGeometryDataInstances};
 
-        std::vector<vk::AccelerationStructureGeometryKHR> asGeometries;
-        asGeometries.emplace_back(vk::GeometryTypeKHR::eInstances, asGeometryData, vk::GeometryFlagBitsKHR::eOpaque);
+        vk::AccelerationStructureGeometryKHR asGeometry{vk::GeometryTypeKHR::eInstances, asGeometryData,
+                                                        vk::GeometryFlagBitsKHR::eOpaque};
 
         vk::AccelerationStructureBuildOffsetInfoKHR asBuildOffset{1, 0x0, 0, 0x0};
 
-        m_TLAS.BuildAccelerationStructure(geometryTypeInfos, asGeometries, &asBuildOffset);
+        m_TLAS.AddGeometry(geometryTypeInfo, asGeometry, asBuildOffset);
+        m_TLAS.BuildAccelerationStructure();
 
         m_descriptorSetAccStructure.setAccelerationStructureCount(1);
         m_descriptorSetAccStructure.setPAccelerationStructures(&m_TLAS.GetAccelerationStructure());

@@ -24,9 +24,10 @@ namespace vkfw_core::gfx::rt {
                               vk::BuildAccelerationStructureFlagsKHR flags);
         ~AccelerationStructure();
 
-        void BuildAccelerationStructure(const std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR>& geometryTypeInfos,
-            const std::vector<vk::AccelerationStructureGeometryKHR>& geometries,
-            const vk::AccelerationStructureBuildOffsetInfoKHR* buildOffsets);
+        void AddGeometry(const vk::AccelerationStructureCreateGeometryTypeInfoKHR& typeInfo,
+                         const vk::AccelerationStructureGeometryKHR& geometry, const vk::AccelerationStructureBuildOffsetInfoKHR& buildOffset);
+
+        void BuildAccelerationStructure();
 
         const vk::AccelerationStructureKHR& GetAccelerationStructure() const { return m_vkAccelerationStructure.get(); }
         vk::DeviceAddress GetHandle() const { return m_handle; }
@@ -49,5 +50,12 @@ namespace vkfw_core::gfx::rt {
         vk::UniqueDeviceMemory m_memory;
         /** The handle of the acceleration structure. */
         vk::DeviceAddress m_handle = 0;
+
+        /** The geometry types contained in the acceleration structure. */
+        std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR> m_geometryTypeInfos;
+        /** The geometries contained in the acceleration structure. */
+        std::vector<vk::AccelerationStructureGeometryKHR> m_geometries;
+        /** The build offsets of the geometries. */
+        std::vector<vk::AccelerationStructureBuildOffsetInfoKHR> m_buildOffsets;
     };
 }

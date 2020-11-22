@@ -65,9 +65,5 @@ namespace vkfw_core::gfx::rt {
 
         /** The descriptor set acceleration structure write info (needed to ensure a valid pointer). */
         vk::WriteDescriptorSetAccelerationStructureKHR m_descriptorSetAccStructure;
-
-        std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR> m_accelerationStructureCreateGeometryTypeInfo;
-        std::vector<vk::AccelerationStructureGeometryKHR> m_accelerationStructureGeometries;
-        std::vector<vk::AccelerationStructureBuildOffsetInfoKHR> m_accelerationStructureBuildOffsets;
     };
 }
