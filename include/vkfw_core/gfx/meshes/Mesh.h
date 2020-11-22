@@ -13,6 +13,7 @@
 #include "gfx/Material.h"
 #include "MeshInfo.h"
 #include "gfx/vk/UniformBufferObject.h"
+#include "core/concepts.h"
 #include <tuple>
 
 namespace vkfw_core::gfx {
@@ -40,20 +41,20 @@ namespace vkfw_core::gfx {
         Mesh& operator=(Mesh&&) noexcept;
         ~Mesh();
 
-        template<class VertexType, class MaterialType>
+        template<Vertex VertexType, class MaterialType>
         static Mesh CreateWithInternalMemoryGroup(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
             const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags = vk::MemoryPropertyFlags(),
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
-        template<class VertexType, class MaterialType>
+        template<Vertex VertexType, class MaterialType>
         static Mesh CreateWithMemoryGroup(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
             const LogicalDevice* device, MemoryGroup& memoryGroup,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
-        template<class VertexType, class MaterialType>
+        template<Vertex VertexType, class MaterialType>
         static Mesh CreateInExternalBuffer(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
             const LogicalDevice* device, MemoryGroup& memoryGroup, unsigned int bufferIdx, std::size_t offset,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
 
-        template<class VertexType, class MaterialType>
+        template<Vertex VertexType, class MaterialType>
         static std::size_t CalculateBufferSize(const LogicalDevice* device, const MeshInfo* meshInfo,
             std::size_t offset, std::size_t numBackbuffers);
 
@@ -95,7 +96,7 @@ namespace vkfw_core::gfx {
         Mesh(const LogicalDevice* device, const std::shared_ptr<const MeshInfo>& meshInfo, UniformBufferObject&& materialsUBO,
             std::size_t numBackbuffers, MemoryGroup& memoryGroup, unsigned int bufferIndex, const std::vector<std::uint32_t>& queueFamilyIndices);
 
-        template<class VertexType, class MaterialType>
+        template<Vertex VertexType, class MaterialType>
         void CreateBuffersInMemoryGroup(std::size_t offset, std::size_t numBackbuffers, const std::vector<std::uint32_t>& queueFamilyIndices);
         void CreateMaterials(const std::vector<std::uint32_t>& queueFamilyIndices);
 
@@ -137,7 +138,7 @@ namespace vkfw_core::gfx {
         std::vector<uint8_t> m_vertexMaterialData;
     };
 
-    template<class VertexType, class MaterialType>
+    template<Vertex VertexType, class MaterialType>
     inline Mesh Mesh::CreateWithInternalMemoryGroup(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
         const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
@@ -147,7 +148,7 @@ namespace vkfw_core::gfx {
         return result;
     }
 
-    template<class VertexType, class MaterialType>
+    template<Vertex VertexType, class MaterialType>
     inline Mesh Mesh::CreateWithMemoryGroup(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
         const LogicalDevice* device, MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
@@ -157,7 +158,7 @@ namespace vkfw_core::gfx {
         return result;
     }
 
-    template<class VertexType, class MaterialType>
+    template<Vertex VertexType, class MaterialType>
     inline Mesh Mesh::CreateInExternalBuffer(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
         const LogicalDevice* device, MemoryGroup& memoryGroup, unsigned int bufferIdx, std::size_t offset,
         const std::vector<std::uint32_t>& queueFamilyIndices)
@@ -168,7 +169,7 @@ namespace vkfw_core::gfx {
         return result;
     }
 
-    template<class VertexType, class MaterialType>
+    template<Vertex VertexType, class MaterialType>
     inline void Mesh::CreateBuffersInMemoryGroup(std::size_t offset, std::size_t,
         const std::vector<std::uint32_t>& queueFamilyIndices)
     {
@@ -213,7 +214,7 @@ namespace vkfw_core::gfx {
         SetIndexBuffer(buffer, offset + vertexBufferSize);
     }
 
-    template<class VertexType, class MaterialType>
+    template<Vertex VertexType, class MaterialType>
     inline std::size_t Mesh::CalculateBufferSize(const LogicalDevice* device, const MeshInfo* meshInfo, std::size_t offset, std::size_t numBackbuffers)
     {
         auto materialAlignment = device->CalculateUniformBufferAlignment(sizeof(MaterialType));
