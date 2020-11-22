@@ -22,6 +22,8 @@ namespace vkfw_core::gfx::rt {
     public:
         AccelerationStructure(vkfw_core::gfx::LogicalDevice* device, vk::AccelerationStructureTypeKHR type,
                               vk::BuildAccelerationStructureFlagsKHR flags);
+        AccelerationStructure(AccelerationStructure&& rhs);
+        AccelerationStructure& operator=(AccelerationStructure&& rhs);
         ~AccelerationStructure();
 
         void AddGeometry(const vk::AccelerationStructureCreateGeometryTypeInfoKHR& typeInfo,

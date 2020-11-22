@@ -9,7 +9,9 @@
 #pragma once
 
 #include "main.h"
+#include "gfx/vk/rt/BottomLevelAccelerationStructure.h"
 #include "gfx/vk/rt/AccelerationStructure.h"
+#include <glm/mat3x4.hpp>
 
 namespace vkfw_core::gfx {
     class LogicalDevice;
@@ -24,11 +26,11 @@ namespace vkfw_core::gfx::rt {
         AccelerationStructureGeometry(vkfw_core::gfx::LogicalDevice* device);
         ~AccelerationStructureGeometry();
 
-        void AddTriangleGeometry(std::size_t primitiveCount, std::size_t vertexCount, std::size_t vertexSize,
-                                 vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress,
-                                 vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress,
-                                 vk::DeviceOrHostAddressConstKHR transformDeviceAddress = nullptr);
-        void InitializeAccelerationStructure();
+        std::size_t AddBottomLevelAccelerationStructure(const glm::mat3x4& transform);
+        BottomLevelAccelerationStructure& GetBottomLevelAccelerationStructure(std::size_t index) { return m_BLAS[index]; }
+        glm::mat3x4& GetBottomLevelAccelerationStructureTransform(std::size_t index) { return m_BLASTransforms[index]; }
+
+        void BuildAccelerationStructure();
 
         void FillDescriptorLayoutBinding(vk::DescriptorSetLayoutBinding& asLayoutBinding,
                                          const vk::ShaderStageFlags& shaderFlags, std::uint32_t binding = 0) const;
@@ -41,7 +43,6 @@ namespace vkfw_core::gfx::rt {
 
     private:
 
-        void CreateBottomLevelAccelerationStructure();
         void CreateTopLevelAccelerationStructure();
 
         void AllocateDescriptorSet(vk::DescriptorPool descPool);
@@ -50,7 +51,9 @@ namespace vkfw_core::gfx::rt {
         vkfw_core::gfx::LogicalDevice* m_device;
 
         /** The bottom level acceleration structure for the scene. */
-        AccelerationStructure m_BLAS;
+        std::vector<BottomLevelAccelerationStructure> m_BLAS;
+        /** The transformations for the bottom level acceleration structures. */
+        std::vector<glm::mat3x4> m_BLASTransforms;
         /** The top level acceleration structure for the scene. */
         AccelerationStructure m_TLAS;
 

@@ -20,6 +20,10 @@ namespace vkfw_core::gfx::rt {
     {
     }
 
+    AccelerationStructure::AccelerationStructure(AccelerationStructure&& rhs) = default;
+
+    AccelerationStructure& AccelerationStructure::operator=(AccelerationStructure&& rhs) = default;
+
     AccelerationStructure::~AccelerationStructure() {}
 
     void AccelerationStructure::AddGeometry(const vk::AccelerationStructureCreateGeometryTypeInfoKHR& typeInfo,

@@ -15,8 +15,6 @@ namespace vkfw_core::gfx::rt {
 
     AccelerationStructureGeometry::AccelerationStructureGeometry(vkfw_core::gfx::LogicalDevice* device)
         : m_device{device},
-          m_BLAS{device, vk::AccelerationStructureTypeKHR::eBottomLevel,
-                 vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace},
           m_TLAS{device, vk::AccelerationStructureTypeKHR::eTopLevel,
                  vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace}
     {
@@ -24,10 +22,57 @@ namespace vkfw_core::gfx::rt {
 
     AccelerationStructureGeometry::~AccelerationStructureGeometry() {}
 
-    void AccelerationStructureGeometry::InitializeAccelerationStructure()
+    void AccelerationStructureGeometry::BuildAccelerationStructure()
     {
-        CreateBottomLevelAccelerationStructure();
+        vkfw_core::gfx::HostBuffer instancesBuffer{m_device, vk::BufferUsageFlagBits::eShaderDeviceAddress};
+        std::vector<vk::AccelerationStructureInstanceKHR> tlasInstances;
+
+        // TODO: a way to build all BLAS at once would be good. [11/22/2020 Sebastian Maisch]
+        for (std::size_t i = 0; i < m_BLAS.size(); ++i) {
+            m_BLAS[i].BuildAccelerationStructure();
+
+            auto& tlasInstance = tlasInstances.emplace_back(vk::TransformMatrixKHR{}, 0, 0xFF, 0,
+                                                            vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable,
+                                                            m_BLAS[i].GetHandle());
+
+            memcpy(&tlasInstance.transform, &m_BLASTransforms[i], sizeof(glm::mat3x4));
+        }
+
+        instancesBuffer.InitializeData(tlasInstances);
+
+        vk::AccelerationStructureCreateGeometryTypeInfoKHR geometryTypeInfo{
+            vk::GeometryTypeKHR::eInstances, static_cast<std::uint32_t>(m_BLAS.size()),
+            vk::IndexType::eUint32,          0,
+            vk::Format::eUndefined,          VK_FALSE};
+
+        vk::AccelerationStructureGeometryInstancesDataKHR asGeometryDataInstances{
+            VK_FALSE, instancesBuffer.GetDeviceAddressConst()};
+        vk::AccelerationStructureGeometryDataKHR asGeometryData{asGeometryDataInstances};
+
+        vk::AccelerationStructureGeometryKHR asGeometry{vk::GeometryTypeKHR::eInstances, asGeometryData,
+                                                        vk::GeometryFlagBitsKHR::eOpaque};
+
+        vk::AccelerationStructureBuildOffsetInfoKHR asBuildOffset{static_cast<std::uint32_t>(m_BLAS.size()), 0x0, 0,
+                                                                  0x0};
+
+        m_TLAS.AddGeometry(geometryTypeInfo, asGeometry, asBuildOffset);
         CreateTopLevelAccelerationStructure();
+    }
+
+    std::size_t AccelerationStructureGeometry::AddBottomLevelAccelerationStructure(const glm::mat3x4& transform)
+    {
+        auto result = m_BLAS.size();
+        m_BLAS.emplace_back(m_device, vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace);
+        m_BLASTransforms.emplace_back(transform);
+        return result;
+    }
+
+    void AccelerationStructureGeometry::CreateTopLevelAccelerationStructure()
+    {
+        m_TLAS.BuildAccelerationStructure();
+
+        m_descriptorSetAccStructure.setAccelerationStructureCount(1);
+        m_descriptorSetAccStructure.setPAccelerationStructures(&m_TLAS.GetAccelerationStructure());
     }
 
     void AccelerationStructureGeometry::FillDescriptorLayoutBinding(vk::DescriptorSetLayoutBinding& asLayoutBinding,
@@ -78,67 +123,6 @@ namespace vkfw_core::gfx::rt {
         descWrite.descriptorCount = 1;
         descWrite.descriptorType = vk::DescriptorType::eAccelerationStructureKHR;
         descWrite.setPNext(&m_descriptorSetAccStructure);
-    }
-
-    void AccelerationStructureGeometry::AddTriangleGeometry(
-        std::size_t primitiveCount, std::size_t vertexCount, std::size_t vertexSize,
-        vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress,
-        vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress,
-        vk::DeviceOrHostAddressConstKHR transformDeviceAddress /*= nullptr*/)
-    {
-        vk::Bool32 hasTransform = (transformDeviceAddress.hostAddress == nullptr) ? VK_FALSE : VK_TRUE;
-        vk::AccelerationStructureCreateGeometryTypeInfoKHR geometryTypeInfo{
-            vk::GeometryTypeKHR::eTriangles, static_cast<std::uint32_t>(primitiveCount),
-            vk::IndexType::eUint32,          static_cast<std::uint32_t>(vertexCount),
-            vk::Format::eR32G32B32Sfloat,    hasTransform};
-
-        vk::AccelerationStructureGeometryTrianglesDataKHR asGeometryDataTriangles{
-            vk::Format::eR32G32B32Sfloat, vertexBufferDeviceAddress, vertexSize, vk::IndexType::eUint32,
-            indexBufferDeviceAddress, transformDeviceAddress};
-        vk::AccelerationStructureGeometryDataKHR asGeometryData{asGeometryDataTriangles};
-        vk::AccelerationStructureGeometryKHR asGeometry{vk::GeometryTypeKHR::eTriangles, asGeometryData,
-                                                        vk::GeometryFlagBitsKHR::eOpaque};
-        vk::AccelerationStructureBuildOffsetInfoKHR asBuildOffset{static_cast<std::uint32_t>(primitiveCount), 0x0, 0,
-                                                                  0x0};
-        m_BLAS.AddGeometry(geometryTypeInfo, asGeometry, asBuildOffset);
-    }
-
-    void AccelerationStructureGeometry::CreateBottomLevelAccelerationStructure()
-    {
-        m_BLAS.BuildAccelerationStructure();
-    }
-
-    void AccelerationStructureGeometry::CreateTopLevelAccelerationStructure()
-    {
-        vk::AccelerationStructureCreateGeometryTypeInfoKHR geometryTypeInfo{
-            vk::GeometryTypeKHR::eInstances, 1, vk::IndexType::eUint32, 0, vk::Format::eUndefined, VK_FALSE};
-
-        vk::TransformMatrixKHR transform_matrix{std::array<std::array<float, 4>, 3>{
-            std::array<float, 4>{1.0f, 0.0f, 0.0f, 0.0f},
-            std::array<float, 4>{0.0f, 1.0f, 0.0f, 0.0f},
-            std::array<float, 4>{0.0f, 0.0f, 1.0f, 0.0f}}};
-
-        vk::AccelerationStructureInstanceKHR tlasInstance{
-            transform_matrix, 0, 0xFF, 0, vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable, m_BLAS.GetHandle()};
-
-        vkfw_core::gfx::HostBuffer instancesBuffer{m_device, vk::BufferUsageFlagBits::eShaderDeviceAddress};
-        instancesBuffer.InitializeData(sizeof(vk::AccelerationStructureInstanceKHR),
-                                       static_cast<const void*>(&tlasInstance));
-
-        vk::AccelerationStructureGeometryInstancesDataKHR asGeometryDataInstances{
-            VK_FALSE, instancesBuffer.GetDeviceAddressConst()};
-        vk::AccelerationStructureGeometryDataKHR asGeometryData{asGeometryDataInstances};
-
-        vk::AccelerationStructureGeometryKHR asGeometry{vk::GeometryTypeKHR::eInstances, asGeometryData,
-                                                        vk::GeometryFlagBitsKHR::eOpaque};
-
-        vk::AccelerationStructureBuildOffsetInfoKHR asBuildOffset{1, 0x0, 0, 0x0};
-
-        m_TLAS.AddGeometry(geometryTypeInfo, asGeometry, asBuildOffset);
-        m_TLAS.BuildAccelerationStructure();
-
-        m_descriptorSetAccStructure.setAccelerationStructureCount(1);
-        m_descriptorSetAccStructure.setPAccelerationStructures(&m_TLAS.GetAccelerationStructure());
     }
 
     void AccelerationStructureGeometry::AllocateDescriptorSet(vk::DescriptorPool descPool)
