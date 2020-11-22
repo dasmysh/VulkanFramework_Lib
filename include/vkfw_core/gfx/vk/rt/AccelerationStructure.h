@@ -26,8 +26,6 @@ namespace vkfw_core::gfx::rt {
         AccelerationStructure& operator=(AccelerationStructure&& rhs) noexcept;
         virtual ~AccelerationStructure();
 
-        void AddGeometry(const vk::AccelerationStructureCreateGeometryTypeInfoKHR& typeInfo,
-                         const vk::AccelerationStructureGeometryKHR& geometry, const vk::AccelerationStructureBuildOffsetInfoKHR& buildOffset);
         virtual void BuildAccelerationStructure();
 
         const vk::AccelerationStructureKHR& GetAccelerationStructure() const { return m_vkAccelerationStructure.get(); }
@@ -35,6 +33,10 @@ namespace vkfw_core::gfx::rt {
 
     protected:
         vkfw_core::gfx::LogicalDevice* GetDevice() { return m_device; }
+        void AddGeometry(const vk::AccelerationStructureCreateGeometryTypeInfoKHR& typeInfo,
+                         const vk::AccelerationStructureGeometryKHR& geometry,
+                         const vk::AccelerationStructureBuildOffsetInfoKHR& buildOffset);
+
     private:
         std::unique_ptr<vkfw_core::gfx::DeviceBuffer> CreateAccelerationStructureScratchBuffer() const;
         void CreateAccelerationStructure(const vk::AccelerationStructureCreateInfoKHR& info);
