@@ -16,11 +16,11 @@ namespace vkfw_core::gfx::rt {
     {
     }
 
-    BottomLevelAccelerationStructure::BottomLevelAccelerationStructure(BottomLevelAccelerationStructure&& rhs) =
-        default;
+    BottomLevelAccelerationStructure::BottomLevelAccelerationStructure(
+        BottomLevelAccelerationStructure&& rhs) noexcept = default;
 
     BottomLevelAccelerationStructure&
-    BottomLevelAccelerationStructure::operator=(BottomLevelAccelerationStructure&& rhs) = default;
+    BottomLevelAccelerationStructure::operator=(BottomLevelAccelerationStructure&& rhs) noexcept = default;
 
     BottomLevelAccelerationStructure::~BottomLevelAccelerationStructure() {}
 

@@ -17,9 +17,9 @@ namespace vkfw_core::gfx::rt {
     public:
         BottomLevelAccelerationStructure(vkfw_core::gfx::LogicalDevice* device,
                                          vk::BuildAccelerationStructureFlagsKHR flags);
-        BottomLevelAccelerationStructure(BottomLevelAccelerationStructure&& rhs);
-        BottomLevelAccelerationStructure& operator=(BottomLevelAccelerationStructure&& rhs);
-        ~BottomLevelAccelerationStructure();
+        BottomLevelAccelerationStructure(BottomLevelAccelerationStructure&& rhs) noexcept;
+        BottomLevelAccelerationStructure& operator=(BottomLevelAccelerationStructure&& rhs) noexcept;
+        ~BottomLevelAccelerationStructure() override;
 
         void AddTriangleGeometry(std::size_t primitiveCount, std::size_t vertexCount, std::size_t vertexSize,
                                  vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress,

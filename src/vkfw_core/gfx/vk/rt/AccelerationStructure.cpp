@@ -20,9 +20,9 @@ namespace vkfw_core::gfx::rt {
     {
     }
 
-    AccelerationStructure::AccelerationStructure(AccelerationStructure&& rhs) = default;
+    AccelerationStructure::AccelerationStructure(AccelerationStructure&& rhs) noexcept = default;
 
-    AccelerationStructure& AccelerationStructure::operator=(AccelerationStructure&& rhs) = default;
+    AccelerationStructure& AccelerationStructure::operator=(AccelerationStructure&& rhs) noexcept = default;
 
     AccelerationStructure::~AccelerationStructure() {}
 

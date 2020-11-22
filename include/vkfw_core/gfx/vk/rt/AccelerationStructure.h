@@ -22,18 +22,19 @@ namespace vkfw_core::gfx::rt {
     public:
         AccelerationStructure(vkfw_core::gfx::LogicalDevice* device, vk::AccelerationStructureTypeKHR type,
                               vk::BuildAccelerationStructureFlagsKHR flags);
-        AccelerationStructure(AccelerationStructure&& rhs);
-        AccelerationStructure& operator=(AccelerationStructure&& rhs);
-        ~AccelerationStructure();
+        AccelerationStructure(AccelerationStructure&& rhs) noexcept;
+        AccelerationStructure& operator=(AccelerationStructure&& rhs) noexcept;
+        virtual ~AccelerationStructure();
 
         void AddGeometry(const vk::AccelerationStructureCreateGeometryTypeInfoKHR& typeInfo,
                          const vk::AccelerationStructureGeometryKHR& geometry, const vk::AccelerationStructureBuildOffsetInfoKHR& buildOffset);
-
-        void BuildAccelerationStructure();
+        virtual void BuildAccelerationStructure();
 
         const vk::AccelerationStructureKHR& GetAccelerationStructure() const { return m_vkAccelerationStructure.get(); }
         vk::DeviceAddress GetHandle() const { return m_handle; }
 
+    protected:
+        vkfw_core::gfx::LogicalDevice* GetDevice() { return m_device; }
     private:
         std::unique_ptr<vkfw_core::gfx::DeviceBuffer> CreateAccelerationStructureScratchBuffer() const;
         void CreateAccelerationStructure(const vk::AccelerationStructureCreateInfoKHR& info);
