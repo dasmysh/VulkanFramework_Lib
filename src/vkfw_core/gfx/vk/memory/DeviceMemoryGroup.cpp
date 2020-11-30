@@ -51,6 +51,14 @@ namespace vkfw_core::gfx {
         return static_cast<unsigned int>(m_deviceBuffers.size() - 1);
     }
 
+    unsigned int DeviceMemoryGroup::AddBufferToGroup(const vk::BufferUsageFlags& usage,
+                                                     const std::vector<std::uint32_t>& queueFamilyIndices)
+    {
+        m_deviceBuffers.emplace_back(m_device, vk::BufferUsageFlagBits::eTransferDst | usage, vk::MemoryPropertyFlags(),
+                                     queueFamilyIndices);
+        return static_cast<unsigned int>(m_deviceBuffers.size() - 1);
+    }
+
     unsigned int DeviceMemoryGroup::AddTextureToGroup(const TextureDescriptor& desc, const glm::u32vec4& size,
         std::uint32_t mipLevels, const std::vector<std::uint32_t>& queueFamilyIndices)
     {

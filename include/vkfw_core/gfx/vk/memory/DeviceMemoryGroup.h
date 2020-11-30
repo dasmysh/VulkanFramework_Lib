@@ -30,6 +30,8 @@ namespace vkfw_core::gfx {
         DeviceMemoryGroup& operator=(DeviceMemoryGroup&&) noexcept;
 
         static constexpr unsigned int INVALID_INDEX = std::numeric_limits<unsigned int>::max();
+        virtual unsigned int AddBufferToGroup(const vk::BufferUsageFlags& usage,
+                         const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         virtual unsigned int AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         virtual unsigned int AddTextureToGroup(const TextureDescriptor& desc,
@@ -39,6 +41,7 @@ namespace vkfw_core::gfx {
         virtual void FinalizeDeviceGroup();
 
         [[nodiscard]] DeviceBuffer* GetBuffer(unsigned int bufferIdx) { return &m_deviceBuffers[bufferIdx]; }
+        [[nodiscard]] const DeviceBuffer* GetBuffer(unsigned int bufferIdx) const { return &m_deviceBuffers[bufferIdx]; }
         [[nodiscard]] DeviceTexture* GetTexture(unsigned int textureIdx) { return &m_deviceImages[textureIdx]; }
         [[nodiscard]] std::size_t GetBuffersInGroup() const { return m_deviceBuffers.size(); }
         [[nodiscard]] std::size_t GetImagesInGroup() const { return m_deviceImages.size(); }

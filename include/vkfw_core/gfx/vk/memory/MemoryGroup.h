@@ -30,6 +30,8 @@ namespace vkfw_core::gfx {
         MemoryGroup& operator=(MemoryGroup&&) noexcept;
 
         static constexpr unsigned int INVALID_INDEX = std::numeric_limits<unsigned int>::max();
+        unsigned int AddBufferToGroup(const vk::BufferUsageFlags& usage,
+                         const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{}) override;
         unsigned int AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size,
                          const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{}) override;
         unsigned int AddTextureToGroup(const TextureDescriptor& desc, const glm::u32vec4& size, std::uint32_t mipLevels,

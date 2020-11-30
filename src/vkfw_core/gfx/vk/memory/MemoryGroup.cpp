@@ -25,6 +25,15 @@ namespace vkfw_core::gfx {
     MemoryGroup::MemoryGroup(MemoryGroup&& rhs) noexcept = default;
     MemoryGroup& MemoryGroup::operator=(MemoryGroup&& rhs) noexcept = default;
 
+    unsigned int MemoryGroup::AddBufferToGroup(const vk::BufferUsageFlags& usage,
+                                               const std::vector<std::uint32_t>& queueFamilyIndices)
+    {
+        auto idx = DeviceMemoryGroup::AddBufferToGroup(usage, queueFamilyIndices);
+        m_hostBuffers.emplace_back(GetDevice(), vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlags(),
+                                   queueFamilyIndices);
+        return idx;
+    }
+
     unsigned int MemoryGroup::AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         auto idx = DeviceMemoryGroup::AddBufferToGroup(usage, size, queueFamilyIndices);
@@ -124,6 +133,22 @@ namespace vkfw_core::gfx {
 
     void MemoryGroup::FinalizeDeviceGroup()
     {
+        // check if all buffers are initialized first.
+        for (std::size_t i_buffer = 0; i_buffer < m_hostBuffers.size(); ++i_buffer) {
+            if (m_hostBuffers[i_buffer].GetBuffer() == vk::Buffer{}) {
+                std::size_t bufferSize = 0;
+                for (const auto& bufferContents : m_bufferContents) {
+                    if (bufferContents.m_bufferIdx == i_buffer) {
+                        if (bufferSize < bufferContents.m_offset + bufferContents.m_size) {
+                            bufferSize = bufferContents.m_offset + bufferContents.m_size;
+                        }
+                    }
+                }
+                GetBuffer(static_cast<unsigned int>(i_buffer))->InitializeBuffer(bufferSize, false);
+                m_hostBuffers[i_buffer].InitializeBuffer(bufferSize, false);
+            }
+        }
+
         InitializeHostMemory(GetDevice(), m_hostOffsets, m_hostBuffers, m_hostImages, m_hostMemory);
         BindHostObjects(m_hostOffsets, m_hostBuffers, m_hostImages, m_hostMemory);
         DeviceMemoryGroup::FinalizeDeviceGroup();
