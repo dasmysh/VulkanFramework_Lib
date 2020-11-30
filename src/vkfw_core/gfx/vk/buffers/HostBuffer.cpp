@@ -11,7 +11,7 @@
 
 namespace vkfw_core::gfx {
 
-    HostBuffer::HostBuffer(const LogicalDevice* device, CONST vk::BufferUsageFlags& usage,
+    HostBuffer::HostBuffer(const LogicalDevice* device, const vk::BufferUsageFlags& usage,
         const vk::MemoryPropertyFlags& memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices) :
         Buffer{ device, usage, memoryFlags | vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, queueFamilyIndices }
     {
