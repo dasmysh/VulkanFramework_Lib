@@ -35,23 +35,8 @@ endif()
 set(IMGUI_VERSION "1.75")
 set(GLM_VERSION "0.9.9.8")
 
-set(CONAN_EXTRA_REQUIRES "")
-set(CONAN_EXTRA_OPTIONS "")
-
-set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
-                         catch2/2.11.3
-                         docopt.cpp/0.6.2
-                         fmt/6.1.2
-                         spdlog/1.5.0
-                         cereal/1.3.0
-                         glm/${GLM_VERSION}
-                         glfw/3.3.2@bincrafters/stable
-                         imgui/${IMGUI_VERSION}
-                         stb/20200203
-                         assimp/5.0.1)
-
-include(cmake/Conan.cmake)
-run_conan()
+include(${CMAKE_BINARY_DIR}/vkfw_core/conanbuildinfo_multi.cmake)
+conan_basic_setup(TARGETS)
 
 find_package(Vulkan 1.2.154.0 REQUIRED)
 target_compile_definitions(vkfw_options INTERFACE VULKAN_HPP_TYPESAFE_CONVERSION)
