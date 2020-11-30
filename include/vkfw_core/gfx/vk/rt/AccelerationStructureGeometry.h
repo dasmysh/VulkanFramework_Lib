@@ -33,8 +33,8 @@ namespace vkfw_core::gfx::rt {
         AccelerationStructureGeometry(vkfw_core::gfx::LogicalDevice* device);
         ~AccelerationStructureGeometry();
 
-        template<Vertex VertexType>
         void AddMeshGeometry(const vkfw_core::gfx::MeshInfo& mesh, const glm::mat4& transform);
+        template<Vertex VertexType> void FinalizeMeshGeometry();
         void AddMeshGeometry(const vkfw_core::gfx::MeshInfo& mesh, const glm::mat4& transform, std::size_t vertexSize,
                              vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress,
                              vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress);
@@ -53,6 +53,8 @@ namespace vkfw_core::gfx::rt {
         void UseDescriptorSet(vk::DescriptorSet descSet, vk::DescriptorSetLayout usedLayout, std::uint32_t binding = 0);
 
         void FillDescriptorSetWrite(vk::WriteDescriptorSet& descWrite) const;
+        void FillBufferDescriptorWriteInfo(vk::DescriptorBufferInfo& vboBufferInfo,
+                                           vk::DescriptorBufferInfo& iboBufferInfo) const;
 
     private:
         void AddMeshNodeGeometry(const vkfw_core::gfx::MeshInfo& mesh, const vkfw_core::gfx::SceneMeshNode* node,
@@ -87,40 +89,64 @@ namespace vkfw_core::gfx::rt {
         /** The descriptor set acceleration structure write info (needed to ensure a valid pointer). */
         vk::WriteDescriptorSetAccelerationStructureKHR m_descriptorSetAccStructure;
 
+        struct MeshGeometryInfo
+        {
+            const MeshInfo* mesh = nullptr;
+            glm::mat4 transform = glm::mat4{1.0f};
+            unsigned int bufferIndex = 0;
+            std::size_t vboOffset = 0;
+            std::size_t vboRange = 0;
+            std::size_t iboOffset = 0;
+            std::size_t iboRange = 0;
+        };
+
         /** Holds the memory for geometry if needed. */
         vkfw_core::gfx::MemoryGroup m_memGroup;
+        /** Holds the information for the the meshes vertex and index buffers. */
+        std::vector<MeshGeometryInfo> m_meshGeometryInfos;
     };
 
-
-    template<Vertex VertexType>
-    void AccelerationStructureGeometry::AddMeshGeometry(const vkfw_core::gfx::MeshInfo& mesh,
-                                                        const glm::mat4& transform)
+    template<Vertex VertexType> void vkfw_core::gfx::rt::AccelerationStructureGeometry::FinalizeMeshGeometry()
     {
-        std::vector<VertexType> verticesMesh;
-        mesh.GetVertices(verticesMesh);
-        auto& indicesMesh = mesh.GetIndices();
+        std::vector<std::vector<VertexType>> vertices{m_meshGeometryInfos.size()};
+        std::vector<std::vector<std::uint32_t>> indices{m_meshGeometryInfos.size()};
+        for (std::size_t i_mesh = 0; i_mesh < m_meshGeometryInfos.size(); ++i_mesh) {
+            auto& meshInfo = m_meshGeometryInfos[i_mesh];
+            meshInfo.mesh->GetVertices(vertices[i_mesh]);
+            indices[i_mesh] = meshInfo.mesh->GetIndices();
 
-        auto indexBufferMeshOffset = vkfw_core::byteSizeOf(verticesMesh);
-        auto completeBufferSize = indexBufferMeshOffset + sizeof(std::uint32_t) * indicesMesh.size();
-        auto completeBufferIdx = m_memGroup.AddBufferToGroup(
-            vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer
-                | vk::BufferUsageFlagBits::eUniformBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
-            completeBufferSize, std::vector<std::uint32_t>{{0, 1}});
+            meshInfo.vboRange = byteSizeOf(vertices[i_mesh]);
+            meshInfo.vboOffset = 0;
+            meshInfo.iboRange = byteSizeOf(indices[i_mesh]);
+            meshInfo.iboOffset = meshInfo.vboRange;
 
-        m_memGroup.AddDataToBufferInGroup(completeBufferIdx, 0, verticesMesh);
-        m_memGroup.AddDataToBufferInGroup(completeBufferIdx, indexBufferMeshOffset, indicesMesh);
+            const std::size_t bufferSize = meshInfo.iboOffset + meshInfo.iboRange;
+
+            meshInfo.bufferIndex = m_memGroup.AddBufferToGroup(
+                vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer
+                    | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eStorageBuffer,
+                bufferSize, std::vector<std::uint32_t>{{0, 1}});
+            m_memGroup.AddDataToBufferInGroup(meshInfo.bufferIndex, meshInfo.vboOffset, vertices[i_mesh]);
+            m_memGroup.AddDataToBufferInGroup(meshInfo.bufferIndex, meshInfo.iboOffset, indices[i_mesh]);
+
+        }
 
         vkfw_core::gfx::QueuedDeviceTransfer transfer{m_device, std::make_pair(0, 0)};
         m_memGroup.FinalizeDeviceGroup();
         m_memGroup.TransferData(transfer);
         transfer.FinishTransfer();
 
-        vk::DeviceOrHostAddressConstKHR vertexBufferMeshDeviceAddress =
-            m_memGroup.GetBuffer(completeBufferIdx)->GetDeviceAddressConst();
-        vk::DeviceOrHostAddressConstKHR indexBufferMeshDeviceAddress{vertexBufferMeshDeviceAddress.deviceAddress
-                                                                     + indexBufferMeshOffset};
+        // auto vertexOffset = vertexBufferCompleteOffset;
+        // auto indexOffset = indexBufferCompleteOffset;
+        for (std::size_t i_mesh = 0; i_mesh < m_meshGeometryInfos.size(); ++i_mesh) {
+            const auto& meshInfo = m_meshGeometryInfos[i_mesh];
 
-        AddMeshGeometry(mesh, transform, sizeof(VertexType), vertexBufferMeshDeviceAddress,
-                        indexBufferMeshDeviceAddress);
+            vk::DeviceOrHostAddressConstKHR bufferDeviceAddress =
+                m_memGroup.GetBuffer(meshInfo.bufferIndex)->GetDeviceAddressConst();
+            vk::DeviceOrHostAddressConstKHR vboDeviceAddress = bufferDeviceAddress.deviceAddress + meshInfo.vboOffset;
+            vk::DeviceOrHostAddressConstKHR iboDeviceAddress = bufferDeviceAddress.deviceAddress + meshInfo.iboOffset;
+
+            AddMeshGeometry(*meshInfo.mesh, meshInfo.transform, sizeof(VertexType), vboDeviceAddress, iboDeviceAddress);
+        }
     }
 }

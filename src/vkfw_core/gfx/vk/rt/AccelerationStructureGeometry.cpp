@@ -31,6 +31,12 @@ namespace vkfw_core::gfx::rt {
         AddMeshNodeGeometry(mesh, mesh.GetRootNode(), transform, vertexSize, vertexBufferDeviceAddress, indexBufferDeviceAddress);
     }
 
+    void AccelerationStructureGeometry::AddMeshGeometry(const vkfw_core::gfx::MeshInfo& mesh,
+                                                        const glm::mat4& transform)
+    {
+        m_meshGeometryInfos.emplace_back(&mesh, transform);
+    }
+
     void AccelerationStructureGeometry::AddMeshNodeGeometry(const vkfw_core::gfx::MeshInfo& mesh,
                                                             const vkfw_core::gfx::SceneMeshNode* node,
                                                             const glm::mat4& transform, std::size_t vertexSize,
@@ -144,6 +150,18 @@ namespace vkfw_core::gfx::rt {
     {
         vk::DescriptorSetAllocateInfo descSetAllocInfo{descPool, 1, &m_descLayout};
         m_descSet = m_device->GetDevice().allocateDescriptorSets(descSetAllocInfo)[0];
+    }
+
+    void AccelerationStructureGeometry::FillBufferDescriptorWriteInfo(vk::DescriptorBufferInfo& /*vboBufferInfo*/,
+                                                                      vk::DescriptorBufferInfo& /*iboBufferInfo*/) const
+    {
+        // vboBufferInfo.setBuffer(m_memGroup.GetBuffer(m_geometryBufferIndex_deprecated)->GetBuffer());
+        // vboBufferInfo.offset = ;
+        // vboBufferInfo.range = ;
+
+        // iboBufferInfo.setBuffer(m_memGroup.GetBuffer(m_geometryBufferIndex_deprecated)->GetBuffer());
+        // iboBufferInfo.offset = ;
+        // iboBufferInfo.range = ;
     }
 
 }
