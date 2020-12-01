@@ -8,6 +8,7 @@
 
 #include "gfx/vk//rt/AccelerationStructureGeometry.h"
 #include <gfx/meshes/MeshInfo.h>
+#include "gfx/vk/QueuedDeviceTransfer.h"
 #include "gfx/vk/buffers/HostBuffer.h"
 #include "gfx/vk/memory/DeviceMemory.h"
 #include "gfx/vk/LogicalDevice.h"
@@ -35,6 +36,37 @@ namespace vkfw_core::gfx::rt {
                                                         const glm::mat4& transform)
     {
         m_meshGeometryInfos.emplace_back(&mesh, transform);
+    }
+
+    void AccelerationStructureGeometry::FinalizeMeshGeometry()
+    {
+        for (auto& meshInfo : m_meshGeometryInfos) {
+            const std::size_t bufferSize = meshInfo.iboOffset + meshInfo.iboRange;
+            meshInfo.bufferIndex = m_memGroup.AddBufferToGroup(
+                vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer
+                    | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eStorageBuffer,
+                bufferSize, std::vector<std::uint32_t>{{0, 1}});
+            m_memGroup.AddDataToBufferInGroup(meshInfo.bufferIndex, meshInfo.vboOffset, meshInfo.vertices);
+            m_memGroup.AddDataToBufferInGroup(meshInfo.bufferIndex, meshInfo.iboOffset, meshInfo.indices);
+        }
+
+        vkfw_core::gfx::QueuedDeviceTransfer transfer{m_device, std::make_pair(0, 0)};
+        m_memGroup.FinalizeDeviceGroup();
+        m_memGroup.TransferData(transfer);
+        transfer.FinishTransfer();
+
+        for (auto& meshInfo : m_meshGeometryInfos) {
+            // free some memory.
+            meshInfo.indices.clear();
+            meshInfo.vertices.clear();
+
+            vk::DeviceOrHostAddressConstKHR bufferDeviceAddress =
+                m_memGroup.GetBuffer(meshInfo.bufferIndex)->GetDeviceAddressConst();
+            vk::DeviceOrHostAddressConstKHR vboDeviceAddress = bufferDeviceAddress.deviceAddress + meshInfo.vboOffset;
+            vk::DeviceOrHostAddressConstKHR iboDeviceAddress = bufferDeviceAddress.deviceAddress + meshInfo.iboOffset;
+
+            AddMeshGeometry(*meshInfo.mesh, meshInfo.transform, meshInfo.vertexSize, vboDeviceAddress, iboDeviceAddress);
+        }
     }
 
     void AccelerationStructureGeometry::AddMeshNodeGeometry(const vkfw_core::gfx::MeshInfo& mesh,

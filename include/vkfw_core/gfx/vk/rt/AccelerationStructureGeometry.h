@@ -33,8 +33,16 @@ namespace vkfw_core::gfx::rt {
         AccelerationStructureGeometry(vkfw_core::gfx::LogicalDevice* device);
         ~AccelerationStructureGeometry();
 
+        // there are 2 options to add meshes:
+        // 1: each mesh can have a different vertex type.
+        template<Vertex VertexType>
+        std::size_t AddMeshGeometry(const vkfw_core::gfx::MeshInfo& mesh, const glm::mat4& transform);
+        void FinalizeMeshGeometry();
+
+        // 2: all meshes use the same vertex type.
         void AddMeshGeometry(const vkfw_core::gfx::MeshInfo& mesh, const glm::mat4& transform);
         template<Vertex VertexType> void FinalizeMeshGeometry();
+
         void AddMeshGeometry(const vkfw_core::gfx::MeshInfo& mesh, const glm::mat4& transform, std::size_t vertexSize,
                              vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress,
                              vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress);
@@ -93,11 +101,14 @@ namespace vkfw_core::gfx::rt {
         {
             const MeshInfo* mesh = nullptr;
             glm::mat4 transform = glm::mat4{1.0f};
-            unsigned int bufferIndex = 0;
+            unsigned int bufferIndex = DeviceMemoryGroup::INVALID_INDEX;
+            std::size_t vertexSize = 0;
             std::size_t vboOffset = 0;
             std::size_t vboRange = 0;
             std::size_t iboOffset = 0;
             std::size_t iboRange = 0;
+            std::vector<std::uint8_t> vertices;
+            std::vector<std::uint32_t> indices;
         };
 
         /** Holds the memory for geometry if needed. */
@@ -119,6 +130,7 @@ namespace vkfw_core::gfx::rt {
             meshInfo.vboOffset = 0;
             meshInfo.iboRange = byteSizeOf(indices[i_mesh]);
             meshInfo.iboOffset = meshInfo.vboRange;
+            meshInfo.vertexSize = sizeof(VertexType);
 
             const std::size_t bufferSize = meshInfo.iboOffset + meshInfo.iboRange;
 
@@ -136,8 +148,6 @@ namespace vkfw_core::gfx::rt {
         m_memGroup.TransferData(transfer);
         transfer.FinishTransfer();
 
-        // auto vertexOffset = vertexBufferCompleteOffset;
-        // auto indexOffset = indexBufferCompleteOffset;
         for (std::size_t i_mesh = 0; i_mesh < m_meshGeometryInfos.size(); ++i_mesh) {
             const auto& meshInfo = m_meshGeometryInfos[i_mesh];
 
@@ -148,5 +158,28 @@ namespace vkfw_core::gfx::rt {
 
             AddMeshGeometry(*meshInfo.mesh, meshInfo.transform, sizeof(VertexType), vboDeviceAddress, iboDeviceAddress);
         }
+    }
+
+    template<Vertex VertexType>
+    std::size_t AccelerationStructureGeometry::AddMeshGeometry(const vkfw_core::gfx::MeshInfo& mesh,
+                                                               const glm::mat4& transform)
+    {
+        auto meshIndex = m_meshGeometryInfos.size();
+
+        auto& meshInfo = m_meshGeometryInfos.emplace_back(&mesh, transform);
+        meshInfo.indices = mesh.GetIndices();
+
+        std::vector<VertexType> vertices;
+        mesh.GetVertices(vertices);
+
+        meshInfo.vertexSize = sizeof(VertexType);
+        meshInfo.vboRange = byteSizeOf(vertices);
+        meshInfo.vboOffset = 0;
+        meshInfo.iboRange = byteSizeOf(meshInfo.indices);
+        meshInfo.iboOffset = meshInfo.vboRange;
+        meshInfo.vertices.resize(byteSizeOf(vertices));
+        memcpy(meshInfo.vertices.data(), vertices.data(), byteSizeOf(vertices));
+
+        return meshIndex;
     }
 }
