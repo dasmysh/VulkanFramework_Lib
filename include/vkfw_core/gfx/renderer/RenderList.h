@@ -17,9 +17,10 @@ namespace vkfw_core::gfx {
     {
     public:
         using BufferReference = RenderElement::BufferReference;
+        using DescSetBinding = RenderElement::DescSetBinding;
         using UBOBinding = RenderElement::UBOBinding;
 
-        inline RenderList(const CameraBase* camera, UBOBinding cameraUBO);
+        inline RenderList(const CameraBase* camera, const UBOBinding& cameraUBO);
 
         inline void SetCurrentPipeline(vk::PipelineLayout currentPipelineLayout,
             vk::Pipeline currentOpaquePipeline, vk::Pipeline currentTransparentPipeline);
@@ -51,9 +52,10 @@ namespace vkfw_core::gfx {
         UBOBinding m_currentWorldMatrices = UBOBinding(nullptr, 0, 0);
     };
 
-    RenderList::RenderList(const CameraBase* camera, UBOBinding cameraUBO) :
+    RenderList::RenderList(const CameraBase* camera, const UBOBinding& cameraUBO)
+        :
         m_camera{ camera },
-        m_cameraMatricesUBO{ std::move(cameraUBO) }
+        m_cameraMatricesUBO{ cameraUBO }
     {
     }
 

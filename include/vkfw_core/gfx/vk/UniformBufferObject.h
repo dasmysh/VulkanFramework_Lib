@@ -12,6 +12,8 @@
 
 namespace vkfw_core::gfx {
 
+    class DescriptorSetLayout;
+
     class UniformBufferObject
     {
     public:
@@ -28,22 +30,15 @@ namespace vkfw_core::gfx {
         void AddUBOToBufferPrefill(MemoryGroup* memoryGroup, unsigned int bufferIndex, std::size_t bufferOffset,
                                    std::size_t size, const void* data);
 
-        void FillDescriptorLayoutBinding(vk::DescriptorSetLayoutBinding& uboLayoutBinding,
-                                         const vk::ShaderStageFlags& shaderFlags, bool isDynamicBuffer = false,
-                                         std::uint32_t binding = 0) const;
-        void CreateLayout(vk::DescriptorPool descPool, const vk::ShaderStageFlags& shaderFlags, bool isDynamicBuffer = false, std::uint32_t binding = 0);
-        void UseLayout(vk::DescriptorPool descPool, vk::DescriptorSetLayout usedLayout, bool isDynamicBuffer = false, std::uint32_t binding = 0);
-        void UseDescriptorSet(vk::DescriptorSet descSet, vk::DescriptorSetLayout usedLayout,
-                              bool isDynamicBuffer = false, std::uint32_t binding = 0);
+        static void AddDescriptorLayoutBinding(DescriptorSetLayout& layout, vk::ShaderStageFlags shaderFlags,
+                                               bool isDynamicBuffer = false, std::uint32_t binding = 0);
 
         void FillUploadCmdBuffer(vk::CommandBuffer cmdBuffer, std::size_t instanceIdx, std::size_t size) const;
-        void FillDescriptorSetWrite(vk::WriteDescriptorSet& descWrite) const;
+        void FillDescriptorBufferInfo(vk::DescriptorBufferInfo& descInfo) const;
         void UpdateInstanceData(std::size_t instanceIdx, std::size_t size, const void* data) const;
-        void Bind(vk::CommandBuffer cmdBuffer, vk::PipelineBindPoint bindingPoint, vk::PipelineLayout pipelineLayout,
-            std::uint32_t setIndex, std::size_t instanceIdx) const;
 
+        [[nodiscard]] std::size_t GetInstanceSize() const { return m_singleSize; }
         [[nodiscard]] std::size_t GetCompleteSize() const { return m_singleSize * m_numInstances; }
-        [[nodiscard]] vk::DescriptorSetLayout GetDescriptorLayout() const { return m_descLayout; }
 
 
         //////////////////////////////////////////////////////////////////////////
@@ -61,8 +56,6 @@ namespace vkfw_core::gfx {
         void UpdateInstanceData(std::size_t instanceIdx, const ContentType& data) const;
 
     private:
-        void AllocateDescriptorSet(vk::DescriptorPool descPool);
-
         /** Holds the device. */
         const LogicalDevice* m_device;
         /** Holds the memory group is in. */
@@ -75,19 +68,6 @@ namespace vkfw_core::gfx {
         std::size_t m_singleSize;
         /** The number of instances. */
         std::size_t m_numInstances;
-        /** Contains the descriptor binding. */
-        std::uint32_t m_descBinding = 0;
-        /** Contains weather the descriptor type. */
-        vk::DescriptorType m_descType = vk::DescriptorType::eUniformBuffer;
-        /** The internal descriptor layout if created here. */
-        vk::UniqueDescriptorSetLayout m_internalDescLayout;
-        /** The descriptor layout used. */
-        vk::DescriptorSetLayout m_descLayout = vk::DescriptorSetLayout();
-        /** The descriptor set of this buffer. */
-        vk::DescriptorSet m_descSet = vk::DescriptorSet();
-        /** The UBO descriptor info. */
-        vk::DescriptorBufferInfo m_descInfo;
-
     };
 
     template<class ContentType>

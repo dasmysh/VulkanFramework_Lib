@@ -10,6 +10,7 @@
 
 #include "main.h"
 #include "core/type_traits.h"
+#include "gfx/vk/pipeline/DescriptorSetLayout.h"
 #include "gfx/Material.h"
 #include "MeshInfo.h"
 #include "gfx/vk/UniformBufferObject.h"
@@ -59,18 +60,15 @@ namespace vkfw_core::gfx {
             std::size_t offset, std::size_t numBackbuffers);
 
         void UploadMeshData(QueuedDeviceTransfer& transfer);
-        void CreateDescriptorSets(std::size_t numBackbuffers);
-        [[nodiscard]] vk::DescriptorSetLayout GetMaterialTexturesDescriptorLayout() const
+        void AddDescriptorPoolSizes(std::vector<vk::DescriptorPoolSize>& poolSizes, std::size_t& setCount) const;
+        void CreateDescriptorSets(vk::DescriptorPool descriptorPool);
+        [[nodiscard]] const DescriptorSetLayout& GetMaterialDescriptorLayout() const
         {
-            return *m_materialTexturesDescriptorSetLayout;
+            return m_materialDescriptorSetLayout;
         }
-        [[nodiscard]] vk::DescriptorSetLayout GetMaterialBufferDescriptorLayout() const
+        [[nodiscard]] const DescriptorSetLayout& GetWorldMatricesDescriptorLayout() const
         {
-            return m_materialsUBO.GetDescriptorLayout();
-        }
-        [[nodiscard]] vk::DescriptorSetLayout GetWorldMatricesDescriptorLayout() const
-        {
-            return m_worldMatricesUBO.GetDescriptorLayout();
+            return m_worldMatricesDescriptorSetLayout;
         }
 
         void TransferWorldMatrices(vk::CommandBuffer transferCmdBuffer, std::size_t backbufferIdx) const;
@@ -127,12 +125,14 @@ namespace vkfw_core::gfx {
         std::vector<Material> m_materials;
         /** The sampler for the materials textures. */
         vk::UniqueSampler m_textureSampler;
-        /** The descriptor pool for mesh rendering. */
-        vk::UniqueDescriptorPool m_descriptorPool;
+        /** The descriptor set layout for world matrices in mesh rendering. */
+        DescriptorSetLayout m_worldMatricesDescriptorSetLayout;
+        /** Holds the world matrix descriptor set. */
+        vk::DescriptorSet m_worldMatrixDescriptorSet;
         /** The descriptor set layout for materials in mesh rendering. */
-        vk::UniqueDescriptorSetLayout m_materialTexturesDescriptorSetLayout;
+        DescriptorSetLayout m_materialDescriptorSetLayout;
         /** Holds the material descriptor sets. */
-        std::vector<vk::DescriptorSet> m_materialTextureDescriptorSets;
+        std::vector<vk::DescriptorSet> m_materialDescriptorSets;
 
         /** Holds the vertex and material data while the mesh is constructed. */
         std::vector<uint8_t> m_vertexMaterialData;

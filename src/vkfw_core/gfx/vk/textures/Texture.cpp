@@ -8,6 +8,7 @@
 
 #include "gfx/vk/textures/Texture.h"
 #include "gfx/vk/LogicalDevice.h"
+#include "gfx/vk/pipeline/DescriptorSetLayout.h"
 #include "gfx/vk/buffers/BufferGroup.h"
 #include "gfx/vk/CommandBuffers.h"
 
@@ -303,6 +304,21 @@ namespace vkfw_core::gfx {
         }
         // else if (size.z == 6 && size.w == 1) { m_type = vk::ImageType::e2D; m_viewType = vk::ImageViewType::eCubeMap; }
         // TODO: Add cube map support later. [3/17/2017 Sebastian Maisch]
+    }
+
+    void Texture::AddDescriptorLayoutBinding(DescriptorSetLayout& layout, vk::DescriptorType type,
+                                             vk::ShaderStageFlags shaderFlags, std::uint32_t binding /*= 0*/)
+    {
+        assert(type == vk::DescriptorType::eCombinedImageSampler || type == vk::DescriptorType::eSampledImage
+               || type == vk::DescriptorType::eStorageImage || type == vk::DescriptorType::eInputAttachment);
+        layout.AddBinding(binding, type, 1, shaderFlags);
+    }
+
+    void Texture::FillDescriptorImageInfo(vk::DescriptorImageInfo& descInfo, vk::Sampler sampler) const
+    {
+        descInfo.sampler = sampler;
+        descInfo.imageView = m_vkImageView.get();
+        descInfo.imageLayout = m_desc.m_imageLayout;
     }
 
 }

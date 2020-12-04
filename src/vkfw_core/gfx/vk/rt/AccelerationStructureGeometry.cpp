@@ -7,6 +7,7 @@
  */
 
 #include "gfx/vk//rt/AccelerationStructureGeometry.h"
+#include "gfx/vk/pipeline/DescriptorSetLayout.h"
 #include <gfx/meshes/MeshInfo.h>
 #include "gfx/vk/QueuedDeviceTransfer.h"
 #include "gfx/vk/buffers/HostBuffer.h"
@@ -115,9 +116,6 @@ namespace vkfw_core::gfx::rt {
         }
 
         m_TLAS.BuildAccelerationStructure();
-
-        m_descriptorSetAccStructure.setAccelerationStructureCount(1);
-        m_descriptorSetAccStructure.setPAccelerationStructures(&m_TLAS.GetAccelerationStructure());
     }
 
     std::size_t AccelerationStructureGeometry::AddBottomLevelAccelerationStructure(const glm::mat3x4& transform)
@@ -128,63 +126,21 @@ namespace vkfw_core::gfx::rt {
         return result;
     }
 
-    void AccelerationStructureGeometry::FillDescriptorLayoutBinding(vk::DescriptorSetLayoutBinding& asLayoutBinding,
-                                                                    const vk::ShaderStageFlags& shaderFlags,
-                                                                    std::uint32_t binding /*= 0*/) const
+    void AccelerationStructureGeometry::AddDescriptorLayoutBinding(DescriptorSetLayout& layout,
+                                                                   vk::ShaderStageFlags shaderFlags,
+                                                                   std::uint32_t binding /*= 0*/)
     {
-        asLayoutBinding.setBinding(binding);
-        asLayoutBinding.setDescriptorType(vk::DescriptorType::eAccelerationStructureKHR);
-        asLayoutBinding.setDescriptorCount(1);
-        asLayoutBinding.setStageFlags(shaderFlags);
+        layout.AddBinding(binding, vk::DescriptorType::eAccelerationStructureKHR, 1, shaderFlags);
     }
 
-    void AccelerationStructureGeometry::CreateLayout(vk::DescriptorPool descPool,
-                                                     const vk::ShaderStageFlags& shaderFlags,
-                                                     std::uint32_t binding /*= 0*/)
+    void AccelerationStructureGeometry::FillDescriptorAccelerationStructureInfo(
+        vk::WriteDescriptorSetAccelerationStructureKHR& descInfo) const
     {
-        m_descBinding = binding;
-        vk::DescriptorSetLayoutBinding asLayoutBinding;
-        FillDescriptorLayoutBinding(asLayoutBinding, shaderFlags, binding);
-
-        vk::DescriptorSetLayoutCreateInfo asLayoutCreateInfo{vk::DescriptorSetLayoutCreateFlags(), 1, &asLayoutBinding};
-        m_internalDescLayout = m_device->GetDevice().createDescriptorSetLayoutUnique(asLayoutCreateInfo);
-        m_descLayout = *m_internalDescLayout;
-        AllocateDescriptorSet(descPool);
+        descInfo.setAccelerationStructureCount(1);
+        descInfo.setPAccelerationStructures(&m_TLAS.GetAccelerationStructure());
     }
 
-    void AccelerationStructureGeometry::UseLayout(vk::DescriptorPool descPool, vk::DescriptorSetLayout usedLayout,
-                                                  std::uint32_t binding /*= 0*/)
-    {
-        m_descBinding = binding;
-        m_descLayout = usedLayout;
-        AllocateDescriptorSet(descPool);
-    }
-
-    void AccelerationStructureGeometry::UseDescriptorSet(vk::DescriptorSet descSet, vk::DescriptorSetLayout usedLayout,
-                                                         std::uint32_t binding /*= 0*/)
-    {
-        m_descBinding = binding;
-        m_descLayout = usedLayout;
-        m_descSet = descSet;
-    }
-
-    void AccelerationStructureGeometry::FillDescriptorSetWrite(vk::WriteDescriptorSet& descWrite) const
-    {
-        descWrite.dstSet = m_descSet;
-        descWrite.dstBinding = m_descBinding;
-        descWrite.dstArrayElement = 0;
-        descWrite.descriptorCount = 1;
-        descWrite.descriptorType = vk::DescriptorType::eAccelerationStructureKHR;
-        descWrite.setPNext(&m_descriptorSetAccStructure);
-    }
-
-    void AccelerationStructureGeometry::AllocateDescriptorSet(vk::DescriptorPool descPool)
-    {
-        vk::DescriptorSetAllocateInfo descSetAllocInfo{descPool, 1, &m_descLayout};
-        m_descSet = m_device->GetDevice().allocateDescriptorSets(descSetAllocInfo)[0];
-    }
-
-    void AccelerationStructureGeometry::FillBufferDescriptorWriteInfo(vk::DescriptorBufferInfo& /*vboBufferInfo*/,
+    void AccelerationStructureGeometry::FillDescriptorBufferInfo(vk::DescriptorBufferInfo& /*vboBufferInfo*/,
                                                                       vk::DescriptorBufferInfo& /*iboBufferInfo*/) const
     {
         // vboBufferInfo.setBuffer(m_memGroup.GetBuffer(m_geometryBufferIndex_deprecated)->GetBuffer());

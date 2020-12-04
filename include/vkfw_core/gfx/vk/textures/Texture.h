@@ -16,6 +16,8 @@
 
 namespace vkfw_core::gfx {
 
+    class DescriptorSetLayout;
+
     struct TextureDescriptor final
     {
         /** Holds the bytes per pixel of the format. */
@@ -88,6 +90,10 @@ namespace vkfw_core::gfx {
         Texture& operator=(const Texture&) = delete;
         Texture& operator=(Texture&&) noexcept;
         virtual ~Texture();
+
+        static void AddDescriptorLayoutBinding(DescriptorSetLayout& layout, vk::DescriptorType type,
+                                               vk::ShaderStageFlags shaderFlags, std::uint32_t binding = 0);
+        void FillDescriptorImageInfo(vk::DescriptorImageInfo& descInfo, vk::Sampler sampler) const;
 
         void InitializeImage(const glm::u32vec4& size, std::uint32_t mipLevels, bool initMemory = true);
         void InitializeExternalImage(vk::Image externalImage, const glm::u32vec4& size, std::uint32_t mipLevels, bool initView = true);

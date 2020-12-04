@@ -18,6 +18,7 @@
 #include <glm/mat4x4.hpp>
 
 namespace vkfw_core::gfx {
+    class DescriptorSetLayout;
     class LogicalDevice;
     class DeviceBuffer;
     class MeshInfo;
@@ -53,15 +54,10 @@ namespace vkfw_core::gfx::rt {
 
         void BuildAccelerationStructure();
 
-        void FillDescriptorLayoutBinding(vk::DescriptorSetLayoutBinding& asLayoutBinding,
-                                         const vk::ShaderStageFlags& shaderFlags, std::uint32_t binding = 0) const;
-        void CreateLayout(vk::DescriptorPool descPool, const vk::ShaderStageFlags& shaderFlags,
-                          std::uint32_t binding = 0);
-        void UseLayout(vk::DescriptorPool descPool, vk::DescriptorSetLayout usedLayout, std::uint32_t binding = 0);
-        void UseDescriptorSet(vk::DescriptorSet descSet, vk::DescriptorSetLayout usedLayout, std::uint32_t binding = 0);
-
-        void FillDescriptorSetWrite(vk::WriteDescriptorSet& descWrite) const;
-        void FillBufferDescriptorWriteInfo(vk::DescriptorBufferInfo& vboBufferInfo,
+        static void AddDescriptorLayoutBinding(DescriptorSetLayout& layout, vk::ShaderStageFlags shaderFlags,
+                                               std::uint32_t binding = 0);
+        void FillDescriptorAccelerationStructureInfo(vk::WriteDescriptorSetAccelerationStructureKHR& descInfo) const;
+        void FillDescriptorBufferInfo(vk::DescriptorBufferInfo& vboBufferInfo,
                                            vk::DescriptorBufferInfo& iboBufferInfo) const;
 
     private:
@@ -73,7 +69,6 @@ namespace vkfw_core::gfx::rt {
         void AddSubMeshGeometry(const vkfw_core::gfx::SubMesh& subMesh, const glm::mat4& transform,
                                 std::size_t vertexSize, vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress,
                                 vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress);
-        void AllocateDescriptorSet(vk::DescriptorPool descPool);
 
         /** The device to create the acceleration structures in. */
         vkfw_core::gfx::LogicalDevice* m_device;
@@ -84,18 +79,6 @@ namespace vkfw_core::gfx::rt {
         std::vector<glm::mat3x4> m_BLASTransforms;
         /** The top level acceleration structure for the scene. */
         TopLevelAccelerationStructure m_TLAS;
-
-        /** Contains the descriptor binding. */
-        std::uint32_t m_descBinding = 0;
-        /** The internal descriptor layout if created here. */
-        vk::UniqueDescriptorSetLayout m_internalDescLayout;
-        /** The descriptor layout used. */
-        vk::DescriptorSetLayout m_descLayout = vk::DescriptorSetLayout();
-        /** The descriptor set of this buffer. */
-        vk::DescriptorSet m_descSet = vk::DescriptorSet();
-
-        /** The descriptor set acceleration structure write info (needed to ensure a valid pointer). */
-        vk::WriteDescriptorSetAccelerationStructureKHR m_descriptorSetAccStructure;
 
         struct MeshGeometryInfo
         {

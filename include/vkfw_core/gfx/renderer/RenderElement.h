@@ -23,7 +23,7 @@ namespace vkfw_core::gfx {
     {
     public:
         using BufferReference = std::pair<const DeviceBuffer*, vk::DeviceSize>;
-        using UBOBinding = std::tuple<const UniformBufferObject*, std::uint32_t, std::size_t>;
+        using UBOBinding = std::tuple<vk::DescriptorSet, std::uint32_t, std::uint32_t>;
         using DescSetBinding = std::pair<vk::DescriptorSet, std::uint32_t>;
 
         inline RenderElement(bool isTransparent, vk::Pipeline pipeline, vk::PipelineLayout pipelineLayout);
@@ -66,8 +66,8 @@ namespace vkfw_core::gfx {
 
         BufferReference m_vertexBuffer = BufferReference(nullptr, 0);
         BufferReference m_indexBuffer = BufferReference(nullptr, 0);
-        UBOBinding m_cameraMatricesUBO = UBOBinding(nullptr, 0, 0);
-        UBOBinding m_worldMatricesUBO = UBOBinding(nullptr, 0, 0);
+        UBOBinding m_cameraMatricesUBO = UBOBinding(vk::DescriptorSet{}, 0, 0);
+        UBOBinding m_worldMatricesUBO = UBOBinding(vk::DescriptorSet{}, 0, 0);
         std::vector<UBOBinding> m_generalUBOs;
         std::vector<DescSetBinding> m_generalDescSets;
 
@@ -162,16 +162,17 @@ namespace vkfw_core::gfx {
             cmdBuffer.bindIndexBuffer(m_indexBuffer.first->GetBuffer(), m_indexBuffer.second, vk::IndexType::eUint32);
         }
 
-        std::get<0>(m_cameraMatricesUBO)
-            ->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, m_pipelineLayout, std::get<1>(m_cameraMatricesUBO),
-                   std::get<2>(m_cameraMatricesUBO));
-        std::get<0>(m_worldMatricesUBO)
-            ->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, m_pipelineLayout, std::get<1>(m_worldMatricesUBO),
-                   std::get<2>(m_worldMatricesUBO));
+        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout,
+                                     std::get<1>(m_cameraMatricesUBO),
+                                     std::get<0>(m_cameraMatricesUBO), std::get<2>(m_cameraMatricesUBO));
+
+        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout,
+                                     std::get<1>(m_worldMatricesUBO), std::get<0>(m_worldMatricesUBO),
+                                     std::get<2>(m_worldMatricesUBO));
 
         for (const auto& ubo : m_generalUBOs) {
-            std::get<0>(ubo)->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, m_pipelineLayout, std::get<1>(ubo),
-                                   std::get<2>(ubo));
+            cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout, std::get<1>(ubo),
+                                         std::get<0>(ubo), std::get<2>(ubo));
         }
 
         for (const auto& ds : m_generalDescSets) {
