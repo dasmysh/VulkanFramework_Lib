@@ -6,7 +6,7 @@
  * @brief  Implementation of a vulkan compute pipeline object.
  */
 
-#include "gfx/vk/ComputePipeline.h"
+#include "gfx/vk/pipeline/ComputePipeline.h"
 #include "gfx/vk/LogicalDevice.h"
 #include "core/resources/ShaderManager.h"
 

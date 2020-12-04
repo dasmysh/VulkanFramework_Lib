@@ -10,7 +10,7 @@
 #include <app/ApplicationBase.h>
 #include "gfx/vk/Shader.h"
 #include "core/resources/ShaderManager.h"
-#include "gfx/vk/GraphicsPipeline.h"
+#include "gfx/vk/pipeline/GraphicsPipeline.h"
 #include "gfx/vk/textures/Texture.h"
 #include "gfx/Texture2D.h"
 #include "gfx/vk/memory/MemoryGroup.h"
