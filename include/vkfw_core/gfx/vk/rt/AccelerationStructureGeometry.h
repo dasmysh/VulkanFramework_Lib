@@ -52,18 +52,17 @@ namespace vkfw_core::gfx::rt {
         }
         [[nodiscard]] glm::mat3x4& GetBottomLevelAccelerationStructureTransform(std::size_t index) { return m_BLASTransforms[index]; }
         void AddTriangleGeometryToBLAS(std::size_t blasIndex, std::size_t primitiveCount, std::size_t vertexCount,
-                                       std::size_t vertexSize, const DeviceBuffer* vbo, std::size_t vboOffset,
+                                       std::size_t vertexSize, const DeviceBuffer* vbo, std::size_t vboOffset = 0,
                                        const DeviceBuffer* ibo = nullptr, std::size_t iboOffset = 0,
                                        vk::DeviceOrHostAddressConstKHR transformDeviceAddress = nullptr);
 
         void BuildAccelerationStructure();
 
-        [[nodiscard]] std::uint32_t AddDescriptorLayoutBinding(DescriptorSetLayout& layout,
-                                                               vk::ShaderStageFlags shaderFlags,
-                                                               std::uint32_t bindingStart = 0);
+        void AddDescriptorLayoutBinding(DescriptorSetLayout& layout, vk::ShaderStageFlags shaderFlags,
+                                        std::uint32_t bindingAS, std::uint32_t bindingVBO, std::uint32_t bindingIBO);
         void FillDescriptorAccelerationStructureInfo(vk::WriteDescriptorSetAccelerationStructureKHR& descInfo) const;
-        void FillDescriptorBufferInfo(vk::DescriptorBufferInfo& vboBufferInfo,
-                                           vk::DescriptorBufferInfo& iboBufferInfo) const;
+        void FillDescriptorBuffersInfo(std::vector<vk::DescriptorBufferInfo>& vboBufferInfos,
+                                      std::vector<vk::DescriptorBufferInfo>& iboBufferInfos) const;
 
     private:
         void AddMeshGeometry(const vkfw_core::gfx::MeshInfo& mesh, const glm::mat4& transform, std::size_t vertexSize,
