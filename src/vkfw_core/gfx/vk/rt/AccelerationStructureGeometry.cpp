@@ -36,7 +36,7 @@ namespace vkfw_core::gfx::rt {
     void AccelerationStructureGeometry::AddMeshGeometry(const vkfw_core::gfx::MeshInfo& mesh,
                                                         const glm::mat4& transform)
     {
-        m_meshGeometryInfos.emplace_back(&mesh, transform);
+        m_meshGeometryInfos.emplace_back(m_geometryIndex++, &mesh, transform);
     }
 
     void AccelerationStructureGeometry::FinalizeMeshGeometry()
@@ -116,14 +116,16 @@ namespace vkfw_core::gfx::rt {
             iboBuffer = ibo->GetBuffer();
             indexBufferDeviceAddress = ibo->GetDeviceAddressConst().deviceAddress + iboOffset;
         } else {
-            if (iboOffset == 0) { iboOffset = vboOffset + vertexCount * vertexSize; }
+            if (iboOffset == 0) {
+                iboOffset = m_device->CalculateStorageBufferAlignment(vboOffset + vertexCount * vertexSize);
+            }
             indexBufferDeviceAddress = vertexBufferDeviceAddress.deviceAddress + iboOffset;
         }
 
         m_BLAS[blasIndex].AddTriangleGeometry(primitiveCount, vertexCount, vertexSize, vertexBufferDeviceAddress,
                                               indexBufferDeviceAddress, transformDeviceAddress);
-        m_triangleGeometryInfos.emplace_back(vboBuffer, vboOffset, vertexCount * vertexSize, iboBuffer, iboOffset,
-                                             primitiveCount * 3 * sizeof(std::uint32_t));
+        m_triangleGeometryInfos.emplace_back(m_geometryIndex++, vboBuffer, vboOffset, vertexCount * vertexSize,
+                                             iboBuffer, iboOffset, primitiveCount * 3 * sizeof(std::uint32_t));
     }
 
     void AccelerationStructureGeometry::BuildAccelerationStructure()
@@ -175,18 +177,25 @@ namespace vkfw_core::gfx::rt {
         std::vector<vk::DescriptorBufferInfo>& vboBufferInfos,
         std::vector<vk::DescriptorBufferInfo>& iboBufferInfos) const
     {
+        auto vboIOffset = vboBufferInfos.size();
+        auto iboIOffset = iboBufferInfos.size();
+        vboBufferInfos.resize(vboIOffset + m_triangleGeometryInfos.size() + m_meshGeometryInfos.size());
+        iboBufferInfos.resize(iboIOffset + m_triangleGeometryInfos.size() + m_meshGeometryInfos.size());
+
         for (const auto& triangleGeometry : m_triangleGeometryInfos) {
-            vboBufferInfos.emplace_back(triangleGeometry.vboBuffer, triangleGeometry.vboOffset,
-                                        triangleGeometry.vboRange);
-            vboBufferInfos.emplace_back(triangleGeometry.iboBuffer, triangleGeometry.iboOffset,
-                                        triangleGeometry.iboRange);
+            vboBufferInfos[vboIOffset + triangleGeometry.index] = vk::DescriptorBufferInfo{
+                triangleGeometry.vboBuffer, triangleGeometry.vboOffset, triangleGeometry.vboRange};
+            iboBufferInfos[iboIOffset + triangleGeometry.index] = vk::DescriptorBufferInfo{
+                triangleGeometry.iboBuffer, triangleGeometry.iboOffset, triangleGeometry.iboRange};
         }
 
         for (const auto& meshGeometry : m_meshGeometryInfos) {
-            vboBufferInfos.emplace_back(m_memGroup.GetBuffer(meshGeometry.bufferIndex)->GetBuffer(),
-                                        meshGeometry.vboOffset, meshGeometry.vboRange);
-            iboBufferInfos.emplace_back(m_memGroup.GetBuffer(meshGeometry.bufferIndex)->GetBuffer(),
-                                        meshGeometry.iboOffset, meshGeometry.iboRange);
+            vboBufferInfos[vboIOffset + meshGeometry.index] =
+                vk::DescriptorBufferInfo{m_memGroup.GetBuffer(meshGeometry.bufferIndex)->GetBuffer(),
+                                         meshGeometry.vboOffset, meshGeometry.vboRange};
+            iboBufferInfos[iboIOffset + meshGeometry.index] =
+                vk::DescriptorBufferInfo{m_memGroup.GetBuffer(meshGeometry.bufferIndex)->GetBuffer(),
+                                         meshGeometry.iboOffset, meshGeometry.iboRange};
         }
     }
 

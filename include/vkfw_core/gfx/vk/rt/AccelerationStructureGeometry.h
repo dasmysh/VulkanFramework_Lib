@@ -89,6 +89,7 @@ namespace vkfw_core::gfx::rt {
 
         struct MeshGeometryInfo
         {
+            std::size_t index = 0;
             const MeshInfo* mesh = nullptr;
             glm::mat4 transform = glm::mat4{1.0f};
             unsigned int bufferIndex = DeviceMemoryGroup::INVALID_INDEX;
@@ -103,6 +104,7 @@ namespace vkfw_core::gfx::rt {
 
         struct TriangleGeometryInfo
         {
+            std::size_t index = 0;
             vk::Buffer vboBuffer;
             std::size_t vboOffset = 0;
             std::size_t vboRange = 0;
@@ -117,6 +119,8 @@ namespace vkfw_core::gfx::rt {
         std::vector<MeshGeometryInfo> m_meshGeometryInfos;
         /** The information about triangle geometries. */
         std::vector<TriangleGeometryInfo> m_triangleGeometryInfos;
+        /** An internal counter for the current geometry index. */
+        std::size_t m_geometryIndex = 0;
     };
 
     template<Vertex VertexType> void vkfw_core::gfx::rt::AccelerationStructureGeometry::FinalizeMeshGeometry()
@@ -131,7 +135,7 @@ namespace vkfw_core::gfx::rt {
             meshInfo.vboRange = byteSizeOf(vertices[i_mesh]);
             meshInfo.vboOffset = 0;
             meshInfo.iboRange = byteSizeOf(indices[i_mesh]);
-            meshInfo.iboOffset = meshInfo.vboRange;
+            meshInfo.iboOffset = m_device->CalculateStorageBufferAlignment(meshInfo.vboRange);
             meshInfo.vertexSize = sizeof(VertexType);
 
             const std::size_t bufferSize = meshInfo.iboOffset + meshInfo.iboRange;
@@ -168,7 +172,7 @@ namespace vkfw_core::gfx::rt {
     {
         auto meshIndex = m_meshGeometryInfos.size();
 
-        auto& meshInfo = m_meshGeometryInfos.emplace_back(&mesh, transform);
+        auto& meshInfo = m_meshGeometryInfos.emplace_back(m_geometryIndex++, &mesh, transform);
         meshInfo.indices = mesh.GetIndices();
 
         std::vector<VertexType> vertices;
@@ -178,7 +182,7 @@ namespace vkfw_core::gfx::rt {
         meshInfo.vboRange = byteSizeOf(vertices);
         meshInfo.vboOffset = 0;
         meshInfo.iboRange = byteSizeOf(meshInfo.indices);
-        meshInfo.iboOffset = meshInfo.vboRange;
+        meshInfo.iboOffset = m_device->CalculateStorageBufferAlignment(meshInfo.vboRange);
         meshInfo.vertices.resize(byteSizeOf(vertices));
         memcpy(meshInfo.vertices.data(), vertices.data(), byteSizeOf(vertices));
 
