@@ -102,10 +102,11 @@ namespace vkfw_core::gfx::rt {
                                               vertexBufferDeviceAddress, indexBufferAddress);
     }
 
-    void AccelerationStructureGeometry::AddTriangleGeometryToBLAS(
-        std::size_t blasIndex, std::size_t primitiveCount, std::size_t vertexCount, std::size_t vertexSize,
-        const DeviceBuffer* vbo, std::size_t vboOffset /* = 0*/, const DeviceBuffer* ibo /*= nullptr*/,
-        std::size_t iboOffset /*= 0*/, vk::DeviceOrHostAddressConstKHR transformDeviceAddress /*= nullptr*/)
+    void AccelerationStructureGeometry::AddTriangleGeometry(const glm::mat3x4& transform, std::size_t primitiveCount,
+                                                            std::size_t vertexCount, std::size_t vertexSize,
+                                                            const DeviceBuffer* vbo, std::size_t vboOffset /* = 0*/,
+                                                            const DeviceBuffer* ibo /*= nullptr*/,
+                                                            std::size_t iboOffset /*= 0*/)
     {
         vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress =
             vbo->GetDeviceAddressConst().deviceAddress + vboOffset;
@@ -122,8 +123,9 @@ namespace vkfw_core::gfx::rt {
             indexBufferDeviceAddress = vertexBufferDeviceAddress.deviceAddress + iboOffset;
         }
 
+        auto blasIndex = AddBottomLevelAccelerationStructure(glm::transpose(transform));
         m_BLAS[blasIndex].AddTriangleGeometry(primitiveCount, vertexCount, vertexSize, vertexBufferDeviceAddress,
-                                              indexBufferDeviceAddress, transformDeviceAddress);
+                                              indexBufferDeviceAddress);
         m_triangleGeometryInfos.emplace_back(m_geometryIndex++, vboBuffer, vboOffset, vertexCount * vertexSize,
                                              iboBuffer, iboOffset, primitiveCount * 3 * sizeof(std::uint32_t));
     }
@@ -135,7 +137,11 @@ namespace vkfw_core::gfx::rt {
             m_BLAS[i].BuildAccelerationStructure();
 
             vk::AccelerationStructureInstanceKHR blasInstance{
-                vk::TransformMatrixKHR{}, 0, 0xFF, 0, vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable,
+                vk::TransformMatrixKHR{},
+                static_cast<std::uint32_t>(i),
+                0xFF,
+                0,
+                vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable,
                 m_BLAS[i].GetHandle()};
             memcpy(&blasInstance.transform, &m_BLASTransforms[i], sizeof(glm::mat3x4));
             m_TLAS.AddBottomLevelAccelerationStructureInstance(blasInstance);

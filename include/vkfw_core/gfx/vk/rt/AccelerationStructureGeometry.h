@@ -51,10 +51,9 @@ namespace vkfw_core::gfx::rt {
             return m_BLAS[index];
         }
         [[nodiscard]] glm::mat3x4& GetBottomLevelAccelerationStructureTransform(std::size_t index) { return m_BLASTransforms[index]; }
-        void AddTriangleGeometryToBLAS(std::size_t blasIndex, std::size_t primitiveCount, std::size_t vertexCount,
-                                       std::size_t vertexSize, const DeviceBuffer* vbo, std::size_t vboOffset = 0,
-                                       const DeviceBuffer* ibo = nullptr, std::size_t iboOffset = 0,
-                                       vk::DeviceOrHostAddressConstKHR transformDeviceAddress = nullptr);
+        void AddTriangleGeometry(const glm::mat3x4& transform, std::size_t primitiveCount, std::size_t vertexCount,
+                                 std::size_t vertexSize, const DeviceBuffer* vbo, std::size_t vboOffset = 0,
+                                 const DeviceBuffer* ibo = nullptr, std::size_t iboOffset = 0);
 
         void BuildAccelerationStructure();
 
