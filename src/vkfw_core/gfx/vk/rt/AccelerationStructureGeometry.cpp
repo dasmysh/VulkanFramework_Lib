@@ -102,6 +102,28 @@ namespace vkfw_core::gfx::rt {
                                               vertexBufferDeviceAddress, indexBufferAddress);
     }
 
+    void AccelerationStructureGeometry::AddTriangleGeometryToBLAS(
+        std::size_t blasIndex, std::size_t primitiveCount, std::size_t vertexCount, std::size_t vertexSize,
+        const DeviceBuffer* vbo, std::size_t vboOffset, const DeviceBuffer* ibo /*= nullptr*/,
+        std::size_t iboOffset /*= 0*/, vk::DeviceOrHostAddressConstKHR transformDeviceAddress /*= nullptr*/)
+    {
+        vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress =
+            vbo->GetDeviceAddressConst().deviceAddress + vboOffset;
+        auto vboBuffer = vbo->GetBuffer();
+        auto iboBuffer = vboBuffer;
+        vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress =
+            vbo->GetDeviceAddressConst().deviceAddress + iboOffset;
+        if (ibo != nullptr) {
+            iboBuffer = ibo->GetBuffer();
+            indexBufferDeviceAddress = ibo->GetDeviceAddressConst().deviceAddress + iboOffset;
+        }
+
+        m_BLAS[blasIndex].AddTriangleGeometry(primitiveCount, vertexCount, vertexSize, vertexBufferDeviceAddress,
+                                              indexBufferDeviceAddress, transformDeviceAddress);
+        m_triangleGeometryInfos.emplace_back(vboBuffer, vboOffset, vertexCount * vertexSize, iboBuffer, iboOffset,
+                                             primitiveCount * 3 * sizeof(std::uint32_t));
+    }
+
     void AccelerationStructureGeometry::BuildAccelerationStructure()
     {
         // TODO: a way to build all BLAS at once would be good. [11/22/2020 Sebastian Maisch]
@@ -126,11 +148,18 @@ namespace vkfw_core::gfx::rt {
         return result;
     }
 
-    void AccelerationStructureGeometry::AddDescriptorLayoutBinding(DescriptorSetLayout& layout,
-                                                                   vk::ShaderStageFlags shaderFlags,
-                                                                   std::uint32_t binding /*= 0*/)
+    std::uint32_t AccelerationStructureGeometry::AddDescriptorLayoutBinding(DescriptorSetLayout& layout,
+                                                                            vk::ShaderStageFlags shaderFlags,
+                                                                            std::uint32_t bindingStart /*= 0*/)
     {
-        layout.AddBinding(binding, vk::DescriptorType::eAccelerationStructureKHR, 1, shaderFlags);
+        layout.AddBinding(bindingStart++, vk::DescriptorType::eAccelerationStructureKHR, 1, shaderFlags);
+        layout.AddBinding(bindingStart++, vk::DescriptorType::eStorageBuffer,
+                          static_cast<std::uint32_t>(m_triangleGeometryInfos.size() + m_meshGeometryInfos.size()),
+                          shaderFlags);
+        layout.AddBinding(bindingStart++, vk::DescriptorType::eStorageBuffer,
+                          static_cast<std::uint32_t>(m_triangleGeometryInfos.size() + m_meshGeometryInfos.size()),
+                          shaderFlags);
+        return bindingStart;
     }
 
     void AccelerationStructureGeometry::FillDescriptorAccelerationStructureInfo(

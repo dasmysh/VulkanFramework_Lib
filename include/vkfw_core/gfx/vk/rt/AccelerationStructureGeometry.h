@@ -24,6 +24,7 @@ namespace vkfw_core::gfx {
     class MeshInfo;
     class SceneMeshNode;
     class SubMesh;
+    class DeviceBuffer;
 }
 
 namespace vkfw_core::gfx::rt {
@@ -44,23 +45,30 @@ namespace vkfw_core::gfx::rt {
         void AddMeshGeometry(const vkfw_core::gfx::MeshInfo& mesh, const glm::mat4& transform);
         template<Vertex VertexType> void FinalizeMeshGeometry();
 
-        void AddMeshGeometry(const vkfw_core::gfx::MeshInfo& mesh, const glm::mat4& transform, std::size_t vertexSize,
-                             vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress,
-                             vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress);
-
-        std::size_t AddBottomLevelAccelerationStructure(const glm::mat3x4& transform);
-        BottomLevelAccelerationStructure& GetBottomLevelAccelerationStructure(std::size_t index) { return m_BLAS[index]; }
-        glm::mat3x4& GetBottomLevelAccelerationStructureTransform(std::size_t index) { return m_BLASTransforms[index]; }
+        [[nodiscard]] std::size_t AddBottomLevelAccelerationStructure(const glm::mat3x4& transform);
+        [[nodiscard]] BottomLevelAccelerationStructure& GetBottomLevelAccelerationStructure(std::size_t index)
+        {
+            return m_BLAS[index];
+        }
+        [[nodiscard]] glm::mat3x4& GetBottomLevelAccelerationStructureTransform(std::size_t index) { return m_BLASTransforms[index]; }
+        void AddTriangleGeometryToBLAS(std::size_t blasIndex, std::size_t primitiveCount, std::size_t vertexCount,
+                                       std::size_t vertexSize, const DeviceBuffer* vbo, std::size_t vboOffset,
+                                       const DeviceBuffer* ibo = nullptr, std::size_t iboOffset = 0,
+                                       vk::DeviceOrHostAddressConstKHR transformDeviceAddress = nullptr);
 
         void BuildAccelerationStructure();
 
-        static void AddDescriptorLayoutBinding(DescriptorSetLayout& layout, vk::ShaderStageFlags shaderFlags,
-                                               std::uint32_t binding = 0);
+        [[nodiscard]] std::uint32_t AddDescriptorLayoutBinding(DescriptorSetLayout& layout,
+                                                               vk::ShaderStageFlags shaderFlags,
+                                                               std::uint32_t bindingStart = 0);
         void FillDescriptorAccelerationStructureInfo(vk::WriteDescriptorSetAccelerationStructureKHR& descInfo) const;
         void FillDescriptorBufferInfo(vk::DescriptorBufferInfo& vboBufferInfo,
                                            vk::DescriptorBufferInfo& iboBufferInfo) const;
 
     private:
+        void AddMeshGeometry(const vkfw_core::gfx::MeshInfo& mesh, const glm::mat4& transform, std::size_t vertexSize,
+                             vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress,
+                             vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress);
         void AddMeshNodeGeometry(const vkfw_core::gfx::MeshInfo& mesh, const vkfw_core::gfx::SceneMeshNode* node,
                                  const glm::mat4& transform, std::size_t vertexSize,
                                  vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress,
@@ -94,10 +102,22 @@ namespace vkfw_core::gfx::rt {
             std::vector<std::uint32_t> indices;
         };
 
+        struct TriangleGeometryInfo
+        {
+            vk::Buffer vboBuffer;
+            std::size_t vboOffset = 0;
+            std::size_t vboRange = 0;
+            vk::Buffer iboBuffer;
+            std::size_t iboOffset = 0;
+            std::size_t iboRange = 0;
+        };
+
         /** Holds the memory for geometry if needed. */
         vkfw_core::gfx::MemoryGroup m_memGroup;
         /** Holds the information for the the meshes vertex and index buffers. */
         std::vector<MeshGeometryInfo> m_meshGeometryInfos;
+        /** The information about triangle geometries. */
+        std::vector<TriangleGeometryInfo> m_triangleGeometryInfos;
     };
 
     template<Vertex VertexType> void vkfw_core::gfx::rt::AccelerationStructureGeometry::FinalizeMeshGeometry()
