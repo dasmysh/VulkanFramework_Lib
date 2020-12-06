@@ -72,7 +72,7 @@ namespace vkfw_core::gfx::rt {
 
         auto localTransform = transform * node->GetLocalTransform();
         for (unsigned int i = 0; i < node->GetNumberOfSubMeshes(); ++i) {
-            AddInstanceInfo(static_cast<std::uint32_t>(mesh.index), glm::transpose(transform),
+            AddInstanceInfo(static_cast<std::uint32_t>(mesh.index), transform,
                             mesh.mesh->GetSubMeshes()[node->GetSubMeshID(i)].GetIndexOffset());
         }
         for (unsigned int i = 0; i < node->GetNumberOfNodes(); ++i) {
@@ -112,17 +112,17 @@ namespace vkfw_core::gfx::rt {
                                               mesh.vertexSize, vboDeviceAddress, indexBufferAddress);
     }
 
-    void AccelerationStructureGeometry::AddInstanceInfo(std::uint32_t bufferIndex, const glm::mat3x4& transform,
+    void AccelerationStructureGeometry::AddInstanceInfo(std::uint32_t bufferIndex, const glm::mat4& transform,
                                                         std::uint32_t indexOffset /*= 0*/)
     {
         // TODO: Add material and texture indices later. [12/6/2020 Sebastian Maisch]
         auto& instanceInfo = m_instanceInfos.emplace_back(bufferIndex, static_cast<std::uint32_t>(-1),
                                                           static_cast<std::uint32_t>(-1), indexOffset);
         instanceInfo.transform = transform;
-        instanceInfo.transformInverseTranspose = glm::transpose(glm::inverse(instanceInfo.transform));
+        instanceInfo.transformInverseTranspose = glm::mat4(glm::mat3(glm::transpose(glm::inverse(instanceInfo.transform))));
     }
 
-    void AccelerationStructureGeometry::AddTriangleGeometry(const glm::mat3x4& transform, std::size_t primitiveCount,
+    void AccelerationStructureGeometry::AddTriangleGeometry(const glm::mat4& transform, std::size_t primitiveCount,
                                                             std::size_t vertexCount, std::size_t vertexSize,
                                                             const DeviceBuffer* vbo, std::size_t vboOffset /* = 0*/,
                                                             const DeviceBuffer* ibo /*= nullptr*/,
@@ -145,7 +145,7 @@ namespace vkfw_core::gfx::rt {
 
         auto blasIndex =
             AddBottomLevelAccelerationStructure(static_cast<std::uint32_t>(m_geometryIndex), glm::transpose(transform));
-        AddInstanceInfo(static_cast<std::uint32_t>(m_geometryIndex), glm::transpose(transform));
+        AddInstanceInfo(static_cast<std::uint32_t>(m_geometryIndex), transform);
         m_BLAS[blasIndex].AddTriangleGeometry(primitiveCount, vertexCount, vertexSize, vertexBufferDeviceAddress,
                                               indexBufferDeviceAddress);
         m_triangleGeometryInfos.emplace_back(m_geometryIndex++, vboBuffer, vboOffset, vertexCount * vertexSize,

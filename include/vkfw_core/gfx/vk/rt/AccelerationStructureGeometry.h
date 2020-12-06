@@ -53,7 +53,7 @@ namespace vkfw_core::gfx::rt {
         // {
         //     return m_BLASTransforms[index];
         // }
-        void AddTriangleGeometry(const glm::mat3x4& transform, std::size_t primitiveCount, std::size_t vertexCount,
+        void AddTriangleGeometry(const glm::mat4& transform, std::size_t primitiveCount, std::size_t vertexCount,
                                  std::size_t vertexSize, const DeviceBuffer* vbo, std::size_t vboOffset = 0,
                                  const DeviceBuffer* ibo = nullptr, std::size_t iboOffset = 0);
 
@@ -109,7 +109,7 @@ namespace vkfw_core::gfx::rt {
         void AddInstanceBufferAndTransferMemGroup();
         [[nodiscard]] std::size_t AddBottomLevelAccelerationStructure(std::uint32_t bufferIndex,
                                                                       const glm::mat3x4& transform);
-        void AddInstanceInfo(std::uint32_t bufferIndex, const glm::mat3x4& transform, std::uint32_t indexOffset = 0);
+        void AddInstanceInfo(std::uint32_t bufferIndex, const glm::mat4& transform, std::uint32_t indexOffset = 0);
         void AddMeshNodeInstance(const MeshGeometryInfo& mesh, const SceneMeshNode* node, const glm::mat4& transform);
         void AddMeshNodeGeometry(const MeshGeometryInfo& mesh, const SceneMeshNode* node, const glm::mat4& transform);
         void AddSubMeshGeometry(const MeshGeometryInfo& mesh, const SubMesh& subMesh, const glm::mat4& transform);
