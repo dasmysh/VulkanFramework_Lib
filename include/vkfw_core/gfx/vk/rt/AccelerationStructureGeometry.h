@@ -32,60 +32,44 @@ namespace vkfw_core::gfx::rt {
     class AccelerationStructureGeometry
     {
     public:
-        AccelerationStructureGeometry(vkfw_core::gfx::LogicalDevice* device);
+        AccelerationStructureGeometry(LogicalDevice* device);
         ~AccelerationStructureGeometry();
 
         // there are 2 options to add meshes:
         // 1: each mesh can have a different vertex type.
         template<Vertex VertexType>
-        std::size_t AddMeshGeometry(const vkfw_core::gfx::MeshInfo& mesh, const glm::mat4& transform);
-        void FinalizeMeshGeometry();
+        std::size_t AddMeshGeometry(const MeshInfo& mesh, const glm::mat4& transform);
+        void FinalizeGeometry();
 
         // 2: all meshes use the same vertex type.
-        void AddMeshGeometry(const vkfw_core::gfx::MeshInfo& mesh, const glm::mat4& transform);
-        template<Vertex VertexType> void FinalizeMeshGeometry();
+        void AddMeshGeometry(const MeshInfo& mesh, const glm::mat4& transform);
+        template<Vertex VertexType> void FinalizeGeometry();
 
-        [[nodiscard]] std::size_t AddBottomLevelAccelerationStructure(const glm::mat3x4& transform);
-        [[nodiscard]] BottomLevelAccelerationStructure& GetBottomLevelAccelerationStructure(std::size_t index)
-        {
-            return m_BLAS[index];
-        }
-        [[nodiscard]] glm::mat3x4& GetBottomLevelAccelerationStructureTransform(std::size_t index) { return m_BLASTransforms[index]; }
+        // [[nodiscard]] BottomLevelAccelerationStructure& GetBottomLevelAccelerationStructure(std::size_t index)
+        // {
+        //     return m_BLAS[index];
+        // }
+        // [[nodiscard]] glm::mat3x4& GetBottomLevelAccelerationStructureTransform(std::size_t index)
+        // {
+        //     return m_BLASTransforms[index];
+        // }
         void AddTriangleGeometry(const glm::mat3x4& transform, std::size_t primitiveCount, std::size_t vertexCount,
                                  std::size_t vertexSize, const DeviceBuffer* vbo, std::size_t vboOffset = 0,
                                  const DeviceBuffer* ibo = nullptr, std::size_t iboOffset = 0);
 
         void BuildAccelerationStructure();
 
-        void AddDescriptorLayoutBinding(DescriptorSetLayout& layout, vk::ShaderStageFlags shaderFlags,
-                                        std::uint32_t bindingAS, std::uint32_t bindingVBO, std::uint32_t bindingIBO);
+        void AddDescriptorLayoutBindingAS(DescriptorSetLayout& layout, vk::ShaderStageFlags shaderFlags,
+                                          std::uint32_t bindingAS);
+        void AddDescriptorLayoutBindingBuffers(DescriptorSetLayout& layout, vk::ShaderStageFlags shaderFlags,
+                                               std::uint32_t bindingVBO, std::uint32_t bindingIBO,
+                                               std::uint32_t bindingInstanceBuffer);
         void FillDescriptorAccelerationStructureInfo(vk::WriteDescriptorSetAccelerationStructureKHR& descInfo) const;
         void FillDescriptorBuffersInfo(std::vector<vk::DescriptorBufferInfo>& vboBufferInfos,
-                                      std::vector<vk::DescriptorBufferInfo>& iboBufferInfos) const;
+                                       std::vector<vk::DescriptorBufferInfo>& iboBufferInfos,
+                                       vk::DescriptorBufferInfo& instanceBufferInfo) const;
 
     private:
-        void AddMeshGeometry(const vkfw_core::gfx::MeshInfo& mesh, const glm::mat4& transform, std::size_t vertexSize,
-                             vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress,
-                             vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress);
-        void AddMeshNodeGeometry(const vkfw_core::gfx::MeshInfo& mesh, const vkfw_core::gfx::SceneMeshNode* node,
-                                 const glm::mat4& transform, std::size_t vertexSize,
-                                 vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress,
-                                 vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress);
-
-        void AddSubMeshGeometry(const vkfw_core::gfx::SubMesh& subMesh, const glm::mat4& transform,
-                                std::size_t vertexSize, vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress,
-                                vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress);
-
-        /** The device to create the acceleration structures in. */
-        vkfw_core::gfx::LogicalDevice* m_device;
-
-        /** The bottom level acceleration structure for the scene. */
-        std::vector<BottomLevelAccelerationStructure> m_BLAS;
-        /** The transformations for the bottom level acceleration structures. */
-        std::vector<glm::mat3x4> m_BLASTransforms;
-        /** The top level acceleration structure for the scene. */
-        TopLevelAccelerationStructure m_TLAS;
-
         struct MeshGeometryInfo
         {
             std::size_t index = 0;
@@ -112,17 +96,51 @@ namespace vkfw_core::gfx::rt {
             std::size_t iboRange = 0;
         };
 
+        struct InstanceInfo
+        {
+            std::uint32_t bufferIndex = 0;
+            std::uint32_t materialIndex = 0;
+            std::uint32_t textureIndex = 0;
+            std::uint32_t indexOffset = 0;
+            glm::mat4 transform = glm::mat4{1.0f};
+            glm::mat4 transformInverseTranspose = glm::mat4{1.0f};
+        };
+
+        void AddInstanceBufferAndTransferMemGroup();
+        [[nodiscard]] std::size_t AddBottomLevelAccelerationStructure(std::uint32_t bufferIndex,
+                                                                      const glm::mat3x4& transform);
+        void AddInstanceInfo(std::uint32_t bufferIndex, const glm::mat3x4& transform, std::uint32_t indexOffset = 0);
+        void AddMeshNodeInstance(const MeshGeometryInfo& mesh, const SceneMeshNode* node, const glm::mat4& transform);
+        void AddMeshNodeGeometry(const MeshGeometryInfo& mesh, const SceneMeshNode* node, const glm::mat4& transform);
+        void AddSubMeshGeometry(const MeshGeometryInfo& mesh, const SubMesh& subMesh, const glm::mat4& transform);
+
+        /** The device to create the acceleration structures in. */
+        LogicalDevice* m_device;
+
+        /** The bottom level acceleration structure for the scene. */
+        std::vector<BottomLevelAccelerationStructure> m_BLAS;
+        /** The transformations for the bottom level acceleration structures. */
+        std::vector<glm::mat3x4> m_BLASTransforms;
+        /** The top level acceleration structure for the scene. */
+        TopLevelAccelerationStructure m_TLAS;
+
         /** Holds the memory for geometry if needed. */
-        vkfw_core::gfx::MemoryGroup m_memGroup;
+        MemoryGroup m_memGroup;
         /** Holds the information for the the meshes vertex and index buffers. */
         std::vector<MeshGeometryInfo> m_meshGeometryInfos;
         /** The information about triangle geometries. */
         std::vector<TriangleGeometryInfo> m_triangleGeometryInfos;
         /** An internal counter for the current geometry index. */
         std::size_t m_geometryIndex = 0;
+        /** Contains for each geometry index an index to a vbo/ibo pair. */
+        std::vector<std::uint32_t> m_bufferIndices;
+        /** Contains further information about each instance like material indices. */
+        std::vector<InstanceInfo> m_instanceInfos;
+        /** The index to the instances buffer. */
+        std::uint32_t m_instanceBufferIndex = 0;
     };
 
-    template<Vertex VertexType> void vkfw_core::gfx::rt::AccelerationStructureGeometry::FinalizeMeshGeometry()
+    template<Vertex VertexType> void AccelerationStructureGeometry::FinalizeGeometry()
     {
         std::vector<std::vector<VertexType>> vertices{m_meshGeometryInfos.size()};
         std::vector<std::vector<std::uint32_t>> indices{m_meshGeometryInfos.size()};
@@ -146,28 +164,19 @@ namespace vkfw_core::gfx::rt {
             m_memGroup.AddDataToBufferInGroup(meshInfo.bufferIndex, meshInfo.vboOffset, vertices[i_mesh]);
             m_memGroup.AddDataToBufferInGroup(meshInfo.bufferIndex, meshInfo.iboOffset, indices[i_mesh]);
 
+            AddMeshNodeInstance(meshInfo, meshInfo.mesh->GetRootNode(), meshInfo.transform);
         }
 
-        vkfw_core::gfx::QueuedDeviceTransfer transfer{m_device, std::make_pair(0, 0)};
-        m_memGroup.FinalizeDeviceGroup();
-        m_memGroup.TransferData(transfer);
-        transfer.FinishTransfer();
+        AddInstanceBufferAndTransferMemGroup();
 
         for (std::size_t i_mesh = 0; i_mesh < m_meshGeometryInfos.size(); ++i_mesh) {
             const auto& meshInfo = m_meshGeometryInfos[i_mesh];
-
-            vk::DeviceOrHostAddressConstKHR bufferDeviceAddress =
-                m_memGroup.GetBuffer(meshInfo.bufferIndex)->GetDeviceAddressConst();
-            vk::DeviceOrHostAddressConstKHR vboDeviceAddress = bufferDeviceAddress.deviceAddress + meshInfo.vboOffset;
-            vk::DeviceOrHostAddressConstKHR iboDeviceAddress = bufferDeviceAddress.deviceAddress + meshInfo.iboOffset;
-
-            AddMeshGeometry(*meshInfo.mesh, meshInfo.transform, sizeof(VertexType), vboDeviceAddress, iboDeviceAddress);
+            AddMeshNodeGeometry(meshInfo, meshInfo.mesh->GetRootNode(), meshInfo.transform);
         }
     }
 
     template<Vertex VertexType>
-    std::size_t AccelerationStructureGeometry::AddMeshGeometry(const vkfw_core::gfx::MeshInfo& mesh,
-                                                               const glm::mat4& transform)
+    std::size_t AccelerationStructureGeometry::AddMeshGeometry(const MeshInfo& mesh, const glm::mat4& transform)
     {
         auto meshIndex = m_meshGeometryInfos.size();
 
