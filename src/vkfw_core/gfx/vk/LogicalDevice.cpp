@@ -71,11 +71,13 @@ namespace vkfw_core::gfx {
 
         if (m_windowCfg.m_useRayTracing) {
             auto features =
-                m_vkPhysicalDevice.getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceRayTracingFeaturesKHR>();
-            m_raytracingFeatures = features.get<vk::PhysicalDeviceRayTracingFeaturesKHR>();
+                m_vkPhysicalDevice.getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceRayTracingPipelineFeaturesKHR, vk::PhysicalDeviceAccelerationStructureFeaturesKHR>();
+            m_raytracingPipelineFeatures = features.get<vk::PhysicalDeviceRayTracingPipelineFeaturesKHR>();
+            m_accelerationStructureFeatures = features.get<vk::PhysicalDeviceAccelerationStructureFeaturesKHR>();
             auto properties =
-                m_vkPhysicalDevice.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPropertiesKHR>();
-            m_raytracingProperties = properties.get<vk::PhysicalDeviceRayTracingPropertiesKHR>();
+                m_vkPhysicalDevice.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPipelinePropertiesKHR, vk::PhysicalDeviceAccelerationStructurePropertiesKHR>();
+            m_raytracingPipelineProperties = properties.get<vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>();
+            m_accelerationStructureProperties = properties.get<vk::PhysicalDeviceAccelerationStructurePropertiesKHR>();
         }
 
         {
@@ -267,6 +269,12 @@ namespace vkfw_core::gfx {
     std::size_t LogicalDevice::CalculateStorageBufferAlignment(std::size_t size) const
     {
         auto factor = m_vkPhysicalDeviceLimits.minStorageBufferOffsetAlignment;
+        return CalcAlignedSize(size, factor);
+    }
+
+    std::size_t LogicalDevice::CalculateASScratchBufferBufferAlignment(std::size_t size) const
+    { 
+        auto factor = m_accelerationStructureProperties.minAccelerationStructureScratchOffsetAlignment;
         return CalcAlignedSize(size, factor);
     }
 

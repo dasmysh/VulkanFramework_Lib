@@ -8,7 +8,8 @@
 
 #include "gfx/vk//rt/AccelerationStructureGeometry.h"
 #include "gfx/vk/pipeline/DescriptorSetLayout.h"
-#include <gfx/meshes/MeshInfo.h>
+#include "gfx/Texture2D.h"
+#include "gfx/meshes/MeshInfo.h"
 #include "gfx/vk/QueuedDeviceTransfer.h"
 #include "gfx/vk/buffers/HostBuffer.h"
 #include "gfx/vk/memory/DeviceMemory.h"
@@ -21,6 +22,14 @@ namespace vkfw_core::gfx::rt {
           m_TLAS{device, vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace},
           m_memGroup{m_device, vk::MemoryPropertyFlags()}
     {
+        vk::SamplerCreateInfo samplerCreateInfo{vk::SamplerCreateFlags(),
+                                                vk::Filter::eLinear,
+                                                vk::Filter::eLinear,
+                                                vk::SamplerMipmapMode::eNearest,
+                                                vk::SamplerAddressMode::eRepeat,
+                                                vk::SamplerAddressMode::eRepeat,
+                                                vk::SamplerAddressMode::eRepeat};
+        m_textureSampler = m_device->GetDevice().createSamplerUnique(samplerCreateInfo);
     }
 
     AccelerationStructureGeometry::~AccelerationStructureGeometry() {}
@@ -40,7 +49,13 @@ namespace vkfw_core::gfx::rt {
                 bufferSize, std::vector<std::uint32_t>{{0, 1}});
             m_memGroup.AddDataToBufferInGroup(meshInfo.bufferIndex, meshInfo.vboOffset, meshInfo.vertices);
             m_memGroup.AddDataToBufferInGroup(meshInfo.bufferIndex, meshInfo.iboOffset, meshInfo.indices);
-            AddMeshNodeInstance(meshInfo, meshInfo.mesh->GetRootNode(), meshInfo.transform);
+
+            auto materialOffset = m_materials.size();
+            for (const auto& mat : meshInfo.mesh->GetMaterials()) {
+                m_materials.emplace_back(&mat, m_device, m_memGroup, std::vector<std::uint32_t>{{0, 1}});
+            }
+            AddMeshNodeInstance(meshInfo, meshInfo.mesh->GetRootNode(), meshInfo.transform,
+                                static_cast<std::uint32_t>(materialOffset));
         }
 
         AddInstanceBufferAndTransferMemGroup();
@@ -66,17 +81,19 @@ namespace vkfw_core::gfx::rt {
     }
 
     void AccelerationStructureGeometry::AddMeshNodeInstance(const MeshGeometryInfo& mesh, const SceneMeshNode* node,
-                                                            const glm::mat4& transform)
+                                                            const glm::mat4& transform, std::uint32_t materialOffset)
     {
         if (!node->HasMeshes()) { return; }
 
         auto localTransform = transform * node->GetLocalTransform();
         for (unsigned int i = 0; i < node->GetNumberOfSubMeshes(); ++i) {
-            AddInstanceInfo(static_cast<std::uint32_t>(mesh.index), transform,
+            auto materialIndex = mesh.mesh->GetSubMeshes()[node->GetSubMeshID(i)].GetMaterialID() + materialOffset;
+            AddInstanceInfo(static_cast<std::uint32_t>(mesh.vertexSize), static_cast<std::uint32_t>(mesh.index),
+                            materialIndex, transform,
                             mesh.mesh->GetSubMeshes()[node->GetSubMeshID(i)].GetIndexOffset());
         }
         for (unsigned int i = 0; i < node->GetNumberOfNodes(); ++i) {
-            AddMeshNodeInstance(mesh, node->GetChild(i), localTransform);
+            AddMeshNodeInstance(mesh, node->GetChild(i), localTransform, materialOffset);
         }
     }
 
@@ -102,7 +119,6 @@ namespace vkfw_core::gfx::rt {
         vk::DeviceOrHostAddressConstKHR vboDeviceAddress = bufferDeviceAddress.deviceAddress + mesh.vboOffset;
         vk::DeviceOrHostAddressConstKHR iboDeviceAddress = bufferDeviceAddress.deviceAddress + mesh.iboOffset;
 
-
         vk::DeviceOrHostAddressConstKHR indexBufferAddress{iboDeviceAddress.deviceAddress
                                                            + subMesh.GetIndexOffset() * sizeof(std::uint32_t)};
 
@@ -112,14 +128,15 @@ namespace vkfw_core::gfx::rt {
                                               mesh.vertexSize, vboDeviceAddress, indexBufferAddress);
     }
 
-    void AccelerationStructureGeometry::AddInstanceInfo(std::uint32_t bufferIndex, const glm::mat4& transform,
+    void AccelerationStructureGeometry::AddInstanceInfo(std::uint32_t vertexSize, std::uint32_t bufferIndex,
+                                                        std::uint32_t materialIndex, const glm::mat4& transform,
                                                         std::uint32_t indexOffset /*= 0*/)
     {
-        // TODO: Add material and texture indices later. [12/6/2020 Sebastian Maisch]
-        auto& instanceInfo = m_instanceInfos.emplace_back(bufferIndex, static_cast<std::uint32_t>(-1),
-                                                          static_cast<std::uint32_t>(-1), indexOffset);
+        auto& instanceInfo =
+            m_instanceInfos.emplace_back(vertexSize, bufferIndex, materialIndex, indexOffset);
         instanceInfo.transform = transform;
-        instanceInfo.transformInverseTranspose = glm::mat4(glm::mat3(glm::transpose(glm::inverse(instanceInfo.transform))));
+        instanceInfo.transformInverseTranspose =
+            glm::mat4(glm::mat3(glm::transpose(glm::inverse(instanceInfo.transform))));
     }
 
     void AccelerationStructureGeometry::AddTriangleGeometry(const glm::mat4& transform, std::size_t primitiveCount,
@@ -145,7 +162,8 @@ namespace vkfw_core::gfx::rt {
 
         auto blasIndex =
             AddBottomLevelAccelerationStructure(static_cast<std::uint32_t>(m_geometryIndex), glm::transpose(transform));
-        AddInstanceInfo(static_cast<std::uint32_t>(m_geometryIndex), transform);
+        AddInstanceInfo(static_cast<std::uint32_t>(vertexSize), static_cast<std::uint32_t>(m_geometryIndex),
+                        static_cast<std::uint32_t>(-1), transform);
         m_BLAS[blasIndex].AddTriangleGeometry(primitiveCount, vertexCount, vertexSize, vertexBufferDeviceAddress,
                                               indexBufferDeviceAddress);
         m_triangleGeometryInfos.emplace_back(m_geometryIndex++, vboBuffer, vboOffset, vertexCount * vertexSize,
@@ -189,11 +207,10 @@ namespace vkfw_core::gfx::rt {
         layout.AddBinding(bindingAS, vk::DescriptorType::eAccelerationStructureKHR, 1, shaderFlags);
     }
 
-    void AccelerationStructureGeometry::AddDescriptorLayoutBindingBuffers(DescriptorSetLayout& layout,
-                                                                          vk::ShaderStageFlags shaderFlags,
-                                                                          std::uint32_t bindingVBO,
-                                                                          std::uint32_t bindingIBO,
-                                                                          std::uint32_t bindingInstanceBuffer)
+    void AccelerationStructureGeometry::AddDescriptorLayoutBindingBuffers(
+        DescriptorSetLayout& layout, vk::ShaderStageFlags shaderFlags, std::uint32_t bindingVBO,
+        std::uint32_t bindingIBO, std::uint32_t bindingInstanceBuffer, std::uint32_t bindingDiffuseTexture,
+        std::uint32_t bindingBumpTexture)
     {
         layout.AddBinding(bindingVBO, vk::DescriptorType::eStorageBuffer,
                           static_cast<std::uint32_t>(m_triangleGeometryInfos.size() + m_meshGeometryInfos.size()),
@@ -202,6 +219,10 @@ namespace vkfw_core::gfx::rt {
                           static_cast<std::uint32_t>(m_triangleGeometryInfos.size() + m_meshGeometryInfos.size()),
                           shaderFlags);
         layout.AddBinding(bindingInstanceBuffer, vk::DescriptorType::eStorageBuffer, 1, shaderFlags);
+        layout.AddBinding(bindingDiffuseTexture, vk::DescriptorType::eCombinedImageSampler,
+                          static_cast<std::uint32_t>(m_materials.size()), shaderFlags);
+        layout.AddBinding(bindingBumpTexture, vk::DescriptorType::eCombinedImageSampler,
+                          static_cast<std::uint32_t>(m_materials.size()), shaderFlags);
     }
 
     void AccelerationStructureGeometry::FillDescriptorAccelerationStructureInfo(
@@ -211,9 +232,10 @@ namespace vkfw_core::gfx::rt {
         descInfo.setPAccelerationStructures(&m_TLAS.GetAccelerationStructure());
     }
 
-    void AccelerationStructureGeometry::FillDescriptorBuffersInfo(std::vector<vk::DescriptorBufferInfo>& vboBufferInfos,
-                                                                  std::vector<vk::DescriptorBufferInfo>& iboBufferInfos,
-                                                                  vk::DescriptorBufferInfo& instanceBufferInfo) const
+    void AccelerationStructureGeometry::FillDescriptorBuffersInfo(
+        std::vector<vk::DescriptorBufferInfo>& vboBufferInfos, std::vector<vk::DescriptorBufferInfo>& iboBufferInfos,
+        vk::DescriptorBufferInfo& instanceBufferInfo, std::vector<vk::DescriptorImageInfo>& diffuseTextureInfos,
+        std::vector<vk::DescriptorImageInfo>& bumpTextureInfos) const
     {
         auto vboIOffset = vboBufferInfos.size();
         auto iboIOffset = iboBufferInfos.size();
@@ -239,6 +261,26 @@ namespace vkfw_core::gfx::rt {
         instanceBufferInfo.setBuffer(m_memGroup.GetBuffer(m_instanceBufferIndex)->GetBuffer());
         instanceBufferInfo.setOffset(0);
         instanceBufferInfo.setRange(VK_WHOLE_SIZE);
+
+        for (const auto& mat : m_materials) {
+            if (mat.m_diffuseTexture) {
+                diffuseTextureInfos.emplace_back(*m_textureSampler, mat.m_diffuseTexture->GetTexture().GetImageView(),
+                                                 vk::ImageLayout::eShaderReadOnlyOptimal);
+            } else {
+                diffuseTextureInfos.emplace_back(*m_textureSampler,
+                                                 m_device->GetDummyTexture()->GetTexture().GetImageView(),
+                                                 vk::ImageLayout::eShaderReadOnlyOptimal);
+            }
+
+            if (mat.m_bumpMap) {
+                bumpTextureInfos.emplace_back(*m_textureSampler, mat.m_bumpMap->GetTexture().GetImageView(),
+                                              vk::ImageLayout::eShaderReadOnlyOptimal);
+            } else {
+                bumpTextureInfos.emplace_back(*m_textureSampler,
+                                              m_device->GetDummyTexture()->GetTexture().GetImageView(),
+                                              vk::ImageLayout::eShaderReadOnlyOptimal);
+            }
+        }
     }
 
 }

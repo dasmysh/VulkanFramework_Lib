@@ -43,7 +43,8 @@ namespace vkfw_core {
         this->InitWindow();
 
         vk::PhysicalDeviceBufferDeviceAddressFeatures enabledBufferDeviceAddresFeatures{VK_TRUE};
-        vk::PhysicalDeviceRayTracingFeaturesKHR enabledRayTracingFeatures{VK_TRUE};
+        vk::PhysicalDeviceRayTracingPipelineFeaturesKHR enabledRayTracingPipelineFeatures{VK_TRUE};
+        vk::PhysicalDeviceAccelerationStructureFeaturesKHR enabledAccelerationStructureFeatures{VK_TRUE};
         std::vector<std::string> reqDeviceExtensions = requiredDeviceExtensions;
         if (m_config->m_useRayTracing) {
             if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
@@ -59,9 +60,15 @@ namespace vkfw_core {
             }
 
             if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
-                          VK_KHR_RAY_TRACING_EXTENSION_NAME)
+                          VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
                 == requiredDeviceExtensions.end()) {
-                reqDeviceExtensions.emplace_back(VK_KHR_RAY_TRACING_EXTENSION_NAME);
+                reqDeviceExtensions.emplace_back(VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME);
+            }
+
+            if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
+                          VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME)
+                == requiredDeviceExtensions.end()) {
+                reqDeviceExtensions.emplace_back(VK_KHR_ACCELERATION_STRUCTURE_EXTENSION_NAME);
             }
 
             if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
@@ -90,10 +97,11 @@ namespace vkfw_core {
 
             // there is no way to check the next chain, so we just add and hope it is fine :).
             enabledBufferDeviceAddresFeatures.pNext = deviceFeaturesNextChain;
-            enabledRayTracingFeatures.pNext = &enabledBufferDeviceAddresFeatures;
+            enabledAccelerationStructureFeatures.pNext = &enabledBufferDeviceAddresFeatures;
+            enabledRayTracingPipelineFeatures.pNext = &enabledAccelerationStructureFeatures;
         }
 
-        this->InitVulkan(reqDeviceExtensions, &enabledRayTracingFeatures);
+        this->InitVulkan(reqDeviceExtensions, &enabledRayTracingPipelineFeatures);
         if (useGUI) { InitGUI(); }
     }
 

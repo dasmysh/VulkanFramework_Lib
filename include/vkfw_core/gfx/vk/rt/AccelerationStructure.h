@@ -33,13 +33,12 @@ namespace vkfw_core::gfx::rt {
 
     protected:
         vkfw_core::gfx::LogicalDevice* GetDevice() { return m_device; }
-        void AddGeometry(const vk::AccelerationStructureCreateGeometryTypeInfoKHR& typeInfo,
-                         const vk::AccelerationStructureGeometryKHR& geometry,
-                         const vk::AccelerationStructureBuildOffsetInfoKHR& buildOffset);
+        void AddGeometry(const vk::AccelerationStructureGeometryKHR& geometry,
+                         const vk::AccelerationStructureBuildRangeInfoKHR& buildRange);
 
     private:
         std::unique_ptr<vkfw_core::gfx::DeviceBuffer> CreateAccelerationStructureScratchBuffer() const;
-        void CreateAccelerationStructure(const vk::AccelerationStructureCreateInfoKHR& info);
+        void CreateAccelerationStructure();
 
         /** The device to create the acceleration structures in. */
         vkfw_core::gfx::LogicalDevice* m_device;
@@ -48,19 +47,19 @@ namespace vkfw_core::gfx::rt {
         vk::AccelerationStructureTypeKHR m_type;
         /** The acceleration structure flags. */
         vk::BuildAccelerationStructureFlagsKHR m_flags;
+        /** The acceleration structures memory requirements. */
+        vk::AccelerationStructureBuildSizesInfoKHR m_memoryRequirements;
 
         /** The actual vulkan acceleration structure object. */
         vk::UniqueAccelerationStructureKHR m_vkAccelerationStructure;
-        /** The device memory containing the acceleration structure. */
-        vk::UniqueDeviceMemory m_memory;
+        /** The device buffer containing the acceleration structure. */
+        std::unique_ptr<vkfw_core::gfx::DeviceBuffer> m_buffer;
         /** The handle of the acceleration structure. */
         vk::DeviceAddress m_handle = 0;
 
-        /** The geometry types contained in the acceleration structure. */
-        std::vector<vk::AccelerationStructureCreateGeometryTypeInfoKHR> m_geometryTypeInfos;
         /** The geometries contained in the acceleration structure. */
         std::vector<vk::AccelerationStructureGeometryKHR> m_geometries;
         /** The build offsets of the geometries. */
-        std::vector<vk::AccelerationStructureBuildOffsetInfoKHR> m_buildOffsets;
+        std::vector<vk::AccelerationStructureBuildRangeInfoKHR> m_buildRanges;
     };
 }

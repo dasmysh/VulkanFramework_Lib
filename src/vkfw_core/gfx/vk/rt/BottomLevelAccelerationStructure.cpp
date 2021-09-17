@@ -30,21 +30,18 @@ namespace vkfw_core::gfx::rt {
         vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress,
         vk::DeviceOrHostAddressConstKHR transformDeviceAddress /*= nullptr*/)
     {
-        vk::Bool32 hasTransform = (transformDeviceAddress.hostAddress == nullptr) ? VK_FALSE : VK_TRUE;
-        vk::AccelerationStructureCreateGeometryTypeInfoKHR geometryTypeInfo{
-            vk::GeometryTypeKHR::eTriangles, static_cast<std::uint32_t>(primitiveCount),
-            vk::IndexType::eUint32,          static_cast<std::uint32_t>(vertexCount),
-            vk::Format::eR32G32B32Sfloat,    hasTransform};
-
         vk::AccelerationStructureGeometryTrianglesDataKHR asGeometryDataTriangles{
-            vk::Format::eR32G32B32Sfloat, vertexBufferDeviceAddress, vertexSize,
+            vk::Format::eR32G32B32Sfloat,
+            vertexBufferDeviceAddress,
+            vertexSize,
+            static_cast<std::uint32_t>(vertexCount - 1),
             vk::IndexType::eUint32,       indexBufferDeviceAddress,  transformDeviceAddress};
         vk::AccelerationStructureGeometryDataKHR asGeometryData{asGeometryDataTriangles};
         vk::AccelerationStructureGeometryKHR asGeometry{vk::GeometryTypeKHR::eTriangles, asGeometryData,
                                                         vk::GeometryFlagBitsKHR::eOpaque};
-        vk::AccelerationStructureBuildOffsetInfoKHR asBuildOffset{static_cast<std::uint32_t>(primitiveCount), 0x0, 0,
-                                                                  0x0};
-        AddGeometry(geometryTypeInfo, asGeometry, asBuildOffset);
+        vk::AccelerationStructureBuildRangeInfoKHR asBuildRange{static_cast<std::uint32_t>(primitiveCount), 0x0, 0,
+                                                                0x0};
+        AddGeometry(asGeometry, asBuildRange);
     }
 
 }

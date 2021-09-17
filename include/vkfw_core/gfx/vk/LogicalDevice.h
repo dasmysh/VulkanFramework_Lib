@@ -87,15 +87,20 @@ namespace vkfw_core::gfx {
 
         [[nodiscard]] const cfg::WindowCfg& GetWindowCfg() const { return m_windowCfg; }
         [[nodiscard]] const vk::PhysicalDeviceProperties& GetDeviceProperties() const { return m_deviceProperties; }
-        [[nodiscard]] const vk::PhysicalDeviceRayTracingPropertiesKHR& GetDeviceRayTracingProperties() const { assert(m_windowCfg.m_useRayTracing); return m_raytracingProperties; }
+        [[nodiscard]] const vk::PhysicalDeviceRayTracingPipelinePropertiesKHR&
+        GetDeviceRayTracingPipelineProperties() const { assert(m_windowCfg.m_useRayTracing); return m_raytracingPipelineProperties; }
+        [[nodiscard]] const vk::PhysicalDeviceAccelerationStructurePropertiesKHR&
+        GetDeviceAccelerationStructureProperties() const { assert(m_windowCfg.m_useRayTracing); return m_accelerationStructureProperties; }
         [[nodiscard]] const vk::PhysicalDeviceFeatures& GetDeviceFeatures() const { return m_deviceFeatures; }
-        [[nodiscard]] const vk::PhysicalDeviceRayTracingFeaturesKHR& GetDeviceRayTracingFeatures() const { assert(m_windowCfg.m_useRayTracing); return m_raytracingFeatures; }
+        [[nodiscard]] const vk::PhysicalDeviceRayTracingPipelineFeaturesKHR& GetDeviceRayTracingPipelineFeatures() const { assert(m_windowCfg.m_useRayTracing); return m_raytracingPipelineFeatures; }
+        [[nodiscard]] const vk::PhysicalDeviceAccelerationStructureFeaturesKHR& GetDeviceAccelerationStructureFeatures() const { assert(m_windowCfg.m_useRayTracing); return m_accelerationStructureFeatures; }
         [[nodiscard]] ShaderManager* GetShaderManager() const { return m_shaderManager.get(); }
         [[nodiscard]] TextureManager* GetTextureManager() const { return m_textureManager.get(); }
         [[nodiscard]] Texture2D* GetDummyTexture() const { return m_dummyTexture.get(); }
 
         [[nodiscard]] std::size_t CalculateUniformBufferAlignment(std::size_t size) const;
         [[nodiscard]] std::size_t CalculateStorageBufferAlignment(std::size_t size) const;
+        [[nodiscard]] std::size_t CalculateASScratchBufferBufferAlignment(std::size_t size) const;
         [[nodiscard]] std::size_t CalculateBufferImageOffset(const Texture& second, std::size_t currentOffset) const;
         [[nodiscard]] std::size_t CalculateImageImageOffset(const Texture& first, const Texture& second,
                                                             std::size_t currentOffset) const;
@@ -124,12 +129,16 @@ namespace vkfw_core::gfx {
 
         /** The properties of the device. */
         vk::PhysicalDeviceProperties m_deviceProperties;
-        /** The raytracing properties for the device. */
-        vk::PhysicalDeviceRayTracingPropertiesKHR m_raytracingProperties;
+        /** The ray tracing pipeline properties for the device. */
+        vk::PhysicalDeviceRayTracingPipelinePropertiesKHR m_raytracingPipelineProperties;
+        /** The acceleration structure properties for the device. */
+        vk::PhysicalDeviceAccelerationStructurePropertiesKHR m_accelerationStructureProperties;
         /** The features of the device. */
         vk::PhysicalDeviceFeatures m_deviceFeatures;
-        /** The raytracing features of the device. */
-        vk::PhysicalDeviceRayTracingFeaturesKHR m_raytracingFeatures;
+        /** The ray tracing pipeline features of the device. */
+        vk::PhysicalDeviceRayTracingPipelineFeaturesKHR m_raytracingPipelineFeatures;
+        /** The acceleration structure features of the device. */
+        vk::PhysicalDeviceAccelerationStructureFeaturesKHR m_accelerationStructureFeatures;
 
         /** Holds the queue descriptions. */
         std::vector<DeviceQueueDesc> m_queueDescriptions;

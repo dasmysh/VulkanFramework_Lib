@@ -13,6 +13,7 @@
 #include "gfx/vk/rt/BottomLevelAccelerationStructure.h"
 #include "gfx/vk/rt/TopLevelAccelerationStructure.h"
 #include "gfx/vk/rt/AccelerationStructure.h"
+#include "gfx/Material.h"
 #include "gfx/vk/memory/MemoryGroup.h"
 #include "core/concepts.h"
 #include <glm/mat4x4.hpp>
@@ -35,6 +36,10 @@ namespace vkfw_core::gfx::rt {
         AccelerationStructureGeometry(LogicalDevice* device);
         ~AccelerationStructureGeometry();
 
+        void AddTriangleGeometry(const glm::mat4& transform, std::size_t primitiveCount, std::size_t vertexCount,
+                                 std::size_t vertexSize, const DeviceBuffer* vbo, std::size_t vboOffset = 0,
+                                 const DeviceBuffer* ibo = nullptr, std::size_t iboOffset = 0);
+
         // there are 2 options to add meshes:
         // 1: each mesh can have a different vertex type.
         template<Vertex VertexType>
@@ -45,29 +50,20 @@ namespace vkfw_core::gfx::rt {
         void AddMeshGeometry(const MeshInfo& mesh, const glm::mat4& transform);
         template<Vertex VertexType> void FinalizeGeometry();
 
-        // [[nodiscard]] BottomLevelAccelerationStructure& GetBottomLevelAccelerationStructure(std::size_t index)
-        // {
-        //     return m_BLAS[index];
-        // }
-        // [[nodiscard]] glm::mat3x4& GetBottomLevelAccelerationStructureTransform(std::size_t index)
-        // {
-        //     return m_BLASTransforms[index];
-        // }
-        void AddTriangleGeometry(const glm::mat4& transform, std::size_t primitiveCount, std::size_t vertexCount,
-                                 std::size_t vertexSize, const DeviceBuffer* vbo, std::size_t vboOffset = 0,
-                                 const DeviceBuffer* ibo = nullptr, std::size_t iboOffset = 0);
-
         void BuildAccelerationStructure();
 
         void AddDescriptorLayoutBindingAS(DescriptorSetLayout& layout, vk::ShaderStageFlags shaderFlags,
                                           std::uint32_t bindingAS);
         void AddDescriptorLayoutBindingBuffers(DescriptorSetLayout& layout, vk::ShaderStageFlags shaderFlags,
                                                std::uint32_t bindingVBO, std::uint32_t bindingIBO,
-                                               std::uint32_t bindingInstanceBuffer);
+                                               std::uint32_t bindingInstanceBuffer, std::uint32_t bindingDiffuseTexture,
+                                               std::uint32_t bindingBumpTexture);
         void FillDescriptorAccelerationStructureInfo(vk::WriteDescriptorSetAccelerationStructureKHR& descInfo) const;
         void FillDescriptorBuffersInfo(std::vector<vk::DescriptorBufferInfo>& vboBufferInfos,
                                        std::vector<vk::DescriptorBufferInfo>& iboBufferInfos,
-                                       vk::DescriptorBufferInfo& instanceBufferInfo) const;
+                                       vk::DescriptorBufferInfo& instanceBufferInfo,
+                                       std::vector<vk::DescriptorImageInfo>& diffuseTextureInfos,
+                                       std::vector<vk::DescriptorImageInfo>& bumpTextureInfos) const;
 
     private:
         struct MeshGeometryInfo
@@ -98,9 +94,9 @@ namespace vkfw_core::gfx::rt {
 
         struct InstanceInfo
         {
+            std::uint32_t vertexSize = 0;
             std::uint32_t bufferIndex = 0;
-            std::uint32_t materialIndex = 0;
-            std::uint32_t textureIndex = 0;
+            std::uint32_t materialIndex = static_cast<std::uint32_t>(-1);
             std::uint32_t indexOffset = 0;
             glm::mat4 transform = glm::mat4{1.0f};
             glm::mat4 transformInverseTranspose = glm::mat4{1.0f};
@@ -109,8 +105,10 @@ namespace vkfw_core::gfx::rt {
         void AddInstanceBufferAndTransferMemGroup();
         [[nodiscard]] std::size_t AddBottomLevelAccelerationStructure(std::uint32_t bufferIndex,
                                                                       const glm::mat3x4& transform);
-        void AddInstanceInfo(std::uint32_t bufferIndex, const glm::mat4& transform, std::uint32_t indexOffset = 0);
-        void AddMeshNodeInstance(const MeshGeometryInfo& mesh, const SceneMeshNode* node, const glm::mat4& transform);
+        void AddInstanceInfo(std::uint32_t vertexSize, std::uint32_t bufferIndex, std::uint32_t materialIndex,
+                             const glm::mat4& transform, std::uint32_t indexOffset = 0);
+        void AddMeshNodeInstance(const MeshGeometryInfo& mesh, const SceneMeshNode* node, const glm::mat4& transform,
+                                 std::uint32_t materialOffset);
         void AddMeshNodeGeometry(const MeshGeometryInfo& mesh, const SceneMeshNode* node, const glm::mat4& transform);
         void AddSubMeshGeometry(const MeshGeometryInfo& mesh, const SubMesh& subMesh, const glm::mat4& transform);
 
@@ -123,6 +121,8 @@ namespace vkfw_core::gfx::rt {
         std::vector<glm::mat3x4> m_BLASTransforms;
         /** The top level acceleration structure for the scene. */
         TopLevelAccelerationStructure m_TLAS;
+        /** The sampler for the materials textures. */
+        vk::UniqueSampler m_textureSampler;
 
         /** Holds the memory for geometry if needed. */
         MemoryGroup m_memGroup;
@@ -138,6 +138,8 @@ namespace vkfw_core::gfx::rt {
         std::vector<InstanceInfo> m_instanceInfos;
         /** The index to the instances buffer. */
         std::uint32_t m_instanceBufferIndex = 0;
+        /** Holds the materials. */
+        std::vector<Material> m_materials;
     };
 
     template<Vertex VertexType> void AccelerationStructureGeometry::FinalizeGeometry()

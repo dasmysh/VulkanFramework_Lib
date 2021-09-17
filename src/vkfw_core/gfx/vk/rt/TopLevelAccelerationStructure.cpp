@@ -32,13 +32,8 @@ namespace vkfw_core::gfx::rt {
 
     void TopLevelAccelerationStructure::BuildAccelerationStructure()
     {
-        vkfw_core::gfx::HostBuffer instancesBuffer{GetDevice(), vk::BufferUsageFlagBits::eShaderDeviceAddress};
+        vkfw_core::gfx::HostBuffer instancesBuffer{GetDevice(), vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR};
         instancesBuffer.InitializeData(m_blasInstances);
-
-        vk::AccelerationStructureCreateGeometryTypeInfoKHR geometryTypeInfo{
-            vk::GeometryTypeKHR::eInstances, static_cast<std::uint32_t>(m_blasInstances.size()),
-            vk::IndexType::eUint32,          0,
-            vk::Format::eUndefined,          VK_FALSE};
 
         vk::AccelerationStructureGeometryInstancesDataKHR asGeometryDataInstances{
             VK_FALSE, instancesBuffer.GetDeviceAddressConst()};
@@ -47,10 +42,10 @@ namespace vkfw_core::gfx::rt {
         vk::AccelerationStructureGeometryKHR asGeometry{vk::GeometryTypeKHR::eInstances, asGeometryData,
                                                         vk::GeometryFlagBitsKHR::eOpaque};
 
-        vk::AccelerationStructureBuildOffsetInfoKHR asBuildOffset{static_cast<std::uint32_t>(m_blasInstances.size()),
+        vk::AccelerationStructureBuildRangeInfoKHR asBuildRange{static_cast<std::uint32_t>(m_blasInstances.size()),
                                                                   0x0, 0, 0x0};
 
-        AddGeometry(geometryTypeInfo, asGeometry, asBuildOffset);
+        AddGeometry(asGeometry, asBuildRange);
 
         AccelerationStructure::BuildAccelerationStructure();
     }
