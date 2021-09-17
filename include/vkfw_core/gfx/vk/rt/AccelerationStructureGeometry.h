@@ -159,10 +159,11 @@ namespace vkfw_core::gfx::rt {
 
             const std::size_t bufferSize = meshInfo.iboOffset + meshInfo.iboRange;
 
-            meshInfo.bufferIndex = m_memGroup.AddBufferToGroup(
-                vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer
-                    | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eStorageBuffer,
-                bufferSize, std::vector<std::uint32_t>{{0, 1}});
+            meshInfo.bufferIndex =
+                m_memGroup.AddBufferToGroup(vk::BufferUsageFlagBits::eShaderDeviceAddress
+                                                | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR
+                                                | vk::BufferUsageFlagBits::eStorageBuffer,
+                                            bufferSize, std::vector<std::uint32_t>{{0, 1}});
             m_memGroup.AddDataToBufferInGroup(meshInfo.bufferIndex, meshInfo.vboOffset, vertices[i_mesh]);
             m_memGroup.AddDataToBufferInGroup(meshInfo.bufferIndex, meshInfo.iboOffset, indices[i_mesh]);
 

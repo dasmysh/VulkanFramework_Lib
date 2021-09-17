@@ -81,10 +81,12 @@ namespace vkfw_core::gfx {
         }
 
         {
-            spdlog::info("VK Device Extensions:");
             auto extensions = m_vkPhysicalDevice.enumerateDeviceExtensionProperties();
-            for (const auto& extension : extensions) {
-                spdlog::info("- {}[SpecVersion: {}]", extension.extensionName, extension.specVersion);
+            if constexpr (verbose_feature_logging) {
+                spdlog::info("VK Device Extensions:");
+                for (const auto& extension : extensions) {
+                    spdlog::info("- {}[SpecVersion: {}]", extension.extensionName, extension.specVersion);
+                }
             }
 
             enabledDeviceExtensions.resize(requiredDeviceExtensions.size());

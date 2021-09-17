@@ -33,4 +33,10 @@ namespace vkfw_core {
 #else
     constexpr bool use_debug_pipeline = false;
 #endif
+
+#ifdef VKFW_DEBUG_VERBOSE_FEATURE_LOGGING
+    constexpr bool verbose_feature_logging = true;
+#else
+    constexpr bool verbose_feature_logging = false;
+#endif
 }

@@ -108,15 +108,15 @@ namespace vkfw_core::gfx {
     vk::DeviceOrHostAddressConstKHR Buffer::GetDeviceAddressConst() const
     {
         assert(IsShaderDeviceAddress());
-        vk::BufferDeviceAddressInfoKHR bufferAddressInfo{ m_buffer.get() };
-        return m_device->GetDevice().getBufferAddressKHR(bufferAddressInfo);
+        vk::BufferDeviceAddressInfo bufferAddressInfo{ m_buffer.get() };
+        return m_device->GetDevice().getBufferAddress(bufferAddressInfo);
     }
 
     vk::DeviceOrHostAddressKHR Buffer::GetDeviceAddress()
     {
         assert(IsShaderDeviceAddress());
-        vk::BufferDeviceAddressInfoKHR bufferAddressInfo{m_buffer.get()};
-        return m_device->GetDevice().getBufferAddressKHR(bufferAddressInfo);
+        vk::BufferDeviceAddressInfo bufferAddressInfo{m_buffer.get()};
+        return m_device->GetDevice().getBufferAddress(bufferAddressInfo);
     }
 
 }

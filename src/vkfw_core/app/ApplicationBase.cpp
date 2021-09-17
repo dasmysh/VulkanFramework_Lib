@@ -21,6 +21,7 @@
 #include <GLFW/glfw3.h>
 #include <fstream>
 #include <set>
+#include <string_view>
 #include <cereal/archives/xml.hpp>
 #include <glm/common.hpp>
 
@@ -58,6 +59,8 @@ namespace vkfw_core {
         } else if ((flags & static_cast<unsigned int>(VK_DEBUG_REPORT_ERROR_BIT_EXT)) != 0) {
             vkLogLevel = spdlog::level::level_enum::err;
         }
+        using namespace std::literals;
+        if ("Loader Message"sv == layerPrefix) return VK_FALSE;
 
         if (performanceFlag) {
             spdlog::log(vkLogLevel, "PERFORMANCE: [{}] Code {} : {}", layerPrefix, code, msg);
@@ -425,10 +428,12 @@ namespace vkfw_core {
 
     void ApplicationBase::CheckVKInstanceExtensions(const std::vector<const char*>& enabledExtensions)
     {
-        spdlog::info("VK Instance Extensions:");
         auto extensions = vk::enumerateInstanceExtensionProperties();
-        for (const auto& extension : extensions) {
-            spdlog::info("- {}[SpecVersion: {}]", extension.extensionName, extension.specVersion);
+        if constexpr (verbose_feature_logging) {
+            spdlog::info("VK Instance Extensions:");
+            for (const auto& extension : extensions) {
+                spdlog::info("- {}[SpecVersion: {}]", extension.extensionName, extension.specVersion);
+            }
         }
 
         for (const auto& enabledExt : enabledExtensions) {
@@ -443,11 +448,13 @@ namespace vkfw_core {
 
     void ApplicationBase::CheckVKInstanceLayers()
     {
-        spdlog::info("VK Instance Layers:");
         auto layers = vk::enumerateInstanceLayerProperties();
-        for (const auto& layer : layers) {
-            spdlog::info("- {}[SpecVersion: {}, ImplVersion: {}]", layer.layerName, layer.specVersion,
-                         layer.implementationVersion);
+        if constexpr (verbose_feature_logging) {
+            spdlog::info("VK Instance Layers:");
+            for (const auto& layer : layers) {
+                spdlog::info("- {}[SpecVersion: {}, ImplVersion: {}]", layer.layerName, layer.specVersion,
+                             layer.implementationVersion);
+            }
         }
 
         for (const auto& enabledLayer : m_vkValidationLayers) {

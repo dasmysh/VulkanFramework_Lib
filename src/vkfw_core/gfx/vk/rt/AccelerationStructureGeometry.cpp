@@ -44,8 +44,8 @@ namespace vkfw_core::gfx::rt {
         for (auto& meshInfo : m_meshGeometryInfos) {
             const std::size_t bufferSize = meshInfo.iboOffset + meshInfo.iboRange;
             meshInfo.bufferIndex = m_memGroup.AddBufferToGroup(
-                vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer
-                    | vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eStorageBuffer,
+                vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR
+                    | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
                 bufferSize, std::vector<std::uint32_t>{{0, 1}});
             m_memGroup.AddDataToBufferInGroup(meshInfo.bufferIndex, meshInfo.vboOffset, meshInfo.vertices);
             m_memGroup.AddDataToBufferInGroup(meshInfo.bufferIndex, meshInfo.iboOffset, meshInfo.indices);
@@ -71,8 +71,11 @@ namespace vkfw_core::gfx::rt {
 
     void AccelerationStructureGeometry::AddInstanceBufferAndTransferMemGroup()
     {
-        m_instanceBufferIndex = m_memGroup.AddBufferToGroup(vk::BufferUsageFlagBits::eStorageBuffer, m_instanceInfos,
-                                                            std::vector<std::uint32_t>{{0, 1}});
+        m_instanceBufferIndex =
+            m_memGroup.AddBufferToGroup(vk::BufferUsageFlagBits::eShaderDeviceAddress
+                                            | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR
+                                            | vk::BufferUsageFlagBits::eStorageBuffer,
+                                        m_instanceInfos, std::vector<std::uint32_t>{{0, 1}});
 
         vkfw_core::gfx::QueuedDeviceTransfer transfer{m_device, std::make_pair(0, 0)};
         m_memGroup.FinalizeDeviceGroup();

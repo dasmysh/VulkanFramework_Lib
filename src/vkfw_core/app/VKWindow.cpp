@@ -42,23 +42,16 @@ namespace vkfw_core {
         m_windowData = std::make_unique<ImGui_ImplVulkanH_WindowData>();
         this->InitWindow();
 
-        vk::PhysicalDeviceBufferDeviceAddressFeatures enabledBufferDeviceAddresFeatures{VK_TRUE};
+        vk::PhysicalDeviceVulkan12Features enableVulkan12Features;
+        enableVulkan12Features.setBufferDeviceAddress(true);
+        enableVulkan12Features.setDescriptorIndexing(true);
+        enableVulkan12Features.setScalarBlockLayout(true);
+        enableVulkan12Features.setRuntimeDescriptorArray(true);
+        enableVulkan12Features.setShaderStorageBufferArrayNonUniformIndexing(true);
         vk::PhysicalDeviceRayTracingPipelineFeaturesKHR enabledRayTracingPipelineFeatures{VK_TRUE};
         vk::PhysicalDeviceAccelerationStructureFeaturesKHR enabledAccelerationStructureFeatures{VK_TRUE};
         std::vector<std::string> reqDeviceExtensions = requiredDeviceExtensions;
         if (m_config->m_useRayTracing) {
-            if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
-                          VK_KHR_MAINTENANCE3_EXTENSION_NAME)
-                == requiredDeviceExtensions.end()) {
-                reqDeviceExtensions.emplace_back(VK_KHR_MAINTENANCE3_EXTENSION_NAME);
-            }
-
-            if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
-                          VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME)
-                == requiredDeviceExtensions.end()) {
-                reqDeviceExtensions.emplace_back(VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
-            }
-
             if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
                           VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
                 == requiredDeviceExtensions.end()) {
@@ -72,21 +65,9 @@ namespace vkfw_core {
             }
 
             if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
-                          VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME)
-                == requiredDeviceExtensions.end()) {
-                reqDeviceExtensions.emplace_back(VK_KHR_BUFFER_DEVICE_ADDRESS_EXTENSION_NAME);
-            }
-
-            if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
                           VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME)
                 == requiredDeviceExtensions.end()) {
                 reqDeviceExtensions.emplace_back(VK_KHR_DEFERRED_HOST_OPERATIONS_EXTENSION_NAME);
-            }
-
-            if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
-                          VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME)
-                == requiredDeviceExtensions.end()) {
-                reqDeviceExtensions.emplace_back(VK_EXT_DESCRIPTOR_INDEXING_EXTENSION_NAME);
             }
 
             if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
@@ -96,12 +77,14 @@ namespace vkfw_core {
             }
 
             // there is no way to check the next chain, so we just add and hope it is fine :).
-            enabledBufferDeviceAddresFeatures.pNext = deviceFeaturesNextChain;
-            enabledAccelerationStructureFeatures.pNext = &enabledBufferDeviceAddresFeatures;
+            enabledAccelerationStructureFeatures.pNext = deviceFeaturesNextChain;
             enabledRayTracingPipelineFeatures.pNext = &enabledAccelerationStructureFeatures;
+            enableVulkan12Features.pNext = &enabledRayTracingPipelineFeatures;
+        } else {
+            enableVulkan12Features.pNext = deviceFeaturesNextChain;
         }
 
-        this->InitVulkan(reqDeviceExtensions, &enabledRayTracingPipelineFeatures);
+        this->InitVulkan(reqDeviceExtensions, &enableVulkan12Features);
         if (useGUI) { InitGUI(); }
     }
 

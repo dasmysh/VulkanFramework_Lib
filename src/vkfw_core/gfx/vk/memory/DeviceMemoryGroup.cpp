@@ -93,7 +93,7 @@ namespace vkfw_core::gfx {
                 images[i], offsets[i + buffers.size()], allocInfo);
         }
 
-        vk::MemoryAllocateFlagsInfoKHR allocateFlagsInfo{};
+        vk::MemoryAllocateFlagsInfo allocateFlagsInfo{};
         if (shaderDeviceAddress) {
             allocateFlagsInfo.flags = vk::MemoryAllocateFlagBits::eDeviceAddress;
             allocInfo.pNext = &allocateFlagsInfo;
