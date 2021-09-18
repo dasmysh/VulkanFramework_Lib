@@ -44,6 +44,8 @@ namespace vkfw_core {
      */
     static VKAPI_ATTR VkBool32 VKAPI_CALL DebugOutputCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT,
         std::uint64_t, std::size_t, std::int32_t code, const char* layerPrefix, const char* msg, void*) {
+        using namespace std::literals;
+        if ("Loader Message"sv == layerPrefix) return VK_FALSE;
 
         auto vkLogLevel = spdlog::level::level_enum::trace;
         bool performanceFlag = false;
@@ -59,8 +61,6 @@ namespace vkfw_core {
         } else if ((flags & static_cast<unsigned int>(VK_DEBUG_REPORT_ERROR_BIT_EXT)) != 0) {
             vkLogLevel = spdlog::level::level_enum::err;
         }
-        using namespace std::literals;
-        if ("Loader Message"sv == layerPrefix) return VK_FALSE;
 
         if (performanceFlag) {
             spdlog::log(vkLogLevel, "PERFORMANCE: [{}] Code {} : {}", layerPrefix, code, msg);

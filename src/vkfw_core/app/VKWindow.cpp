@@ -39,7 +39,7 @@ namespace vkfw_core {
         m_maximized(conf.m_fullscreen),
         m_frameCount(0)
     {
-        m_windowData = std::make_unique<ImGui_ImplVulkanH_WindowData>();
+        m_windowData = std::make_unique<ImGui_ImplVulkanH_Window>();
         this->InitWindow();
 
         vk::PhysicalDeviceVulkan12Features enableVulkan12Features;
@@ -107,7 +107,6 @@ namespace vkfw_core {
         m_currentlyRenderedImage{ rhs.m_currentlyRenderedImage },
         m_vkImguiDescPool{ std::move(rhs.m_vkImguiDescPool) },
         m_windowData{ std::move(rhs.m_windowData) },
-        m_glfwWindowData{ rhs.m_glfwWindowData },
         m_imguiVulkanData{ std::move(rhs.m_imguiVulkanData) },
         m_currMousePosition{ rhs.m_currMousePosition },
         m_prevMousePosition{ rhs.m_prevMousePosition },
@@ -119,7 +118,6 @@ namespace vkfw_core {
         m_frameCount{ rhs.m_frameCount }
     {
         rhs.m_window = nullptr;
-        rhs.m_glfwWindowData = nullptr;
     }
 
     VKWindow& VKWindow::operator=(VKWindow&& rhs) noexcept
@@ -144,7 +142,6 @@ namespace vkfw_core {
             m_currentlyRenderedImage = rhs.m_currentlyRenderedImage;
             m_vkImguiDescPool = std::move(rhs.m_vkImguiDescPool);
             m_windowData = std::move(rhs.m_windowData);
-            m_glfwWindowData = rhs.m_glfwWindowData;
             m_imguiVulkanData = std::move(rhs.m_imguiVulkanData);
             m_currMousePosition = rhs.m_currMousePosition;
             m_prevMousePosition = rhs.m_prevMousePosition;
@@ -155,7 +152,6 @@ namespace vkfw_core {
             m_focused = rhs.m_focused;
             m_frameCount = rhs.m_frameCount;
 
-            rhs.m_glfwWindowData = nullptr;
             rhs.m_window = nullptr;
         }
         return *this;
@@ -277,7 +273,7 @@ namespace vkfw_core {
 
     void VKWindow::InitGUI()
     {
-        ImGui_ImplVulkanH_WindowData* wd = m_windowData.get();
+        ImGui_ImplVulkanH_Window* wd = m_windowData.get();
 
         {
             wd->Surface = m_vkSurface.get();
@@ -297,7 +293,7 @@ namespace vkfw_core {
 
 
         // Setup GLFW binding
-        ImGui_ImplGlfw_InitForVulkan(&m_glfwWindowData, m_window);
+        ImGui_ImplGlfw_InitForVulkan(m_window, true);
 
         vk::DescriptorPoolSize imguiDescPoolSize{ vk::DescriptorType::eCombinedImageSampler, 1 };
         vk::DescriptorPoolCreateInfo imguiDescSetPoolInfo{ vk::DescriptorPoolCreateFlags(), 1, 1, &imguiDescPoolSize };
@@ -313,7 +309,12 @@ namespace vkfw_core {
         m_imguiVulkanData->PipelineCache = VK_NULL_HANDLE;
         m_imguiVulkanData->DescriptorPool = m_vkImguiDescPool.get();
         m_imguiVulkanData->Allocator = nullptr;
-        ImGui_ImplVulkan_Init(m_imguiVulkanData.get(), wd->RenderPass, m_vkImGuiCommandBuffers.size());
+        m_imguiVulkanData->CheckVkResultFn = nullptr;
+        m_imguiVulkanData->ImageCount = static_cast<std::uint32_t>(m_vkImGuiCommandBuffers.size());
+        m_imguiVulkanData->MinImageCount = static_cast<std::uint32_t>(m_vkImGuiCommandBuffers.size());
+        m_imguiVulkanData->MSAASamples = VK_SAMPLE_COUNT_1_BIT;
+        m_imguiVulkanData->Subpass = 0;
+        ImGui_ImplVulkan_Init(m_imguiVulkanData.get(), wd->RenderPass);
 
         // Setup style
         ImGui::StyleColorsDark();
@@ -341,7 +342,7 @@ namespace vkfw_core {
             vk::CommandBufferBeginInfo begin_info{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
             m_vkImGuiCommandBuffers[0]->begin(begin_info);
 
-            ImGui_ImplVulkan_CreateFontsTexture(m_imguiVulkanData.get(), command_buffer);
+            ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
 
             vk::SubmitInfo end_info{ 0, nullptr, nullptr, 1, &(*m_vkImGuiCommandBuffers[0]) };
             m_vkImGuiCommandBuffers[0]->end();
@@ -349,7 +350,7 @@ namespace vkfw_core {
 
             m_logicalDevice->GetDevice().waitIdle();
 
-            ImGui_ImplVulkan_InvalidateFontUploadObjects(m_imguiVulkanData.get());
+            ImGui_ImplVulkan_DestroyFontUploadObjects();
         }
         m_imguiInitialized = true;
     }
@@ -545,8 +546,8 @@ namespace vkfw_core {
     {
         m_logicalDevice->GetDevice().waitIdle();
 
-        ImGui_ImplVulkan_Shutdown(m_imguiVulkanData.get());
-        ImGui_ImplGlfw_Shutdown(m_glfwWindowData);
+        ImGui_ImplVulkan_Shutdown();
+        ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
 
         m_vkCmdBufferUFences.clear();
@@ -633,8 +634,8 @@ namespace vkfw_core {
 
         // Start the Dear ImGui frame
         if (ApplicationBase::instance().IsGUIMode()) {
-            ImGui_ImplVulkan_NewFrame(m_imguiVulkanData.get());
-            ImGui_ImplGlfw_NewFrame(m_glfwWindowData);
+            ImGui_ImplVulkan_NewFrame();
+            ImGui_ImplGlfw_NewFrame();
             ImGui::NewFrame();
         }
     }
@@ -674,7 +675,7 @@ namespace vkfw_core {
             }
 
             // Record ImGui Draw Data and draw funcs into command buffer
-            ImGui_ImplVulkan_RenderDrawData(m_imguiVulkanData.get(), ImGui::GetDrawData(), *m_vkImGuiCommandBuffers[m_currentlyRenderedImage]);
+            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), *m_vkImGuiCommandBuffers[m_currentlyRenderedImage]);
 
             m_vkImGuiCommandBuffers[m_currentlyRenderedImage]->endRenderPass();
             m_vkImGuiCommandBuffers[m_currentlyRenderedImage]->end();
@@ -947,7 +948,7 @@ namespace vkfw_core {
         auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         if (!win->m_imguiInitialized) return;
 
-        ImGui_ImplGlfw_MouseButtonCallback(win->m_glfwWindowData, button, action, mods);
+        // ImGui_ImplGlfw_MouseButtonCallback(win->m_glfwWindowData, button, action, mods);
 
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureMouse) {
@@ -978,7 +979,7 @@ namespace vkfw_core {
         auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         if (!win->m_imguiInitialized) return;
 
-        ImGui_ImplGlfw_ScrollCallback(win->m_glfwWindowData, xoffset, yoffset);
+        // ImGui_ImplGlfw_ScrollCallback(win->m_glfwWindowData, xoffset, yoffset);
 
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureMouse) {
@@ -991,7 +992,7 @@ namespace vkfw_core {
         auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         if (!win->m_imguiInitialized) return;
 
-        ImGui_ImplGlfw_KeyCallback(win->m_glfwWindowData, key, scancode, action, mods);
+        // ImGui_ImplGlfw_KeyCallback(win->m_glfwWindowData, key, scancode, action, mods);
 
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureKeyboard) {
@@ -1004,7 +1005,7 @@ namespace vkfw_core {
         auto win = reinterpret_cast<VKWindow*>(glfwGetWindowUserPointer(window)); // NOLINT
         if (!win->m_imguiInitialized) return;
 
-        ImGui_ImplGlfw_CharCallback(win->m_glfwWindowData, codepoint);
+        // ImGui_ImplGlfw_CharCallback(win->m_glfwWindowData, codepoint);
 
         auto& io = ImGui::GetIO();
         if (!io.WantCaptureKeyboard) {

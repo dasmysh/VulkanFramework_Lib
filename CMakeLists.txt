@@ -32,7 +32,7 @@ if (ENABLE_PCH)
   target_precompile_headers(vkfw_options INTERFACE <vector> <string> <map> <utility>)
 endif()
 
-set(IMGUI_VERSION "1.75")
+set(IMGUI_VERSION "1.84.2")
 set(GLM_VERSION "0.9.9.8")
 
 include(${CMAKE_BINARY_DIR}/vkfw_core/conanbuildinfo_multi.cmake)
@@ -54,8 +54,24 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/imgui.natvis")
   message(
     STATUS
       "Downloading imgui.natvis from https://github.com/ocornut/imgui")
-  file(DOWNLOAD "https://github.com/ocornut/imgui/raw/v${IMGUI_VERSION}/misc/natvis/imgui.natvis"
+  file(DOWNLOAD "https://github.com/ocornut/imgui/raw/v${IMGUI_VERSION}/misc/debuggers/imgui.natvis"
        "${CMAKE_BINARY_DIR}/imgui.natvis")
+endif()
+
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/imgui.gdb")
+  message(
+    STATUS
+      "Downloading imgui.gdb from https://github.com/ocornut/imgui")
+  file(DOWNLOAD "https://github.com/ocornut/imgui/raw/v${IMGUI_VERSION}/misc/debuggers/imgui.gdb"
+       "${CMAKE_BINARY_DIR}/imgui.gdb")
+endif()
+
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/imgui.natstepfilter")
+  message(
+    STATUS
+      "Downloading imgui.natstepfilter from https://github.com/ocornut/imgui")
+  file(DOWNLOAD "https://github.com/ocornut/imgui/raw/v${IMGUI_VERSION}/misc/debuggers/imgui.natstepfilter"
+       "${CMAKE_BINARY_DIR}/imgui.natstepfilter")
 endif()
 
 if(NOT EXISTS "${CMAKE_BINARY_DIR}/extern/imgui/cpp/imgui_stdlib.cpp")

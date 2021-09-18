@@ -21,8 +21,7 @@ namespace vkfw_core::gfx {
     class LogicalDevice;
 }
 
-struct ImGui_ImplVulkanH_WindowData;
-struct ImGui_GLFWWindow;
+struct ImGui_ImplVulkanH_Window;
 struct ImGui_ImplVulkan_InitInfo;
 
 namespace vkfw_core {
@@ -146,9 +145,7 @@ namespace vkfw_core {
         /** The descriptor pool for ImGUI. */
         vk::UniqueDescriptorPool m_vkImguiDescPool;
         /** ImGui window data. */
-        std::unique_ptr<ImGui_ImplVulkanH_WindowData> m_windowData;
-        /** ImGui GLFW window data. */
-        ImGui_GLFWWindow* m_glfwWindowData = nullptr;
+        std::unique_ptr<ImGui_ImplVulkanH_Window> m_windowData;
         /** ImGui vulkan data. */
         std::unique_ptr<ImGui_ImplVulkan_InitInfo> m_imguiVulkanData;
 
