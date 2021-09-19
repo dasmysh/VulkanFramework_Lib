@@ -150,8 +150,8 @@ namespace vkfw_core {
         vk::UniqueInstance m_vkInstance;
         /** Holds the dispatch loader for the instance. */
         // vk::DispatchLoaderDynamic vkDispatchLoaderInst_;
-        /** Holds the debug report callback. */
-        vk::UniqueHandle<vk::DebugReportCallbackEXT, vk::DispatchLoaderDynamic> m_vkDebugReportCB;
+        /** Holds the debug utils messenger. */
+        vk::UniqueDebugUtilsMessengerEXT m_vkDebugUtilsMessenger;
         /** Holds the physical devices. */
         std::map<unsigned int, vk::PhysicalDevice> m_vkPhysicalDevices;
         /** Holds the physical device. */

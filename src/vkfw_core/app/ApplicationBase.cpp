@@ -42,31 +42,47 @@ namespace vkfw_core {
      * @param msg the debug message
      * @param userData the user supplied data
      */
-    static VKAPI_ATTR VkBool32 VKAPI_CALL DebugOutputCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT,
-        std::uint64_t, std::size_t, std::int32_t code, const char* layerPrefix, const char* msg, void*) {
+    static VKAPI_ATTR VkBool32 VKAPI_CALL DebugOutputCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeverity,
+                                                              VkDebugUtilsMessageTypeFlagsEXT messageType,
+                                                              const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+                                                              void*) {
         using namespace std::literals;
-        if ("Loader Message"sv == layerPrefix) return VK_FALSE;
+        if ("Loader Message"sv == pCallbackData->pMessageIdName) return VK_FALSE;
 
         auto vkLogLevel = spdlog::level::level_enum::trace;
-        bool performanceFlag = false;
-        if ((flags & static_cast<unsigned int>(VK_DEBUG_REPORT_DEBUG_BIT_EXT)) != 0) {
+        if ((messageSeverity & static_cast<unsigned int>(VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT)) != 0) {
             vkLogLevel = spdlog::level::level_enum::debug;
-        } else if ((flags & static_cast<unsigned int>(VK_DEBUG_REPORT_INFORMATION_BIT_EXT)) != 0) {
+        } else if ((messageSeverity & static_cast<unsigned int>(VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT)) != 0) {
             vkLogLevel = spdlog::level::level_enum::info;
-        } else if ((flags & static_cast<unsigned int>(VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT)) != 0) {
+        } else if ((messageSeverity & static_cast<unsigned int>(VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT))
+                   != 0) {
             vkLogLevel = spdlog::level::level_enum::warn;
-            performanceFlag = true;
-        } else if ((flags & static_cast<unsigned int>(VK_DEBUG_REPORT_WARNING_BIT_EXT)) != 0) {
-            vkLogLevel = spdlog::level::level_enum::warn;
-        } else if ((flags & static_cast<unsigned int>(VK_DEBUG_REPORT_ERROR_BIT_EXT)) != 0) {
+        } else if ((messageSeverity & static_cast<unsigned int>(VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT)) != 0) {
             vkLogLevel = spdlog::level::level_enum::err;
         }
 
-        if (performanceFlag) {
-            spdlog::log(vkLogLevel, "PERFORMANCE: [{}] Code {} : {}", layerPrefix, code, msg);
+        std::string_view messageTypeString;
+        if ((messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT) != 0) {
+            messageTypeString = "Performance";
+        } else if ((messageType & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) != 0) {
+            messageTypeString = "Validation";
         } else {
-            spdlog::log(vkLogLevel, " [{}] Code {} : {}", layerPrefix, code, msg);
+            messageTypeString = "General";
         }
+
+        std::string objectsString = pCallbackData->objectCount == 0 ? "" : "\nVulkan Objects:";
+        for (std::uint32_t i = 0; i < pCallbackData->objectCount; ++i) {
+            objectsString = fmt::format("{}\n  {}: 0x{:0<#16x} ()", objectsString,
+                                        vk::to_string(vk::ObjectType(pCallbackData->pObjects[i].objectType)),
+                                        pCallbackData->pObjects[i].objectHandle, pCallbackData->pObjects[i].pObjectName);
+        }
+
+        std::string queueLabelString = pCallbackData->queueLabelCount == 0 ? "" : "\nVulkan Queue Labels:";
+        for (std::uint32_t i = 0; i < pCallbackData->queueLabelCount; ++i) {
+            queueLabelString = fmt::format("{}\n  {}", queueLabelString, pCallbackData->pQueueLabels[i].pLabelName);
+        }
+
+        spdlog::log(vkLogLevel, " [{}]: {}{}{}", messageTypeString, pCallbackData->pMessage, objectsString, queueLabelString);
 
         return VK_FALSE;
     }
@@ -276,8 +292,7 @@ namespace vkfw_core {
     ApplicationBase::~ApplicationBase() noexcept
     {
         m_windows.clear();
-        m_vkDebugReportCB.reset();
-        // if (vkDebugReportCB_) vk::DestroyDebugReportCallbackEXT(*m_vkInstance, m_vkDebugReportCB, nullptr);
+        m_vkDebugUtilsMessenger.reset();
         m_vkInstance.reset();
 
         spdlog::debug("Exiting application. Saving configuration to file.");
@@ -494,7 +509,7 @@ namespace vkfw_core {
         useValidationLayers = true;
 #endif
         if (useValidationLayers) {
-            enabledExtensions.push_back(VK_EXT_DEBUG_REPORT_EXTENSION_NAME);
+            enabledExtensions.push_back(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
             m_vkValidationLayers.push_back("VK_LAYER_KHRONOS_validation");
         }
 
@@ -513,21 +528,20 @@ namespace vkfw_core {
             VULKAN_HPP_DEFAULT_DISPATCHER.init(m_vkInstance.get());
         }
 
-        vk::DebugReportFlagsEXT drFlags(vk::DebugReportFlagBitsEXT::eError);
-        drFlags |= vk::DebugReportFlagBitsEXT::eWarning;
+        if (useValidationLayers) {
+            vk::DebugUtilsMessageSeverityFlagsEXT debugUtilsSeverities =
+                vk::DebugUtilsMessageSeverityFlagBitsEXT::eWarning | vk::DebugUtilsMessageSeverityFlagBitsEXT::eError;
+            vk::DebugUtilsMessageTypeFlagsEXT debugUtilsTypes = vk::DebugUtilsMessageTypeFlagBitsEXT::eGeneral;
 #ifndef NDEBUG
-        drFlags |= vk::DebugReportFlagBitsEXT::ePerformanceWarning;
-        drFlags |= vk::DebugReportFlagBitsEXT::eInformation;
-        drFlags |= vk::DebugReportFlagBitsEXT::eDebug;
+            debugUtilsSeverities |=
+                vk::DebugUtilsMessageSeverityFlagBitsEXT::eVerbose | vk::DebugUtilsMessageSeverityFlagBitsEXT::eInfo;
+            debugUtilsTypes |=
+                vk::DebugUtilsMessageTypeFlagBitsEXT::ePerformance | vk::DebugUtilsMessageTypeFlagBitsEXT::eValidation;
 #endif
-        vk::DebugReportCallbackCreateInfoEXT drCreateInfo{ drFlags, DebugOutputCallback, this };
 
-        try {
-            m_vkDebugReportCB = m_vkInstance->createDebugReportCallbackEXTUnique(drCreateInfo);
-        }
-        catch (vk::SystemError& e) {
-            spdlog::critical("Could not create DebugReportCallback ({}).", e.what());
-            throw std::runtime_error("Could not create DebugReportCallback.");
+            vk::DebugUtilsMessengerCreateInfoEXT messengerCreateInfo{
+                {}, debugUtilsSeverities, debugUtilsTypes, DebugOutputCallback, this};
+            m_vkDebugUtilsMessenger = m_vkInstance->createDebugUtilsMessengerEXTUnique(messengerCreateInfo);
         }
         spdlog::info("Vulkan instance created.");
 
