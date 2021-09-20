@@ -25,4 +25,11 @@ namespace vkfw_core {
         { T::m_attributeDescriptions[0] } -> std::convertible_to<vk::VertexInputAttributeDescription>;
         std::constructible_from<T, const vkfw_core::gfx::MeshInfo*, std::size_t>;
     };
+
+    template<typename T>
+    concept VulkanObject = requires
+    {
+        T::CType;
+        { T::CType } -> std::convertible_to<void*>;
+    };
 }

@@ -17,6 +17,7 @@ namespace vkfw_core::gfx {
 
 namespace vkfw_core::gfx::rt {
 
+    // TODO: add queue [9/20/2021 Sebastian Maisch]
     class AccelerationStructure
     {
     public:

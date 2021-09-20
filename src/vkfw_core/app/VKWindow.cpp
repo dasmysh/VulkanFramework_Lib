@@ -305,7 +305,7 @@ namespace vkfw_core {
         m_imguiVulkanData->PhysicalDevice = m_logicalDevice->GetPhysicalDevice();
         m_imguiVulkanData->Device = m_logicalDevice->GetDevice();
         m_imguiVulkanData->QueueFamily = m_graphicsQueue;
-        m_imguiVulkanData->Queue = m_logicalDevice->GetQueue(m_graphicsQueue, 0);
+        m_imguiVulkanData->Queue = m_logicalDevice->GetQueue(m_graphicsQueue, 0).GetHandle();
         m_imguiVulkanData->PipelineCache = VK_NULL_HANDLE;
         m_imguiVulkanData->DescriptorPool = m_vkImguiDescPool.get();
         m_imguiVulkanData->Allocator = nullptr;
@@ -346,7 +346,7 @@ namespace vkfw_core {
 
             vk::SubmitInfo end_info{ 0, nullptr, nullptr, 1, &(*m_vkImGuiCommandBuffers[0]) };
             m_vkImGuiCommandBuffers[0]->end();
-            m_logicalDevice->GetQueue(m_graphicsQueue, 0).submit(end_info, vk::Fence());
+            m_logicalDevice->GetQueue(m_graphicsQueue, 0).Submit(end_info, vk::Fence());
 
             m_logicalDevice->GetDevice().waitIdle();
 
@@ -686,14 +686,14 @@ namespace vkfw_core {
         std::array<vk::CommandBuffer, 2> submitCmdBuffers{ *m_vkCommandBuffers[m_currentlyRenderedImage], *m_vkImGuiCommandBuffers[m_currentlyRenderedImage] };
         vk::SubmitInfo submitInfo{ 2, waitSemaphores.data(), waitStages.data(), 2, submitCmdBuffers.data(), 1, &(*m_vkRenderingFinishedSemaphore) };
 
-        m_logicalDevice->GetQueue(m_graphicsQueue, 0).submit(submitInfo, m_vkCmdBufferFences[m_currentlyRenderedImage]);
+        m_logicalDevice->GetQueue(m_graphicsQueue, 0).Submit(submitInfo, m_vkCmdBufferFences[m_currentlyRenderedImage]);
     }
 
     void VKWindow::SubmitFrame()
     {
         std::array<vk::SwapchainKHR, 1> swapchains = { *m_vkSwapchain };
         vk::PresentInfoKHR presentInfo{ 1, &(*m_vkRenderingFinishedSemaphore), 1, swapchains.data(), &m_currentlyRenderedImage }; //<- wait on these semaphores
-        auto result = m_logicalDevice->GetQueue(m_graphicsQueue, 0).presentKHR(presentInfo);
+        auto result = m_logicalDevice->GetQueue(m_graphicsQueue, 0).Present(presentInfo);
 
         if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || m_frameBufferResize) {
             m_frameBufferResize = false;

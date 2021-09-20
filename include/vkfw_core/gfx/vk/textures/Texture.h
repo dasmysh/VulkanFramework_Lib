@@ -17,6 +17,7 @@
 namespace vkfw_core::gfx {
 
     class DescriptorSetLayout;
+    class Queue;
 
     struct TextureDescriptor final
     {
@@ -100,7 +101,7 @@ namespace vkfw_core::gfx {
         void InitializeImageView();
         void TransitionLayout(vk::ImageLayout newLayout, vk::CommandBuffer cmdBuffer);
         vk::UniqueCommandBuffer TransitionLayout(vk::ImageLayout newLayout,
-            std::pair<std::uint32_t, std::uint32_t> transitionQueueIdx,
+            const Queue& transitionQueue,
             const std::vector<vk::Semaphore>& waitSemaphores,
             const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence);
         void CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset,
@@ -109,16 +110,16 @@ namespace vkfw_core::gfx {
         [[nodiscard]] vk::UniqueCommandBuffer
         CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, const Texture& dstImage,
                        std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset, const glm::u32vec4& size,
-                       std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
+                       const Queue& copyQueue,
                        const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
                        const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
                        vk::Fence fence = vk::Fence()) const;
         [[nodiscard]] vk::UniqueCommandBuffer
-        CopyImageAsync(const Texture& dstImage, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
+        CopyImageAsync(const Texture& dstImage, const Queue& transitionQueue,
                        const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
                        const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
                        vk::Fence fence = vk::Fence()) const;
-        void CopyImageSync(const Texture& dstImage, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx) const;
+        void CopyImageSync(const Texture& dstImage, const Queue& copyQueue) const;
 
         [[nodiscard]] const glm::u32vec4& GetSize() const { return m_size; }
         [[nodiscard]] const glm::u32vec4& GetPixelSize() const { return m_pixelSize; }

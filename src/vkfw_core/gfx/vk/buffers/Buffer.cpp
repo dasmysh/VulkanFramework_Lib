@@ -81,28 +81,27 @@ namespace vkfw_core::gfx {
     }
 
     vk::UniqueCommandBuffer Buffer::CopyBufferAsync(std::size_t srcOffset, const Buffer& dstBuffer, std::size_t dstOffset,
-        std::size_t size, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx, const std::vector<vk::Semaphore>& waitSemaphores,
+        std::size_t size, const Queue& copyQueue, const std::vector<vk::Semaphore>& waitSemaphores,
         const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
     {
-        auto transferCmdBuffer = CommandBuffers::beginSingleTimeSubmit(m_device, copyQueueIdx.first);
+        auto transferCmdBuffer = CommandBuffers::beginSingleTimeSubmit(m_device, copyQueue.GetCommandPool());
         CopyBufferAsync(srcOffset, dstBuffer, dstOffset, size, *transferCmdBuffer);
-        CommandBuffers::endSingleTimeSubmit(m_device, *transferCmdBuffer, copyQueueIdx.first, copyQueueIdx.second,
-            waitSemaphores, signalSemaphores, fence);
+        CommandBuffers::endSingleTimeSubmit(copyQueue, *transferCmdBuffer, waitSemaphores, signalSemaphores, fence);
 
         return transferCmdBuffer;
     }
 
-    vk::UniqueCommandBuffer Buffer::CopyBufferAsync(const Buffer& dstBuffer, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
+    vk::UniqueCommandBuffer Buffer::CopyBufferAsync(const Buffer& dstBuffer, const Queue& copyQueue,
         const std::vector<vk::Semaphore>& waitSemaphores, const std::vector<vk::Semaphore>& signalSemaphores,
         vk::Fence fence) const
     {
-        return CopyBufferAsync(0, dstBuffer, 0, m_size, copyQueueIdx, waitSemaphores, signalSemaphores, fence);
+        return CopyBufferAsync(0, dstBuffer, 0, m_size, copyQueue, waitSemaphores, signalSemaphores, fence);
     }
 
-    void Buffer::CopyBufferSync(const Buffer& dstBuffer, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx) const
+    void Buffer::CopyBufferSync(const Buffer& dstBuffer, const Queue& copyQueue) const
     {
-        auto cmdBuffer = CopyBufferAsync(dstBuffer, copyQueueIdx);
-        m_device->GetQueue(copyQueueIdx.first, copyQueueIdx.second).waitIdle();
+        auto cmdBuffer = CopyBufferAsync(dstBuffer, copyQueue);
+        copyQueue.WaitIdle();
     }
 
     vk::DeviceOrHostAddressConstKHR Buffer::GetDeviceAddressConst() const

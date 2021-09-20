@@ -167,16 +167,15 @@ namespace vkfw_core::gfx {
     }
 
     vk::UniqueCommandBuffer Texture::TransitionLayout(vk::ImageLayout newLayout,
-        std::pair<std::uint32_t, std::uint32_t> transitionQueueIdx,
+        const Queue& transitionQueue,
         const std::vector<vk::Semaphore>& waitSemaphores,
         const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence)
     {
         if (m_desc.m_imageLayout == newLayout) { return vk::UniqueCommandBuffer(); }
 
-        auto transitionCmdBuffer = CommandBuffers::beginSingleTimeSubmit(m_device, transitionQueueIdx.first);
+        auto transitionCmdBuffer = CommandBuffers::beginSingleTimeSubmit(m_device, transitionQueue.GetCommandPool());
         TransitionLayout(newLayout, *transitionCmdBuffer);
-        CommandBuffers::endSingleTimeSubmit(m_device, *transitionCmdBuffer, transitionQueueIdx.first,
-                                            transitionQueueIdx.second,
+        CommandBuffers::endSingleTimeSubmit(transitionQueue, *transitionCmdBuffer,
             waitSemaphores, signalSemaphores, fence);
         return transitionCmdBuffer;
     }
@@ -207,29 +206,31 @@ namespace vkfw_core::gfx {
         cmdBuffer.copyImage(m_vkImage, m_desc.m_imageLayout, dstImage.m_vkImage, dstImage.m_desc.m_imageLayout, copyRegion);
     }
 
-    vk::UniqueCommandBuffer Texture::CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, const Texture& dstImage,
-        std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset, const glm::u32vec4& size,
-        std::pair<std::uint32_t, std::uint32_t> copyQueueIdx, const std::vector<vk::Semaphore>& waitSemaphores,
-        const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
+    vk::UniqueCommandBuffer
+    Texture::CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, const Texture& dstImage,
+                            std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset, const glm::u32vec4& size,
+                            const Queue& copyQueue, const std::vector<vk::Semaphore>& waitSemaphores,
+                            const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
     {
-        auto transferCmdBuffer = CommandBuffers::beginSingleTimeSubmit(m_device, copyQueueIdx.first);
+        auto transferCmdBuffer = CommandBuffers::beginSingleTimeSubmit(m_device, copyQueue.GetCommandPool());
         CopyImageAsync(srcMipLevel, srcOffset, dstImage, dstMipLevel, dstOffset, size, *transferCmdBuffer);
-        CommandBuffers::endSingleTimeSubmit(m_device, *transferCmdBuffer, copyQueueIdx.first, copyQueueIdx.second,
-            waitSemaphores, signalSemaphores, fence);
+        CommandBuffers::endSingleTimeSubmit(copyQueue, *transferCmdBuffer,
+                                            waitSemaphores, signalSemaphores, fence);
 
         return transferCmdBuffer;
     }
 
-    vk::UniqueCommandBuffer Texture::CopyImageAsync(const Texture& dstImage, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
+    vk::UniqueCommandBuffer Texture::CopyImageAsync(const Texture& dstImage, const Queue& copyQueue,
         const std::vector<vk::Semaphore>& waitSemaphores, const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
     {
-        return CopyImageAsync(0, glm::u32vec4(0), dstImage, 0, glm::u32vec4(0), m_size, copyQueueIdx, waitSemaphores, signalSemaphores, fence);
+        return CopyImageAsync(0, glm::u32vec4(0), dstImage, 0, glm::u32vec4(0), m_size, copyQueue, waitSemaphores,
+                              signalSemaphores, fence);
     }
 
-    void Texture::CopyImageSync(const Texture& dstImage, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx) const
+    void Texture::CopyImageSync(const Texture& dstImage, const Queue& copyQueue) const
     {
-        auto cmdBuffer = CopyImageAsync(dstImage, copyQueueIdx);
-        m_device->GetQueue(copyQueueIdx.first, copyQueueIdx.second).waitIdle();
+        auto cmdBuffer = CopyImageAsync(dstImage, copyQueue);
+        copyQueue.WaitIdle();
     }
 
     vk::ImageAspectFlags Texture::GetValidAspects() const

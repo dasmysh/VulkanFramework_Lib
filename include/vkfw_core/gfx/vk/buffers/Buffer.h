@@ -14,6 +14,8 @@
 
 namespace vkfw_core::gfx {
 
+    class Queue;
+
     class Buffer
     {
     public:
@@ -31,16 +33,16 @@ namespace vkfw_core::gfx {
                              vk::CommandBuffer cmdBuffer) const;
         [[nodiscard]] vk::UniqueCommandBuffer
         CopyBufferAsync(std::size_t srcOffset, const Buffer& dstBuffer, std::size_t dstOffset, std::size_t size,
-                        std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
+                        const Queue& queue,
                         const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
                         const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
                         vk::Fence fence = vk::Fence()) const;
         [[nodiscard]] vk::UniqueCommandBuffer
-        CopyBufferAsync(const Buffer& dstBuffer, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
+        CopyBufferAsync(const Buffer& dstBuffer, const Queue& queue,
                         const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
                         const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
                         vk::Fence fence = vk::Fence()) const;
-        void CopyBufferSync(const Buffer& dstBuffer, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx) const;
+        void CopyBufferSync(const Buffer& dstBuffer, const Queue& copyQueue) const;
 
         [[nodiscard]] std::size_t GetSize() const { return m_size; }
         [[nodiscard]] vk::Buffer GetBuffer() const { return *m_buffer; }

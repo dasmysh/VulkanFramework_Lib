@@ -9,6 +9,9 @@
 #pragma once
 
 #include "main.h"
+#include "core/concepts.h"
+#include "gfx/vk/wrappers/Queue.h"
+#include "gfx/vk/wrappers/CommandPool.h"
 
 #include <glm/vec2.hpp>
 
@@ -60,17 +63,17 @@ namespace vkfw_core::gfx {
 
         [[nodiscard]] const vk::PhysicalDevice& GetPhysicalDevice() const { return m_vkPhysicalDevice; }
         [[nodiscard]] const vk::Device& GetDevice() const { return *m_vkDevice; }
-        [[nodiscard]] const vk::Queue& GetQueue(unsigned int familyIndex, unsigned int queueIndex) const
+        [[nodiscard]] const Queue& GetQueue(unsigned int familyIndex, unsigned int queueIndex) const
         {
-            return m_vkQueuesByRequestedFamily[familyIndex][queueIndex];
+            return m_queuesByRequestedFamily[familyIndex][queueIndex];
         }
         [[nodiscard]] const DeviceQueueDesc& GetQueueInfo(unsigned int familyIndex) const
         {
             return m_queueDescriptions[familyIndex];
         }
-        [[nodiscard]] const vk::CommandPool& GetCommandPool(unsigned int familyIndex) const
+        [[nodiscard]] const CommandPool& GetCommandPool(unsigned int familyIndex) const
         {
-            return m_vkCmdPoolsByRequestedQFamily[familyIndex];
+            return m_cmdPoolsByRequestedQFamily[familyIndex];
         }
 
         [[nodiscard]] vk::UniqueCommandPool
@@ -79,8 +82,18 @@ namespace vkfw_core::gfx {
         std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline(const std::vector<std::string>& shaderNames,
             const glm::uvec2& size, unsigned int numBlendAttachments);
 
-        VkResult DebugMarkerSetObjectTagEXT(VkDevice device, VkDebugMarkerObjectTagInfoEXT* tagInfo) const;
-        VkResult DebugMarkerSetObjectNameEXT(VkDevice device, VkDebugMarkerObjectNameInfoEXT* nameInfo) const;
+        template<VulkanObject T> void SetObjectName(T object, vk::ObjectType type, std::string_view name) const
+        {
+            SetObjectName(reinterpret_cast<std::uint64_t>(object), type, name);
+        };
+        template<VulkanObject T, typename Tag>
+        void SetObjectTag(T object, vk::ObjectType type, std::uint64_t tagHandle, const Tag* tag) const
+        {
+            SetObjectTag(reinterpret_cast<std::uint64_t>(object), type, tagHandle, tag, sizeof(Tag));
+        };
+        void SetObjectName(std::uint64_t object, vk::ObjectType type, std::string_view name) const;
+        void SetObjectTag(std::uint64_t object, vk::ObjectType type, std::uint64_t tagHandle, const void* tagData, std::size_t tagSize) const;
+
         void CmdDebugMarkerBeginEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const;
         void CmdDebugMarkerEndEXT(VkCommandBuffer cmdBuffer) const;
         void CmdDebugMarkerInsertEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const;
@@ -110,10 +123,6 @@ namespace vkfw_core::gfx {
                             const vk::FormatFeatureFlags& features) const;
 
     private:
-        [[nodiscard]] PFN_vkVoidFunction LoadVKDeviceFunction(const std::string& functionName,
-                                                              const std::string& extensionName,
-                                                              bool mandatory = false) const;
-
         /** Holds the configuration of the window associated with this device. */
         const cfg::WindowCfg& m_windowCfg;
         /** Holds the physical device. */
@@ -143,19 +152,9 @@ namespace vkfw_core::gfx {
         /** Holds the queue descriptions. */
         std::vector<DeviceQueueDesc> m_queueDescriptions;
         /** Holds the queues by requested queue family. */
-        std::vector<std::vector<vk::Queue>> m_vkQueuesByRequestedFamily;
+        std::vector<std::vector<Queue>> m_queuesByRequestedFamily;
         /** Holds a command pool for each requested queue family. */
-        std::vector<vk::CommandPool> m_vkCmdPoolsByRequestedQFamily;
-
-        /** Holds whether debug markers are enabled. */
-        bool m_enableDebugMarkers = false;
-
-        // VK_EXT_debug_marker
-        PFN_vkDebugMarkerSetObjectTagEXT fpDebugMarkerSetObjectTagEXT = nullptr;
-        PFN_vkDebugMarkerSetObjectNameEXT fpDebugMarkerSetObjectNameEXT = nullptr;
-        PFN_vkCmdDebugMarkerBeginEXT fpCmdDebugMarkerBeginEXT = nullptr;
-        PFN_vkCmdDebugMarkerEndEXT fpCmdDebugMarkerEndEXT = nullptr;
-        PFN_vkCmdDebugMarkerInsertEXT fpCmdDebugMarkerInsertEXT = nullptr;
+        std::vector<CommandPool> m_cmdPoolsByRequestedQFamily;
 
         /** Holds the shader manager. */
         std::unique_ptr<ShaderManager> m_shaderManager;

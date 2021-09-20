@@ -10,6 +10,7 @@
 
 #include "main.h"
 #include "core/type_traits.h"
+#include "gfx/vk/wrappers/Queue.h"
 
 #include <glm/gtc/type_precision.hpp>
 
@@ -22,11 +23,12 @@ namespace vkfw_core::gfx {
     class HostTexture;
     class Texture;
     struct TextureDescriptor;
+    class Queue;
 
     class QueuedDeviceTransfer final
     {
     public:
-        QueuedDeviceTransfer(const LogicalDevice* device, std::pair<std::uint32_t, std::uint32_t> transferQueue);
+        QueuedDeviceTransfer(const LogicalDevice* device, const Queue& transferQueue);
         ~QueuedDeviceTransfer();
         QueuedDeviceTransfer(const QueuedDeviceTransfer&) = delete;
         QueuedDeviceTransfer& operator=(const QueuedDeviceTransfer&) = delete;
@@ -71,7 +73,7 @@ namespace vkfw_core::gfx {
         /** Holds the device. */
         const LogicalDevice* m_device;
         /** Holds the transfer queue used. */
-        std::pair<std::uint32_t, std::uint32_t> m_transferQueue;
+        Queue m_transferQueue;
         /** Holds all staging buffers. */
         std::vector<HostBuffer> m_stagingBuffers;
         /** Holds all staging textures. */

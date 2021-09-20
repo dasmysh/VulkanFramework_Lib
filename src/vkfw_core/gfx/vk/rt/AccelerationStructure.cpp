@@ -63,9 +63,9 @@ namespace vkfw_core::gfx::rt {
                 assert(false);
             }
         } else {
-            auto vkAccStructureCmdBuffer = vkfw_core::gfx::CommandBuffers::beginSingleTimeSubmit(m_device, 0);
+            auto vkAccStructureCmdBuffer = vkfw_core::gfx::CommandBuffers::beginSingleTimeSubmit(m_device, m_device->GetCommandPool(0));
             vkAccStructureCmdBuffer->buildAccelerationStructuresKHR(asBuildInfo, m_buildRanges.data());
-            vkfw_core::gfx::CommandBuffers::endSingleTimeSubmitAndWait(m_device, vkAccStructureCmdBuffer.get(), 0, 0);
+            vkfw_core::gfx::CommandBuffers::endSingleTimeSubmitAndWait(m_device, m_device->GetQueue(0, 0), vkAccStructureCmdBuffer.get());
         }
     }
 

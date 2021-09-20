@@ -106,14 +106,15 @@ namespace vkfw_core::gfx {
         m_memoryGroup.FinalizeDeviceGroup();
 
         vk::UniqueCommandBuffer ucmdBuffer;
-        if (!cmdBuffer) { ucmdBuffer = CommandBuffers::beginSingleTimeSubmit(m_device, 0); }
+        if (!cmdBuffer) { ucmdBuffer = CommandBuffers::beginSingleTimeSubmit(m_device, m_device->GetCommandPool(0)); }
         for (auto i = 0U; i < m_memoryGroup.GetImagesInGroup(); ++i) {
             m_memoryGroup.GetTexture(i)->TransitionLayout(imageLayouts[i],
                                                          cmdBuffer ? cmdBuffer : *ucmdBuffer);
         }
         if (!cmdBuffer) {
-            CommandBuffers::endSingleTimeSubmit(m_device, *ucmdBuffer, 0, 0);
-            m_device->GetQueue(0, 0).waitIdle();
+            auto& queue = m_device->GetQueue(0, 0);
+            CommandBuffers::endSingleTimeSubmit(queue, *ucmdBuffer);
+            queue.WaitIdle();
         }
 
     }

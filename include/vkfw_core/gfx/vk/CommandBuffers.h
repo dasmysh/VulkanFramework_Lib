@@ -13,19 +13,21 @@
 
 namespace vkfw_core::gfx {
 
+    class Queue;
+
     class CommandBuffers
     {
     public:
         CommandBuffers(const LogicalDevice* device, unsigned int queueFamily, vk::CommandBufferLevel level, std::uint32_t numBuffers);
 
-        static vk::UniqueCommandBuffer beginSingleTimeSubmit(const LogicalDevice* device, unsigned int queueFamily);
-        static void endSingleTimeSubmit(const LogicalDevice* device, vk::CommandBuffer cmdBuffer,
-            unsigned int queueFamily, unsigned int queueIndex,
-            const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
-            const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
-            vk::Fence fence = vk::Fence());
-        static void endSingleTimeSubmitAndWait(const LogicalDevice* device, vk::CommandBuffer cmdBuffer,
-                                               unsigned int queueFamily, unsigned int queueIndex);
+        static vk::UniqueCommandBuffer beginSingleTimeSubmit(const LogicalDevice* device, const CommandPool& commandPool);
+        static void
+        endSingleTimeSubmit(const Queue& queue, vk::CommandBuffer cmdBuffer,
+                            const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
+                            const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
+                            vk::Fence fence = vk::Fence());
+        static void endSingleTimeSubmitAndWait(const LogicalDevice* device, const Queue& queue,
+                                               vk::CommandBuffer cmdBuffer);
 
     private:
         /** Holds the device. */

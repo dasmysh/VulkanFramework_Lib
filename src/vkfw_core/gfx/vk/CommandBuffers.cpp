@@ -9,6 +9,8 @@
 // #define VK_USE_PLATFORM_WIN32_KHR
 
 #include "gfx/vk/CommandBuffers.h"
+#include "gfx/vk//wrappers/Queue.h"
+#include "gfx/vk//wrappers/CommandPool.h"
 
 namespace vkfw_core::gfx {
 
@@ -17,13 +19,14 @@ namespace vkfw_core::gfx {
         m_queueFamily{ queueFamily }
     {
         spdlog::warn("Command buffers are not fully implemented at the moment.");
-        vk::CommandBufferAllocateInfo cmdBufferallocInfo{ m_device->GetCommandPool(m_queueFamily) , level, numBuffers };
+        vk::CommandBufferAllocateInfo cmdBufferallocInfo{ m_device->GetCommandPool(m_queueFamily).GetHandle(), level, numBuffers };
         m_vkCmdBuffers = m_device->GetDevice().allocateCommandBuffersUnique(cmdBufferallocInfo);
     }
 
-    vk::UniqueCommandBuffer CommandBuffers::beginSingleTimeSubmit(const LogicalDevice* device, unsigned int queueFamily)
+    vk::UniqueCommandBuffer CommandBuffers::beginSingleTimeSubmit(const LogicalDevice* device,
+                                                                  const CommandPool& commandPool)
     {
-        vk::CommandBufferAllocateInfo cmdBufferallocInfo{ device->GetCommandPool(queueFamily) , vk::CommandBufferLevel::ePrimary, 1 };
+        vk::CommandBufferAllocateInfo cmdBufferallocInfo{commandPool.GetHandle(), vk::CommandBufferLevel::ePrimary, 1};
         auto cmdBuffer = device->GetDevice().allocateCommandBuffersUnique(cmdBufferallocInfo);
 
         vk::CommandBufferBeginInfo beginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
@@ -31,23 +34,23 @@ namespace vkfw_core::gfx {
         return std::move(cmdBuffer[0]);
     }
 
-    void CommandBuffers::endSingleTimeSubmit(const LogicalDevice* device, vk::CommandBuffer cmdBuffer,
-        unsigned int queueFamily, unsigned int queueIndex, const std::vector<vk::Semaphore>& waitSemaphores,
-        const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence)
+    void CommandBuffers::endSingleTimeSubmit(const Queue& queue, vk::CommandBuffer cmdBuffer,
+                                             const std::vector<vk::Semaphore>& waitSemaphores,
+                                             const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence)
     {
         cmdBuffer.end();
-
-        vk::SubmitInfo submitInfo{ static_cast<std::uint32_t>(waitSemaphores.size()), waitSemaphores.data(),
-            nullptr, 1, &cmdBuffer, static_cast<std::uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
-        device->GetQueue(queueFamily, queueIndex).submit(submitInfo, fence);
+        vk::SubmitInfo submitInfo{
+            static_cast<std::uint32_t>(waitSemaphores.size()),   waitSemaphores.data(),  nullptr, 1, &cmdBuffer,
+            static_cast<std::uint32_t>(signalSemaphores.size()), signalSemaphores.data()};
+        queue.Submit(submitInfo, fence);
     }
 
-    void CommandBuffers::endSingleTimeSubmitAndWait(const LogicalDevice* device, vk::CommandBuffer cmdBuffer,
-                                                    unsigned int queueFamily, unsigned int queueIndex)
+    void CommandBuffers::endSingleTimeSubmitAndWait(const LogicalDevice* device, const Queue& queue,
+                                                    vk::CommandBuffer cmdBuffer)
     {
         vk::FenceCreateInfo fenceInfo{};
         auto fence = device->GetDevice().createFenceUnique(fenceInfo);
-        endSingleTimeSubmit(device, cmdBuffer, queueFamily, queueIndex, {}, {}, fence.get());
+        endSingleTimeSubmit(queue, cmdBuffer, {}, {}, fence.get());
         if (auto r = device->GetDevice().waitForFences(fence.get(), VK_TRUE, vkfw_core::defaultFenceTimeout); r != vk::Result::eSuccess) {
             spdlog::error("Error while waiting for fence: {}.", r);
             throw std::runtime_error("Error while waiting for fence.");

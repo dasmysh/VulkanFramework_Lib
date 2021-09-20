@@ -77,7 +77,7 @@ namespace vkfw_core::gfx::rt {
                                             | vk::BufferUsageFlagBits::eStorageBuffer,
                                         m_instanceInfos, std::vector<std::uint32_t>{{0, 1}});
 
-        vkfw_core::gfx::QueuedDeviceTransfer transfer{m_device, std::make_pair(0, 0)};
+        vkfw_core::gfx::QueuedDeviceTransfer transfer{m_device, m_device->GetQueue(0, 0)};
         m_memGroup.FinalizeDeviceGroup();
         m_memGroup.TransferData(transfer);
         transfer.FinishTransfer();

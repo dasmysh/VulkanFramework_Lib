@@ -96,12 +96,6 @@ namespace vkfw_core::gfx {
                 enabledDeviceExtensions[i] = requiredDeviceExtensions[i].c_str();
             }
 
-            auto dbgMkFound = std::find_if(extensions.begin(), extensions.end(),
-                [](const vk::ExtensionProperties& extProps) { return std::strcmp(VK_EXT_DEBUG_MARKER_EXTENSION_NAME, &extProps.extensionName[0]) == 0; });
-            if (dbgMkFound != extensions.end()) {
-                m_enableDebugMarkers = true;
-                enabledDeviceExtensions.push_back(VK_EXT_DEBUG_MARKER_EXTENSION_NAME);
-            }
             if (surface) {
                 enabledDeviceExtensions.push_back(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
             } // checked this extension earlier
@@ -120,11 +114,12 @@ namespace vkfw_core::gfx {
         }
 
         m_vkDevice = m_vkPhysicalDevice.createDeviceUnique(deviceCreateInfo);
-        m_vkQueuesByRequestedFamily.resize(m_queueDescriptions.size());
+        m_queuesByRequestedFamily.resize(m_queueDescriptions.size());
         for (auto i = 0U; i < m_queueDescriptions.size(); ++i) {
-            m_vkQueuesByRequestedFamily[i].resize(m_queueDescriptions[i].m_priorities.size());
+            m_queuesByRequestedFamily[i].resize(m_queueDescriptions[i].m_priorities.size(),
+                                                Queue{nullptr, CommandPool{nullptr}});
         }
-        m_vkCmdPoolsByRequestedQFamily.resize(m_queueDescriptions.size());
+        m_cmdPoolsByRequestedQFamily.resize(m_queueDescriptions.size(), CommandPool{nullptr});
 
         for (const auto& deviceQueueDesc : deviceQFamilyToRequested) {
             const auto& priorities = deviceQFamilyPriorities[deviceQueueDesc.first];
@@ -156,24 +151,12 @@ namespace vkfw_core::gfx {
                 } else {
                     m_vkQueuesByDeviceFamily[deviceQueueDesc.first][j] = m_vkDevice->getQueue(deviceQueueDesc.first, j);
                 }
-                m_vkQueuesByRequestedFamily[mappings[j].first][mappings[j].second] = m_vkQueuesByDeviceFamily[deviceQueueDesc.first][j];
-                m_vkCmdPoolsByRequestedQFamily[mappings[j].first] = *m_vkCmdPoolsByDeviceQFamily[deviceQueueDesc.first];
+                m_cmdPoolsByRequestedQFamily[mappings[j].first] =
+                    CommandPool{*m_vkCmdPoolsByDeviceQFamily[deviceQueueDesc.first]};
+                m_queuesByRequestedFamily[mappings[j].first][mappings[j].second] =
+                    Queue{m_vkQueuesByDeviceFamily[deviceQueueDesc.first][j],
+                          m_cmdPoolsByRequestedQFamily[mappings[j].first]};
             }
-        }
-
-        if (m_enableDebugMarkers) {
-            fpDebugMarkerSetObjectTagEXT =
-                reinterpret_cast<PFN_vkDebugMarkerSetObjectTagEXT>(LoadVKDeviceFunction( // NOLINT
-                    "vkDebugMarkerSetObjectTagEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
-            fpDebugMarkerSetObjectNameEXT =
-                reinterpret_cast<PFN_vkDebugMarkerSetObjectNameEXT>(LoadVKDeviceFunction( // NOLINT
-                    "vkDebugMarkerSetObjectNameEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
-            fpCmdDebugMarkerBeginEXT = reinterpret_cast<PFN_vkCmdDebugMarkerBeginEXT>( // NOLINT
-                LoadVKDeviceFunction("vkCmdDebugMarkerBeginEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
-            fpCmdDebugMarkerEndEXT = reinterpret_cast<PFN_vkCmdDebugMarkerEndEXT>( // NOLINT
-                LoadVKDeviceFunction("vkCmdDebugMarkerEndEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
-            fpCmdDebugMarkerInsertEXT = reinterpret_cast<PFN_vkCmdDebugMarkerInsertEXT>( // NOLINT
-                LoadVKDeviceFunction("vkCmdDebugMarkerInsertEXT", VK_EXT_DEBUG_MARKER_EXTENSION_NAME, true));
         }
 
         m_shaderManager = std::make_unique<ShaderManager>(this);
@@ -182,7 +165,7 @@ namespace vkfw_core::gfx {
         m_dummyMemGroup = std::make_unique<MemoryGroup>(this, vk::MemoryPropertyFlags());
         m_dummyTexture = m_textureManager->GetResource("dummy.png", true, true, *m_dummyMemGroup); // , std::vector<std::uint32_t>{ {0, 1} }
 
-        QueuedDeviceTransfer transfer{ this, std::make_pair(0, 0) };
+        QueuedDeviceTransfer transfer{ this, GetQueue(0, 0) };
         m_dummyMemGroup->FinalizeDeviceGroup();
         m_dummyMemGroup->TransferData(transfer);
         transfer.FinishTransfer();
@@ -192,24 +175,9 @@ namespace vkfw_core::gfx {
     LogicalDevice::~LogicalDevice()
     {
         m_vkCmdPoolsByDeviceQFamily.clear();
-        m_vkCmdPoolsByRequestedQFamily.clear();
+        m_cmdPoolsByRequestedQFamily.clear();
         m_vkQueuesByDeviceFamily.clear();
-        m_vkQueuesByRequestedFamily.clear();
-    }
-
-    PFN_vkVoidFunction LogicalDevice::LoadVKDeviceFunction(const std::string& functionName, const std::string& extensionName, bool mandatory) const
-    {
-        auto func = vkGetDeviceProcAddr(static_cast<vk::Device>(*m_vkDevice), functionName.c_str());
-        if (func == nullptr) {
-            if (mandatory) {
-                spdlog::critical("Could not load device function '{}' [{}].",
-                                 functionName, extensionName);
-                throw std::runtime_error("Could not load mandatory device function.");
-            }
-            spdlog::warn("Could not load device function '{}' [{}].", functionName, extensionName);
-        }
-
-        return func;
+        m_queuesByRequestedFamily.clear();
     }
 
     vk::UniqueCommandPool LogicalDevice::CreateCommandPoolForQueue(unsigned int familyIndex, const vk::CommandPoolCreateFlags& flags) const
@@ -232,30 +200,20 @@ namespace vkfw_core::gfx {
         return std::make_unique<GraphicsPipeline>(this, shaders, size, numBlendAttachments);
     }
 
-    VkResult LogicalDevice::DebugMarkerSetObjectTagEXT(VkDevice device, VkDebugMarkerObjectTagInfoEXT* tagInfo) const
-    {
-        return m_enableDebugMarkers ? fpDebugMarkerSetObjectTagEXT(device, tagInfo) : VK_SUCCESS;
-    }
-
-    VkResult LogicalDevice::DebugMarkerSetObjectNameEXT(VkDevice device, VkDebugMarkerObjectNameInfoEXT* nameInfo) const
-    {
-        return m_enableDebugMarkers ? fpDebugMarkerSetObjectNameEXT(device, nameInfo) : VK_SUCCESS;
-    }
-
-    void LogicalDevice::CmdDebugMarkerBeginEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const
-    {
-        if (m_enableDebugMarkers) { fpCmdDebugMarkerBeginEXT(cmdBuffer, markerInfo); }
-    }
-
-    void LogicalDevice::CmdDebugMarkerEndEXT(VkCommandBuffer cmdBuffer) const
-    {
-        if (m_enableDebugMarkers) { fpCmdDebugMarkerEndEXT(cmdBuffer); }
-    }
-
-    void LogicalDevice::CmdDebugMarkerInsertEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const
-    {
-        if (m_enableDebugMarkers) { fpCmdDebugMarkerInsertEXT(cmdBuffer, markerInfo); }
-    }
+    // void LogicalDevice::CmdDebugMarkerBeginEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const
+    // {
+    //     if (m_enableDebugMarkers) { fpCmdDebugMarkerBeginEXT(cmdBuffer, markerInfo); }
+    // }
+    //
+    // void LogicalDevice::CmdDebugMarkerEndEXT(VkCommandBuffer cmdBuffer) const
+    // {
+    //     if (m_enableDebugMarkers) { fpCmdDebugMarkerEndEXT(cmdBuffer); }
+    // }
+    //
+    // void LogicalDevice::CmdDebugMarkerInsertEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const
+    // {
+    //     if (m_enableDebugMarkers) { fpCmdDebugMarkerInsertEXT(cmdBuffer, markerInfo); }
+    // }
 
     constexpr std::size_t CalcAlignedSize(std::size_t size, std::size_t alignment)
     {
@@ -275,7 +233,7 @@ namespace vkfw_core::gfx {
     }
 
     std::size_t LogicalDevice::CalculateASScratchBufferBufferAlignment(std::size_t size) const
-    { 
+    {
         auto factor = m_accelerationStructureProperties.minAccelerationStructureScratchOffsetAlignment;
         return CalcAlignedSize(size, factor);
     }
@@ -309,4 +267,21 @@ namespace vkfw_core::gfx {
 
         throw std::runtime_error("No candidate format supported.");
     }
+
+#ifndef NDEBUG
+    void LogicalDevice::SetObjectName(std::uint64_t object, vk::ObjectType type, std::string_view name) const
+    {
+        m_vkDevice->setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT{ type, object, name.data() });
+    }
+
+    void LogicalDevice::SetObjectTag(std::uint64_t object, vk::ObjectType type, std::uint64_t tagHandle,
+                                   const void* tagData, std::size_t tagSize) const
+    {
+        m_vkDevice->setDebugUtilsObjectTagEXT(vk::DebugUtilsObjectTagInfoEXT{ type, object, tagHandle, tagSize, tagData });
+    }
+#else
+    void LogicalDevice::SetObjectName(std::uint64_t, vk::ObjectType, std::string_view) const {}
+    void LogicalDevice::SetObjectTag(std::uint64_t, vk::ObjectType, std::uint64_t, const void*, std::size_t) const {}
+#endif
+
 }
