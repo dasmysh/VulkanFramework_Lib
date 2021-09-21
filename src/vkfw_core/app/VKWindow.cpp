@@ -346,7 +346,12 @@ namespace vkfw_core {
 
             vk::SubmitInfo end_info{ 0, nullptr, nullptr, 1, &(*m_vkImGuiCommandBuffers[0]) };
             m_vkImGuiCommandBuffers[0]->end();
-            m_logicalDevice->GetQueue(m_graphicsQueue, 0).Submit(end_info, vk::Fence());
+
+            const auto& graphicsQueue = m_logicalDevice->GetQueue(m_graphicsQueue, 0);
+            {
+                QUEUE_REGION(graphicsQueue, "Upload ImGui Fonts");
+                graphicsQueue.Submit(end_info, vk::Fence());
+            }
 
             m_logicalDevice->GetDevice().waitIdle();
 
@@ -686,13 +691,20 @@ namespace vkfw_core {
         std::array<vk::CommandBuffer, 2> submitCmdBuffers{ *m_vkCommandBuffers[m_currentlyRenderedImage], *m_vkImGuiCommandBuffers[m_currentlyRenderedImage] };
         vk::SubmitInfo submitInfo{ 2, waitSemaphores.data(), waitStages.data(), 2, submitCmdBuffers.data(), 1, &(*m_vkRenderingFinishedSemaphore) };
 
-        m_logicalDevice->GetQueue(m_graphicsQueue, 0).Submit(submitInfo, m_vkCmdBufferFences[m_currentlyRenderedImage]);
+        const auto& graphicsQueue = m_logicalDevice->GetQueue(m_graphicsQueue, 0);
+        {
+            QUEUE_REGION(graphicsQueue, "Draw");
+            graphicsQueue.Submit(submitInfo, m_vkCmdBufferFences[m_currentlyRenderedImage]);
+        }
     }
 
     void VKWindow::SubmitFrame()
     {
-        std::array<vk::SwapchainKHR, 1> swapchains = { *m_vkSwapchain };
-        vk::PresentInfoKHR presentInfo{ 1, &(*m_vkRenderingFinishedSemaphore), 1, swapchains.data(), &m_currentlyRenderedImage }; //<- wait on these semaphores
+        const auto& graphicsQueue = m_logicalDevice->GetQueue(m_graphicsQueue, 0);
+        QUEUE_REGION(graphicsQueue, "Present");
+        std::array<vk::SwapchainKHR, 1> swapchains = {*m_vkSwapchain};
+        vk::PresentInfoKHR presentInfo{1, &(*m_vkRenderingFinishedSemaphore), 1, swapchains.data(),
+                                       &m_currentlyRenderedImage}; //<- wait on these semaphores
         auto result = m_logicalDevice->GetQueue(m_graphicsQueue, 0).Present(presentInfo);
 
         if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || m_frameBufferResize) {
@@ -703,13 +715,11 @@ namespace vkfw_core {
                 // TODO: notify all resources depending on this...
                 ApplicationBase::instance().OnResize(static_cast<int>(m_config->m_windowWidth),
                                                      static_cast<int>(m_config->m_windowHeight), this);
-            }
-            catch (std::runtime_error& e) {
+            } catch (std::runtime_error& e) {
                 spdlog::critical("Could not reacquire resources after resize: {}", e.what());
                 throw std::runtime_error("Could not reacquire resources after resize.");
             }
-        }
-        else if (result != vk::Result::eSuccess) {
+        } else if (result != vk::Result::eSuccess) {
             spdlog::critical("Could not present swap chain image ({}).", vk::to_string(result));
             throw std::runtime_error("Could not present swap chain image.");
         }

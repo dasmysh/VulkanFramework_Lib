@@ -33,4 +33,22 @@ namespace vkfw_core::gfx {
     private:
         CommandPool m_commandPool;
     };
+
+    class QueueRegion
+    {
+    public:
+        QueueRegion(const Queue& queue, std::string_view region_name, const glm::vec4& color = glm::vec4{1.0})
+            : m_queue{queue}
+        {
+            m_queue.BeginLabel(region_name, color);
+        }
+
+        ~QueueRegion() { m_queue.EndLabel(); }
+
+    private:
+        const Queue& m_queue;
+    };
 }
+
+#define QUEUE_REGION(queue, ...) \
+const vkfw_core::gfx::QueueRegion UNIQUENAME(queue_region_) { queue, __VA_ARGS__ }

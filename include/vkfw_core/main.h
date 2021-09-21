@@ -43,4 +43,9 @@
 namespace vkfw_core {
     class ApplicationBase;
 }
+
+#define CONCAT(a, b) a ## b
+#define CONCAT2(a, b) CONCAT(a, b)
+#define UNIQUENAME(prefix) CONCAT2(prefix, __LINE__)
+
 // ReSharper restore CppUnusedIncludeDirective
