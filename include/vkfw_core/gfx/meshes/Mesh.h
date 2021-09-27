@@ -88,11 +88,12 @@ namespace vkfw_core::gfx {
             const SubMesh& subMesh, RenderList& renderList) const;
 
     private:
-        Mesh(const LogicalDevice* device, const std::shared_ptr<const MeshInfo>& meshInfo, UniformBufferObject&& materialsUBO,
-            std::size_t numBackbuffers, const vk::MemoryPropertyFlags& memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices);
-
-        Mesh(const LogicalDevice* device, const std::shared_ptr<const MeshInfo>& meshInfo, UniformBufferObject&& materialsUBO,
-            std::size_t numBackbuffers, MemoryGroup& memoryGroup, unsigned int bufferIndex, const std::vector<std::uint32_t>& queueFamilyIndices);
+        Mesh(const LogicalDevice* device, std::string_view name, const std::shared_ptr<const MeshInfo>& meshInfo,
+             UniformBufferObject&& materialsUBO, std::size_t numBackbuffers, const vk::MemoryPropertyFlags& memoryFlags,
+             const std::vector<std::uint32_t>& queueFamilyIndices);
+        Mesh(const LogicalDevice* device, std::string_view name, const std::shared_ptr<const MeshInfo>& meshInfo,
+             UniformBufferObject&& materialsUBO, std::size_t numBackbuffers, MemoryGroup& memoryGroup,
+             unsigned int bufferIndex, const std::vector<std::uint32_t>& queueFamilyIndices);
 
         template<Vertex VertexType, class MaterialType>
         void CreateBuffersInMemoryGroup(std::size_t offset, std::size_t numBackbuffers, const std::vector<std::uint32_t>& queueFamilyIndices);

@@ -15,7 +15,7 @@ namespace vkfw_core::gfx::rt {
     class BottomLevelAccelerationStructure : public AccelerationStructure
     {
     public:
-        BottomLevelAccelerationStructure(vkfw_core::gfx::LogicalDevice* device,
+        BottomLevelAccelerationStructure(vkfw_core::gfx::LogicalDevice* device, std::string_view name,
                                          vk::BuildAccelerationStructureFlagsKHR flags);
         BottomLevelAccelerationStructure(BottomLevelAccelerationStructure&& rhs) noexcept;
         BottomLevelAccelerationStructure& operator=(BottomLevelAccelerationStructure&& rhs) noexcept;

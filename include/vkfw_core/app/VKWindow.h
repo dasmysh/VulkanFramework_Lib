@@ -9,6 +9,11 @@
 #pragma once
 
 #include "main.h"
+#include "gfx/vk/wrappers/RenderPass.h"
+#include "gfx/vk/wrappers/Swapchain.h"
+#include "gfx/vk/wrappers/VulkanSyncResources.h"
+#include "gfx/vk/wrappers/CommandBuffer.h"
+#include "gfx/vk/wrappers/DescriptorPool.h"
 
 #include <glm/vec2.hpp>
 
@@ -49,7 +54,7 @@ namespace vkfw_core {
         [[nodiscard]] gfx::LogicalDevice& GetDevice() const { return *m_logicalDevice; }
         [[nodiscard]] const std::vector<gfx::Framebuffer>& GetFramebuffers() const { return m_swapchainFramebuffers; }
         [[nodiscard]] std::vector<gfx::Framebuffer>& GetFramebuffers() { return m_swapchainFramebuffers; }
-        [[nodiscard]] vk::RenderPass GetRenderPass() const { return *m_vkSwapchainRenderPass; }
+        [[nodiscard]] const gfx::RenderPass& GetRenderPass() const { return m_swapchainRenderPass; }
 
         [[nodiscard]] bool IsMouseButtonPressed(int button) const;
         [[nodiscard]] bool IsKeyPressed(int key) const;
@@ -74,13 +79,13 @@ namespace vkfw_core {
         void SubmitFrame();
 
         // for primary cmd buffer: dirty bit, update if needed. (start cmd buffer, end cmd buffer; render pass needs to be started and ended with BeginSwapchainRenderPass and EndSwapchainRenderpass.)
-        void UpdatePrimaryCommandBuffers(const function_view<void(const vk::CommandBuffer& commandBuffer,
+        void UpdatePrimaryCommandBuffers(const function_view<void(const gfx::CommandBuffer& commandBuffer,
                                                                   std::size_t cmdBufferIndex)>& fillFunc) const;
         void BeginSwapchainRenderPass(std::size_t cmdBufferIndex) const;
         void EndSwapchainRenderPass(std::size_t cmdBufferIndex) const;
 
         [[nodiscard]] std::uint32_t GetCurrentlyRenderedImageIndex() const { return m_currentlyRenderedImage; }
-        [[nodiscard]] vk::Semaphore GetDataAvailableSemaphore() const { return *m_vkDataAvailableSemaphore; }
+        [[nodiscard]] const gfx::Semaphore& GetDataAvailableSemaphore() const { return m_dataAvailableSemaphore; }
 
     private:
         void WindowPosCallback(int xpos, int ypos) const;
@@ -107,7 +112,7 @@ namespace vkfw_core {
         cfg::WindowCfg* m_config;
 
         /** Holds the Vulkan surface. */
-        vk::UniqueSurfaceKHR m_vkSurface;
+        gfx::Surface m_surface;
         /** Holds the size of the surface. */
         vk::Extent2D m_vkSurfaceExtend;
         /** Holds the logical device. */
@@ -115,35 +120,34 @@ namespace vkfw_core {
         /** Holds the queue number used for graphics output. */
         unsigned int m_graphicsQueue = 0;
         /** Holds the swap chain. */
-        vk::UniqueSwapchainKHR m_vkSwapchain;
+        gfx::Swapchain m_swapchain;
         /** Holds the swap chain render pass. */
-        vk::UniqueRenderPass m_vkSwapchainRenderPass;
+        gfx::RenderPass m_swapchainRenderPass;
         /** Render pass for ImGui. */
-        vk::UniqueRenderPass m_vkImGuiRenderPass;
+        gfx::RenderPass m_imGuiRenderPass;
         /** Holds the swap chain frame buffers. */
         std::vector<gfx::Framebuffer> m_swapchainFramebuffers;
         /** Command pools for the swap chain cmd buffers (later: not only primary). */
-        std::vector<vk::UniqueCommandPool> m_vkCommandPools;
+        std::vector<gfx::CommandPool> m_commandPools;
         /** Holds the swap chain command buffers. */
-        std::vector<vk::UniqueCommandBuffer> m_vkCommandBuffers;
+        std::vector<gfx::CommandBuffer> m_commandBuffers;
         /** Command pools for the ImGui cmd buffers. */
-        std::vector<vk::UniqueCommandPool> m_vkImGuiCommandPools;
+        std::vector<gfx::CommandPool> m_imGuiCommandPools;
         /** Holds the command buffers for ImGui. */
-        std::vector<vk::UniqueCommandBuffer> m_vkImGuiCommandBuffers;
+        std::vector<gfx::CommandBuffer> m_imGuiCommandBuffers;
         /** Hold a fence for each command buffer to signal it is processed. */
-        std::vector<vk::UniqueFence> m_vkCmdBufferUFences;
-        std::vector<vk::Fence> m_vkCmdBufferFences;
+        std::vector<gfx::Fence> m_cmdBufferFences;
         /** Holds the semaphore to notify when a new swap image is available. */
-        vk::UniqueSemaphore m_vkImageAvailableSemaphore;
+        gfx::Semaphore m_imageAvailableSemaphore;
         /** Holds the semaphore to notify when the data for that frame is uploaded to the GPU. */
-        vk::UniqueSemaphore m_vkDataAvailableSemaphore;
+        gfx::Semaphore m_dataAvailableSemaphore;
         /** Holds the semaphore to notify when rendering is finished. */
-        vk::UniqueSemaphore m_vkRenderingFinishedSemaphore;
+        gfx::Semaphore m_renderingFinishedSemaphore;
         /** Holds the currently rendered image. */
         std::uint32_t m_currentlyRenderedImage = 0;
 
         /** The descriptor pool for ImGUI. */
-        vk::UniqueDescriptorPool m_vkImguiDescPool;
+        gfx::DescriptorPool m_imguiDescPool;
         /** ImGui window data. */
         std::unique_ptr<ImGui_ImplVulkanH_Window> m_windowData;
         /** ImGui vulkan data. */

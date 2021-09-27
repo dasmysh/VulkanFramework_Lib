@@ -11,6 +11,7 @@
 #include "main.h"
 #include "core/type_traits.h"
 #include "gfx/vk/wrappers/Queue.h"
+#include "gfx/vk/wrappers/CommandBuffer.h"
 
 #include <glm/gtc/type_precision.hpp>
 
@@ -35,18 +36,28 @@ namespace vkfw_core::gfx {
         QueuedDeviceTransfer(QueuedDeviceTransfer&&) noexcept;
         QueuedDeviceTransfer& operator=(QueuedDeviceTransfer&&) noexcept;
 
-        std::unique_ptr<DeviceBuffer> CreateDeviceBufferWithData(const vk::BufferUsageFlags& deviceBufferUsage,
-            const vk::MemoryPropertyFlags& memoryFlags, const std::vector<std::uint32_t>& deviceBufferQueues,
-            std::size_t bufferSize, std::size_t dataSize, const void* data);
-        std::unique_ptr<DeviceTexture> CreateDeviceTextureWithData(const TextureDescriptor& textureDesc,
-            const std::vector<std::uint32_t>& deviceBufferQueues, const glm::u32vec4& textureSize,
-            std::uint32_t mipLevels, const glm::u32vec4& dataSize, const void* data);
-        std::unique_ptr<DeviceBuffer> CreateDeviceBufferWithData(const vk::BufferUsageFlags& deviceBufferUsage,
-            const vk::MemoryPropertyFlags& memoryFlags, const std::vector<std::uint32_t>& deviceBufferQueues,
-            std::size_t size, const void* data);
-        std::unique_ptr<DeviceTexture> CreateDeviceTextureWithData(const TextureDescriptor& textureDesc,
-            const std::vector<std::uint32_t>& deviceBufferQueues, const glm::u32vec4& size,
-            std::uint32_t mipLevels, const void* data);
+        std::unique_ptr<DeviceBuffer> CreateDeviceBufferWithData(std::string_view name,
+                                                                 const vk::BufferUsageFlags& deviceBufferUsage,
+                                                                 const vk::MemoryPropertyFlags& memoryFlags,
+                                                                 const std::vector<std::uint32_t>& deviceBufferQueues,
+                                                                 std::size_t bufferSize, std::size_t dataSize,
+                                                                 const void* data);
+        std::unique_ptr<DeviceTexture> CreateDeviceTextureWithData(std::string_view name,
+                                                                   const TextureDescriptor& textureDesc,
+                                                                   const std::vector<std::uint32_t>& deviceBufferQueues,
+                                                                   const glm::u32vec4& textureSize,
+                                                                   std::uint32_t mipLevels,
+                                                                   const glm::u32vec4& dataSize, const void* data);
+        std::unique_ptr<DeviceBuffer> CreateDeviceBufferWithData(std::string_view name,
+                                                                 const vk::BufferUsageFlags& deviceBufferUsage,
+                                                                 const vk::MemoryPropertyFlags& memoryFlags,
+                                                                 const std::vector<std::uint32_t>& deviceBufferQueues,
+                                                                 std::size_t size, const void* data);
+        std::unique_ptr<DeviceTexture> CreateDeviceTextureWithData(std::string_view name,
+                                                                   const TextureDescriptor& textureDesc,
+                                                                   const std::vector<std::uint32_t>& deviceBufferQueues,
+                                                                   const glm::u32vec4& size, std::uint32_t mipLevels,
+                                                                   const void* data);
 
         void TransferDataToBuffer(std::size_t dataSize, const void* data, const Buffer& dst, std::size_t dstOffset);
 
@@ -66,8 +77,8 @@ namespace vkfw_core::gfx {
         template<class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value> TransferDataToBuffer(const T& data, const Buffer& dst, std::size_t dstOffset);
 
     private:
-        void AddStagingBuffer(std::size_t dataSize, const void* data);
-        void AddStagingTexture(const glm::u32vec4& size, std::uint32_t mipLevels,
+        void AddStagingBuffer(std::string_view name, std::size_t dataSize, const void* data);
+        void AddStagingTexture(std::string_view name, const glm::u32vec4& size, std::uint32_t mipLevels,
             const TextureDescriptor& textureDesc, const void* data);
 
         /** Holds the device. */
@@ -79,7 +90,7 @@ namespace vkfw_core::gfx {
         /** Holds all staging textures. */
         std::vector<HostTexture> m_stagingTextures;
         /** Holds all command buffers for transfer. */
-        std::vector<vk::UniqueCommandBuffer> m_transferCmdBuffers;
+        std::vector<CommandBuffer> m_transferCmdBuffers;
     };
 
     template <class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> QueuedDeviceTransfer::CreateDeviceBufferWithData(

@@ -17,7 +17,7 @@ namespace vkfw_core::gfx {
     class HostTexture final : public Texture
     {
     public:
-        HostTexture(const LogicalDevice* device, const TextureDescriptor& desc,
+        HostTexture(const LogicalDevice* device, std::string_view name, const TextureDescriptor& desc,
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         ~HostTexture() override;
         HostTexture(const HostTexture&);

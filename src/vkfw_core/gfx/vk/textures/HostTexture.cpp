@@ -11,16 +11,15 @@
 
 namespace vkfw_core::gfx {
 
-    HostTexture::HostTexture(const LogicalDevice* device, const TextureDescriptor& desc,
+    HostTexture::HostTexture(const LogicalDevice* device, std::string_view name, const TextureDescriptor& desc,
         const std::vector<std::uint32_t>& queueFamilyIndices) :
-        Texture{ device, TextureDescriptor(desc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent), queueFamilyIndices }
+        Texture{ device, name, TextureDescriptor(desc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent), queueFamilyIndices }
     {
     }
 
     HostTexture::~HostTexture() = default;
 
-    HostTexture::HostTexture(const HostTexture& rhs) :
-        Texture{ rhs.CopyWithoutData() }
+    HostTexture::HostTexture(const HostTexture& rhs) : Texture{rhs.CopyWithoutData(fmt::format("{}-Copy", rhs.GetName()))}
     {
         auto texSize = rhs.GetSize();
         auto mipLevels = rhs.GetMipLevels();

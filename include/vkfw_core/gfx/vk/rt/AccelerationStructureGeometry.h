@@ -33,7 +33,7 @@ namespace vkfw_core::gfx::rt {
     class AccelerationStructureGeometry
     {
     public:
-        AccelerationStructureGeometry(LogicalDevice* device);
+        AccelerationStructureGeometry(LogicalDevice* device, std::string_view name);
         ~AccelerationStructureGeometry();
 
         void AddTriangleGeometry(const glm::mat4& transform, std::size_t primitiveCount, std::size_t vertexCount,
@@ -103,7 +103,7 @@ namespace vkfw_core::gfx::rt {
         };
 
         void AddInstanceBufferAndTransferMemGroup();
-        [[nodiscard]] std::size_t AddBottomLevelAccelerationStructure(std::uint32_t bufferIndex,
+        [[nodiscard]] std::size_t AddBottomLevelAccelerationStructure(std::string_view name, std::uint32_t bufferIndex,
                                                                       const glm::mat3x4& transform);
         void AddInstanceInfo(std::uint32_t vertexSize, std::uint32_t bufferIndex, std::uint32_t materialIndex,
                              const glm::mat4& transform, std::uint32_t indexOffset = 0);
@@ -114,6 +114,8 @@ namespace vkfw_core::gfx::rt {
 
         /** The device to create the acceleration structures in. */
         LogicalDevice* m_device;
+        /** The structures name. */
+        std::string m_name;
 
         /** The bottom level acceleration structure for the scene. */
         std::vector<BottomLevelAccelerationStructure> m_BLAS;

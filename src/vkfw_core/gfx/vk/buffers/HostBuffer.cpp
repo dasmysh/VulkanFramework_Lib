@@ -11,16 +11,15 @@
 
 namespace vkfw_core::gfx {
 
-    HostBuffer::HostBuffer(const LogicalDevice* device, const vk::BufferUsageFlags& usage,
+    HostBuffer::HostBuffer(const LogicalDevice* device, std::string_view name, const vk::BufferUsageFlags& usage,
         const vk::MemoryPropertyFlags& memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices) :
-        Buffer{ device, usage, memoryFlags | vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, queueFamilyIndices }
+        Buffer{ device, name, usage, memoryFlags | vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent, queueFamilyIndices }
     {
     }
 
     HostBuffer::~HostBuffer() = default;
 
-    HostBuffer::HostBuffer(const HostBuffer& rhs) :
-        Buffer{ rhs.CopyWithoutData() }
+    HostBuffer::HostBuffer(const HostBuffer& rhs) : Buffer{rhs.CopyWithoutData(fmt::format("{}-Copy", rhs.GetName()))}
     {
         std::vector<std::uint8_t> tmp(rhs.GetSize());
         rhs.DownloadData(tmp);

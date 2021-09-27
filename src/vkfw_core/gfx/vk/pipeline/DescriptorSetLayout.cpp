@@ -11,7 +11,10 @@
 
 namespace vkfw_core::gfx {
 
-    DescriptorSetLayout::DescriptorSetLayout() {}
+    DescriptorSetLayout::DescriptorSetLayout(std::string_view name)
+        : VulkanObjectWrapper{nullptr, name, vk::UniqueDescriptorSetLayout{}}
+    {
+    }
 
     DescriptorSetLayout::DescriptorSetLayout(DescriptorSetLayout&& rhs) noexcept = default;
 
@@ -29,16 +32,16 @@ namespace vkfw_core::gfx {
     {
         vk::DescriptorSetLayoutCreateInfo layoutInfo{vk::DescriptorSetLayoutCreateFlags{},
                                                      static_cast<std::uint32_t>(m_bindings.size()), m_bindings.data()};
-        m_layout = device->GetDevice().createDescriptorSetLayoutUnique(layoutInfo);
-        return *m_layout;
+        SetHandle(device->GetHandle(), device->GetHandle().createDescriptorSetLayoutUnique(layoutInfo));
+        return GetHandle();
     }
 
-    vk::UniqueDescriptorPool DescriptorSetLayout::CreateDescriptorPool(const LogicalDevice* device)
+    DescriptorPool DescriptorSetLayout::CreateDescriptorPool(const LogicalDevice* device, std::string_view name)
     {
         std::vector<vk::DescriptorPoolSize> poolSizes;
         std::size_t setCount = 1;
         AddDescriptorPoolSizes(poolSizes, setCount);
-        return DescriptorSetLayout::CreateDescriptorPool(device, poolSizes, setCount);
+        return DescriptorSetLayout::CreateDescriptorPool(device, name, poolSizes, setCount);
     }
 
     void DescriptorSetLayout::AddDescriptorPoolSizes(std::vector<vk::DescriptorPoolSize>& poolSizes,
@@ -60,13 +63,14 @@ namespace vkfw_core::gfx {
         }
     }
 
-    vk::UniqueDescriptorPool DescriptorSetLayout::CreateDescriptorPool(
-        const LogicalDevice* device, const std::vector<vk::DescriptorPoolSize>& poolSizes, std::size_t setCount)
+    DescriptorPool DescriptorSetLayout::CreateDescriptorPool(
+        const LogicalDevice* device, std::string_view name, const std::vector<vk::DescriptorPoolSize>& poolSizes, std::size_t setCount)
     {
         vk::DescriptorPoolCreateInfo descriptorPoolCreateInfo{
             vk::DescriptorPoolCreateFlags{}, static_cast<std::uint32_t>(setCount),
             static_cast<std::uint32_t>(poolSizes.size()), poolSizes.data()};
-        return device->GetDevice().createDescriptorPoolUnique(descriptorPoolCreateInfo);
+        return DescriptorPool{device->GetHandle(), name,
+                              device->GetHandle().createDescriptorPoolUnique(descriptorPoolCreateInfo)};
     }
 
     vk::WriteDescriptorSet DescriptorSetLayout::MakeWrite(vk::DescriptorSet descriptorSet, std::uint32_t binding,

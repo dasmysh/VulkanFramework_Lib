@@ -7,11 +7,12 @@
  */
 
 #include "gfx/vk/wrappers/Queue.h"
+#include "gfx/vk/wrappers/VulkanSyncResources.h"
 
 namespace vkfw_core::gfx {
 
-    Queue::Queue(vk::Queue queue, const CommandPool& commandPool)
-        : VulkanObjectWrapper{queue}, m_commandPool{commandPool}
+    Queue::Queue(vk::Device device, std::string_view name, vk::Queue queue, const CommandPool& commandPool)
+        : VulkanObjectWrapper{device, name, queue}, m_commandPool{&commandPool}
     {
     }
 
@@ -37,9 +38,9 @@ namespace vkfw_core::gfx {
     void Queue::EndLabel() const {}
 #endif
 
-    void Queue::Submit(const vk::SubmitInfo& submitInfo, vk::Fence fence) const
+    void Queue::Submit(const vk::SubmitInfo& submitInfo, const Fence& fence) const
     {
-        GetHandle().submit(submitInfo, fence);
+        GetHandle().submit(submitInfo, fence.GetHandle());
     }
 
     vk::Result Queue::Present(const vk::PresentInfoKHR& presentInfo) const { return GetHandle().presentKHR(presentInfo); }

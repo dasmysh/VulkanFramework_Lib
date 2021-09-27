@@ -45,7 +45,7 @@ namespace vkfw_core::gfx {
     {
         auto loadFn = [this, &transfer, &queueFamilyIndices](const glm::u32vec4& size, const TextureDescriptor& desc,
                                                              void* data) {
-            m_texturePtr = transfer.CreateDeviceTextureWithData(desc, queueFamilyIndices, size, 1, data);
+            m_texturePtr = transfer.CreateDeviceTextureWithData(GetId(), desc, queueFamilyIndices, size, 1, data);
             m_texture = m_texturePtr.get();
             stbi_image_free(data);
         };
@@ -65,7 +65,7 @@ namespace vkfw_core::gfx {
         m_memoryGroup = &memGroup;
         auto loadFn = [this, &memGroup, &queueFamilyIndices](const glm::u32vec4& size, const TextureDescriptor& desc, void* data)
         {
-            m_textureIdx = memGroup.AddTextureToGroup(desc, size, 1, queueFamilyIndices);
+            m_textureIdx = memGroup.AddTextureToGroup(GetId(), desc, size, 1, queueFamilyIndices);
             glm::u32vec3 dataSize(size.x * memGroup.GetHostTexture(m_textureIdx)->GetDescriptor().m_bytesPP, size.y, size.z);
             memGroup.AddDataToTextureInGroup(m_textureIdx, vk::ImageAspectFlagBits::eColor, 0, 0, dataSize, data,
                                              stbi_image_free);

@@ -10,9 +10,9 @@
 
 namespace vkfw_core::gfx::rt {
 
-    BottomLevelAccelerationStructure::BottomLevelAccelerationStructure(LogicalDevice* device,
+    BottomLevelAccelerationStructure::BottomLevelAccelerationStructure(LogicalDevice* device, std::string_view name,
                                                                        vk::BuildAccelerationStructureFlagsKHR flags)
-        : AccelerationStructure{device, vk::AccelerationStructureTypeKHR::eBottomLevel, flags}
+        : AccelerationStructure{device, name, vk::AccelerationStructureTypeKHR::eBottomLevel, flags}
     {
     }
 

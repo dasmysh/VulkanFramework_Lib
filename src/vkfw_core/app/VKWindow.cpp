@@ -28,10 +28,14 @@ namespace vkfw_core {
      */
     VKWindow::VKWindow(cfg::WindowCfg& conf, bool useGUI, const std::vector<std::string>& requiredDeviceExtensions,
                        void* deviceFeaturesNextChain)
-        :
-        m_window{ nullptr },
-        m_config(&conf),
-        m_currMousePosition(0.0f),
+        : m_window{nullptr}
+        , m_config{&conf}
+        , m_surface{nullptr, fmt::format("Win-{} Surface", conf.m_windowTitle), vk::UniqueSurfaceKHR{}}
+        , m_swapchain{nullptr, fmt::format("Win-{} Swapchain", conf.m_windowTitle), vk::UniqueSwapchainKHR{}}
+        , m_swapchainRenderPass{nullptr, fmt::format("Win-{} SCRenderPass", conf.m_windowTitle), vk::UniqueRenderPass{}}
+        , m_imGuiRenderPass{nullptr, fmt::format("Win-{} ImGuiRenderPass", conf.m_windowTitle), vk::UniqueRenderPass{}}
+        , m_imguiDescPool{nullptr, fmt::format("Win-{} ImGuiDescriptorPool", conf.m_windowTitle), vk::UniqueDescriptorPool{}}
+        , m_currMousePosition(0.0f),
         m_prevMousePosition(0.0f),
         m_relativeMousePosition(0.0f),
         m_mouseInWindow(true),
@@ -91,21 +95,22 @@ namespace vkfw_core {
     VKWindow::VKWindow(VKWindow&& rhs) noexcept :
         m_window{ rhs.m_window },
         m_config{ rhs.m_config },
-        m_vkSurface{ std::move(rhs.m_vkSurface) },
+        m_surface{ std::move(rhs.m_surface) },
         m_vkSurfaceExtend{ rhs.m_vkSurfaceExtend },
         m_logicalDevice{ std::move(rhs.m_logicalDevice) },
         m_graphicsQueue{ rhs.m_graphicsQueue },
-        m_vkSwapchain{ std::move(rhs.m_vkSwapchain) },
-        m_vkSwapchainRenderPass{ std::move(rhs.m_vkSwapchainRenderPass) },
-        m_swapchainFramebuffers{ std::move(rhs.m_swapchainFramebuffers) },
-        m_vkCommandPools{ std::move(rhs.m_vkCommandPools) },
-        m_vkCommandBuffers{ std::move(rhs.m_vkCommandBuffers) },
-        m_vkImGuiCommandPools{ std::move(rhs.m_vkImGuiCommandPools) },
-        m_vkImGuiCommandBuffers{ std::move(rhs.m_vkImGuiCommandBuffers) },
-        m_vkImageAvailableSemaphore{ std::move(rhs.m_vkImageAvailableSemaphore) },
-        m_vkRenderingFinishedSemaphore{ std::move(rhs.m_vkRenderingFinishedSemaphore) },
+        m_swapchain{ std::move(rhs.m_swapchain) },
+        m_swapchainRenderPass{ std::move(rhs.m_swapchainRenderPass) }
+        , m_imGuiRenderPass{ std::move(rhs.m_imGuiRenderPass)}
+        ,m_swapchainFramebuffers{ std::move(rhs.m_swapchainFramebuffers) },
+        m_commandPools{ std::move(rhs.m_commandPools) },
+        m_commandBuffers{ std::move(rhs.m_commandBuffers) },
+        m_imGuiCommandPools{ std::move(rhs.m_imGuiCommandPools) },
+        m_imGuiCommandBuffers{ std::move(rhs.m_imGuiCommandBuffers) },
+        m_imageAvailableSemaphore{ std::move(rhs.m_imageAvailableSemaphore) },
+        m_renderingFinishedSemaphore{ std::move(rhs.m_renderingFinishedSemaphore) },
         m_currentlyRenderedImage{ rhs.m_currentlyRenderedImage },
-        m_vkImguiDescPool{ std::move(rhs.m_vkImguiDescPool) },
+        m_imguiDescPool{ std::move(rhs.m_imguiDescPool) },
         m_windowData{ std::move(rhs.m_windowData) },
         m_imguiVulkanData{ std::move(rhs.m_imguiVulkanData) },
         m_currMousePosition{ rhs.m_currMousePosition },
@@ -126,21 +131,22 @@ namespace vkfw_core {
             this->~VKWindow();
             m_window = rhs.m_window;
             m_config = rhs.m_config;
-            m_vkSurface = std::move(rhs.m_vkSurface);
+            m_surface = std::move(rhs.m_surface);
             m_vkSurfaceExtend = rhs.m_vkSurfaceExtend;
             m_logicalDevice = std::move(rhs.m_logicalDevice);
             m_graphicsQueue = rhs.m_graphicsQueue;
-            m_vkSwapchain = std::move(rhs.m_vkSwapchain);
-            m_vkSwapchainRenderPass = std::move(rhs.m_vkSwapchainRenderPass);
+            m_swapchain = std::move(rhs.m_swapchain);
+            m_swapchainRenderPass = std::move(rhs.m_swapchainRenderPass);
+            m_imGuiRenderPass = std::move(rhs.m_imGuiRenderPass);
             m_swapchainFramebuffers = std::move(rhs.m_swapchainFramebuffers);
-            m_vkCommandPools = std::move(rhs.m_vkCommandPools);
-            m_vkCommandBuffers = std::move(rhs.m_vkCommandBuffers);
-            m_vkImGuiCommandPools = std::move(rhs.m_vkImGuiCommandPools);
-            m_vkImGuiCommandBuffers = std::move(rhs.m_vkImGuiCommandBuffers);
-            m_vkImageAvailableSemaphore = std::move(rhs.m_vkImageAvailableSemaphore);
-            m_vkRenderingFinishedSemaphore = std::move(rhs.m_vkRenderingFinishedSemaphore);
+            m_commandPools = std::move(rhs.m_commandPools);
+            m_commandBuffers = std::move(rhs.m_commandBuffers);
+            m_imGuiCommandPools = std::move(rhs.m_imGuiCommandPools);
+            m_imGuiCommandBuffers = std::move(rhs.m_imGuiCommandBuffers);
+            m_imageAvailableSemaphore = std::move(rhs.m_imageAvailableSemaphore);
+            m_renderingFinishedSemaphore = std::move(rhs.m_renderingFinishedSemaphore);
             m_currentlyRenderedImage = rhs.m_currentlyRenderedImage;
-            m_vkImguiDescPool = std::move(rhs.m_vkImguiDescPool);
+            m_imguiDescPool = std::move(rhs.m_imguiDescPool);
             m_windowData = std::move(rhs.m_windowData);
             m_imguiVulkanData = std::move(rhs.m_imguiVulkanData);
             m_currMousePosition = rhs.m_currMousePosition;
@@ -248,12 +254,14 @@ namespace vkfw_core {
         VkSurfaceKHR surfaceKHR = VK_NULL_HANDLE;
         auto result = glfwCreateWindowSurface(ApplicationBase::instance().GetVKInstance(), m_window, nullptr, &surfaceKHR);
         vk::ObjectDestroy<vk::Instance, vk::DispatchLoaderDynamic> deleter(ApplicationBase::instance().GetVKInstance());
-        m_vkSurface = vk::UniqueSurfaceKHR(vk::SurfaceKHR(surfaceKHR), deleter);
+        m_surface = gfx::Surface{nullptr, fmt::format("Win-{} Surface", m_config->m_windowTitle), vk::UniqueSurfaceKHR(vk::SurfaceKHR(surfaceKHR), deleter)};
         if (result != VK_SUCCESS) {
             spdlog::critical("Could not create window surface ({}).", vk::to_string(vk::Result(result)));
             throw std::runtime_error("Could not create window surface.");
         }
-        m_logicalDevice = ApplicationBase::instance().CreateLogicalDevice(*m_config, requiredDeviceExtensions, featuresNextChain, *m_vkSurface);
+        m_logicalDevice = ApplicationBase::instance().CreateLogicalDevice(*m_config, requiredDeviceExtensions,
+                                                                          featuresNextChain, m_surface);
+        m_surface = gfx::Surface{m_logicalDevice->GetHandle(), std::move(m_surface)};
         for (auto i = 0U; i < m_config->m_queues.size(); ++i) {
             if (m_config->m_queues[i].m_graphics) {
                 m_graphicsQueue = i;
@@ -264,9 +272,13 @@ namespace vkfw_core {
         RecreateSwapChain();
 
         vk::SemaphoreCreateInfo semaphoreInfo{ };
-        m_vkImageAvailableSemaphore = m_logicalDevice->GetDevice().createSemaphoreUnique(semaphoreInfo);
-        m_vkDataAvailableSemaphore = m_logicalDevice->GetDevice().createSemaphoreUnique(semaphoreInfo);
-        m_vkRenderingFinishedSemaphore = m_logicalDevice->GetDevice().createSemaphoreUnique(semaphoreInfo);
+        m_imageAvailableSemaphore = gfx::Semaphore{m_logicalDevice->GetHandle(), "Win-{} ImgAvailSemaphore",
+                                                     m_logicalDevice->GetHandle().createSemaphoreUnique(semaphoreInfo)};
+        m_dataAvailableSemaphore = gfx::Semaphore{m_logicalDevice->GetHandle(), "Win-{} DataAvailSemaphore",
+                                                  m_logicalDevice->GetHandle().createSemaphoreUnique(semaphoreInfo)};
+        m_renderingFinishedSemaphore =
+            gfx::Semaphore{m_logicalDevice->GetHandle(), "Win-{} RenderFinishedSemaphore",
+                           m_logicalDevice->GetHandle().createSemaphoreUnique(semaphoreInfo)};
 
         spdlog::info("Initializing Vulkan surface... done.");
     }
@@ -276,7 +288,7 @@ namespace vkfw_core {
         ImGui_ImplVulkanH_Window* wd = m_windowData.get();
 
         {
-            wd->Surface = m_vkSurface.get();
+            wd->Surface = m_surface.GetHandle();
 
             // Check for WSI support
             auto res = m_logicalDevice->GetPhysicalDevice().getSurfaceSupportKHR(m_graphicsQueue, wd->Surface);
@@ -297,21 +309,23 @@ namespace vkfw_core {
 
         vk::DescriptorPoolSize imguiDescPoolSize{ vk::DescriptorType::eCombinedImageSampler, 1 };
         vk::DescriptorPoolCreateInfo imguiDescSetPoolInfo{ vk::DescriptorPoolCreateFlags(), 1, 1, &imguiDescPoolSize };
-        m_vkImguiDescPool = m_logicalDevice->GetDevice().createDescriptorPoolUnique(imguiDescSetPoolInfo);
+        m_imguiDescPool = gfx::DescriptorPool{
+            m_logicalDevice->GetHandle(), fmt::format("Win-{} ImGuiDescPool", m_config->m_windowTitle),
+            m_logicalDevice->GetHandle().createDescriptorPoolUnique(imguiDescSetPoolInfo)};
 
         // Setup Vulkan binding
         m_imguiVulkanData = std::make_unique<ImGui_ImplVulkan_InitInfo>();
         m_imguiVulkanData->Instance = ApplicationBase::instance().GetVKInstance();
         m_imguiVulkanData->PhysicalDevice = m_logicalDevice->GetPhysicalDevice();
-        m_imguiVulkanData->Device = m_logicalDevice->GetDevice();
+        m_imguiVulkanData->Device = m_logicalDevice->GetHandle();
         m_imguiVulkanData->QueueFamily = m_graphicsQueue;
         m_imguiVulkanData->Queue = m_logicalDevice->GetQueue(m_graphicsQueue, 0).GetHandle();
         m_imguiVulkanData->PipelineCache = VK_NULL_HANDLE;
-        m_imguiVulkanData->DescriptorPool = m_vkImguiDescPool.get();
+        m_imguiVulkanData->DescriptorPool = m_imguiDescPool.GetHandle();
         m_imguiVulkanData->Allocator = nullptr;
         m_imguiVulkanData->CheckVkResultFn = nullptr;
-        m_imguiVulkanData->ImageCount = static_cast<std::uint32_t>(m_vkImGuiCommandBuffers.size());
-        m_imguiVulkanData->MinImageCount = static_cast<std::uint32_t>(m_vkImGuiCommandBuffers.size());
+        m_imguiVulkanData->ImageCount = static_cast<std::uint32_t>(m_imGuiCommandBuffers.size());
+        m_imguiVulkanData->MinImageCount = static_cast<std::uint32_t>(m_imGuiCommandBuffers.size());
         m_imguiVulkanData->MSAASamples = VK_SAMPLE_COUNT_1_BIT;
         m_imguiVulkanData->Subpass = 0;
         ImGui_ImplVulkan_Init(m_imguiVulkanData.get(), wd->RenderPass);
@@ -336,24 +350,24 @@ namespace vkfw_core {
 
         // Upload Fonts
         {
-            VkCommandBuffer command_buffer = *m_vkImGuiCommandBuffers[0];
+            // VkCommandBuffer command_buffer = *m_vkImGuiCommandBuffers[0];
 
-            m_logicalDevice->GetDevice().resetCommandPool(*m_vkImGuiCommandPools[0], vk::CommandPoolResetFlags());
+            m_logicalDevice->GetHandle().resetCommandPool(m_imGuiCommandPools[0].GetHandle(), vk::CommandPoolResetFlags());
             vk::CommandBufferBeginInfo begin_info{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
-            m_vkImGuiCommandBuffers[0]->begin(begin_info);
+            m_imGuiCommandBuffers[0].Begin(begin_info);
 
-            ImGui_ImplVulkan_CreateFontsTexture(command_buffer);
+            ImGui_ImplVulkan_CreateFontsTexture(m_imGuiCommandBuffers[0].GetHandle());
 
-            vk::SubmitInfo end_info{ 0, nullptr, nullptr, 1, &(*m_vkImGuiCommandBuffers[0]) };
-            m_vkImGuiCommandBuffers[0]->end();
+            vk::SubmitInfo end_info{0, nullptr, nullptr, 1, m_imGuiCommandBuffers[0].GetHandlePtr()};
+            m_imGuiCommandBuffers[0].End();
 
             const auto& graphicsQueue = m_logicalDevice->GetQueue(m_graphicsQueue, 0);
             {
                 QUEUE_REGION(graphicsQueue, "Upload ImGui Fonts");
-                graphicsQueue.Submit(end_info, vk::Fence());
+                graphicsQueue.Submit(end_info, gfx::Fence{});
             }
 
-            m_logicalDevice->GetDevice().waitIdle();
+            m_logicalDevice->GetHandle().waitIdle();
 
             ImGui_ImplVulkan_DestroyFontUploadObjects();
         }
@@ -369,37 +383,43 @@ namespace vkfw_core {
             glfwWaitEvents();
         }
 
-        m_logicalDevice->GetDevice().waitIdle();
+        m_logicalDevice->GetHandle().waitIdle();
 
-        m_vkCommandBuffers.clear();
-        m_vkImGuiCommandBuffers.clear();
-        m_vkCommandPools.clear();
-        m_vkImGuiCommandPools.clear();
-        m_vkCmdBufferUFences.clear();
+        m_commandBuffers.clear();
+        m_imGuiCommandBuffers.clear();
+        m_commandPools.clear();
+        m_imGuiCommandPools.clear();
+        m_cmdBufferFences.clear();
 
         DestroySwapchainImages();
 
         // NOLINTNEXTLINE
-        auto surfaceCapabilities = m_logicalDevice->GetPhysicalDevice().getSurfaceCapabilitiesKHR(*m_vkSurface);
-        auto deviceSurfaceFormats = m_logicalDevice->GetPhysicalDevice().getSurfaceFormatsKHR(*m_vkSurface);
+        auto surfaceCapabilities =
+            m_logicalDevice->GetPhysicalDevice().getSurfaceCapabilitiesKHR(m_surface.GetHandle());
+        auto deviceSurfaceFormats = m_logicalDevice->GetPhysicalDevice().getSurfaceFormatsKHR(m_surface.GetHandle());
         auto surfaceFormats = cfg::GetVulkanSurfaceFormatsFromConfig(*m_config);
-        std::sort(deviceSurfaceFormats.begin(), deviceSurfaceFormats.end(), [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0.format < f1.format; });
-        std::sort(surfaceFormats.begin(), surfaceFormats.end(), [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0.format < f1.format; });
+        std::sort(deviceSurfaceFormats.begin(), deviceSurfaceFormats.end(),
+                  [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0.format < f1.format; });
+        std::sort(surfaceFormats.begin(), surfaceFormats.end(),
+                  [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0.format < f1.format; });
 
         vk::SurfaceFormatKHR surfaceFormat;
         if (deviceSurfaceFormats.size() == 1 && deviceSurfaceFormats[0].format == vk::Format::eUndefined) {
             surfaceFormat = surfaceFormats[0];
-        }
-        else {
+        } else {
             std::vector<vk::SurfaceFormatKHR> formatIntersection;
-            std::set_intersection(deviceSurfaceFormats.begin(), deviceSurfaceFormats.end(), surfaceFormats.begin(), surfaceFormats.end(),
-                std::back_inserter(formatIntersection), [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0 == f1; });
+            std::set_intersection(
+                deviceSurfaceFormats.begin(), deviceSurfaceFormats.end(), surfaceFormats.begin(), surfaceFormats.end(),
+                std::back_inserter(formatIntersection),
+                [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0 == f1; });
             if (!formatIntersection.empty()) {
-                surfaceFormat = formatIntersection[0]; // no color space check here as color space does not depend on the color space flag but the actual format.
-            }
-            else {
-                spdlog::critical("No suitable surface format found after correct enumeration (this should never happen).");
-                throw std::runtime_error("No suitable surface format found after correct enumeration (this should never happen).");
+                surfaceFormat = formatIntersection
+                    [0]; // no color space check here as color space does not depend on the color space flag but the actual format.
+            } else {
+                spdlog::critical(
+                    "No suitable surface format found after correct enumeration (this should never happen).");
+                throw std::runtime_error(
+                    "No suitable surface format found after correct enumeration (this should never happen).");
             }
         }
 
@@ -410,13 +430,26 @@ namespace vkfw_core {
         glm::u32vec2 maxSurfaceSize(surfaceCapabilities.maxImageExtent.width,
                                     surfaceCapabilities.maxImageExtent.height);
         auto surfaceExtend = glm::clamp(configSurfaceSize, minSurfaceSize, maxSurfaceSize);
-        m_vkSurfaceExtend = vk::Extent2D{ surfaceExtend.x, surfaceExtend.y };
+        m_vkSurfaceExtend = vk::Extent2D{surfaceExtend.x, surfaceExtend.y};
         auto imageCount = surfaceCapabilities.minImageCount + cfg::GetVulkanAdditionalImageCountFromConfig(*m_config);
 
         {
-            vk::SwapchainCreateInfoKHR swapChainCreateInfo{ vk::SwapchainCreateFlagsKHR(), *m_vkSurface, imageCount, surfaceFormat.format, surfaceFormat.colorSpace,
-                m_vkSurfaceExtend, 1, vk::ImageUsageFlagBits::eColorAttachment, vk::SharingMode::eExclusive, 0, nullptr, surfaceCapabilities.currentTransform,
-                vk::CompositeAlphaFlagBitsKHR::eOpaque, presentMode, static_cast<vk::Bool32>(true), *m_vkSwapchain };
+            vk::SwapchainCreateInfoKHR swapChainCreateInfo{vk::SwapchainCreateFlagsKHR(),
+                                                           m_surface.GetHandle(),
+                                                           imageCount,
+                                                           surfaceFormat.format,
+                                                           surfaceFormat.colorSpace,
+                                                           m_vkSurfaceExtend,
+                                                           1,
+                                                           vk::ImageUsageFlagBits::eColorAttachment,
+                                                           vk::SharingMode::eExclusive,
+                                                           0,
+                                                           nullptr,
+                                                           surfaceCapabilities.currentTransform,
+                                                           vk::CompositeAlphaFlagBitsKHR::eOpaque,
+                                                           presentMode,
+                                                           static_cast<vk::Bool32>(true),
+                                                           m_swapchain.GetHandle()};
 
             // not sure if this is needed for anything else but ray tracing ...
             if (surfaceCapabilities.supportedUsageFlags & vk::ImageUsageFlagBits::eTransferSrc) {
@@ -427,150 +460,216 @@ namespace vkfw_core {
                 swapChainCreateInfo.imageUsage |= vk::ImageUsageFlagBits::eTransferDst;
             }
 
-            m_vkSwapchain = m_logicalDevice->GetDevice().createSwapchainKHRUnique(swapChainCreateInfo);
-        }
-        m_windowData->Width = m_vkSurfaceExtend.width;
-        m_windowData->Height = m_vkSurfaceExtend.height;
-        m_windowData->Swapchain = *m_vkSwapchain;
-        m_windowData->PresentMode = static_cast<VkPresentModeKHR>(presentMode);
-        m_windowData->SurfaceFormat = surfaceFormat;
+            m_swapchain =
+                gfx::Swapchain{m_logicalDevice->GetHandle(), fmt::format("Win-{} Swapchain", m_config->m_windowTitle),
+                               m_logicalDevice->GetHandle().createSwapchainKHRUnique(swapChainCreateInfo)};
+            m_windowData->Width = m_vkSurfaceExtend.width;
+            m_windowData->Height = m_vkSurfaceExtend.height;
+            m_windowData->Swapchain = m_swapchain.GetHandle();
+            m_windowData->PresentMode = static_cast<VkPresentModeKHR>(presentMode);
+            m_windowData->SurfaceFormat = surfaceFormat;
 
-        auto swapchainImages = m_logicalDevice->GetDevice().getSwapchainImagesKHR(*m_vkSwapchain);
+            auto swapchainImages = m_logicalDevice->GetHandle().getSwapchainImagesKHR(m_swapchain.GetHandle());
 
-        auto dsFormat = FindSupportedDepthFormat();
-        {
-            // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
-            vk::AttachmentDescription colorAttachment{ vk::AttachmentDescriptionFlags(), surfaceFormat.format, vk::SampleCountFlagBits::e1,
-                vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore,
-                vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
-                vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal };
-            vk::AttachmentReference colorAttachmentRef{ 0, vk::ImageLayout::eColorAttachmentOptimal };
-            // TODO: check the stencil load/store operations. [3/20/2017 Sebastian Maisch]
-            vk::AttachmentDescription depthAttachment{ vk::AttachmentDescriptionFlags(), dsFormat.second, vk::SampleCountFlagBits::e1,
-                vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare,
-                vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare,
-                vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal };
-            vk::AttachmentReference depthAttachmentRef{ 1, vk::ImageLayout::eDepthStencilAttachmentOptimal };
+            auto dsFormat = FindSupportedDepthFormat();
+            {
+                // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
+                vk::AttachmentDescription colorAttachment{vk::AttachmentDescriptionFlags(),
+                                                          surfaceFormat.format,
+                                                          vk::SampleCountFlagBits::e1,
+                                                          vk::AttachmentLoadOp::eClear,
+                                                          vk::AttachmentStoreOp::eStore,
+                                                          vk::AttachmentLoadOp::eDontCare,
+                                                          vk::AttachmentStoreOp::eDontCare,
+                                                          vk::ImageLayout::eUndefined,
+                                                          vk::ImageLayout::eColorAttachmentOptimal};
+                vk::AttachmentReference colorAttachmentRef{0, vk::ImageLayout::eColorAttachmentOptimal};
+                // TODO: check the stencil load/store operations. [3/20/2017 Sebastian Maisch]
+                vk::AttachmentDescription depthAttachment{vk::AttachmentDescriptionFlags(),
+                                                          dsFormat.second,
+                                                          vk::SampleCountFlagBits::e1,
+                                                          vk::AttachmentLoadOp::eClear,
+                                                          vk::AttachmentStoreOp::eDontCare,
+                                                          vk::AttachmentLoadOp::eClear,
+                                                          vk::AttachmentStoreOp::eDontCare,
+                                                          vk::ImageLayout::eDepthStencilAttachmentOptimal,
+                                                          vk::ImageLayout::eDepthStencilAttachmentOptimal};
+                vk::AttachmentReference depthAttachmentRef{1, vk::ImageLayout::eDepthStencilAttachmentOptimal};
 
-            vk::SubpassDescription subPass{ vk::SubpassDescriptionFlags(), vk::PipelineBindPoint::eGraphics, 0, nullptr,
-                1, &colorAttachmentRef, nullptr, &depthAttachmentRef, 0, nullptr };
+                vk::SubpassDescription subPass{vk::SubpassDescriptionFlags(),
+                                               vk::PipelineBindPoint::eGraphics,
+                                               0,
+                                               nullptr,
+                                               1,
+                                               &colorAttachmentRef,
+                                               nullptr,
+                                               &depthAttachmentRef,
+                                               0,
+                                               nullptr};
 
-            vk::SubpassDependency dependency{ VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlags(),
-                vk::AccessFlagBits::eColorAttachmentRead | vk::AccessFlagBits::eColorAttachmentWrite };
-            std::array<vk::AttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
-            vk::RenderPassCreateInfo renderPassInfo{ vk::RenderPassCreateFlags(),
-                static_cast<std::uint32_t>(attachments.size()), attachments.data(), 1, &subPass, 1, &dependency };
+                vk::SubpassDependency dependency{VK_SUBPASS_EXTERNAL,
+                                                 0,
+                                                 vk::PipelineStageFlagBits::eColorAttachmentOutput,
+                                                 vk::PipelineStageFlagBits::eColorAttachmentOutput,
+                                                 vk::AccessFlags(),
+                                                 vk::AccessFlagBits::eColorAttachmentRead
+                                                     | vk::AccessFlagBits::eColorAttachmentWrite};
+                std::array<vk::AttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
+                vk::RenderPassCreateInfo renderPassInfo{vk::RenderPassCreateFlags(),
+                                                        static_cast<std::uint32_t>(attachments.size()),
+                                                        attachments.data(),
+                                                        1,
+                                                        &subPass,
+                                                        1,
+                                                        &dependency};
 
-            m_vkSwapchainRenderPass = m_logicalDevice->GetDevice().createRenderPassUnique(renderPassInfo);
-        }
-
-        {
-            // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
-            vk::AttachmentDescription colorAttachment{ vk::AttachmentDescriptionFlags(), surfaceFormat.format, vk::SampleCountFlagBits::e1,
-                vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore,
-                vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
-                vk::ImageLayout::eColorAttachmentOptimal, vk::ImageLayout::ePresentSrcKHR };
-            vk::AttachmentReference colorAttachmentRef{ 0, vk::ImageLayout::eColorAttachmentOptimal };
-            // TODO: check the stencil load/store operations. [3/20/2017 Sebastian Maisch]
-            vk::AttachmentDescription depthAttachment{ vk::AttachmentDescriptionFlags(), dsFormat.second, vk::SampleCountFlagBits::e1,
-                vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eDontCare,
-                vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
-                vk::ImageLayout::eDepthStencilAttachmentOptimal, vk::ImageLayout::eDepthStencilAttachmentOptimal };
-            vk::AttachmentReference depthAttachmentRef{ 1, vk::ImageLayout::eDepthStencilAttachmentOptimal };
-
-            vk::SubpassDescription subPass{ vk::SubpassDescriptionFlags(), vk::PipelineBindPoint::eGraphics, 0, nullptr,
-                1, &colorAttachmentRef, nullptr, &depthAttachmentRef, 0, nullptr };
-
-            vk::SubpassDependency dependency{ VK_SUBPASS_EXTERNAL, 0, vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::AccessFlags(),
-                vk::AccessFlagBits::eColorAttachmentWrite };
-            std::array<vk::AttachmentDescription, 2> attachments = { colorAttachment, depthAttachment };
-            vk::RenderPassCreateInfo renderPassInfo{ vk::RenderPassCreateFlags(),
-                static_cast<std::uint32_t>(attachments.size()), attachments.data(), 1, &subPass, 1, &dependency };
-
-            m_vkImGuiRenderPass = m_logicalDevice->GetDevice().createRenderPassUnique(renderPassInfo);
-            m_windowData->RenderPass = *m_vkImGuiRenderPass;
-        }
-
-        // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
-        gfx::FramebufferDescriptor fbDesc;
-        fbDesc.m_tex.emplace_back(m_config->m_backbufferBits / 8, surfaceFormat.format, vk::SampleCountFlagBits::e1);
-        if (m_config->m_useRayTracing) {
-            fbDesc.m_tex.back().m_imageUsage |= vk::ImageUsageFlagBits::eTransferDst;
-        }
-        fbDesc.m_tex.push_back(gfx::TextureDescriptor::DepthBufferTextureDesc(dsFormat.first, dsFormat.second, vk::SampleCountFlagBits::e1));
-        m_swapchainFramebuffers.reserve(swapchainImages.size());
-
-        m_vkCommandPools.resize(swapchainImages.size());
-        m_vkImGuiCommandPools.resize(swapchainImages.size());
-        m_vkCommandBuffers.resize(swapchainImages.size());
-        m_vkImGuiCommandBuffers.resize(swapchainImages.size());
-
-        vk::CommandPoolCreateInfo poolInfo{ vk::CommandPoolCreateFlags(), m_logicalDevice->GetQueueInfo(m_graphicsQueue).m_familyIndex };
-
-        for (std::size_t i = 0; i < swapchainImages.size(); ++i) {
-            std::vector<vk::Image> attachments{ swapchainImages[i] };
-            m_swapchainFramebuffers.emplace_back(m_logicalDevice.get(), glm::uvec2(m_vkSurfaceExtend.width, m_vkSurfaceExtend.height),
-                attachments, *m_vkSwapchainRenderPass, fbDesc);
-
-            m_vkCommandPools[i] = m_logicalDevice->GetDevice().createCommandPoolUnique(poolInfo);
-            m_vkImGuiCommandPools[i] = m_logicalDevice->GetDevice().createCommandPoolUnique(poolInfo);
-
-            vk::CommandBufferAllocateInfo allocInfo{ *m_vkCommandPools[i], vk::CommandBufferLevel::ePrimary, 1 };
-            vk::CommandBufferAllocateInfo imgui_allocInfo{ *m_vkImGuiCommandPools[i], vk::CommandBufferLevel::ePrimary, 1 };
-
-            try {
-                m_vkCommandBuffers[i] =
-                    std::move(m_logicalDevice->GetDevice().allocateCommandBuffersUnique(allocInfo)[0]);
-                m_vkImGuiCommandBuffers[i] =
-                    std::move(m_logicalDevice->GetDevice().allocateCommandBuffersUnique(imgui_allocInfo)[0]);
+                m_swapchainRenderPass = gfx::RenderPass{
+                    m_logicalDevice->GetHandle(), fmt::format("Win-{} SwapchainRenderPass", m_config->m_windowTitle),
+                    m_logicalDevice->GetHandle().createRenderPassUnique(renderPassInfo)};
             }
-            catch (vk::SystemError& e) {
-                spdlog::critical("Could not allocate command buffers ({}).", e.what());
-                throw std::runtime_error("Could not allocate command buffers.");
+
+            {
+                // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
+                vk::AttachmentDescription colorAttachment{
+                    vk::AttachmentDescriptionFlags(), surfaceFormat.format,
+                    vk::SampleCountFlagBits::e1,      vk::AttachmentLoadOp::eLoad,
+                    vk::AttachmentStoreOp::eStore,    vk::AttachmentLoadOp::eDontCare,
+                    vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
+                    vk::ImageLayout::ePresentSrcKHR};
+                vk::AttachmentReference colorAttachmentRef{0, vk::ImageLayout::eColorAttachmentOptimal};
+                // TODO: check the stencil load/store operations. [3/20/2017 Sebastian Maisch]
+                vk::AttachmentDescription depthAttachment{vk::AttachmentDescriptionFlags(),
+                                                          dsFormat.second,
+                                                          vk::SampleCountFlagBits::e1,
+                                                          vk::AttachmentLoadOp::eLoad,
+                                                          vk::AttachmentStoreOp::eDontCare,
+                                                          vk::AttachmentLoadOp::eDontCare,
+                                                          vk::AttachmentStoreOp::eDontCare,
+                                                          vk::ImageLayout::eDepthStencilAttachmentOptimal,
+                                                          vk::ImageLayout::eDepthStencilAttachmentOptimal};
+                vk::AttachmentReference depthAttachmentRef{1, vk::ImageLayout::eDepthStencilAttachmentOptimal};
+
+                vk::SubpassDescription subPass{vk::SubpassDescriptionFlags(),
+                                               vk::PipelineBindPoint::eGraphics,
+                                               0,
+                                               nullptr,
+                                               1,
+                                               &colorAttachmentRef,
+                                               nullptr,
+                                               &depthAttachmentRef,
+                                               0,
+                                               nullptr};
+
+                vk::SubpassDependency dependency{VK_SUBPASS_EXTERNAL,
+                                                 0,
+                                                 vk::PipelineStageFlagBits::eColorAttachmentOutput,
+                                                 vk::PipelineStageFlagBits::eColorAttachmentOutput,
+                                                 vk::AccessFlags(),
+                                                 vk::AccessFlagBits::eColorAttachmentWrite};
+                std::array<vk::AttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
+                vk::RenderPassCreateInfo renderPassInfo{vk::RenderPassCreateFlags(),
+                                                        static_cast<std::uint32_t>(attachments.size()),
+                                                        attachments.data(),
+                                                        1,
+                                                        &subPass,
+                                                        1,
+                                                        &dependency};
+
+                m_imGuiRenderPass = gfx::RenderPass{
+                    m_logicalDevice->GetHandle(), fmt::format("Win-{} ImGuiRenderPass", m_config->m_windowTitle),
+                    m_logicalDevice->GetHandle().createRenderPassUnique(renderPassInfo)};
+                m_windowData->RenderPass = m_imGuiRenderPass.GetHandle();
+            }
+
+            // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
+            gfx::FramebufferDescriptor fbDesc;
+            fbDesc.m_tex.emplace_back(m_config->m_backbufferBits / 8, surfaceFormat.format,
+                                      vk::SampleCountFlagBits::e1);
+            if (m_config->m_useRayTracing) { fbDesc.m_tex.back().m_imageUsage |= vk::ImageUsageFlagBits::eTransferDst; }
+            fbDesc.m_tex.push_back(gfx::TextureDescriptor::DepthBufferTextureDesc(dsFormat.first, dsFormat.second,
+                                                                                  vk::SampleCountFlagBits::e1));
+            m_swapchainFramebuffers.reserve(swapchainImages.size());
+
+            m_commandPools.resize(swapchainImages.size());
+            m_imGuiCommandPools.resize(swapchainImages.size());
+            m_commandBuffers.resize(swapchainImages.size());
+            m_imGuiCommandBuffers.resize(swapchainImages.size());
+            m_cmdBufferFences.resize(m_commandBuffers.size());
+
+            vk::CommandPoolCreateInfo poolInfo{vk::CommandPoolCreateFlags(),
+                                               m_logicalDevice->GetQueueInfo(m_graphicsQueue).m_familyIndex};
+            vk::FenceCreateInfo fenceCreateInfo{vk::FenceCreateFlagBits::eSignaled};
+
+            for (std::size_t i = 0; i < swapchainImages.size(); ++i) {
+                std::vector<vk::Image> attachments{swapchainImages[i]};
+                m_swapchainFramebuffers.emplace_back(m_logicalDevice.get(),
+                                                     fmt::format("Win-{} SwapchainImage{}", m_config->m_windowTitle, i),
+                                                     glm::uvec2(m_vkSurfaceExtend.width, m_vkSurfaceExtend.height),
+                                                     attachments, m_swapchainRenderPass, fbDesc);
+
+                m_commandPools[i] = gfx::CommandPool{m_logicalDevice->GetHandle(),
+                                                     fmt::format("Win-{} CommandPool{}", m_config->m_windowTitle, i),
+                                                     m_logicalDevice->GetHandle().createCommandPoolUnique(poolInfo)};
+                m_imGuiCommandPools[i] = gfx::CommandPool{
+                    m_logicalDevice->GetHandle(), fmt::format("Win-{} ImGuiCommandPool{}", m_config->m_windowTitle, i),
+                    m_logicalDevice->GetHandle().createCommandPoolUnique(poolInfo)};
+
+                vk::CommandBufferAllocateInfo allocInfo{m_commandPools[i].GetHandle(), vk::CommandBufferLevel::ePrimary,
+                                                        1};
+                vk::CommandBufferAllocateInfo imgui_allocInfo{m_imGuiCommandPools[i].GetHandle(),
+                                                              vk::CommandBufferLevel::ePrimary, 1};
+
+                try {
+                    m_commandBuffers[i] = gfx::CommandBuffer{
+                        m_logicalDevice->GetHandle(), fmt::format("Win-{} CommandBuffer{}", m_config->m_windowTitle, i),
+                        std::move(m_logicalDevice->GetHandle().allocateCommandBuffersUnique(allocInfo)[0])};
+                    m_imGuiCommandBuffers[i] = gfx::CommandBuffer{
+                        m_logicalDevice->GetHandle(),
+                        fmt::format("Win-{} ImGuiCommandBuffer{}", m_config->m_windowTitle, i),
+                        std::move(m_logicalDevice->GetHandle().allocateCommandBuffersUnique(imgui_allocInfo)[0])};
+                } catch (vk::SystemError& e) {
+                    spdlog::critical("Could not allocate command buffers ({}).", e.what());
+                    throw std::runtime_error("Could not allocate command buffers.");
+                }
+
+                m_cmdBufferFences[i] =
+                    gfx::Fence{m_logicalDevice->GetHandle(),
+                               fmt::format("Win-{} CommandBufferFence{}", m_config->m_windowTitle, i),
+                               m_logicalDevice->GetHandle().createFenceUnique(fenceCreateInfo)};
             }
         }
-
-        vk::FenceCreateInfo fenceCreateInfo{ vk::FenceCreateFlagBits::eSignaled };
-        m_vkCmdBufferUFences.resize(m_vkCommandBuffers.size());
-        m_vkCmdBufferFences.resize(m_vkCommandBuffers.size());
-        for (auto& fence : m_vkCmdBufferUFences) {
-            fence = m_logicalDevice->GetDevice().createFenceUnique(fenceCreateInfo);
-        }
-        std::transform(m_vkCmdBufferUFences.begin(), m_vkCmdBufferUFences.end(), m_vkCmdBufferFences.begin(), [](auto& cmdBuffer) { return *cmdBuffer; });
     }
 
     void VKWindow::DestroySwapchainImages()
     {
         m_swapchainFramebuffers.clear();
-        m_vkSwapchainRenderPass.reset();
+        m_swapchainRenderPass = gfx::RenderPass{};
     }
 
     void VKWindow::ReleaseVulkan()
     {
-        m_logicalDevice->GetDevice().waitIdle();
+        m_logicalDevice->GetHandle().waitIdle();
 
         ImGui_ImplVulkan_Shutdown();
         ImGui_ImplGlfw_Shutdown();
         ImGui::DestroyContext();
 
-        m_vkCmdBufferUFences.clear();
-        m_vkImageAvailableSemaphore.reset();
-        m_vkDataAvailableSemaphore.reset();
-        m_vkRenderingFinishedSemaphore.reset();
-        m_vkCommandBuffers.clear();
-        m_vkImGuiCommandBuffers.clear();
-        m_vkCommandPools.clear();
+        m_cmdBufferFences.clear();
+        m_imageAvailableSemaphore = gfx::Semaphore{};
+        m_dataAvailableSemaphore = gfx::Semaphore{};
+        m_renderingFinishedSemaphore = gfx::Semaphore{};
+        m_commandBuffers.clear();
+        m_imGuiCommandBuffers.clear();
+        m_commandPools.clear();
 
-        m_vkImGuiRenderPass.reset();
-        m_vkImguiDescPool.reset();
-        m_vkImGuiCommandPools.clear();
+        m_imGuiRenderPass = gfx::RenderPass{};
+        m_imguiDescPool = gfx::DescriptorPool{};
+        m_imGuiCommandPools.clear();
 
         DestroySwapchainImages();
-        m_vkSwapchain.reset();
+        m_swapchain = gfx::Swapchain{};
         m_logicalDevice.reset();
-        m_vkSurface.reset();
+        m_surface = gfx::Surface{};
     }
 
     std::pair<unsigned int, vk::Format> VKWindow::FindSupportedDepthFormat() const
@@ -623,7 +722,8 @@ namespace vkfw_core {
 
     void VKWindow::PrepareFrame()
     {
-        auto result = m_logicalDevice->GetDevice().acquireNextImageKHR(*m_vkSwapchain, std::numeric_limits<std::uint64_t>::max(), *m_vkImageAvailableSemaphore, vk::Fence());
+        auto result = m_logicalDevice->GetHandle().acquireNextImageKHR(
+            m_swapchain.GetHandle(), std::numeric_limits<std::uint64_t>::max(), m_imageAvailableSemaphore.GetHandle(), vk::Fence());
         m_currentlyRenderedImage = result.value;
 
         // NOLINTNEXTLINE
@@ -649,10 +749,10 @@ namespace vkfw_core {
     {
         {
             auto syncResult =
-                m_logicalDevice->GetDevice().getFenceStatus(m_vkCmdBufferFences[m_currentlyRenderedImage]);
+                m_logicalDevice->GetHandle().getFenceStatus(m_cmdBufferFences[m_currentlyRenderedImage].GetHandle());
             while (syncResult == vk::Result::eTimeout || syncResult == vk::Result::eNotReady) {
-                syncResult = m_logicalDevice->GetDevice().waitForFences(m_vkCmdBufferFences[m_currentlyRenderedImage],
-                                                                       VK_TRUE, defaultFenceTimeout);
+                syncResult = m_logicalDevice->GetHandle().waitForFences(
+                    m_cmdBufferFences[m_currentlyRenderedImage].GetHandle(), VK_TRUE, defaultFenceTimeout);
             }
 
             if (syncResult != vk::Result::eSuccess) {
@@ -660,7 +760,7 @@ namespace vkfw_core {
                 throw std::runtime_error("Error synchronizing command buffer.");
             }
 
-            m_logicalDevice->GetDevice().resetFences(m_vkCmdBufferFences[m_currentlyRenderedImage]);
+            m_logicalDevice->GetHandle().resetFences(m_cmdBufferFences[m_currentlyRenderedImage].GetHandle());
         }
 
         // Rendering
@@ -668,33 +768,35 @@ namespace vkfw_core {
             ImGui::Render();
 
             {
-                m_logicalDevice->GetDevice().resetCommandPool(*m_vkImGuiCommandPools[m_currentlyRenderedImage], vk::CommandPoolResetFlags());
+                m_logicalDevice->GetHandle().resetCommandPool(m_imGuiCommandPools[m_currentlyRenderedImage].GetHandle(),
+                                                              vk::CommandPoolResetFlags());
                 vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
-                m_vkImGuiCommandBuffers[m_currentlyRenderedImage]->begin(cmdBufferBeginInfo);
+                m_imGuiCommandBuffers[m_currentlyRenderedImage].Begin(cmdBufferBeginInfo);
             }
 
             {
-                vk::RenderPassBeginInfo imGuiRenderPassBeginInfo{ *m_vkImGuiRenderPass, m_swapchainFramebuffers[m_currentlyRenderedImage].GetFramebuffer(),
+                vk::RenderPassBeginInfo imGuiRenderPassBeginInfo{
+                    m_imGuiRenderPass.GetHandle(), m_swapchainFramebuffers[m_currentlyRenderedImage].GetHandle(),
                     vk::Rect2D(vk::Offset2D(0, 0), m_vkSurfaceExtend), 0, nullptr };
-                m_vkImGuiCommandBuffers[m_currentlyRenderedImage]->beginRenderPass(imGuiRenderPassBeginInfo, vk::SubpassContents::eInline);
+                m_imGuiCommandBuffers[m_currentlyRenderedImage].GetHandle().beginRenderPass(imGuiRenderPassBeginInfo, vk::SubpassContents::eInline);
             }
 
             // Record ImGui Draw Data and draw funcs into command buffer
-            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), *m_vkImGuiCommandBuffers[m_currentlyRenderedImage]);
+            ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_imGuiCommandBuffers[m_currentlyRenderedImage].GetHandle());
 
-            m_vkImGuiCommandBuffers[m_currentlyRenderedImage]->endRenderPass();
-            m_vkImGuiCommandBuffers[m_currentlyRenderedImage]->end();
+            m_imGuiCommandBuffers[m_currentlyRenderedImage].GetHandle().endRenderPass();
+            m_imGuiCommandBuffers[m_currentlyRenderedImage].End();
         }
 
         std::array<vk::PipelineStageFlags, 2> waitStages{ vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eTopOfPipe };
-        std::array<vk::Semaphore, 2> waitSemaphores{*m_vkImageAvailableSemaphore, *m_vkDataAvailableSemaphore};
-        std::array<vk::CommandBuffer, 2> submitCmdBuffers{ *m_vkCommandBuffers[m_currentlyRenderedImage], *m_vkImGuiCommandBuffers[m_currentlyRenderedImage] };
-        vk::SubmitInfo submitInfo{ 2, waitSemaphores.data(), waitStages.data(), 2, submitCmdBuffers.data(), 1, &(*m_vkRenderingFinishedSemaphore) };
+        std::array<vk::Semaphore, 2> waitSemaphores{m_imageAvailableSemaphore.GetHandle(), m_dataAvailableSemaphore.GetHandle()};
+        std::array<vk::CommandBuffer, 2> submitCmdBuffers{ m_commandBuffers[m_currentlyRenderedImage].GetHandle(), m_imGuiCommandBuffers[m_currentlyRenderedImage].GetHandle() };
+        vk::SubmitInfo submitInfo{ 2, waitSemaphores.data(), waitStages.data(), 2, submitCmdBuffers.data(), 1, m_renderingFinishedSemaphore.GetHandlePtr() };
 
         const auto& graphicsQueue = m_logicalDevice->GetQueue(m_graphicsQueue, 0);
         {
             QUEUE_REGION(graphicsQueue, "Draw");
-            graphicsQueue.Submit(submitInfo, m_vkCmdBufferFences[m_currentlyRenderedImage]);
+            graphicsQueue.Submit(submitInfo, m_cmdBufferFences[m_currentlyRenderedImage]);
         }
     }
 
@@ -702,8 +804,8 @@ namespace vkfw_core {
     {
         const auto& graphicsQueue = m_logicalDevice->GetQueue(m_graphicsQueue, 0);
         QUEUE_REGION(graphicsQueue, "Present");
-        std::array<vk::SwapchainKHR, 1> swapchains = {*m_vkSwapchain};
-        vk::PresentInfoKHR presentInfo{1, &(*m_vkRenderingFinishedSemaphore), 1, swapchains.data(),
+        std::array<vk::SwapchainKHR, 1> swapchains = {m_swapchain.GetHandle()};
+        vk::PresentInfoKHR presentInfo{1, m_renderingFinishedSemaphore.GetHandlePtr(), 1, m_swapchain.GetHandlePtr(),
                                        &m_currentlyRenderedImage}; //<- wait on these semaphores
         auto result = m_logicalDevice->GetQueue(m_graphicsQueue, 0).Present(presentInfo);
 
@@ -728,14 +830,14 @@ namespace vkfw_core {
     }
 
     void VKWindow::UpdatePrimaryCommandBuffers(
-        const function_view<void(const vk::CommandBuffer& commandBuffer, std::size_t cmdBufferIndex)>& fillFunc) const
+        const function_view<void(const gfx::CommandBuffer& commandBuffer, std::size_t cmdBufferIndex)>& fillFunc) const
     {
-        for (std::size_t i = 0U; i < m_vkCommandBuffers.size(); ++i) {
+        for (std::size_t i = 0U; i < m_commandBuffers.size(); ++i) {
             {
                 auto syncResult = vk::Result::eTimeout;
                 while (syncResult == vk::Result::eTimeout) {
-                    syncResult =
-                        m_logicalDevice->GetDevice().waitForFences(m_vkCmdBufferFences[i], VK_TRUE, defaultFenceTimeout);
+                    syncResult = m_logicalDevice->GetHandle().waitForFences(m_cmdBufferFences[i].GetHandle(), VK_TRUE,
+                                                                            defaultFenceTimeout);
                 }
 
                 if (syncResult != vk::Result::eSuccess) {
@@ -744,14 +846,14 @@ namespace vkfw_core {
                 }
             }
 
-            m_logicalDevice->GetDevice().resetCommandPool(*m_vkCommandPools[i], vk::CommandPoolResetFlags());
+            m_logicalDevice->GetHandle().resetCommandPool(m_commandPools[i].GetHandle(), vk::CommandPoolResetFlags());
 
             vk::CommandBufferBeginInfo cmdBufferBeginInfo{ vk::CommandBufferUsageFlagBits::eSimultaneousUse };
-            m_vkCommandBuffers[i]->begin(cmdBufferBeginInfo);
+            m_commandBuffers[i].Begin(cmdBufferBeginInfo);
 
-            fillFunc(*m_vkCommandBuffers[i], i);
+            fillFunc(m_commandBuffers[i], i);
 
-            m_vkCommandBuffers[i]->end();
+            m_commandBuffers[i].End();
         }
     }
 
@@ -760,16 +862,16 @@ namespace vkfw_core {
         std::array<vk::ClearValue, 2> clearColor;
         clearColor[0].setColor(vk::ClearColorValue{std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f}});
         clearColor[1].setDepthStencil(vk::ClearDepthStencilValue{1.0f, 0});
-        vk::RenderPassBeginInfo renderPassBeginInfo{*m_vkSwapchainRenderPass,
-                                                    m_swapchainFramebuffers[cmdBufferIndex].GetFramebuffer(),
+        vk::RenderPassBeginInfo renderPassBeginInfo{m_swapchainRenderPass.GetHandle(),
+                                                    m_swapchainFramebuffers[cmdBufferIndex].GetHandle(),
                                                     vk::Rect2D(vk::Offset2D(0, 0), m_vkSurfaceExtend),
                                                     static_cast<std::uint32_t>(clearColor.size()), clearColor.data()};
-        m_vkCommandBuffers[cmdBufferIndex]->beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+        m_commandBuffers[cmdBufferIndex].GetHandle().beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
     }
 
     void VKWindow::EndSwapchainRenderPass(std::size_t cmdBufferIndex) const
     {
-        m_vkCommandBuffers[cmdBufferIndex]->endRenderPass();
+        m_commandBuffers[cmdBufferIndex].GetHandle().endRenderPass();
     }
 
     /**

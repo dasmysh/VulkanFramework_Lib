@@ -13,9 +13,10 @@
 
 namespace vkfw_core::gfx {
 
-    class CommandPool : public VulkanObjectWrapper<vk::CommandPool>
+    class CommandPool : public VulkanObjectWrapper<vk::UniqueCommandPool>
     {
     public:
-        CommandPool(vk::CommandPool commandPool);
+        CommandPool() : VulkanObjectWrapper{nullptr, "", vk::UniqueCommandPool{}} {}
+        CommandPool(vk::Device device, std::string_view name, vk::UniqueCommandPool commandPool);
     };
 }

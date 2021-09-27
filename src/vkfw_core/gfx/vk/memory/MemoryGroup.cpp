@@ -15,9 +15,12 @@ namespace vkfw_core::gfx {
     {
     };
 
-    MemoryGroup::MemoryGroup(const LogicalDevice* device, const vk::MemoryPropertyFlags& memoryFlags) :
-        DeviceMemoryGroup(device, memoryFlags),
-        m_hostMemory{ device, memoryFlags | vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent }
+    MemoryGroup::MemoryGroup(const LogicalDevice* device, std::string_view name,
+                             const vk::MemoryPropertyFlags& memoryFlags)
+        :
+        DeviceMemoryGroup(device, name, memoryFlags), m_hostMemory{device, fmt::format("Host:{}", name),
+                       memoryFlags | vk::MemoryPropertyFlagBits::eHostVisible
+                           | vk::MemoryPropertyFlagBits::eHostCoherent}
     {
     }
 
@@ -25,31 +28,35 @@ namespace vkfw_core::gfx {
     MemoryGroup::MemoryGroup(MemoryGroup&& rhs) noexcept = default;
     MemoryGroup& MemoryGroup::operator=(MemoryGroup&& rhs) noexcept = default;
 
-    unsigned int MemoryGroup::AddBufferToGroup(const vk::BufferUsageFlags& usage,
+    unsigned int MemoryGroup::AddBufferToGroup(std::string_view name, const vk::BufferUsageFlags& usage,
                                                const std::vector<std::uint32_t>& queueFamilyIndices)
     {
-        auto idx = DeviceMemoryGroup::AddBufferToGroup(usage, queueFamilyIndices);
-        m_hostBuffers.emplace_back(GetDevice(), vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlags(),
+        auto idx = DeviceMemoryGroup::AddBufferToGroup(name, usage, queueFamilyIndices);
+        m_hostBuffers.emplace_back(GetDevice(), fmt::format("Host:{}", name), vk::BufferUsageFlagBits::eTransferSrc,
+                                   vk::MemoryPropertyFlags(),
                                    queueFamilyIndices);
         return idx;
     }
 
-    unsigned int MemoryGroup::AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size, const std::vector<std::uint32_t>& queueFamilyIndices)
+    unsigned int MemoryGroup::AddBufferToGroup(std::string_view name, const vk::BufferUsageFlags& usage,
+                                               std::size_t size, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
-        auto idx = DeviceMemoryGroup::AddBufferToGroup(usage, size, queueFamilyIndices);
+        auto idx = DeviceMemoryGroup::AddBufferToGroup(name, usage, size, queueFamilyIndices);
 
-        m_hostBuffers.emplace_back(GetDevice(), vk::BufferUsageFlagBits::eTransferSrc, vk::MemoryPropertyFlags(), queueFamilyIndices);
+        m_hostBuffers.emplace_back(GetDevice(), fmt::format("Host:{}", name), vk::BufferUsageFlagBits::eTransferSrc,
+                                   vk::MemoryPropertyFlags(), queueFamilyIndices);
         m_hostBuffers.back().InitializeBuffer(size, false);
 
         return idx;
     }
 
-    unsigned int MemoryGroup::AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size,
+    unsigned int MemoryGroup::AddBufferToGroup(std::string_view name, const vk::BufferUsageFlags& usage,
+                                               std::size_t size,
                                                std::variant<void*, const void*> data,
                                                const std::function<void(void*)>& deleter,
                                                const std::vector<std::uint32_t>& queueFamilyIndices)
     {
-        auto idx = AddBufferToGroup(usage, size, queueFamilyIndices);
+        auto idx = AddBufferToGroup(name, usage, size, queueFamilyIndices);
         AddDataToBufferInGroup(idx, 0, size, data, deleter);
         return idx;
     }
@@ -84,14 +91,15 @@ namespace vkfw_core::gfx {
         m_bufferContents.push_back(bufferContentsDesc);
     }
 
-    unsigned int MemoryGroup::AddTextureToGroup(const TextureDescriptor& desc, const glm::u32vec4& size,
+    unsigned int MemoryGroup::AddTextureToGroup(std::string_view name, const TextureDescriptor& desc,
+                                                const glm::u32vec4& size,
         std::uint32_t mipLevels, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
-        auto idx = DeviceMemoryGroup::AddTextureToGroup(desc, size, mipLevels, queueFamilyIndices);
+        auto idx = DeviceMemoryGroup::AddTextureToGroup(name, desc, size, mipLevels, queueFamilyIndices);
 
         TextureDescriptor stagingTexDesc{ desc, vk::ImageUsageFlagBits::eTransferSrc };
         stagingTexDesc.m_imageTiling = vk::ImageTiling::eLinear;
-        m_hostImages.emplace_back(GetDevice(), stagingTexDesc, queueFamilyIndices);
+        m_hostImages.emplace_back(GetDevice(), fmt::format("Host:{}", name), stagingTexDesc, queueFamilyIndices);
         m_hostImages.back().InitializeImage(size, mipLevels, false);
 
         return idx;
@@ -135,7 +143,7 @@ namespace vkfw_core::gfx {
     {
         // check if all buffers are initialized first.
         for (std::size_t i_buffer = 0; i_buffer < m_hostBuffers.size(); ++i_buffer) {
-            if (m_hostBuffers[i_buffer].GetBuffer() == vk::Buffer{}) {
+            if (!m_hostBuffers[i_buffer]) {
                 std::size_t bufferSize = 0;
                 for (const auto& bufferContents : m_bufferContents) {
                     if (bufferContents.m_bufferIdx == i_buffer) {
@@ -165,7 +173,8 @@ namespace vkfw_core::gfx {
         }
         for (const auto& contentDesc : m_imageContents) {
             vk::ImageSubresource imgSubresource{ contentDesc.m_aspectFlags, contentDesc.m_mipLevel, contentDesc.m_arrayLayer };
-            auto subresourceLayout = GetDevice()->GetDevice().getImageSubresourceLayout(m_hostImages[contentDesc.m_imageIdx].GetImage(), imgSubresource);
+            auto subresourceLayout = GetDevice()->GetHandle().getImageSubresourceLayout(
+                m_hostImages[contentDesc.m_imageIdx].GetImage(), imgSubresource);
             m_hostMemory.CopyToHostMemory(m_hostOffsets[contentDesc.m_imageIdx + m_hostBuffers.size()], glm::u32vec3(0),
                                          subresourceLayout, contentDesc.m_size,
                                          contentDesc.m_deleter ? std::get<void*>(contentDesc.m_data)
@@ -196,6 +205,6 @@ namespace vkfw_core::gfx {
         std::size_t offset, std::size_t dataSize)
     {
         vk::BufferCopy copyRegion{ offset, offset, dataSize };
-        cmdBuffer.copyBuffer(m_hostBuffers[bufferIdx].GetBuffer(), GetBuffer(bufferIdx)->GetBuffer(), copyRegion);
+        cmdBuffer.copyBuffer(m_hostBuffers[bufferIdx].GetHandle(), GetBuffer(bufferIdx)->GetHandle(), copyRegion);
     }
 }

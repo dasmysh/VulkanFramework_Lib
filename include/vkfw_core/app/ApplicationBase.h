@@ -9,7 +9,7 @@
 #pragma once
 
 #include "main.h"
-
+#include "gfx/vk/wrappers/Swapchain.h"
 #include <glm/vec2.hpp>
 
 #include <core/function_view.h>
@@ -71,10 +71,10 @@ namespace vkfw_core {
 
         [[nodiscard]] const cfg::Configuration& GetConfig() const { return m_config; };
         [[nodiscard]] const std::vector<const char*>& GetVKValidationLayers() const { return m_vkValidationLayers; }
-        [[nodiscard]] const vk::Instance& GetVKInstance() const { return *m_vkInstance; }
+        [[nodiscard]] vk::Instance GetVKInstance() const { return *m_vkInstance; }
         [[nodiscard]] std::unique_ptr<gfx::LogicalDevice>
         CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const std::vector<std::string>& requiredDeviceExtensions,
-                            void* featuresNextChain, const vk::SurfaceKHR& surface = vk::SurfaceKHR()) const;
+                            void* featuresNextChain, const gfx::Surface& surface = gfx::Surface{}) const;
         // std::unique_ptr<gfx::LogicalDevice> CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const vk::SurfaceKHR& surface) const;
 
     private:
@@ -135,7 +135,7 @@ namespace vkfw_core {
         static bool CheckDeviceExtensions(const vk::PhysicalDevice& device, const std::vector<std::string>& requiredExtensions);
         std::unique_ptr<gfx::LogicalDevice>
         CreateLogicalDevice(const cfg::WindowCfg& windowCfg, const std::vector<std::string>& requiredDeviceExtensions,
-                            void* featuresNextChain, const vk::SurfaceKHR& surface,
+                            void* featuresNextChain, const gfx::Surface& surface,
                             const function_view<bool(const vk::PhysicalDevice&)>& additionalDeviceChecks) const;
         [[nodiscard]] PFN_vkVoidFunction LoadVKInstanceFunction(const std::string& functionName,
                                                                 const std::string& extensionName,

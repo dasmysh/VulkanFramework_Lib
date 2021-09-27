@@ -9,14 +9,17 @@
 #include "gfx/vk/rt/AccelerationStructure.h"
 #include "gfx/vk/buffers/DeviceBuffer.h"
 #include "gfx/vk/LogicalDevice.h"
-#include "gfx/vk/CommandBuffers.h"
+#include "gfx/vk/wrappers/CommandBuffer.h"
 
 namespace vkfw_core::gfx::rt {
 
-    AccelerationStructure::AccelerationStructure(vkfw_core::gfx::LogicalDevice* device,
+    AccelerationStructure::AccelerationStructure(vkfw_core::gfx::LogicalDevice* device, std::string_view name,
                                                  vk::AccelerationStructureTypeKHR type,
                                                  vk::BuildAccelerationStructureFlagsKHR flags)
-        : m_device{device}, m_type{type}, m_flags{flags}
+        : VulkanObjectWrapper{device->GetHandle(), name, vk::UniqueAccelerationStructureKHR{}}
+        , m_device{device}
+        , m_type{type}
+        , m_flags{flags}
     {
     }
 
@@ -44,51 +47,55 @@ namespace vkfw_core::gfx::rt {
             asPrimitiveCounts.push_back(buildRange.primitiveCount);
         }
 
-        m_memoryRequirements = m_device->GetDevice().getAccelerationStructureBuildSizesKHR(
+        m_memoryRequirements = m_device->GetHandle().getAccelerationStructureBuildSizesKHR(
             vk::AccelerationStructureBuildTypeKHR::eDevice, asBuildInfo, asPrimitiveCounts);
 
         CreateAccelerationStructure();
 
         auto scratchBuffer = CreateAccelerationStructureScratchBuffer();
 
-        asBuildInfo.dstAccelerationStructure = m_vkAccelerationStructure.get();
+        asBuildInfo.dstAccelerationStructure = GetHandle();
         asBuildInfo.scratchData =
             m_device->CalculateASScratchBufferBufferAlignment(scratchBuffer->GetDeviceAddress().deviceAddress);
 
         if (m_device->GetDeviceAccelerationStructureFeatures().accelerationStructureHostCommands) {
-            if (m_device->GetDevice().buildAccelerationStructuresKHR(vk::DeferredOperationKHR{}, asBuildInfo,
+            if (m_device->GetHandle().buildAccelerationStructuresKHR(vk::DeferredOperationKHR{}, asBuildInfo,
                                                                      m_buildRanges.data())
                 != vk::Result::eSuccess) {
                 spdlog::error("Could not build acceleration structure.");
                 assert(false);
             }
         } else {
-            auto vkAccStructureCmdBuffer = vkfw_core::gfx::CommandBuffers::beginSingleTimeSubmit(m_device, m_device->GetCommandPool(0));
-            vkAccStructureCmdBuffer->buildAccelerationStructuresKHR(asBuildInfo, m_buildRanges.data());
-            vkfw_core::gfx::CommandBuffers::endSingleTimeSubmitAndWait(m_device, m_device->GetQueue(0, 0), vkAccStructureCmdBuffer.get());
+            auto accStructureCmdBuffer = vkfw_core::gfx::CommandBuffer::beginSingleTimeSubmit(
+                m_device, fmt::format("{} BuildCMDBuffer", GetName()), fmt::format("{} BuildAS", GetName()),
+                m_device->GetCommandPool(0));
+            accStructureCmdBuffer.GetHandle().buildAccelerationStructuresKHR(asBuildInfo, m_buildRanges.data());
+            vkfw_core::gfx::CommandBuffer::endSingleTimeSubmitAndWait(m_device, m_device->GetQueue(0, 0),
+                                                                      accStructureCmdBuffer);
         }
     }
 
     void AccelerationStructure::CreateAccelerationStructure()
     {
         m_buffer = std::make_unique<vkfw_core::gfx::DeviceBuffer>(
-            m_device,
+            m_device, fmt::format("ASBuffer:{}", GetName()),
             vk::BufferUsageFlagBits::eAccelerationStructureStorageKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress);
         m_buffer->InitializeBuffer(m_memoryRequirements.accelerationStructureSize);
 
         vk::AccelerationStructureCreateInfoKHR asCreateInfo{
-            {}, m_buffer->GetBuffer(), 0, m_memoryRequirements.accelerationStructureSize, m_type};
+            {}, m_buffer->GetHandle(), 0, m_memoryRequirements.accelerationStructureSize, m_type};
 
-        m_vkAccelerationStructure = m_device->GetDevice().createAccelerationStructureKHRUnique(asCreateInfo);
+        SetHandle(m_device->GetHandle(), m_device->GetHandle().createAccelerationStructureKHRUnique(asCreateInfo));
 
-        vk::AccelerationStructureDeviceAddressInfoKHR asDeviceAddressInfo{m_vkAccelerationStructure.get()};
-        m_handle = m_device->GetDevice().getAccelerationStructureAddressKHR(asDeviceAddressInfo);
+        vk::AccelerationStructureDeviceAddressInfoKHR asDeviceAddressInfo{GetHandle()};
+        m_handle = m_device->GetHandle().getAccelerationStructureAddressKHR(asDeviceAddressInfo);
     }
 
     std::unique_ptr<vkfw_core::gfx::DeviceBuffer> AccelerationStructure::CreateAccelerationStructureScratchBuffer() const
     {
         std::unique_ptr<vkfw_core::gfx::DeviceBuffer> scratchBuffer = std::make_unique<vkfw_core::gfx::DeviceBuffer>(
-            m_device, vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress);
+            m_device, fmt::format("ASScratchBuffer:{}", GetName()),
+            vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress);
         scratchBuffer->InitializeBuffer(
             m_device->CalculateASScratchBufferBufferAlignment(m_memoryRequirements.buildScratchSize));
 

@@ -8,6 +8,7 @@
 
 #pragma once
 
+#include "gfx/vk/wrappers/VulkanObjectWrapper.h"
 #include "main.h"
 
 #include <glm/gtc/type_precision.hpp>
@@ -19,11 +20,11 @@ namespace vkfw_core::gfx {
     class Buffer;
     class Texture;
 
-    class DeviceMemory final
+    class DeviceMemory final : public VulkanObjectWrapper<vk::UniqueDeviceMemory>
     {
     public:
-        DeviceMemory(const LogicalDevice* device, const vk::MemoryPropertyFlags& properties);
-        DeviceMemory(const LogicalDevice* device, vk::MemoryRequirements memRequirements,
+        DeviceMemory(const LogicalDevice* device, std::string_view name, const vk::MemoryPropertyFlags& properties);
+        DeviceMemory(const LogicalDevice* device, std::string_view name, vk::MemoryRequirements memRequirements,
                      const vk::MemoryPropertyFlags& properties);
         DeviceMemory(const DeviceMemory&) = delete;
         DeviceMemory& operator=(const DeviceMemory&) = delete;
@@ -63,8 +64,6 @@ namespace vkfw_core::gfx {
 
         /** Holds the device. */
         const LogicalDevice* m_device;
-        /** Holds the Vulkan device memory. */
-        vk::UniqueDeviceMemory m_vkDeviceMemory;
         /** Holds the current size of the memory in bytes. */
         std::size_t m_size;
         /** Holds the memory properties. */

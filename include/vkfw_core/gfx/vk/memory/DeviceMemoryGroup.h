@@ -22,7 +22,7 @@ namespace vkfw_core::gfx {
     class DeviceMemoryGroup
     {
     public:
-        explicit DeviceMemoryGroup(const LogicalDevice* device, const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags());
+        explicit DeviceMemoryGroup(const LogicalDevice* device, std::string_view name, const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags());
         virtual ~DeviceMemoryGroup();
         DeviceMemoryGroup(const DeviceMemoryGroup&) = delete;
         DeviceMemoryGroup& operator=(const DeviceMemoryGroup&) = delete;
@@ -30,13 +30,16 @@ namespace vkfw_core::gfx {
         DeviceMemoryGroup& operator=(DeviceMemoryGroup&&) noexcept;
 
         static constexpr unsigned int INVALID_INDEX = std::numeric_limits<unsigned int>::max();
-        virtual unsigned int AddBufferToGroup(const vk::BufferUsageFlags& usage,
+        virtual unsigned int
+        AddBufferToGroup(std::string_view name, const vk::BufferUsageFlags& usage,
                          const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
-        virtual unsigned int AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size,
-            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
-        virtual unsigned int AddTextureToGroup(const TextureDescriptor& desc,
-            const glm::u32vec4& size, std::uint32_t mipLevels,
-            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
+        virtual unsigned int
+        AddBufferToGroup(std::string_view name, const vk::BufferUsageFlags& usage, std::size_t size,
+                         const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
+        virtual unsigned int
+        AddTextureToGroup(std::string_view name, const TextureDescriptor& desc, const glm::u32vec4& size,
+                          std::uint32_t mipLevels,
+                          const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
 
         virtual void FinalizeDeviceGroup();
 

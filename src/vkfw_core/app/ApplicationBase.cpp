@@ -268,16 +268,16 @@ namespace vkfw_core {
             if (wc.m_useRayTracing) hasRayTracing = true;
         }
 
-        std::vector<std::string> reqInstanceExtensions = requiredInstanceExtensions;
-        if (hasRayTracing) {
-            if (std::find(requiredInstanceExtensions.begin(), requiredInstanceExtensions.end(),
-                VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)
-                == requiredInstanceExtensions.end()) {
-                reqInstanceExtensions.emplace_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-            }
-        }
+        // std::vector<std::string> reqInstanceExtensions = requiredInstanceExtensions;
+        // if (hasRayTracing) {
+        //     if (std::find(requiredInstanceExtensions.begin(), requiredInstanceExtensions.end(),
+        //         VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)
+        //         == requiredInstanceExtensions.end()) {
+        //         reqInstanceExtensions.emplace_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+        //     }
+        // }
 
-        InitVulkan(applicationName, applicationVersion, reqInstanceExtensions);
+        InitVulkan(applicationName, applicationVersion, requiredInstanceExtensions);
         m_instance = this;
 
         // TODO: Check if the GUI works with multiple windows. [10/19/2018 Sebastian Maisch]
@@ -558,7 +558,7 @@ namespace vkfw_core {
 
     std::unique_ptr<gfx::LogicalDevice> ApplicationBase::CreateLogicalDevice(
         const cfg::WindowCfg& windowCfg, const std::vector<std::string>& requiredDeviceExtensions,
-        void* featuresNextChain, const vk::SurfaceKHR& surface, const function_view<bool(const vk::PhysicalDevice&)>& additionalDeviceChecks) const
+        void* featuresNextChain, const gfx::Surface& surface, const function_view<bool(const vk::PhysicalDevice&)>& additionalDeviceChecks) const
     {
         vk::PhysicalDevice physicalDevice;
         std::vector<gfx::DeviceQueueDesc> deviceQueueDesc;
@@ -572,7 +572,7 @@ namespace vkfw_core {
             if (!additionalDeviceChecks(device.second)) { continue; }
 
             for (const auto& queueDesc : windowCfg.m_queues) {
-                auto queueFamilyIndex = qf::findQueueFamily(device.second, queueDesc, surface);
+                auto queueFamilyIndex = qf::findQueueFamily(device.second, queueDesc, surface.GetHandle());
                 if (queueFamilyIndex != -1) {
                     deviceQueueDesc.emplace_back(queueFamilyIndex, queueDesc.m_priorities);
                 }
@@ -609,7 +609,7 @@ namespace vkfw_core {
 
         auto logicalDevice = std::make_unique<gfx::LogicalDevice>(windowCfg, physicalDevice, deviceQueueDesc,
                                                                   requiredDeviceExtensionsInternal, featuresNextChain, surface);
-        VULKAN_HPP_DEFAULT_DISPATCHER.init(logicalDevice->GetDevice());
+        VULKAN_HPP_DEFAULT_DISPATCHER.init(logicalDevice->GetHandle());
         return std::move(logicalDevice);
     }
 
@@ -622,8 +622,7 @@ namespace vkfw_core {
     std::unique_ptr<gfx::LogicalDevice>
     ApplicationBase::CreateLogicalDevice(const cfg::WindowCfg& windowCfg,
                                          const std::vector<std::string>& requiredDeviceExtensions,
-                                         void* featuresNextChain,
-                                         const vk::SurfaceKHR& surface) const
+                                         void* featuresNextChain, const gfx::Surface& surface) const
     {
         auto requestedFormats = cfg::GetVulkanSurfaceFormatsFromConfig(windowCfg);
         std::sort(requestedFormats.begin(), requestedFormats.end(), [](const vk::SurfaceFormatKHR& f0, const vk::SurfaceFormatKHR& f1) { return f0.format < f1.format; });
@@ -634,9 +633,9 @@ namespace vkfw_core {
         // NOLINTNEXTLINE
         return CreateLogicalDevice(windowCfg, requiredDeviceExtensions, featuresNextChain, surface, [&surface, &requestedFormats, &requestedPresentMode, &requestedAdditionalImgCnt, &requestedExtend](const vk::PhysicalDevice& device) {
             // NOLINTNEXTLINE
-            auto deviceSurfaceCaps = device.getSurfaceCapabilitiesKHR(surface);
-            auto deviceSurfaceFormats = device.getSurfaceFormatsKHR(surface);
-            auto presentModes = device.getSurfacePresentModesKHR(surface);
+            auto deviceSurfaceCaps = device.getSurfaceCapabilitiesKHR(surface.GetHandle());
+            auto deviceSurfaceFormats = device.getSurfaceFormatsKHR(surface.GetHandle());
+            auto presentModes = device.getSurfacePresentModesKHR(surface.GetHandle());
             auto formatSupported = false;
             auto presentModeSupported = false;
             auto sizeSupported = false;

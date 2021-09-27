@@ -9,8 +9,7 @@
 #include "gfx/vk/textures/Texture.h"
 #include "gfx/vk/LogicalDevice.h"
 #include "gfx/vk/pipeline/DescriptorSetLayout.h"
-#include "gfx/vk/buffers/BufferGroup.h"
-#include "gfx/vk/CommandBuffers.h"
+#include "gfx/vk/wrappers/CommandBuffer.h"
 
 namespace vkfw_core::gfx {
 
@@ -60,11 +59,12 @@ namespace vkfw_core::gfx {
         return texDesc;
     }
 
-    Texture::Texture(const LogicalDevice* device, const TextureDescriptor& desc,
-        std::vector<std::uint32_t> queueFamilyIndices) :
-        m_device{ device },
-        m_imageDeviceMemory{ device, desc.m_memoryProperties },
-        m_size{ 0 },
+    Texture::Texture(const LogicalDevice* device, std::string_view name, const TextureDescriptor& desc,
+        std::vector<std::uint32_t> queueFamilyIndices)
+        : VulkanObjectWrapper{device->GetHandle(), name, vk::UniqueImage{}}
+        , m_device{ device }, m_imageDeviceMemory{device, fmt::format("DeviceMemory:{}", name), desc.m_memoryProperties}
+        , m_imageView{device->GetHandle(), fmt::format("View:{}", name), vk::UniqueImageView{}}
+        , m_size{ 0 },
         m_mipLevels{ 0 },
         m_desc{ desc },
         m_queueFamilyIndices{ std::move(queueFamilyIndices) }
@@ -73,10 +73,10 @@ namespace vkfw_core::gfx {
     }
 
     Texture::Texture(Texture&& rhs) noexcept
-        : m_device{rhs.m_device},
-          m_vkInternalImage{std::move(rhs.m_vkInternalImage)},
-          m_vkImage{std::move(rhs.m_vkImage)},
-          m_vkImageView{std::move(rhs.m_vkImageView)},
+        : VulkanObjectWrapper{std::move(rhs)}
+        , m_device{rhs.m_device},
+          m_image{std::move(rhs.m_image)},
+          m_imageView{std::move(rhs.m_imageView)},
           m_imageDeviceMemory{std::move(rhs.m_imageDeviceMemory)},
           m_size{rhs.m_size},
           m_mipLevels{rhs.m_mipLevels},
@@ -92,10 +92,10 @@ namespace vkfw_core::gfx {
     Texture& Texture::operator=(Texture&& rhs) noexcept
     {
         this->~Texture();
+        VulkanObjectWrapper::operator=(std::move(rhs));
         m_device = rhs.m_device;
-        m_vkInternalImage = std::move(rhs.m_vkInternalImage);
-        m_vkImage = std::move(rhs.m_vkImage);
-        m_vkImageView = std::move(rhs.m_vkImageView);
+        m_image = std::move(rhs.m_image);
+        m_imageView = std::move(rhs.m_imageView);
         m_imageDeviceMemory = std::move(rhs.m_imageDeviceMemory);
         m_size = rhs.m_size;
         m_mipLevels = rhs.m_mipLevels;
@@ -123,12 +123,12 @@ namespace vkfw_core::gfx {
             imgCreateInfo.setPQueueFamilyIndices(m_queueFamilyIndices.data());
         }
 
-        m_vkInternalImage = m_device->GetDevice().createImageUnique(imgCreateInfo);
-        m_vkImage = *m_vkInternalImage;
+        SetHandle(m_device->GetHandle(), m_device->GetHandle().createImageUnique(imgCreateInfo));
+        m_image = GetHandle();
 
         if (initMemory) {
             vk::MemoryRequirements memRequirements =
-                m_device->GetDevice().getImageMemoryRequirements(*m_vkInternalImage);
+                m_device->GetHandle().getImageMemoryRequirements(GetHandle());
             m_imageDeviceMemory.InitializeMemory(memRequirements);
             m_imageDeviceMemory.BindToTexture(*this, 0);
             InitializeImageView();
@@ -139,7 +139,7 @@ namespace vkfw_core::gfx {
                                           bool initView)
     {
         InitSize(size, mipLevels);
-        m_vkImage = externalImage;
+        m_image = externalImage;
 
         if (initView) { InitializeImageView(); }
     }
@@ -148,40 +148,41 @@ namespace vkfw_core::gfx {
     {
         vk::ImageSubresourceRange imgSubresourceRange{ GetValidAspects(), 0, m_mipLevels, 0, m_size.w };
 
-        vk::ImageViewCreateInfo imgViewCreateInfo{ vk::ImageViewCreateFlags(), m_vkImage, m_viewType, m_desc.m_format, vk::ComponentMapping(), imgSubresourceRange };
-        m_vkImageView = m_device->GetDevice().createImageViewUnique(imgViewCreateInfo);
+        vk::ImageViewCreateInfo imgViewCreateInfo{ vk::ImageViewCreateFlags(), m_image, m_viewType, m_desc.m_format, vk::ComponentMapping(), imgSubresourceRange };
+        m_imageView.SetHandle(m_device->GetHandle(), m_device->GetHandle().createImageViewUnique(imgViewCreateInfo));
     }
 
-    void Texture::TransitionLayout(vk::ImageLayout newLayout, vk::CommandBuffer cmdBuffer)
+    void Texture::TransitionLayout(vk::ImageLayout newLayout, const CommandBuffer& cmdBuffer)
     {
         vk::ImageSubresourceRange subresourceRange{ GetValidAspects(), 0, m_mipLevels, 0, m_size.w };
         vk::ImageMemoryBarrier transitionBarrier{ vk::AccessFlags(), vk::AccessFlags(), m_desc.m_imageLayout,
-            newLayout, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, m_vkImage, subresourceRange };
+            newLayout, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, m_image, subresourceRange };
 
         transitionBarrier.srcAccessMask = GetAccessFlagsForLayout(m_desc.m_imageLayout);
         transitionBarrier.dstAccessMask = GetAccessFlagsForLayout(newLayout);
 
-        cmdBuffer.pipelineBarrier(GetStageFlagsForLayout(m_desc.m_imageLayout), GetStageFlagsForLayout(newLayout),
+        cmdBuffer.GetHandle().pipelineBarrier(GetStageFlagsForLayout(m_desc.m_imageLayout), GetStageFlagsForLayout(newLayout),
             vk::DependencyFlags(), nullptr, nullptr, transitionBarrier);
         m_desc.m_imageLayout = newLayout;
     }
 
-    vk::UniqueCommandBuffer Texture::TransitionLayout(vk::ImageLayout newLayout,
-        const Queue& transitionQueue,
-        const std::vector<vk::Semaphore>& waitSemaphores,
-        const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence)
+    CommandBuffer Texture::TransitionLayout(vk::ImageLayout newLayout, const Queue& transitionQueue,
+                                            std::span<vk::Semaphore> waitSemaphores,
+                                            std::span<vk::Semaphore> signalSemaphores, const Fence& fence)
     {
-        if (m_desc.m_imageLayout == newLayout) { return vk::UniqueCommandBuffer(); }
+        if (m_desc.m_imageLayout == newLayout) { return CommandBuffer{}; }
 
-        auto transitionCmdBuffer = CommandBuffers::beginSingleTimeSubmit(m_device, transitionQueue.GetCommandPool());
-        TransitionLayout(newLayout, *transitionCmdBuffer);
-        CommandBuffers::endSingleTimeSubmit(transitionQueue, *transitionCmdBuffer,
-            waitSemaphores, signalSemaphores, fence);
+        auto transitionCmdBuffer = CommandBuffer::beginSingleTimeSubmit(
+            m_device, fmt::format("TransitionLayoutCmdBuffer:{}", GetName()), "TransitionLayout",
+            transitionQueue.GetCommandPool());
+        TransitionLayout(newLayout, transitionCmdBuffer);
+        CommandBuffer::endSingleTimeSubmit(transitionQueue, transitionCmdBuffer, waitSemaphores, signalSemaphores,
+                                           fence);
         return transitionCmdBuffer;
     }
 
     void Texture::CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4 & srcOffset, const Texture & dstImage,
-        std::uint32_t dstMipLevel, const glm::u32vec4 & dstOffset, const glm::u32vec4 & size, vk::CommandBuffer cmdBuffer) const
+        std::uint32_t dstMipLevel, const glm::u32vec4 & dstOffset, const glm::u32vec4 & size, const CommandBuffer& cmdBuffer) const
     {
         assert(m_desc.m_imageUsage & vk::ImageUsageFlagBits::eTransferSrc);
         assert(dstImage.m_desc.m_imageUsage & vk::ImageUsageFlagBits::eTransferDst);
@@ -203,25 +204,27 @@ namespace vkfw_core::gfx {
             subresourceLayersDst,
             vk::Offset3D{ static_cast<std::int32_t>(dstOffset.x), static_cast<std::int32_t>(dstOffset.y), static_cast<std::int32_t>(dstOffset.z) },
             vk::Extent3D{size.x / static_cast<std::uint32_t>(m_desc.m_bytesPP), size.y, size.z}};
-        cmdBuffer.copyImage(m_vkImage, m_desc.m_imageLayout, dstImage.m_vkImage, dstImage.m_desc.m_imageLayout, copyRegion);
+        cmdBuffer.GetHandle().copyImage(m_image, m_desc.m_imageLayout, dstImage.m_image, dstImage.m_desc.m_imageLayout, copyRegion);
     }
 
-    vk::UniqueCommandBuffer
-    Texture::CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, const Texture& dstImage,
-                            std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset, const glm::u32vec4& size,
-                            const Queue& copyQueue, const std::vector<vk::Semaphore>& waitSemaphores,
-                            const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
+    CommandBuffer Texture::CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset,
+                                          const Texture& dstImage, std::uint32_t dstMipLevel,
+                                          const glm::u32vec4& dstOffset, const glm::u32vec4& size,
+                                          const Queue& copyQueue, std::span<vk::Semaphore> waitSemaphores,
+                                          std::span<vk::Semaphore> signalSemaphores, const Fence& fence) const
     {
-        auto transferCmdBuffer = CommandBuffers::beginSingleTimeSubmit(m_device, copyQueue.GetCommandPool());
-        CopyImageAsync(srcMipLevel, srcOffset, dstImage, dstMipLevel, dstOffset, size, *transferCmdBuffer);
-        CommandBuffers::endSingleTimeSubmit(copyQueue, *transferCmdBuffer,
-                                            waitSemaphores, signalSemaphores, fence);
+        auto transferCmdBuffer = CommandBuffer::beginSingleTimeSubmit(
+            m_device, fmt::format("CopyImageAsyncCmdBuffer:{}-{}", GetName(), dstImage.GetName()),
+            "CopyImageAsync", copyQueue.GetCommandPool());
+        CopyImageAsync(srcMipLevel, srcOffset, dstImage, dstMipLevel, dstOffset, size, transferCmdBuffer);
+        CommandBuffer::endSingleTimeSubmit(copyQueue, transferCmdBuffer, waitSemaphores, signalSemaphores, fence);
 
         return transferCmdBuffer;
     }
 
-    vk::UniqueCommandBuffer Texture::CopyImageAsync(const Texture& dstImage, const Queue& copyQueue,
-        const std::vector<vk::Semaphore>& waitSemaphores, const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence) const
+    CommandBuffer Texture::CopyImageAsync(const Texture& dstImage, const Queue& copyQueue,
+                                          std::span<vk::Semaphore> waitSemaphores,
+                                          std::span<vk::Semaphore> signalSemaphores, const Fence& fence) const
     {
         return CopyImageAsync(0, glm::u32vec4(0), dstImage, 0, glm::u32vec4(0), m_size, copyQueue, waitSemaphores,
                               signalSemaphores, fence);
@@ -315,10 +318,10 @@ namespace vkfw_core::gfx {
         layout.AddBinding(binding, type, 1, shaderFlags);
     }
 
-    void Texture::FillDescriptorImageInfo(vk::DescriptorImageInfo& descInfo, vk::Sampler sampler) const
+    void Texture::FillDescriptorImageInfo(vk::DescriptorImageInfo& descInfo, const Sampler& sampler) const
     {
-        descInfo.sampler = sampler;
-        descInfo.imageView = m_vkImageView.get();
+        descInfo.sampler = sampler.GetHandle();
+        descInfo.imageView = m_imageView.GetHandle();
         descInfo.imageLayout = m_desc.m_imageLayout;
     }
 

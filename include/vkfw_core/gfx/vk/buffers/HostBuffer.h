@@ -19,7 +19,7 @@ namespace vkfw_core::gfx {
     class HostBuffer final : public Buffer
     {
     public:
-        HostBuffer(const LogicalDevice* device, const vk::BufferUsageFlags& usage, const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags(),
+        HostBuffer(const LogicalDevice* device, std::string_view name, const vk::BufferUsageFlags& usage, const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags(),
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         ~HostBuffer() override;
         HostBuffer(const HostBuffer&);

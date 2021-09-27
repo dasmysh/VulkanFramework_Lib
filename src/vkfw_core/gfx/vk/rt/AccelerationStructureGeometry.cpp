@@ -17,10 +17,11 @@
 
 namespace vkfw_core::gfx::rt {
 
-    AccelerationStructureGeometry::AccelerationStructureGeometry(LogicalDevice* device)
-        : m_device{device},
-          m_TLAS{device, vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace},
-          m_memGroup{m_device, vk::MemoryPropertyFlags()}
+    AccelerationStructureGeometry::AccelerationStructureGeometry(LogicalDevice* device, std::string_view name)
+        : m_device{device}
+        , m_name{name}
+        , m_TLAS{device, fmt::format("TLAS:", name), vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace}
+        , m_memGroup{m_device, fmt::format("ASGeometryMemGroup:{}", name), vk::MemoryPropertyFlags()}
     {
         vk::SamplerCreateInfo samplerCreateInfo{vk::SamplerCreateFlags(),
                                                 vk::Filter::eLinear,
@@ -29,7 +30,7 @@ namespace vkfw_core::gfx::rt {
                                                 vk::SamplerAddressMode::eRepeat,
                                                 vk::SamplerAddressMode::eRepeat,
                                                 vk::SamplerAddressMode::eRepeat};
-        m_textureSampler = m_device->GetDevice().createSamplerUnique(samplerCreateInfo);
+        m_textureSampler = m_device->GetHandle().createSamplerUnique(samplerCreateInfo);
     }
 
     AccelerationStructureGeometry::~AccelerationStructureGeometry() {}
@@ -44,6 +45,7 @@ namespace vkfw_core::gfx::rt {
         for (auto& meshInfo : m_meshGeometryInfos) {
             const std::size_t bufferSize = meshInfo.iboOffset + meshInfo.iboRange;
             meshInfo.bufferIndex = m_memGroup.AddBufferToGroup(
+                fmt::format("ASMeshBuffer:{}-{}", m_name, meshInfo.index),
                 vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR
                     | vk::BufferUsageFlagBits::eStorageBuffer | vk::BufferUsageFlagBits::eShaderDeviceAddress,
                 bufferSize, std::vector<std::uint32_t>{{0, 1}});
@@ -72,7 +74,7 @@ namespace vkfw_core::gfx::rt {
     void AccelerationStructureGeometry::AddInstanceBufferAndTransferMemGroup()
     {
         m_instanceBufferIndex =
-            m_memGroup.AddBufferToGroup(vk::BufferUsageFlagBits::eShaderDeviceAddress
+            m_memGroup.AddBufferToGroup(fmt::format("ASInstanceBuffer:{}", m_name), vk::BufferUsageFlagBits::eShaderDeviceAddress
                                             | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR
                                             | vk::BufferUsageFlagBits::eStorageBuffer,
                                         m_instanceInfos, std::vector<std::uint32_t>{{0, 1}});
@@ -126,7 +128,8 @@ namespace vkfw_core::gfx::rt {
                                                            + subMesh.GetIndexOffset() * sizeof(std::uint32_t)};
 
         auto blasIndex =
-            AddBottomLevelAccelerationStructure(static_cast<std::uint32_t>(mesh.index), glm::transpose(transform));
+            AddBottomLevelAccelerationStructure(fmt::format("BLAS:{}-{}", m_name, m_BLAS.size()),
+                                                static_cast<std::uint32_t>(mesh.index), glm::transpose(transform));
         m_BLAS[blasIndex].AddTriangleGeometry(subMesh.GetNumberOfTriangles(), subMesh.GetNumberOfIndices(),
                                               mesh.vertexSize, vboDeviceAddress, indexBufferAddress);
     }
@@ -150,11 +153,11 @@ namespace vkfw_core::gfx::rt {
     {
         vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress =
             vbo->GetDeviceAddressConst().deviceAddress + vboOffset;
-        auto vboBuffer = vbo->GetBuffer();
+        auto vboBuffer = vbo->GetHandle();
         auto iboBuffer = vboBuffer;
         vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress = vertexBufferDeviceAddress;
         if (ibo != nullptr) {
-            iboBuffer = ibo->GetBuffer();
+            iboBuffer = ibo->GetHandle();
             indexBufferDeviceAddress = ibo->GetDeviceAddressConst().deviceAddress + iboOffset;
         } else {
             if (iboOffset == 0) {
@@ -164,7 +167,8 @@ namespace vkfw_core::gfx::rt {
         }
 
         auto blasIndex =
-            AddBottomLevelAccelerationStructure(static_cast<std::uint32_t>(m_geometryIndex), glm::transpose(transform));
+            AddBottomLevelAccelerationStructure(fmt::format("BLAS:{}-{}", m_name, m_BLAS.size()),
+                                                static_cast<std::uint32_t>(m_geometryIndex), glm::transpose(transform));
         AddInstanceInfo(static_cast<std::uint32_t>(vertexSize), static_cast<std::uint32_t>(m_geometryIndex),
                         static_cast<std::uint32_t>(-1), transform);
         m_BLAS[blasIndex].AddTriangleGeometry(primitiveCount, vertexCount, vertexSize, vertexBufferDeviceAddress,
@@ -185,7 +189,7 @@ namespace vkfw_core::gfx::rt {
                 0xFF,
                 0,
                 vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable,
-                m_BLAS[i].GetHandle()};
+                m_BLAS[i].GetAddressHandle()};
             memcpy(&blasInstance.transform, &m_BLASTransforms[i], sizeof(glm::mat3x4));
             m_TLAS.AddBottomLevelAccelerationStructureInstance(blasInstance);
         }
@@ -193,11 +197,11 @@ namespace vkfw_core::gfx::rt {
         m_TLAS.BuildAccelerationStructure();
     }
 
-    std::size_t AccelerationStructureGeometry::AddBottomLevelAccelerationStructure(std::uint32_t bufferIndex,
+    std::size_t AccelerationStructureGeometry::AddBottomLevelAccelerationStructure(std::string_view name, std::uint32_t bufferIndex,
                                                                                    const glm::mat3x4& transform)
     {
         auto result = m_BLAS.size();
-        m_BLAS.emplace_back(m_device, vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace);
+        m_BLAS.emplace_back(m_device, name, vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace);
         m_BLASTransforms.emplace_back(transform);
         m_bufferIndices.push_back(bufferIndex);
         return result;
@@ -232,7 +236,7 @@ namespace vkfw_core::gfx::rt {
         vk::WriteDescriptorSetAccelerationStructureKHR& descInfo) const
     {
         descInfo.setAccelerationStructureCount(1);
-        descInfo.setPAccelerationStructures(&m_TLAS.GetAccelerationStructure());
+        descInfo.setPAccelerationStructures(m_TLAS.GetHandlePtr());
     }
 
     void AccelerationStructureGeometry::FillDescriptorBuffersInfo(
@@ -254,33 +258,33 @@ namespace vkfw_core::gfx::rt {
 
         for (const auto& meshGeometry : m_meshGeometryInfos) {
             vboBufferInfos[vboIOffset + meshGeometry.index] =
-                vk::DescriptorBufferInfo{m_memGroup.GetBuffer(meshGeometry.bufferIndex)->GetBuffer(),
+                vk::DescriptorBufferInfo{m_memGroup.GetBuffer(meshGeometry.bufferIndex)->GetHandle(),
                                          meshGeometry.vboOffset, meshGeometry.vboRange};
             iboBufferInfos[iboIOffset + meshGeometry.index] =
-                vk::DescriptorBufferInfo{m_memGroup.GetBuffer(meshGeometry.bufferIndex)->GetBuffer(),
+                vk::DescriptorBufferInfo{m_memGroup.GetBuffer(meshGeometry.bufferIndex)->GetHandle(),
                                          meshGeometry.iboOffset, meshGeometry.iboRange};
         }
 
-        instanceBufferInfo.setBuffer(m_memGroup.GetBuffer(m_instanceBufferIndex)->GetBuffer());
+        instanceBufferInfo.setBuffer(m_memGroup.GetBuffer(m_instanceBufferIndex)->GetHandle());
         instanceBufferInfo.setOffset(0);
         instanceBufferInfo.setRange(VK_WHOLE_SIZE);
 
         for (const auto& mat : m_materials) {
             if (mat.m_diffuseTexture) {
-                diffuseTextureInfos.emplace_back(*m_textureSampler, mat.m_diffuseTexture->GetTexture().GetImageView(),
+                diffuseTextureInfos.emplace_back(*m_textureSampler, mat.m_diffuseTexture->GetTexture().GetImageView().GetHandle(),
                                                  vk::ImageLayout::eShaderReadOnlyOptimal);
             } else {
                 diffuseTextureInfos.emplace_back(*m_textureSampler,
-                                                 m_device->GetDummyTexture()->GetTexture().GetImageView(),
+                                                 m_device->GetDummyTexture()->GetTexture().GetImageView().GetHandle(),
                                                  vk::ImageLayout::eShaderReadOnlyOptimal);
             }
 
             if (mat.m_bumpMap) {
-                bumpTextureInfos.emplace_back(*m_textureSampler, mat.m_bumpMap->GetTexture().GetImageView(),
+                bumpTextureInfos.emplace_back(*m_textureSampler, mat.m_bumpMap->GetTexture().GetImageView().GetHandle(),
                                               vk::ImageLayout::eShaderReadOnlyOptimal);
             } else {
                 bumpTextureInfos.emplace_back(*m_textureSampler,
-                                              m_device->GetDummyTexture()->GetTexture().GetImageView(),
+                                              m_device->GetDummyTexture()->GetTexture().GetImageView().GetHandle(),
                                               vk::ImageLayout::eShaderReadOnlyOptimal);
             }
         }

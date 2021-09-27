@@ -64,7 +64,7 @@ namespace vkfw_core::gfx {
 
     void UniformBufferObject::FillDescriptorBufferInfo(vk::DescriptorBufferInfo& descInfo) const
     {
-        descInfo.buffer = m_memoryGroup->GetBuffer(m_bufferIdx)->GetBuffer();
+        descInfo.buffer = m_memoryGroup->GetBuffer(m_bufferIdx)->GetHandle();
         descInfo.offset = m_bufferOffset;
         descInfo.range = m_singleSize;
     }

@@ -156,10 +156,10 @@ namespace vkfw_core::gfx {
             cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline);
         }
         if ((lastElement == nullptr) || lastElement->m_vertexBuffer == m_vertexBuffer) {
-            cmdBuffer.bindVertexBuffers(0, 1, m_vertexBuffer.first->GetBufferPtr(), &m_vertexBuffer.second);
+            cmdBuffer.bindVertexBuffers(0, 1, m_vertexBuffer.first->GetHandlePtr(), &m_vertexBuffer.second);
         }
         if ((lastElement == nullptr) || lastElement->m_indexBuffer == m_indexBuffer) {
-            cmdBuffer.bindIndexBuffer(m_indexBuffer.first->GetBuffer(), m_indexBuffer.second, vk::IndexType::eUint32);
+            cmdBuffer.bindIndexBuffer(m_indexBuffer.first->GetHandle(), m_indexBuffer.second, vk::IndexType::eUint32);
         }
 
         cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout,

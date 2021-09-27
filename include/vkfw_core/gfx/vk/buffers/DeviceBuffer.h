@@ -17,7 +17,8 @@ namespace vkfw_core::gfx {
     class DeviceBuffer final : public Buffer
     {
     public:
-        DeviceBuffer(const LogicalDevice* device, const vk::BufferUsageFlags& usage, const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags(),
+        DeviceBuffer(const LogicalDevice* device, std::string_view name, const vk::BufferUsageFlags& usage,
+                     const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags(),
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         ~DeviceBuffer() override;
         DeviceBuffer(const DeviceBuffer&) = delete;

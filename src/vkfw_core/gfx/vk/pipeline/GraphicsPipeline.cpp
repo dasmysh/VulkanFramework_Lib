@@ -12,10 +12,13 @@
 
 namespace vkfw_core::gfx {
 
-    GraphicsPipeline::GraphicsPipeline(const LogicalDevice* device, const std::vector<std::shared_ptr<Shader>>& shaders, const glm::uvec2& size, unsigned int numBlendAttachments) :
-        m_device{ device },
-        m_shaders{ shaders },
-        m_state{ std::make_unique<State>() }
+    GraphicsPipeline::GraphicsPipeline(const LogicalDevice* device, std::string_view name,
+                                       const std::vector<std::shared_ptr<Shader>>& shaders, const glm::uvec2& size,
+                                       unsigned int numBlendAttachments)
+        : VulkanObjectWrapper{device->GetHandle(), name, vk::UniquePipeline{}}
+        , m_device{ device }
+        , m_shaders{ shaders }
+        , m_state{std::make_unique<State>()}
     {
         ResetShaders(shaders);
 
@@ -24,23 +27,48 @@ namespace vkfw_core::gfx {
 
         ResetFramebuffer(size, 1, 1);
 
-        m_state->m_rasterizer = vk::PipelineRasterizationStateCreateInfo{ vk::PipelineRasterizationStateCreateFlags(), VK_FALSE,
-            VK_FALSE, vk::PolygonMode::eFill, vk::CullModeFlagBits::eBack, vk::FrontFace::eCounterClockwise, VK_FALSE, 0.0f, 0.0f, 0.0f, 1.0f };
+        m_state->m_rasterizer = vk::PipelineRasterizationStateCreateInfo{vk::PipelineRasterizationStateCreateFlags(),
+                                                                         VK_FALSE,
+                                                                         VK_FALSE,
+                                                                         vk::PolygonMode::eFill,
+                                                                         vk::CullModeFlagBits::eBack,
+                                                                         vk::FrontFace::eCounterClockwise,
+                                                                         VK_FALSE,
+                                                                         0.0f,
+                                                                         0.0f,
+                                                                         0.0f,
+                                                                         1.0f};
         vk::StencilOpState frontStencilOpState{};
         vk::StencilOpState backStencilOpState{};
-        m_state->m_depthStencil = vk::PipelineDepthStencilStateCreateInfo{ vk::PipelineDepthStencilStateCreateFlags(),
-            VK_TRUE, VK_TRUE, vk::CompareOp::eLess, VK_FALSE,
-            VK_FALSE, frontStencilOpState, backStencilOpState, 0.0f, 1.0f };
+        m_state->m_depthStencil = vk::PipelineDepthStencilStateCreateInfo{vk::PipelineDepthStencilStateCreateFlags(),
+                                                                          VK_TRUE,
+                                                                          VK_TRUE,
+                                                                          vk::CompareOp::eLess,
+                                                                          VK_FALSE,
+                                                                          VK_FALSE,
+                                                                          frontStencilOpState,
+                                                                          backStencilOpState,
+                                                                          0.0f,
+                                                                          1.0f};
 
         m_state->m_colorBlendAttachments.resize(numBlendAttachments);
         for (auto& blendAttachment : m_state->m_colorBlendAttachments) {
-            blendAttachment = vk::PipelineColorBlendAttachmentState{ VK_FALSE,
-                vk::BlendFactor::eOne, vk::BlendFactor::eZero, vk::BlendOp::eAdd,
-                vk::BlendFactor::eOne, vk::BlendFactor::eZero, vk::BlendOp::eAdd,
-                vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB | vk::ColorComponentFlagBits::eA };
+            blendAttachment = vk::PipelineColorBlendAttachmentState{
+                VK_FALSE,
+                vk::BlendFactor::eOne,
+                vk::BlendFactor::eZero,
+                vk::BlendOp::eAdd,
+                vk::BlendFactor::eOne,
+                vk::BlendFactor::eZero,
+                vk::BlendOp::eAdd,
+                vk::ColorComponentFlagBits::eR | vk::ColorComponentFlagBits::eG | vk::ColorComponentFlagBits::eB
+                    | vk::ColorComponentFlagBits::eA};
         }
 
-        m_state->m_colorBlending = vk::PipelineColorBlendStateCreateInfo{ vk::PipelineColorBlendStateCreateFlags(), VK_FALSE, vk::LogicOp::eCopy,
+        m_state->m_colorBlending =
+            vk::PipelineColorBlendStateCreateInfo{vk::PipelineColorBlendStateCreateFlags(),
+                                                  VK_FALSE,
+                                                  vk::LogicOp::eCopy,
                                                   static_cast<std::uint32_t>(m_state->m_colorBlendAttachments.size()),
                                                   m_state->m_colorBlendAttachments.data(),
                                                   {{0.0f, 0.0f, 0.0f, 0.0f}}};
@@ -55,11 +83,11 @@ namespace vkfw_core::gfx {
         pipelineLayoutInfo.pPushConstantRanges = 0; // Optional*/
     }
 
-    GraphicsPipeline::GraphicsPipeline(GraphicsPipeline&& rhs) noexcept :
-    m_device{ rhs.m_device },
-        m_shaders{ std::move(rhs.m_shaders) },
-        m_state{ std::move(rhs.m_state) },
-        m_vkPipeline{ std::move(rhs.m_vkPipeline) }
+    GraphicsPipeline::GraphicsPipeline(GraphicsPipeline&& rhs) noexcept
+        : VulkanObjectWrapper{std::move(rhs)}
+        , m_device{ rhs.m_device }
+        , m_shaders{ std::move(rhs.m_shaders) }
+        , m_state{ std::move(rhs.m_state) }
     {
     }
 
@@ -67,10 +95,10 @@ namespace vkfw_core::gfx {
     {
         if (this != &rhs) {
             this->~GraphicsPipeline();
+            VulkanObjectWrapper::operator=(std::move(rhs));
             m_device = rhs.m_device;
             m_shaders = std::move(rhs.m_shaders);
             m_state = std::move(rhs.m_state);
-            m_vkPipeline = std::move(rhs.m_vkPipeline);
         }
         return *this;
     }
@@ -113,7 +141,8 @@ namespace vkfw_core::gfx {
             &m_state->m_viewportState, &m_state->m_rasterizer, &m_state->m_multisampling, &m_state->m_depthStencil,
             &m_state->m_colorBlending, &dynamicState, pipelineLayout, renderPass, subpass };
 
-        m_vkPipeline = m_device->GetDevice().createGraphicsPipelineUnique(vk::PipelineCache(), pipelineInfo);
+        SetHandle(m_device->GetHandle(),
+                  m_device->GetHandle().createGraphicsPipelineUnique(vk::PipelineCache(), pipelineInfo));
 
         if (!keepState) { m_state.reset(); }
     }

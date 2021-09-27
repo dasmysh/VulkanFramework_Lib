@@ -11,15 +11,17 @@
 #include "main.h"
 #include "gfx/vk/LogicalDevice.h"
 #include "gfx/vk/memory/DeviceMemory.h"
+#include "gfx/vk/wrappers/CommandBuffer.h"
 
 namespace vkfw_core::gfx {
 
     class Queue;
 
-    class Buffer
+    class Buffer : public VulkanObjectWrapper<vk::UniqueBuffer>
     {
     public:
-        Buffer(const LogicalDevice* device, const vk::BufferUsageFlags& usage, const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags(),
+        Buffer(const LogicalDevice* device, std::string_view name, const vk::BufferUsageFlags& usage,
+               const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags(),
             std::vector<std::uint32_t> queueFamilyIndices = std::vector<std::uint32_t>{});
         virtual ~Buffer();
         Buffer(const Buffer&) = delete;
@@ -30,23 +32,20 @@ namespace vkfw_core::gfx {
         void InitializeBuffer(std::size_t size, bool initMemory = true);
 
         void CopyBufferAsync(std::size_t srcOffset, const Buffer& dstBuffer, std::size_t dstOffset, std::size_t size,
-                             vk::CommandBuffer cmdBuffer) const;
-        [[nodiscard]] vk::UniqueCommandBuffer
+                             const CommandBuffer& cmdBuffer) const;
+        [[nodiscard]] CommandBuffer
         CopyBufferAsync(std::size_t srcOffset, const Buffer& dstBuffer, std::size_t dstOffset, std::size_t size,
-                        const Queue& queue,
-                        const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
-                        const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
-                        vk::Fence fence = vk::Fence()) const;
-        [[nodiscard]] vk::UniqueCommandBuffer
+                        const Queue& queue, std::span<vk::Semaphore> waitSemaphores = std::span<vk::Semaphore>{},
+                        std::span<vk::Semaphore> signalSemaphores = std::span<vk::Semaphore>{},
+                        const Fence& fence = Fence{}) const;
+        [[nodiscard]] CommandBuffer
         CopyBufferAsync(const Buffer& dstBuffer, const Queue& queue,
-                        const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
-                        const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
-                        vk::Fence fence = vk::Fence()) const;
+                        std::span<vk::Semaphore> waitSemaphores = std::span<vk::Semaphore>{},
+                        std::span<vk::Semaphore> signalSemaphores = std::span<vk::Semaphore>{},
+                        const Fence& fence = Fence{}) const;
         void CopyBufferSync(const Buffer& dstBuffer, const Queue& copyQueue) const;
 
         [[nodiscard]] std::size_t GetSize() const { return m_size; }
-        [[nodiscard]] vk::Buffer GetBuffer() const { return *m_buffer; }
-        [[nodiscard]] const vk::Buffer* GetBufferPtr() const { return &(*m_buffer); }
         [[nodiscard]] const DeviceMemory& GetDeviceMemory() const { return m_bufferDeviceMemory; }
         [[nodiscard]] vk::DeviceOrHostAddressConstKHR GetDeviceAddressConst() const;
         [[nodiscard]] vk::DeviceOrHostAddressKHR GetDeviceAddress();
@@ -57,9 +56,9 @@ namespace vkfw_core::gfx {
         }
 
     protected:
-        [[nodiscard]] Buffer CopyWithoutData() const
+        [[nodiscard]] Buffer CopyWithoutData(std::string_view name) const
         {
-            return Buffer{m_device, m_usage, m_bufferDeviceMemory.GetMemoryProperties(), m_queueFamilyIndices};
+            return Buffer{m_device, name, m_usage, m_bufferDeviceMemory.GetMemoryProperties(), m_queueFamilyIndices};
         }
 
     private:
@@ -67,8 +66,6 @@ namespace vkfw_core::gfx {
         const LogicalDevice* m_device;
         /** Holds the Vulkan device memory for the buffer. */
         DeviceMemory m_bufferDeviceMemory;
-        /** Holds the Vulkan buffer object. */
-        vk::UniqueBuffer m_buffer;
         /** Holds the current size of the buffer in bytes. */
         std::size_t m_size;
         /** Holds the buffer usage. */

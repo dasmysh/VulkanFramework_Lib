@@ -10,8 +10,8 @@
 
 namespace vkfw_core::gfx {
 
-    CommandPool::CommandPool(vk::CommandPool commandPool)
-        : VulkanObjectWrapper{commandPool}
+    CommandPool::CommandPool(vk::Device device, std::string_view name, vk::UniqueCommandPool commandPool)
+        : VulkanObjectWrapper{device, name, std::move(commandPool)}
     {
     }
 

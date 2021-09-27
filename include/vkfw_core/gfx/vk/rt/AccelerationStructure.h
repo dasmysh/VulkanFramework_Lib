@@ -9,6 +9,7 @@
 #pragma once
 
 #include "main.h"
+#include "gfx/vk/wrappers/VulkanObjectWrapper.h"
 
 namespace vkfw_core::gfx {
     class LogicalDevice;
@@ -18,10 +19,11 @@ namespace vkfw_core::gfx {
 namespace vkfw_core::gfx::rt {
 
     // TODO: add queue [9/20/2021 Sebastian Maisch]
-    class AccelerationStructure
+    class AccelerationStructure : public VulkanObjectWrapper<vk::UniqueAccelerationStructureKHR>
     {
     public:
-        AccelerationStructure(vkfw_core::gfx::LogicalDevice* device, vk::AccelerationStructureTypeKHR type,
+        AccelerationStructure(vkfw_core::gfx::LogicalDevice* device, std::string_view name,
+                              vk::AccelerationStructureTypeKHR type,
                               vk::BuildAccelerationStructureFlagsKHR flags);
         AccelerationStructure(AccelerationStructure&& rhs) noexcept;
         AccelerationStructure& operator=(AccelerationStructure&& rhs) noexcept;
@@ -29,8 +31,7 @@ namespace vkfw_core::gfx::rt {
 
         virtual void BuildAccelerationStructure();
 
-        const vk::AccelerationStructureKHR& GetAccelerationStructure() const { return m_vkAccelerationStructure.get(); }
-        vk::DeviceAddress GetHandle() const { return m_handle; }
+        vk::DeviceAddress GetAddressHandle() const { return m_handle; }
 
     protected:
         vkfw_core::gfx::LogicalDevice* GetDevice() { return m_device; }
@@ -51,8 +52,6 @@ namespace vkfw_core::gfx::rt {
         /** The acceleration structures memory requirements. */
         vk::AccelerationStructureBuildSizesInfoKHR m_memoryRequirements;
 
-        /** The actual vulkan acceleration structure object. */
-        vk::UniqueAccelerationStructureKHR m_vkAccelerationStructure;
         /** The device buffer containing the acceleration structure. */
         std::unique_ptr<vkfw_core::gfx::DeviceBuffer> m_buffer;
         /** The handle of the acceleration structure. */

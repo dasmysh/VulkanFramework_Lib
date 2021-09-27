@@ -18,22 +18,23 @@
 
 namespace vkfw_core::gfx {
 
-    LogicalDevice::LogicalDevice(const cfg::WindowCfg& windowCfg, const vk::PhysicalDevice& phDevice,
+    LogicalDevice::LogicalDevice(const cfg::WindowCfg& windowCfg, vk::PhysicalDevice phDevice,
                                  std::vector<DeviceQueueDesc> queueDescs,
                                  const std::vector<std::string>& requiredDeviceExtensions, void* featuresNextChain,
-                                 const vk::SurfaceKHR& surface)
-        :
-        m_windowCfg(windowCfg),
-        m_vkPhysicalDevice(phDevice),
-        m_vkPhysicalDeviceLimits(phDevice.getProperties().limits), // NOLINT
-        m_queueDescriptions(std::move(queueDescs))
+                                 const Surface& surface)
+        : VulkanObjectWrapper{nullptr, fmt::format("WindowDevice-{}", windowCfg.m_windowTitle), vk::UniqueDevice{}}
+        , m_windowCfg{windowCfg}
+        , m_vkPhysicalDevice{phDevice}
+        , m_vkPhysicalDeviceLimits{phDevice.getProperties().limits} // NOLINT
+        , m_queueDescriptions{std::move(queueDescs)}
     {
         std::map<std::uint32_t, std::vector<std::pair<std::uint32_t, std::uint32_t>>> deviceQFamilyToRequested;
         std::map<std::uint32_t, std::vector<float>> deviceQFamilyPriorities;
         for (auto i = 0U; i < m_queueDescriptions.size(); ++i) {
             for (auto j = 0U; j < m_queueDescriptions[i].m_priorities.size(); ++j) {
                 deviceQFamilyToRequested[m_queueDescriptions[i].m_familyIndex].emplace_back(std::make_pair(i, j));
-                deviceQFamilyPriorities[m_queueDescriptions[i].m_familyIndex].push_back(m_queueDescriptions[i].m_priorities[j]);
+                deviceQFamilyPriorities[m_queueDescriptions[i].m_familyIndex].push_back(
+                    m_queueDescriptions[i].m_priorities[j]);
             }
         }
 
@@ -71,11 +72,15 @@ namespace vkfw_core::gfx {
 
         if (m_windowCfg.m_useRayTracing) {
             auto features =
-                m_vkPhysicalDevice.getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceRayTracingPipelineFeaturesKHR, vk::PhysicalDeviceAccelerationStructureFeaturesKHR>();
+                m_vkPhysicalDevice
+                    .getFeatures2<vk::PhysicalDeviceFeatures2, vk::PhysicalDeviceRayTracingPipelineFeaturesKHR,
+                                  vk::PhysicalDeviceAccelerationStructureFeaturesKHR>();
             m_raytracingPipelineFeatures = features.get<vk::PhysicalDeviceRayTracingPipelineFeaturesKHR>();
             m_accelerationStructureFeatures = features.get<vk::PhysicalDeviceAccelerationStructureFeaturesKHR>();
             auto properties =
-                m_vkPhysicalDevice.getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPipelinePropertiesKHR, vk::PhysicalDeviceAccelerationStructurePropertiesKHR>();
+                m_vkPhysicalDevice
+                    .getProperties2<vk::PhysicalDeviceProperties2, vk::PhysicalDeviceRayTracingPipelinePropertiesKHR,
+                                    vk::PhysicalDeviceAccelerationStructurePropertiesKHR>();
             m_raytracingPipelineProperties = properties.get<vk::PhysicalDeviceRayTracingPipelinePropertiesKHR>();
             m_accelerationStructureProperties = properties.get<vk::PhysicalDeviceAccelerationStructurePropertiesKHR>();
         }
@@ -101,9 +106,14 @@ namespace vkfw_core::gfx {
             } // checked this extension earlier
         }
 
-        vk::DeviceCreateInfo deviceCreateInfo{ vk::DeviceCreateFlags(), static_cast<std::uint32_t>(queueCreateInfo.size()), queueCreateInfo.data(),
-            static_cast<std::uint32_t>(ApplicationBase::instance().GetVKValidationLayers().size()), ApplicationBase::instance().GetVKValidationLayers().data(),
-            static_cast<std::uint32_t>(enabledDeviceExtensions.size()), enabledDeviceExtensions.data(),
+        vk::DeviceCreateInfo deviceCreateInfo{
+            vk::DeviceCreateFlags(),
+            static_cast<std::uint32_t>(queueCreateInfo.size()),
+            queueCreateInfo.data(),
+            static_cast<std::uint32_t>(ApplicationBase::instance().GetVKValidationLayers().size()),
+            ApplicationBase::instance().GetVKValidationLayers().data(),
+            static_cast<std::uint32_t>(enabledDeviceExtensions.size()),
+            enabledDeviceExtensions.data(),
             &m_deviceFeatures};
         vk::PhysicalDeviceFeatures2 physicalDeviceFeatures2;
         if (featuresNextChain) {
@@ -113,13 +123,17 @@ namespace vkfw_core::gfx {
             deviceCreateInfo.pNext = &physicalDeviceFeatures2;
         }
 
-        m_vkDevice = m_vkPhysicalDevice.createDeviceUnique(deviceCreateInfo);
+        {
+            auto vkUDevice = m_vkPhysicalDevice.createDeviceUnique(deviceCreateInfo);
+            auto vkDevice = *vkUDevice;
+            SetHandle(vkDevice, std::move(vkUDevice));
+        }
+
         m_queuesByRequestedFamily.resize(m_queueDescriptions.size());
         for (auto i = 0U; i < m_queueDescriptions.size(); ++i) {
-            m_queuesByRequestedFamily[i].resize(m_queueDescriptions[i].m_priorities.size(),
-                                                Queue{nullptr, CommandPool{nullptr}});
+            m_queuesByRequestedFamily[i].resize(m_queueDescriptions[i].m_priorities.size(), Queue{});
         }
-        m_cmdPoolsByRequestedQFamily.resize(m_queueDescriptions.size(), CommandPool{nullptr});
+        m_cmdPoolsByRequestedQFamily.resize(m_queueDescriptions.size(), nullptr);
 
         for (const auto& deviceQueueDesc : deviceQFamilyToRequested) {
             const auto& priorities = deviceQFamilyPriorities[deviceQueueDesc.first];
@@ -129,15 +143,19 @@ namespace vkfw_core::gfx {
             if constexpr (use_debug_pipeline) {
                 vk::CommandPoolCreateInfo poolInfo{vk::CommandPoolCreateFlags(),
                                                    m_singleQueueOnly ? 0 : deviceQueueDesc.first};
-                m_vkCmdPoolsByDeviceQFamily[deviceQueueDesc.first] = m_vkDevice->createCommandPoolUnique(poolInfo);
+                m_vkCmdPoolsByDeviceQFamily[deviceQueueDesc.first] = CommandPool{
+                    GetHandle(), fmt::format("Dev-{} QueueCommandPool{}", windowCfg.m_windowTitle, mappings[0].first),
+                                GetHandle().createCommandPoolUnique(poolInfo)};
             } else {
                 vk::CommandPoolCreateInfo poolInfo{vk::CommandPoolCreateFlags(), deviceQueueDesc.first};
-                m_vkCmdPoolsByDeviceQFamily[deviceQueueDesc.first] = m_vkDevice->createCommandPoolUnique(poolInfo);
+                m_vkCmdPoolsByDeviceQFamily[deviceQueueDesc.first] = CommandPool{
+                    GetHandle(), fmt::format("Dev-{} QueueCommandPool{}", windowCfg.m_windowTitle, mappings[0].first),
+                                GetHandle().createCommandPoolUnique(poolInfo)};
             }
 
             vk::Queue vkSingleQueue;
             if constexpr (use_debug_pipeline) {
-                if (m_singleQueueOnly) { vkSingleQueue = m_vkDevice->getQueue(0, 0); }
+                if (m_singleQueueOnly) { vkSingleQueue = GetHandle().getQueue(0, 0); }
             }
 
             for (auto j = 0U; j < priorities.size(); ++j) {
@@ -146,26 +164,27 @@ namespace vkfw_core::gfx {
                         m_vkQueuesByDeviceFamily[deviceQueueDesc.first][j] = vkSingleQueue;
                     } else {
                         m_vkQueuesByDeviceFamily[deviceQueueDesc.first][j] =
-                            m_vkDevice->getQueue(deviceQueueDesc.first, j);
+                            GetHandle().getQueue(deviceQueueDesc.first, j);
                     }
                 } else {
-                    m_vkQueuesByDeviceFamily[deviceQueueDesc.first][j] = m_vkDevice->getQueue(deviceQueueDesc.first, j);
+                    m_vkQueuesByDeviceFamily[deviceQueueDesc.first][j] = GetHandle().getQueue(deviceQueueDesc.first, j);
                 }
-                m_cmdPoolsByRequestedQFamily[mappings[j].first] =
-                    CommandPool{*m_vkCmdPoolsByDeviceQFamily[deviceQueueDesc.first]};
+                m_cmdPoolsByRequestedQFamily[mappings[j].first] = &m_vkCmdPoolsByDeviceQFamily[deviceQueueDesc.first];
                 m_queuesByRequestedFamily[mappings[j].first][mappings[j].second] =
-                    Queue{m_vkQueuesByDeviceFamily[deviceQueueDesc.first][j],
-                          m_cmdPoolsByRequestedQFamily[mappings[j].first]};
+                    Queue{GetHandle(), fmt::format("Dev-{} Queue{}-{}", windowCfg.m_windowTitle, mappings[j].first, mappings[j].second),
+                          m_vkQueuesByDeviceFamily[deviceQueueDesc.first][j],
+                          *m_cmdPoolsByRequestedQFamily[mappings[j].first]};
             }
         }
 
         m_shaderManager = std::make_unique<ShaderManager>(this);
         m_textureManager = std::make_unique<TextureManager>(this);
 
-        m_dummyMemGroup = std::make_unique<MemoryGroup>(this, vk::MemoryPropertyFlags());
-        m_dummyTexture = m_textureManager->GetResource("dummy.png", true, true, *m_dummyMemGroup); // , std::vector<std::uint32_t>{ {0, 1} }
+        m_dummyMemGroup = std::make_unique<MemoryGroup>(this, "DummyMemGroup", vk::MemoryPropertyFlags());
+        m_dummyTexture = m_textureManager->GetResource("dummy.png", true, true,
+                                                       *m_dummyMemGroup); // , std::vector<std::uint32_t>{ {0, 1} }
 
-        QueuedDeviceTransfer transfer{ this, GetQueue(0, 0) };
+        QueuedDeviceTransfer transfer{this, GetQueue(0, 0)};
         m_dummyMemGroup->FinalizeDeviceGroup();
         m_dummyMemGroup->TransferData(transfer);
         transfer.FinishTransfer();
@@ -180,14 +199,14 @@ namespace vkfw_core::gfx {
         m_queuesByRequestedFamily.clear();
     }
 
-    vk::UniqueCommandPool LogicalDevice::CreateCommandPoolForQueue(unsigned int familyIndex, const vk::CommandPoolCreateFlags& flags) const
+    CommandPool LogicalDevice::CreateCommandPoolForQueue(std::string_view name, unsigned int familyIndex, const vk::CommandPoolCreateFlags& flags) const
     {
         if constexpr (use_debug_pipeline) {
             vk::CommandPoolCreateInfo poolInfo{flags, m_singleQueueOnly ? 0 : familyIndex};
-            return m_vkDevice->createCommandPoolUnique(poolInfo);
+            return CommandPool{GetHandle(), name, GetHandle().createCommandPoolUnique(poolInfo)};
         } else {
             vk::CommandPoolCreateInfo poolInfo{flags, familyIndex};
-            return m_vkDevice->createCommandPoolUnique(poolInfo);
+            return CommandPool{GetHandle(), name, GetHandle().createCommandPoolUnique(poolInfo)};
         }
     }
 
@@ -197,7 +216,8 @@ namespace vkfw_core::gfx {
         std::vector<std::shared_ptr<Shader>> shaders(shaderNames.size());
         for (auto i = 0U; i < shaderNames.size(); ++i) { shaders[i] = m_shaderManager->GetResource(shaderNames[i]); }
 
-        return std::make_unique<GraphicsPipeline>(this, shaders, size, numBlendAttachments);
+        return std::make_unique<GraphicsPipeline>(this, fmt::format("{}", fmt::join(shaderNames, "|")), shaders, size,
+                                                  numBlendAttachments);
     }
 
     // void LogicalDevice::CmdDebugMarkerBeginEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const
@@ -267,21 +287,5 @@ namespace vkfw_core::gfx {
 
         throw std::runtime_error("No candidate format supported.");
     }
-
-#ifndef NDEBUG
-    void LogicalDevice::SetObjectName(std::uint64_t object, vk::ObjectType type, std::string_view name) const
-    {
-        m_vkDevice->setDebugUtilsObjectNameEXT(vk::DebugUtilsObjectNameInfoEXT{ type, object, name.data() });
-    }
-
-    void LogicalDevice::SetObjectTag(std::uint64_t object, vk::ObjectType type, std::uint64_t tagHandle,
-                                   const void* tagData, std::size_t tagSize) const
-    {
-        m_vkDevice->setDebugUtilsObjectTagEXT(vk::DebugUtilsObjectTagInfoEXT{ type, object, tagHandle, tagSize, tagData });
-    }
-#else
-    void LogicalDevice::SetObjectName(std::uint64_t, vk::ObjectType, std::string_view) const {}
-    void LogicalDevice::SetObjectTag(std::uint64_t, vk::ObjectType, std::uint64_t, const void*, std::size_t) const {}
-#endif
 
 }

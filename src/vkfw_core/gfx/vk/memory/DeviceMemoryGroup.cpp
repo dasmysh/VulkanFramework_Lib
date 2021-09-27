@@ -13,9 +13,10 @@
 
 namespace vkfw_core::gfx {
 
-    DeviceMemoryGroup::DeviceMemoryGroup(const LogicalDevice* device, const vk::MemoryPropertyFlags& memoryFlags) :
-        m_device{ device },
-        m_deviceMemory{ device, memoryFlags | vk::MemoryPropertyFlagBits::eDeviceLocal }
+    DeviceMemoryGroup::DeviceMemoryGroup(const LogicalDevice* device, std::string_view name,
+                                         const vk::MemoryPropertyFlags& memoryFlags)
+        :
+        m_device{ device }, m_deviceMemory{device, name, memoryFlags | vk::MemoryPropertyFlagBits::eDeviceLocal}
     {
     }
 
@@ -42,27 +43,30 @@ namespace vkfw_core::gfx {
         return *this;
     }
 
-    unsigned int DeviceMemoryGroup::AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size, const std::vector<std::uint32_t>& queueFamilyIndices)
+    unsigned int DeviceMemoryGroup::AddBufferToGroup(std::string_view name, const vk::BufferUsageFlags& usage,
+                                                     std::size_t size,
+                                                     const std::vector<std::uint32_t>& queueFamilyIndices)
     {
-        m_deviceBuffers.emplace_back(m_device, vk::BufferUsageFlagBits::eTransferDst | usage, vk::MemoryPropertyFlags(),
+        m_deviceBuffers.emplace_back(m_device, name, vk::BufferUsageFlagBits::eTransferDst | usage, vk::MemoryPropertyFlags(),
                                      queueFamilyIndices);
         m_deviceBuffers.back().InitializeBuffer(size, false);
 
         return static_cast<unsigned int>(m_deviceBuffers.size() - 1);
     }
 
-    unsigned int DeviceMemoryGroup::AddBufferToGroup(const vk::BufferUsageFlags& usage,
+    unsigned int DeviceMemoryGroup::AddBufferToGroup(std::string_view name, const vk::BufferUsageFlags& usage,
                                                      const std::vector<std::uint32_t>& queueFamilyIndices)
     {
-        m_deviceBuffers.emplace_back(m_device, vk::BufferUsageFlagBits::eTransferDst | usage, vk::MemoryPropertyFlags(),
+        m_deviceBuffers.emplace_back(m_device, name, vk::BufferUsageFlagBits::eTransferDst | usage, vk::MemoryPropertyFlags(),
                                      queueFamilyIndices);
         return static_cast<unsigned int>(m_deviceBuffers.size() - 1);
     }
 
-    unsigned int DeviceMemoryGroup::AddTextureToGroup(const TextureDescriptor& desc, const glm::u32vec4& size,
+    unsigned int DeviceMemoryGroup::AddTextureToGroup(std::string_view name, const TextureDescriptor& desc,
+                                                      const glm::u32vec4& size,
         std::uint32_t mipLevels, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
-        m_deviceImages.emplace_back(m_device, TextureDescriptor(desc, vk::ImageUsageFlagBits::eTransferDst),
+        m_deviceImages.emplace_back(m_device, name, TextureDescriptor(desc, vk::ImageUsageFlagBits::eTransferDst),
                                     queueFamilyIndices);
         m_deviceImages.back().InitializeImage(size, mipLevels, false);
 
@@ -144,7 +148,7 @@ namespace vkfw_core::gfx {
                                                             bool& shaderDeviceAddress)
     {
         shaderDeviceAddress = shaderDeviceAddress || buffer.IsShaderDeviceAddress();
-        auto memRequirements = device->GetDevice().getBufferMemoryRequirements(buffer.GetBuffer());
+        auto memRequirements = device->GetHandle().getBufferMemoryRequirements(buffer.GetHandle());
         return FillAllocationInfo(device, memRequirements, buffer.GetDeviceMemory().GetMemoryProperties(), allocInfo);
     }
 
@@ -152,7 +156,7 @@ namespace vkfw_core::gfx {
         const Texture* lastImage, const Texture& image,
         std::size_t& imageOffset, vk::MemoryAllocateInfo& allocInfo)
     {
-        auto memRequirements = device->GetDevice().getImageMemoryRequirements(image.GetImage());
+        auto memRequirements = device->GetHandle().getImageMemoryRequirements(image.GetImage());
         std::size_t newOffset;
         if (lastImage == nullptr) {
             newOffset = device->CalculateBufferImageOffset(image, imageOffset);

@@ -11,7 +11,7 @@
 #include "gfx/vk/buffers/DeviceBuffer.h"
 #include "gfx/vk/textures/HostTexture.h"
 #include "gfx/vk/textures/DeviceTexture.h"
-#include "gfx/vk/CommandBuffers.h"
+#include "gfx/vk/wrappers/CommandBuffer.h"
 
 namespace vkfw_core::gfx {
 
@@ -50,18 +50,17 @@ namespace vkfw_core::gfx {
     }
 
     std::unique_ptr<DeviceBuffer> QueuedDeviceTransfer::CreateDeviceBufferWithData(
-        const vk::BufferUsageFlags& deviceBufferUsage, const vk::MemoryPropertyFlags& memoryFlags,
-        const std::vector<std::uint32_t>& deviceBufferQueues, std::size_t bufferSize,
-        std::size_t dataSize, const void* data)
+        std::string_view name, const vk::BufferUsageFlags& deviceBufferUsage,
+        const vk::MemoryPropertyFlags& memoryFlags, const std::vector<std::uint32_t>& deviceBufferQueues,
+        std::size_t bufferSize, std::size_t dataSize, const void* data)
     {
-        AddStagingBuffer(dataSize, data);
+        AddStagingBuffer(fmt::format("StagingBuffer:{}", name), dataSize, data);
 
         std::vector<std::uint32_t> queueFamilies;
         queueFamilies.reserve(deviceBufferQueues.size());
         for (auto queue : deviceBufferQueues) { queueFamilies.push_back(m_device->GetQueueInfo(queue).m_familyIndex); }
         auto deviceBuffer = std::make_unique<DeviceBuffer>(
-            m_device, vk::BufferUsageFlagBits::eTransferDst | deviceBufferUsage,
-            memoryFlags, queueFamilies);
+            m_device, name, vk::BufferUsageFlagBits::eTransferDst | deviceBufferUsage, memoryFlags, queueFamilies);
         deviceBuffer->InitializeBuffer(bufferSize);
 
         AddTransferToQueue(m_stagingBuffers.back(), *deviceBuffer);
@@ -69,16 +68,18 @@ namespace vkfw_core::gfx {
         return deviceBuffer;
     }
 
-    std::unique_ptr<DeviceTexture> QueuedDeviceTransfer::CreateDeviceTextureWithData(
-        const TextureDescriptor& textureDesc, const std::vector<std::uint32_t>& deviceBufferQueues,
-        const glm::u32vec4& textureSize, std::uint32_t mipLevels, const glm::u32vec4& dataSize, const void* data)
+    std::unique_ptr<DeviceTexture>
+    QueuedDeviceTransfer::CreateDeviceTextureWithData(std::string_view name, const TextureDescriptor& textureDesc,
+                                                      const std::vector<std::uint32_t>& deviceBufferQueues,
+                                                      const glm::u32vec4& textureSize, std::uint32_t mipLevels,
+                                                      const glm::u32vec4& dataSize, const void* data)
     {
-        AddStagingTexture(dataSize, mipLevels, textureDesc, data);
+        AddStagingTexture(fmt::format("StagingTexture:{}", name), dataSize, mipLevels, textureDesc, data);
 
         std::vector<std::uint32_t> queueFamilies;
         queueFamilies.reserve(deviceBufferQueues.size());
         for (auto queue : deviceBufferQueues) { queueFamilies.push_back(m_device->GetQueueInfo(queue).m_familyIndex); }
-        auto deviceTexture = std::make_unique<DeviceTexture>(m_device, textureDesc, queueFamilies);
+        auto deviceTexture = std::make_unique<DeviceTexture>(m_device, name, textureDesc, queueFamilies);
         deviceTexture->InitializeImage(textureSize, mipLevels);
 
         AddTransferToQueue(m_stagingTextures.back(), *deviceTexture);
@@ -87,28 +88,31 @@ namespace vkfw_core::gfx {
     }
 
     std::unique_ptr<DeviceBuffer> QueuedDeviceTransfer::CreateDeviceBufferWithData(
-        const vk::BufferUsageFlags& deviceBufferUsage, const vk::MemoryPropertyFlags& memoryFlags,
-        const std::vector<std::uint32_t>& deviceBufferQueues, std::size_t size, const void* data)
+        std::string_view name, const vk::BufferUsageFlags& deviceBufferUsage,
+        const vk::MemoryPropertyFlags& memoryFlags, const std::vector<std::uint32_t>& deviceBufferQueues,
+        std::size_t size, const void* data)
     {
-        return CreateDeviceBufferWithData(deviceBufferUsage, memoryFlags, deviceBufferQueues, size, size, data);
+        return CreateDeviceBufferWithData(name, deviceBufferUsage, memoryFlags, deviceBufferQueues, size, size, data);
     }
 
-    std::unique_ptr<DeviceTexture> QueuedDeviceTransfer::CreateDeviceTextureWithData(
-        const TextureDescriptor& textureDesc, const std::vector<std::uint32_t>& deviceBufferQueues,
-        const glm::u32vec4& size, std::uint32_t mipLevels, const void* data)
+    std::unique_ptr<DeviceTexture>
+    QueuedDeviceTransfer::CreateDeviceTextureWithData(std::string_view name, const TextureDescriptor& textureDesc,
+                                                      const std::vector<std::uint32_t>& deviceBufferQueues,
+                                                      const glm::u32vec4& size, std::uint32_t mipLevels,
+                                                      const void* data)
     {
-        return CreateDeviceTextureWithData(textureDesc, deviceBufferQueues, size, mipLevels, size, data);
+        return CreateDeviceTextureWithData(name, textureDesc, deviceBufferQueues, size, mipLevels, size, data);
     }
 
     void QueuedDeviceTransfer::TransferDataToBuffer(std::size_t dataSize, const void* data, const Buffer& dst, std::size_t dstOffset)
     {
-        AddStagingBuffer(dataSize, data);
+        AddStagingBuffer(fmt::format("StagingBuffer:{}", dst.GetName()), dataSize, data);
         AddTransferToQueue(m_stagingBuffers.back(), 0, dst, dstOffset, dataSize);
     }
 
     void QueuedDeviceTransfer::AddTransferToQueue(const Buffer& src, std::size_t srcOffset, const Buffer& dst, std::size_t dstOffset, std::size_t copySize)
     {
-        m_transferCmdBuffers.push_back(src.CopyBufferAsync(srcOffset, dst, dstOffset, copySize, m_transferQueue));
+        m_transferCmdBuffers.emplace_back(src.CopyBufferAsync(srcOffset, dst, dstOffset, copySize, m_transferQueue));
     }
 
     void QueuedDeviceTransfer::AddTransferToQueue(const Buffer& src, const Buffer& dst)
@@ -118,14 +122,16 @@ namespace vkfw_core::gfx {
 
     void QueuedDeviceTransfer::AddTransferToQueue(Texture& src, Texture& dst)
     {
-        auto imgCopyCmdBuffer = CommandBuffers::beginSingleTimeSubmit(m_device, m_transferQueue.GetCommandPool());
-        src.TransitionLayout(vk::ImageLayout::eTransferSrcOptimal, *imgCopyCmdBuffer);
-        dst.TransitionLayout(vk::ImageLayout::eTransferDstOptimal, *imgCopyCmdBuffer);
-        src.CopyImageAsync(0, glm::u32vec4(0), dst, 0, glm::u32vec4(0), src.GetSize(), *imgCopyCmdBuffer);
-        dst.TransitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal, *imgCopyCmdBuffer);
-        CommandBuffers::endSingleTimeSubmit(m_transferQueue, *imgCopyCmdBuffer);
+        auto imgCopyCmdBuffer = CommandBuffer::beginSingleTimeSubmit(
+            m_device, fmt::format("{} to {} CmdBuffer", src.GetName(), dst.GetName()),
+            fmt::format("{} to {} Transfer", src.GetName(), dst.GetName()), m_transferQueue.GetCommandPool());
+        src.TransitionLayout(vk::ImageLayout::eTransferSrcOptimal, imgCopyCmdBuffer);
+        dst.TransitionLayout(vk::ImageLayout::eTransferDstOptimal, imgCopyCmdBuffer);
+        src.CopyImageAsync(0, glm::u32vec4(0), dst, 0, glm::u32vec4(0), src.GetSize(), imgCopyCmdBuffer);
+        dst.TransitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal, imgCopyCmdBuffer);
+        CommandBuffer::endSingleTimeSubmit(m_transferQueue, imgCopyCmdBuffer);
 
-        m_transferCmdBuffers.push_back(std::move(imgCopyCmdBuffer));
+        m_transferCmdBuffers.emplace_back(std::move(imgCopyCmdBuffer));
     }
 
     void QueuedDeviceTransfer::FinishTransfer()
@@ -135,16 +141,17 @@ namespace vkfw_core::gfx {
         m_stagingBuffers.clear();
     }
 
-    void QueuedDeviceTransfer::AddStagingBuffer(std::size_t dataSize, const void* data)
+    void QueuedDeviceTransfer::AddStagingBuffer(std::string_view name, std::size_t dataSize, const void* data)
     {
-        m_stagingBuffers.emplace_back(m_device, vk::BufferUsageFlagBits::eTransferSrc);
+        m_stagingBuffers.emplace_back(m_device, name, vk::BufferUsageFlagBits::eTransferSrc);
         m_stagingBuffers.back().InitializeData(dataSize, data);
     }
 
-    void QueuedDeviceTransfer::AddStagingTexture(const glm::u32vec4& size, std::uint32_t mipLevels,
+    void QueuedDeviceTransfer::AddStagingTexture(std::string_view name, const glm::u32vec4& size,
+                                                 std::uint32_t mipLevels,
         const TextureDescriptor& textureDesc, const void* data)
     {
-        m_stagingTextures.emplace_back(m_device, TextureDescriptor::StagingTextureDesc(textureDesc));
+        m_stagingTextures.emplace_back(m_device, name, TextureDescriptor::StagingTextureDesc(textureDesc));
         m_stagingTextures.back().InitializeData(size, mipLevels, data);
     }
 }

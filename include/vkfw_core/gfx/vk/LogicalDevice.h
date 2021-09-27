@@ -12,6 +12,7 @@
 #include "core/concepts.h"
 #include "gfx/vk/wrappers/Queue.h"
 #include "gfx/vk/wrappers/CommandPool.h"
+#include "gfx/vk/wrappers/Swapchain.h"
 
 #include <glm/vec2.hpp>
 
@@ -46,14 +47,13 @@ namespace vkfw_core::gfx {
         std::vector<float> m_priorities;
     };
 
-    class LogicalDevice final
+    class LogicalDevice final : public VulkanObjectWrapper<vk::UniqueDevice>
     {
     public:
-        LogicalDevice(const cfg::WindowCfg& windowCfg, const vk::PhysicalDevice& phDevice,
+        LogicalDevice(const cfg::WindowCfg& windowCfg, vk::PhysicalDevice phDevice,
                       std::vector<DeviceQueueDesc> queueDescs,
                       const std::vector<std::string>& requiredDeviceExtensions,
-                      void* featuresNextChain,
-                      const vk::SurfaceKHR& surface = vk::SurfaceKHR());
+                      void* featuresNextChain, const Surface& surface = Surface{});
         LogicalDevice(const LogicalDevice&); // TODO: implement [10/30/2016 Sebastian Maisch]
         LogicalDevice(LogicalDevice&&) noexcept;
         LogicalDevice& operator=(const LogicalDevice&);
@@ -61,8 +61,7 @@ namespace vkfw_core::gfx {
         ~LogicalDevice();
 
 
-        [[nodiscard]] const vk::PhysicalDevice& GetPhysicalDevice() const { return m_vkPhysicalDevice; }
-        [[nodiscard]] const vk::Device& GetDevice() const { return *m_vkDevice; }
+        [[nodiscard]] vk::PhysicalDevice GetPhysicalDevice() const { return m_vkPhysicalDevice; }
         [[nodiscard]] const Queue& GetQueue(unsigned int familyIndex, unsigned int queueIndex) const
         {
             return m_queuesByRequestedFamily[familyIndex][queueIndex];
@@ -73,30 +72,14 @@ namespace vkfw_core::gfx {
         }
         [[nodiscard]] const CommandPool& GetCommandPool(unsigned int familyIndex) const
         {
-            return m_cmdPoolsByRequestedQFamily[familyIndex];
+            return *m_cmdPoolsByRequestedQFamily[familyIndex];
         }
 
-        [[nodiscard]] vk::UniqueCommandPool
-        CreateCommandPoolForQueue(unsigned int familyIndex,
+        [[nodiscard]] CommandPool
+        CreateCommandPoolForQueue(std::string_view name, unsigned int familyIndex,
                                   const vk::CommandPoolCreateFlags& flags = vk::CommandPoolCreateFlags()) const;
         std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline(const std::vector<std::string>& shaderNames,
             const glm::uvec2& size, unsigned int numBlendAttachments);
-
-        template<VulkanObject T> void SetObjectName(T object, vk::ObjectType type, std::string_view name) const
-        {
-            SetObjectName(reinterpret_cast<std::uint64_t>(object), type, name);
-        };
-        template<VulkanObject T, typename Tag>
-        void SetObjectTag(T object, vk::ObjectType type, std::uint64_t tagHandle, const Tag* tag) const
-        {
-            SetObjectTag(reinterpret_cast<std::uint64_t>(object), type, tagHandle, tag, sizeof(Tag));
-        };
-        void SetObjectName(std::uint64_t object, vk::ObjectType type, std::string_view name) const;
-        void SetObjectTag(std::uint64_t object, vk::ObjectType type, std::uint64_t tagHandle, const void* tagData, std::size_t tagSize) const;
-
-        void CmdDebugMarkerBeginEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const;
-        void CmdDebugMarkerEndEXT(VkCommandBuffer cmdBuffer) const;
-        void CmdDebugMarkerInsertEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const;
 
         [[nodiscard]] const cfg::WindowCfg& GetWindowCfg() const { return m_windowCfg; }
         [[nodiscard]] const vk::PhysicalDeviceProperties& GetDeviceProperties() const { return m_deviceProperties; }
@@ -129,12 +112,10 @@ namespace vkfw_core::gfx {
         vk::PhysicalDevice m_vkPhysicalDevice;
         /** Holds the physical device limits. */
         vk::PhysicalDeviceLimits m_vkPhysicalDeviceLimits;
-        /** Holds the actual device. */
-        vk::UniqueDevice m_vkDevice;
         /** Holds the queues by device queue family. */
         std::map<std::uint32_t, std::vector<vk::Queue>> m_vkQueuesByDeviceFamily;
         /** Holds a command pool for each device queue family. */
-        std::map<std::uint32_t, vk::UniqueCommandPool> m_vkCmdPoolsByDeviceQFamily;
+        std::map<std::uint32_t, CommandPool> m_vkCmdPoolsByDeviceQFamily;
 
         /** The properties of the device. */
         vk::PhysicalDeviceProperties m_deviceProperties;
@@ -154,7 +135,7 @@ namespace vkfw_core::gfx {
         /** Holds the queues by requested queue family. */
         std::vector<std::vector<Queue>> m_queuesByRequestedFamily;
         /** Holds a command pool for each requested queue family. */
-        std::vector<CommandPool> m_cmdPoolsByRequestedQFamily;
+        std::vector<CommandPool*> m_cmdPoolsByRequestedQFamily;
 
         /** Holds the shader manager. */
         std::unique_ptr<ShaderManager> m_shaderManager;

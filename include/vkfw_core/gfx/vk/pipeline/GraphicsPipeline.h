@@ -9,6 +9,7 @@
 #pragma once
 
 #include "main.h"
+#include "gfx/vk/wrappers/VulkanObjectWrapper.h"
 
 #include <glm/vec2.hpp>
 
@@ -17,10 +18,12 @@ namespace vkfw_core::gfx {
     class Framebuffer; // NOLINT
     class Shader;
 
-    class GraphicsPipeline final
+    class GraphicsPipeline final : public VulkanObjectWrapper<vk::UniquePipeline>
     {
     public:
-        GraphicsPipeline(const LogicalDevice* device, const std::vector<std::shared_ptr<Shader>>& shaders, const glm::uvec2& size, unsigned int numBlendAttachments);
+        GraphicsPipeline(const LogicalDevice* device, std::string_view name,
+                         const std::vector<std::shared_ptr<Shader>>& shaders, const glm::uvec2& size,
+                         unsigned int numBlendAttachments);
         GraphicsPipeline(const GraphicsPipeline&) = delete;
         GraphicsPipeline& operator=(const GraphicsPipeline&) = delete;
         GraphicsPipeline(GraphicsPipeline&&) noexcept;
@@ -31,7 +34,6 @@ namespace vkfw_core::gfx {
         template<class Vertex> void ResetVertexInput() const;
         void ResetFramebuffer(const glm::uvec2& size, unsigned int numViewports, unsigned int numScissors) const;
         void CreatePipeline(bool keepState, vk::RenderPass renderPass, unsigned int subpass, vk::PipelineLayout pipelineLayout);
-        [[nodiscard]] vk::Pipeline GetPipeline() const { return *m_vkPipeline; }
 
         [[nodiscard]] vk::Viewport& GetViewport(unsigned int idx) const
         {
@@ -117,8 +119,6 @@ namespace vkfw_core::gfx {
         std::vector<std::shared_ptr<Shader>> m_shaders;
         /** Holds the state. */
         std::unique_ptr<State> m_state;
-        /** Holds the pipeline. */
-        vk::UniquePipeline m_vkPipeline;
     };
 
     template <class Vertex>

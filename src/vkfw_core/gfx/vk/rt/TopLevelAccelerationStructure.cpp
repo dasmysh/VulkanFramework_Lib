@@ -11,8 +11,9 @@
 namespace vkfw_core::gfx::rt {
 
     TopLevelAccelerationStructure::TopLevelAccelerationStructure(vkfw_core::gfx::LogicalDevice* device,
+                                                                 std::string_view name,
                                                                  vk::BuildAccelerationStructureFlagsKHR flags)
-        : AccelerationStructure{device, vk::AccelerationStructureTypeKHR::eTopLevel, flags}
+        : AccelerationStructure{device, name, vk::AccelerationStructureTypeKHR::eTopLevel, flags}
     {
     }
 
@@ -32,7 +33,10 @@ namespace vkfw_core::gfx::rt {
 
     void TopLevelAccelerationStructure::BuildAccelerationStructure()
     {
-        vkfw_core::gfx::HostBuffer instancesBuffer{GetDevice(), vk::BufferUsageFlagBits::eShaderDeviceAddress | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR};
+        vkfw_core::gfx::HostBuffer instancesBuffer{
+            GetDevice(), fmt::format("InstanceBuffer:{}", GetName()),
+            vk::BufferUsageFlagBits::eShaderDeviceAddress
+                | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR};
         instancesBuffer.InitializeData(m_blasInstances);
 
         vk::AccelerationStructureGeometryInstancesDataKHR asGeometryDataInstances{

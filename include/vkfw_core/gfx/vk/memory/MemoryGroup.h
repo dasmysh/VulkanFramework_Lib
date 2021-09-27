@@ -22,7 +22,7 @@ namespace vkfw_core::gfx {
     class MemoryGroup final : public DeviceMemoryGroup
     {
     public:
-        explicit MemoryGroup(const LogicalDevice* device, const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags());
+        explicit MemoryGroup(const LogicalDevice* device, std::string_view name, const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags());
         ~MemoryGroup() override;
         MemoryGroup(const MemoryGroup&) = delete;
         MemoryGroup& operator=(const MemoryGroup&) = delete;
@@ -30,13 +30,19 @@ namespace vkfw_core::gfx {
         MemoryGroup& operator=(MemoryGroup&&) noexcept;
 
         static constexpr unsigned int INVALID_INDEX = std::numeric_limits<unsigned int>::max();
-        unsigned int AddBufferToGroup(const vk::BufferUsageFlags& usage,
+        unsigned int
+        AddBufferToGroup(std::string_view name, const vk::BufferUsageFlags& usage,
                          const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{}) override;
-        unsigned int AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size,
+        unsigned int
+        AddBufferToGroup(std::string_view name, const vk::BufferUsageFlags& usage, std::size_t size,
                          const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{}) override;
-        unsigned int AddTextureToGroup(const TextureDescriptor& desc, const glm::u32vec4& size, std::uint32_t mipLevels,
+        unsigned int
+        AddTextureToGroup(std::string_view name, const TextureDescriptor& desc, const glm::u32vec4& size,
+                          std::uint32_t mipLevels,
                           const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{}) override;
-        unsigned int AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size, std::variant<void*, const void*> data,
+        unsigned int
+        AddBufferToGroup(std::string_view name, const vk::BufferUsageFlags& usage, std::size_t size,
+                         std::variant<void*, const void*> data,
                          const std::function<void(void*)>& deleter = nullptr,
                          const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         void AddDataToBufferInGroup(unsigned int bufferIdx, std::size_t offset, std::size_t dataSize,
@@ -61,7 +67,7 @@ namespace vkfw_core::gfx {
 
         template<contiguous_memory T>
         unsigned int
-        AddBufferToGroup(vk::BufferUsageFlags usage, const T& data,
+        AddBufferToGroup(std::string_view name, vk::BufferUsageFlags usage, const T& data,
                          const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         template<contiguous_memory T>
         void AddDataToBufferInGroup(unsigned int bufferIdx, std::size_t offset, const T& data);
@@ -116,10 +122,10 @@ namespace vkfw_core::gfx {
     };
 
     template<contiguous_memory T>
-    unsigned int MemoryGroup::AddBufferToGroup(vk::BufferUsageFlags usage, const T& data,
+    unsigned int MemoryGroup::AddBufferToGroup(std::string_view name, vk::BufferUsageFlags usage, const T& data,
                                                const std::vector<std::uint32_t>& queueFamilyIndices)
     {
-        return AddBufferToGroup(usage, byteSizeOf(data), data.data(), nullptr, queueFamilyIndices);
+        return AddBufferToGroup(name, usage, byteSizeOf(data), data.data(), nullptr, queueFamilyIndices);
     }
 
     template<contiguous_memory T>

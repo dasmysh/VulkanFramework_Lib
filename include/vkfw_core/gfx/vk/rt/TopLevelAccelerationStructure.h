@@ -16,7 +16,7 @@ namespace vkfw_core::gfx::rt {
     class TopLevelAccelerationStructure : public AccelerationStructure
     {
     public:
-        TopLevelAccelerationStructure(vkfw_core::gfx::LogicalDevice* device,
+        TopLevelAccelerationStructure(vkfw_core::gfx::LogicalDevice* device, std::string_view name,
                                          vk::BuildAccelerationStructureFlagsKHR flags);
         TopLevelAccelerationStructure(TopLevelAccelerationStructure&& rhs) noexcept;
         TopLevelAccelerationStructure& operator=(TopLevelAccelerationStructure&& rhs) noexcept;

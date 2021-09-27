@@ -30,6 +30,12 @@ namespace vkfw_core {
     concept VulkanObject = requires
     {
         T::CType;
-        { T::CType } -> std::convertible_to<void*>;
+    };
+
+    template<typename T>
+    concept UniqueVulkanObject = requires
+    {
+        T::element_type;
+        T::element_type::CType;
     };
 }
