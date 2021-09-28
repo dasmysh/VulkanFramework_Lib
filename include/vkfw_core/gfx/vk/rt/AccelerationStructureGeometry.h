@@ -124,7 +124,7 @@ namespace vkfw_core::gfx::rt {
         /** The top level acceleration structure for the scene. */
         TopLevelAccelerationStructure m_TLAS;
         /** The sampler for the materials textures. */
-        vk::UniqueSampler m_textureSampler;
+        Sampler m_textureSampler;
 
         /** Holds the memory for geometry if needed. */
         MemoryGroup m_memGroup;

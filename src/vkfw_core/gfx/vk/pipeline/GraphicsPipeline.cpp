@@ -126,7 +126,7 @@ namespace vkfw_core::gfx {
         m_state->m_multisampling = vk::PipelineMultisampleStateCreateInfo{ vk::PipelineMultisampleStateCreateFlags(), vk::SampleCountFlagBits::e1, VK_FALSE, 1.0f, nullptr, VK_FALSE, VK_FALSE };
     }
 
-    void GraphicsPipeline::CreatePipeline(bool keepState, vk::RenderPass renderPass, unsigned int subpass, vk::PipelineLayout pipelineLayout)
+    void GraphicsPipeline::CreatePipeline(bool keepState, const RenderPass& renderPass, unsigned int subpass, const PipelineLayout& pipelineLayout)
     {
         assert(m_state);
         vk::PipelineDynamicStateCreateInfo dynamicState{vk::PipelineDynamicStateCreateFlags(),
@@ -139,7 +139,7 @@ namespace vkfw_core::gfx {
                                                     m_state->m_shaderStageInfos.data(),
             &m_state->m_vertexInputCreateInfo, &m_state->m_inputAssemblyCreateInfo, &m_state->m_tesselation,
             &m_state->m_viewportState, &m_state->m_rasterizer, &m_state->m_multisampling, &m_state->m_depthStencil,
-            &m_state->m_colorBlending, &dynamicState, pipelineLayout, renderPass, subpass };
+            &m_state->m_colorBlending, &dynamicState, pipelineLayout.GetHandle(), renderPass.GetHandle(), subpass };
 
         SetHandle(m_device->GetHandle(),
                   m_device->GetHandle().createGraphicsPipelineUnique(vk::PipelineCache(), pipelineInfo));

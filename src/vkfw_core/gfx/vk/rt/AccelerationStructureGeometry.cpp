@@ -21,6 +21,7 @@ namespace vkfw_core::gfx::rt {
         : m_device{device}
         , m_name{name}
         , m_TLAS{device, fmt::format("TLAS:", name), vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace}
+        , m_textureSampler{device->GetHandle(), fmt::format("ASSampler:{}", name), vk::UniqueSampler{}}
         , m_memGroup{m_device, fmt::format("ASGeometryMemGroup:{}", name), vk::MemoryPropertyFlags()}
     {
         vk::SamplerCreateInfo samplerCreateInfo{vk::SamplerCreateFlags(),
@@ -30,7 +31,7 @@ namespace vkfw_core::gfx::rt {
                                                 vk::SamplerAddressMode::eRepeat,
                                                 vk::SamplerAddressMode::eRepeat,
                                                 vk::SamplerAddressMode::eRepeat};
-        m_textureSampler = m_device->GetHandle().createSamplerUnique(samplerCreateInfo);
+        m_textureSampler.SetHandle(device->GetHandle(), m_device->GetHandle().createSamplerUnique(samplerCreateInfo));
     }
 
     AccelerationStructureGeometry::~AccelerationStructureGeometry() {}
@@ -271,19 +272,20 @@ namespace vkfw_core::gfx::rt {
 
         for (const auto& mat : m_materials) {
             if (mat.m_diffuseTexture) {
-                diffuseTextureInfos.emplace_back(*m_textureSampler, mat.m_diffuseTexture->GetTexture().GetImageView().GetHandle(),
+                diffuseTextureInfos.emplace_back(m_textureSampler.GetHandle(), mat.m_diffuseTexture->GetTexture().GetImageView().GetHandle(),
                                                  vk::ImageLayout::eShaderReadOnlyOptimal);
             } else {
-                diffuseTextureInfos.emplace_back(*m_textureSampler,
+                diffuseTextureInfos.emplace_back(m_textureSampler.GetHandle(),
                                                  m_device->GetDummyTexture()->GetTexture().GetImageView().GetHandle(),
                                                  vk::ImageLayout::eShaderReadOnlyOptimal);
             }
 
             if (mat.m_bumpMap) {
-                bumpTextureInfos.emplace_back(*m_textureSampler, mat.m_bumpMap->GetTexture().GetImageView().GetHandle(),
+                bumpTextureInfos.emplace_back(m_textureSampler.GetHandle(),
+                                              mat.m_bumpMap->GetTexture().GetImageView().GetHandle(),
                                               vk::ImageLayout::eShaderReadOnlyOptimal);
             } else {
-                bumpTextureInfos.emplace_back(*m_textureSampler,
+                bumpTextureInfos.emplace_back(m_textureSampler.GetHandle(),
                                               m_device->GetDummyTexture()->GetTexture().GetImageView().GetHandle(),
                                               vk::ImageLayout::eShaderReadOnlyOptimal);
             }

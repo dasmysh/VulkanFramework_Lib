@@ -14,6 +14,8 @@
 #include "gfx/Material.h"
 #include "MeshInfo.h"
 #include "gfx/vk/UniformBufferObject.h"
+#include "gfx/vk/wrappers/DescriptorSet.h"
+#include "gfx/vk/wrappers/PipelineLayout.h"
 #include "core/concepts.h"
 #include <tuple>
 
@@ -61,7 +63,7 @@ namespace vkfw_core::gfx {
 
         void UploadMeshData(QueuedDeviceTransfer& transfer);
         void AddDescriptorPoolSizes(std::vector<vk::DescriptorPoolSize>& poolSizes, std::size_t& setCount) const;
-        void CreateDescriptorSets(vk::DescriptorPool descriptorPool);
+        void CreateDescriptorSets(const DescriptorPool& descriptorPool);
         [[nodiscard]] const DescriptorSetLayout& GetMaterialDescriptorLayout() const
         {
             return m_materialDescriptorSetLayout;
@@ -71,14 +73,17 @@ namespace vkfw_core::gfx {
             return m_worldMatricesDescriptorSetLayout;
         }
 
-        void TransferWorldMatrices(vk::CommandBuffer transferCmdBuffer, std::size_t backbufferIdx) const;
+        void TransferWorldMatrices(const CommandBuffer& transferCmdBuffer, std::size_t backbufferIdx) const;
 
         void UpdateWorldMatrices(std::size_t backbufferIndex, const glm::mat4& worldMatrix) const;
         void UpdateWorldMatricesNode(std::size_t backbufferIndex, const SceneMeshNode* node, const glm::mat4& worldMatrix) const;
 
-        void Draw(vk::CommandBuffer cmdBuffer, std::size_t backbufferIdx, vk::PipelineLayout pipelineLayout) const;
-        void DrawNode(vk::CommandBuffer cmdBuffer, std::size_t backbufferIdx, vk::PipelineLayout pipelineLayout, const SceneMeshNode* node) const;
-        void DrawSubMesh(vk::CommandBuffer cmdBuffer, vk::PipelineLayout pipelineLayout, const SubMesh& subMesh) const;
+        void Draw(const CommandBuffer& cmdBuffer, std::size_t backbufferIdx,
+                  const PipelineLayout& pipelineLayout) const;
+        void DrawNode(const CommandBuffer& cmdBuffer, std::size_t backbufferIdx, const PipelineLayout& pipelineLayout,
+                      const SceneMeshNode* node) const;
+        void DrawSubMesh(const CommandBuffer& cmdBuffer, const PipelineLayout& pipelineLayout,
+                         const SubMesh& subMesh) const;
 
         void GetDrawElements(const glm::mat4& worldMatrix, const CameraBase& camera, std::size_t backbufferIdx,
             RenderList& renderList) const;
@@ -104,6 +109,8 @@ namespace vkfw_core::gfx {
 
         /** Holds the device. */
         const LogicalDevice* m_device;
+        /** Holds the name. */
+        std::string m_name;
         /** Holds the mesh info object containing vertex/index data. */
         std::shared_ptr<const MeshInfo> m_meshInfo;
         /** Holds the internal memory group. */
@@ -125,15 +132,15 @@ namespace vkfw_core::gfx {
         /** Holds the meshes materials. */
         std::vector<Material> m_materials;
         /** The sampler for the materials textures. */
-        vk::UniqueSampler m_textureSampler;
+        Sampler m_textureSampler;
         /** The descriptor set layout for world matrices in mesh rendering. */
         DescriptorSetLayout m_worldMatricesDescriptorSetLayout;
         /** Holds the world matrix descriptor set. */
-        vk::DescriptorSet m_worldMatrixDescriptorSet;
+        DescriptorSet m_worldMatrixDescriptorSet;
         /** The descriptor set layout for materials in mesh rendering. */
         DescriptorSetLayout m_materialDescriptorSetLayout;
         /** Holds the material descriptor sets. */
-        std::vector<vk::DescriptorSet> m_materialDescriptorSets;
+        std::vector<DescriptorSet> m_materialDescriptorSets;
 
         /** Holds the vertex and material data while the mesh is constructed. */
         std::vector<uint8_t> m_vertexMaterialData;

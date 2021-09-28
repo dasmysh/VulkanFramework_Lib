@@ -9,7 +9,8 @@
 #pragma once
 
 #include "main.h"
-#include "gfx/vk/wrappers/VulkanObjectWrapper.h"
+#include "gfx/vk/wrappers/RenderPass.h"
+#include "gfx/vk/wrappers/PipelineLayout.h"
 
 #include <glm/vec2.hpp>
 
@@ -33,7 +34,7 @@ namespace vkfw_core::gfx {
         void ResetShaders(const std::vector<std::shared_ptr<Shader>>& shaders);
         template<class Vertex> void ResetVertexInput() const;
         void ResetFramebuffer(const glm::uvec2& size, unsigned int numViewports, unsigned int numScissors) const;
-        void CreatePipeline(bool keepState, vk::RenderPass renderPass, unsigned int subpass, vk::PipelineLayout pipelineLayout);
+        void CreatePipeline(bool keepState, const RenderPass& renderPass, unsigned int subpass, const PipelineLayout& pipelineLayout);
 
         [[nodiscard]] vk::Viewport& GetViewport(unsigned int idx) const
         {

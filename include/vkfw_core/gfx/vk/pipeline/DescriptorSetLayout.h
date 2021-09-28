@@ -11,6 +11,7 @@
 #include "main.h"
 #include "gfx/vk/wrappers/VulkanObjectWrapper.h"
 #include "gfx/vk/wrappers/DescriptorPool.h"
+#include "gfx/vk/wrappers/DescriptorSet.h"
 
 namespace vkfw_core::gfx {
     class LogicalDevice;
@@ -38,32 +39,32 @@ namespace vkfw_core::gfx {
                                                                  const std::vector<vk::DescriptorPoolSize>& poolSizes,
                              std::size_t setCount);
 
-        [[nodiscard]] vk::WriteDescriptorSet MakeWrite(vk::DescriptorSet descriptorSet,
+        [[nodiscard]] vk::WriteDescriptorSet MakeWrite(const DescriptorSet& descriptorSet,
                                                        std::uint32_t binding,
                                                        std::uint32_t arrayElement = 0);
-        [[nodiscard]] vk::WriteDescriptorSet MakeWrite(vk::DescriptorSet descriptorSet,
+        [[nodiscard]] vk::WriteDescriptorSet MakeWrite(const DescriptorSet& descriptorSet,
                                                        std::uint32_t binding,
                                                        const vk::DescriptorImageInfo* imageInfo,
                                                        std::uint32_t arrayElement = 0);
-        [[nodiscard]] vk::WriteDescriptorSet MakeWrite(vk::DescriptorSet descriptorSet,
+        [[nodiscard]] vk::WriteDescriptorSet MakeWrite(const DescriptorSet& descriptorSet,
                                                        std::uint32_t binding,
                                                        const vk::DescriptorBufferInfo* bufferInfo,
                                                        std::uint32_t arrayElement = 0);
         [[nodiscard]] vk::WriteDescriptorSet
-        MakeWrite(vk::DescriptorSet descriptorSet, std::uint32_t binding,
+        MakeWrite(const DescriptorSet& descriptorSet, std::uint32_t binding,
                   const vk::WriteDescriptorSetAccelerationStructureKHR* accelerationStructureInfo,
                   std::uint32_t arrayElement = 0);
 
-        [[nodiscard]] vk::WriteDescriptorSet MakeWriteArray(vk::DescriptorSet descriptorSet,
+        [[nodiscard]] vk::WriteDescriptorSet MakeWriteArray(const DescriptorSet& descriptorSet,
                                                             std::uint32_t binding) const;
-        [[nodiscard]] vk::WriteDescriptorSet MakeWriteArray(vk::DescriptorSet descriptorSet,
+        [[nodiscard]] vk::WriteDescriptorSet MakeWriteArray(const DescriptorSet& descriptorSet,
                                                             std::uint32_t binding,
                                                             const vk::DescriptorImageInfo* imageInfo) const;
-        [[nodiscard]] vk::WriteDescriptorSet MakeWriteArray(vk::DescriptorSet descriptorSet,
+        [[nodiscard]] vk::WriteDescriptorSet MakeWriteArray(const DescriptorSet& descriptorSet,
                                                             std::uint32_t binding,
                                                             const vk::DescriptorBufferInfo* bufferInfo) const;
         [[nodiscard]] vk::WriteDescriptorSet
-        MakeWriteArray(vk::DescriptorSet descriptorSet, std::uint32_t binding,
+        MakeWriteArray(const DescriptorSet& descriptorSet, std::uint32_t binding,
                        const vk::WriteDescriptorSetAccelerationStructureKHR* accelerationStructureInfo) const;
 
     private:

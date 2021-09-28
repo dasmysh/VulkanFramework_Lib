@@ -73,7 +73,7 @@ namespace vkfw_core::gfx {
                               device->GetHandle().createDescriptorPoolUnique(descriptorPoolCreateInfo)};
     }
 
-    vk::WriteDescriptorSet DescriptorSetLayout::MakeWrite(vk::DescriptorSet descriptorSet, std::uint32_t binding,
+    vk::WriteDescriptorSet DescriptorSetLayout::MakeWrite(const DescriptorSet& descriptorSet, std::uint32_t binding,
                                                           std::uint32_t arrayElement /*= 0*/)
     {
         vk::WriteDescriptorSet writeSet;
@@ -82,7 +82,7 @@ namespace vkfw_core::gfx {
                 writeSet.descriptorCount = 1;
                 writeSet.descriptorType = m_bindings[i].descriptorType;
                 writeSet.dstBinding = binding;
-                writeSet.dstSet = descriptorSet;
+                writeSet.dstSet = descriptorSet.GetHandle();
                 writeSet.dstArrayElement = arrayElement;
                 return writeSet;
             }
@@ -91,7 +91,7 @@ namespace vkfw_core::gfx {
         return writeSet;
     }
 
-    vk::WriteDescriptorSet DescriptorSetLayout::MakeWrite(vk::DescriptorSet descriptorSet, std::uint32_t binding,
+    vk::WriteDescriptorSet DescriptorSetLayout::MakeWrite(const DescriptorSet& descriptorSet, std::uint32_t binding,
                                                           const vk::DescriptorImageInfo* imageInfo,
                                                           std::uint32_t arrayElement /*= 0*/)
     {
@@ -106,7 +106,7 @@ namespace vkfw_core::gfx {
         return writeSet;
     }
 
-    vk::WriteDescriptorSet DescriptorSetLayout::MakeWrite(vk::DescriptorSet descriptorSet, std::uint32_t binding,
+    vk::WriteDescriptorSet DescriptorSetLayout::MakeWrite(const DescriptorSet& descriptorSet, std::uint32_t binding,
                                                           const vk::DescriptorBufferInfo* bufferInfo,
                                                           std::uint32_t arrayElement /*= 0*/)
     {
@@ -121,7 +121,7 @@ namespace vkfw_core::gfx {
     }
 
     vk::WriteDescriptorSet
-    DescriptorSetLayout::MakeWrite(vk::DescriptorSet descriptorSet, std::uint32_t binding,
+    DescriptorSetLayout::MakeWrite(const DescriptorSet& descriptorSet, std::uint32_t binding,
                                    const vk::WriteDescriptorSetAccelerationStructureKHR* accelerationStructureInfo,
                                    std::uint32_t arrayElement /*= 0*/)
     {
@@ -132,7 +132,7 @@ namespace vkfw_core::gfx {
         return writeSet;
     }
 
-    vk::WriteDescriptorSet DescriptorSetLayout::MakeWriteArray(vk::DescriptorSet descriptorSet,
+    vk::WriteDescriptorSet DescriptorSetLayout::MakeWriteArray(const DescriptorSet& descriptorSet,
                                                                std::uint32_t binding) const
     {
         vk::WriteDescriptorSet writeSet;
@@ -141,7 +141,7 @@ namespace vkfw_core::gfx {
                 writeSet.descriptorCount = m_bindings[i].descriptorCount;
                 writeSet.descriptorType = m_bindings[i].descriptorType;
                 writeSet.dstBinding = binding;
-                writeSet.dstSet = descriptorSet;
+                writeSet.dstSet = descriptorSet.GetHandle();
                 writeSet.dstArrayElement = 0;
                 return writeSet;
             }
@@ -150,7 +150,8 @@ namespace vkfw_core::gfx {
         return writeSet;
     }
 
-    vk::WriteDescriptorSet DescriptorSetLayout::MakeWriteArray(vk::DescriptorSet descriptorSet, std::uint32_t binding,
+    vk::WriteDescriptorSet DescriptorSetLayout::MakeWriteArray(const DescriptorSet& descriptorSet,
+                                                               std::uint32_t binding,
                                                                const vk::DescriptorImageInfo* imageInfo) const
     {
         vk::WriteDescriptorSet writeSet = MakeWriteArray(descriptorSet, binding);
@@ -164,7 +165,8 @@ namespace vkfw_core::gfx {
         return writeSet;
     }
 
-    vk::WriteDescriptorSet DescriptorSetLayout::MakeWriteArray(vk::DescriptorSet descriptorSet, std::uint32_t binding,
+    vk::WriteDescriptorSet DescriptorSetLayout::MakeWriteArray(const DescriptorSet& descriptorSet,
+                                                               std::uint32_t binding,
                                                                const vk::DescriptorBufferInfo* bufferInfo) const
     {
         vk::WriteDescriptorSet writeSet = MakeWriteArray(descriptorSet, binding);
@@ -178,7 +180,7 @@ namespace vkfw_core::gfx {
     }
 
     vk::WriteDescriptorSet DescriptorSetLayout::MakeWriteArray(
-        vk::DescriptorSet descriptorSet, std::uint32_t binding,
+        const DescriptorSet& descriptorSet, std::uint32_t binding,
         const vk::WriteDescriptorSetAccelerationStructureKHR* accelerationStructureInfo) const
     {
         vk::WriteDescriptorSet writeSet = MakeWriteArray(descriptorSet, binding);

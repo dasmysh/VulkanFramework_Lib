@@ -13,20 +13,25 @@
 
 #include "main.h"
 #include "core/math/primitives.h"
+#include "gfx/vk/wrappers/PipelineLayout.h"
+#include "gfx/vk/pipeline/GraphicsPipeline.h"
 
 namespace vkfw_core::gfx {
 
+    class DescriptorSet;
     class DeviceBuffer;
+    class PipelineLayout;
     class UniformBufferObject;
+    class GraphicsPipeline;
 
     class RenderElement final
     {
     public:
         using BufferReference = std::pair<const DeviceBuffer*, vk::DeviceSize>;
-        using UBOBinding = std::tuple<vk::DescriptorSet, std::uint32_t, std::uint32_t>;
-        using DescSetBinding = std::pair<vk::DescriptorSet, std::uint32_t>;
+        using UBOBinding = std::tuple<const DescriptorSet*, std::uint32_t, std::uint32_t>;
+        using DescSetBinding = std::pair<const DescriptorSet*, std::uint32_t>;
 
-        inline RenderElement(bool isTransparent, vk::Pipeline pipeline, vk::PipelineLayout pipelineLayout);
+        inline RenderElement(bool isTransparent, const GraphicsPipeline& pipeline, const PipelineLayout& pipelineLayout);
         inline RenderElement(bool isTransparent, const RenderElement& referenceElement);
 
         inline RenderElement& BindVertexBuffer(BufferReference vtxBuffer);
@@ -39,7 +44,7 @@ namespace vkfw_core::gfx {
             std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix,
             const math::AABB3<float>& boundingBox);
 
-        inline const RenderElement& DrawElement(vk::CommandBuffer cmdBuffer, const RenderElement* lastElement = nullptr) const;
+        inline const RenderElement& DrawElement(const CommandBuffer& cmdBuffer, const RenderElement* lastElement = nullptr) const;
 
         friend bool operator<(const RenderElement& l, const RenderElement& r)
         {
@@ -61,13 +66,13 @@ namespace vkfw_core::gfx {
 
     private:
         bool m_isTransparent;
-        vk::Pipeline m_pipeline;
-        vk::PipelineLayout m_pipelineLayout;
+        const GraphicsPipeline* m_pipeline;
+        const PipelineLayout* m_pipelineLayout;
 
         BufferReference m_vertexBuffer = BufferReference(nullptr, 0);
         BufferReference m_indexBuffer = BufferReference(nullptr, 0);
-        UBOBinding m_cameraMatricesUBO = UBOBinding(vk::DescriptorSet{}, 0, 0);
-        UBOBinding m_worldMatricesUBO = UBOBinding(vk::DescriptorSet{}, 0, 0);
+        UBOBinding m_cameraMatricesUBO = UBOBinding(nullptr, 0, 0);
+        UBOBinding m_worldMatricesUBO = UBOBinding(nullptr, 0, 0);
         std::vector<UBOBinding> m_generalUBOs;
         std::vector<DescSetBinding> m_generalDescSets;
 
@@ -80,10 +85,10 @@ namespace vkfw_core::gfx {
 
     };
 
-    RenderElement::RenderElement(bool isTransparent, vk::Pipeline pipeline, vk::PipelineLayout pipelineLayout) :
+    RenderElement::RenderElement(bool isTransparent, const GraphicsPipeline& pipeline, const PipelineLayout& pipelineLayout) :
         m_isTransparent{ isTransparent },
-        m_pipeline{ pipeline },
-        m_pipelineLayout{ pipelineLayout }
+        m_pipeline{ &pipeline },
+        m_pipelineLayout{ &pipelineLayout }
     {
     }
 
@@ -150,37 +155,38 @@ namespace vkfw_core::gfx {
         return *this;
     }
 
-    const RenderElement& RenderElement::DrawElement(vk::CommandBuffer cmdBuffer, const RenderElement* lastElement /*= nullptr*/) const
+    const RenderElement& RenderElement::DrawElement(const CommandBuffer& cmdBuffer, const RenderElement* lastElement /*= nullptr*/) const
     {
         if ((lastElement == nullptr) || lastElement->m_pipeline == m_pipeline) {
-            cmdBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline);
+            cmdBuffer.GetHandle().bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline->GetHandle());
         }
         if ((lastElement == nullptr) || lastElement->m_vertexBuffer == m_vertexBuffer) {
-            cmdBuffer.bindVertexBuffers(0, 1, m_vertexBuffer.first->GetHandlePtr(), &m_vertexBuffer.second);
+            cmdBuffer.GetHandle().bindVertexBuffers(0, 1, m_vertexBuffer.first->GetHandlePtr(), &m_vertexBuffer.second);
         }
         if ((lastElement == nullptr) || lastElement->m_indexBuffer == m_indexBuffer) {
-            cmdBuffer.bindIndexBuffer(m_indexBuffer.first->GetHandle(), m_indexBuffer.second, vk::IndexType::eUint32);
+            cmdBuffer.GetHandle().bindIndexBuffer(m_indexBuffer.first->GetHandle(), m_indexBuffer.second,
+                                                  vk::IndexType::eUint32);
         }
 
-        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout,
+        cmdBuffer.GetHandle().bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout->GetHandle(),
                                      std::get<1>(m_cameraMatricesUBO),
-                                     std::get<0>(m_cameraMatricesUBO), std::get<2>(m_cameraMatricesUBO));
+                                     std::get<0>(m_cameraMatricesUBO)->GetHandle(), std::get<2>(m_cameraMatricesUBO));
 
-        cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout,
-                                     std::get<1>(m_worldMatricesUBO), std::get<0>(m_worldMatricesUBO),
-                                     std::get<2>(m_worldMatricesUBO));
+        cmdBuffer.GetHandle().bindDescriptorSets(
+            vk::PipelineBindPoint::eGraphics, m_pipelineLayout->GetHandle(), std::get<1>(m_worldMatricesUBO),
+            std::get<0>(m_worldMatricesUBO)->GetHandle(), std::get<2>(m_worldMatricesUBO));
 
         for (const auto& ubo : m_generalUBOs) {
-            cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout, std::get<1>(ubo),
-                                         std::get<0>(ubo), std::get<2>(ubo));
+            cmdBuffer.GetHandle().bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout->GetHandle(),
+                                                     std::get<1>(ubo), std::get<0>(ubo)->GetHandle(), std::get<2>(ubo));
         }
 
         for (const auto& ds : m_generalDescSets) {
-            cmdBuffer.bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout, ds.second, ds.first,
-                                         nullptr);
+            cmdBuffer.GetHandle().bindDescriptorSets(vk::PipelineBindPoint::eGraphics, m_pipelineLayout->GetHandle(),
+                                                     ds.second, ds.first->GetHandle(), nullptr);
         }
 
-        cmdBuffer.drawIndexed(m_indexCount, m_instanceCount, m_firstIndex, m_vertexOffset, m_firstInstance);
+        cmdBuffer.GetHandle().drawIndexed(m_indexCount, m_instanceCount, m_firstIndex, m_vertexOffset, m_firstInstance);
         return *this;
     }
 
