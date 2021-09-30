@@ -16,6 +16,7 @@ namespace vkfw_core::gfx {
     class Sampler : public VulkanObjectWrapper<vk::UniqueSampler>
     {
     public:
+        Sampler() : VulkanObjectWrapper{nullptr, "", vk::UniqueSampler{}} {}
         Sampler(vk::Device device, std::string_view name, vk::UniqueSampler sampler)
             : VulkanObjectWrapper{device, name, std::move(sampler)}
         {

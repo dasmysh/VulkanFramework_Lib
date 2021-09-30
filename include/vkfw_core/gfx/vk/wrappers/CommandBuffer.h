@@ -36,6 +36,16 @@ namespace vkfw_core::gfx {
         void InsertLabel(std::string_view label_name, const glm::vec4& color) const;
         void EndLabel() const;
 
+        static std::vector<CommandBuffer> Initialize(vk::Device device, std::string_view name,
+                                                     std::vector<vk::UniqueCommandBuffer>&& commandBuffers)
+        {
+            std::vector<CommandBuffer> result;
+            for (std::size_t i = 0; i < commandBuffers.size(); ++i) {
+                result.emplace_back(device, fmt::format("{}-{}", name, i), std::move(commandBuffers[i]));
+            }
+            return result;
+        }
+
         static CommandBuffer beginSingleTimeSubmit(const LogicalDevice* device, std::string_view cmdBufferName,
                                                    std::string_view regionName, const CommandPool& commandPool);
         static void

@@ -216,24 +216,9 @@ namespace vkfw_core::gfx {
         std::vector<std::shared_ptr<Shader>> shaders(shaderNames.size());
         for (auto i = 0U; i < shaderNames.size(); ++i) { shaders[i] = m_shaderManager->GetResource(shaderNames[i]); }
 
-        return std::make_unique<GraphicsPipeline>(this, fmt::format("{}", fmt::join(shaderNames, "|")), shaders, size,
+        return std::make_unique<GraphicsPipeline>(this, fmt::format("{}", fmt::join(shaderNames, "|")), std::move(shaders), size,
                                                   numBlendAttachments);
     }
-
-    // void LogicalDevice::CmdDebugMarkerBeginEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const
-    // {
-    //     if (m_enableDebugMarkers) { fpCmdDebugMarkerBeginEXT(cmdBuffer, markerInfo); }
-    // }
-    //
-    // void LogicalDevice::CmdDebugMarkerEndEXT(VkCommandBuffer cmdBuffer) const
-    // {
-    //     if (m_enableDebugMarkers) { fpCmdDebugMarkerEndEXT(cmdBuffer); }
-    // }
-    //
-    // void LogicalDevice::CmdDebugMarkerInsertEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const
-    // {
-    //     if (m_enableDebugMarkers) { fpCmdDebugMarkerInsertEXT(cmdBuffer, markerInfo); }
-    // }
 
     constexpr std::size_t CalcAlignedSize(std::size_t size, std::size_t alignment)
     {

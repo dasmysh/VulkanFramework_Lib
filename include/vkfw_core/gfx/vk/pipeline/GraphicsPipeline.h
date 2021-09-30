@@ -23,7 +23,7 @@ namespace vkfw_core::gfx {
     {
     public:
         GraphicsPipeline(const LogicalDevice* device, std::string_view name,
-                         const std::vector<std::shared_ptr<Shader>>& shaders, const glm::uvec2& size,
+                         std::vector<std::shared_ptr<Shader>>&& shaders, const glm::uvec2& size,
                          unsigned int numBlendAttachments);
         GraphicsPipeline(const GraphicsPipeline&) = delete;
         GraphicsPipeline& operator=(const GraphicsPipeline&) = delete;
@@ -31,7 +31,7 @@ namespace vkfw_core::gfx {
         GraphicsPipeline& operator=(GraphicsPipeline&&) noexcept;
         ~GraphicsPipeline();
 
-        void ResetShaders(const std::vector<std::shared_ptr<Shader>>& shaders);
+        void ResetShaders(std::vector<std::shared_ptr<Shader>>&& shaders);
         template<class Vertex> void ResetVertexInput() const;
         void ResetFramebuffer(const glm::uvec2& size, unsigned int numViewports, unsigned int numScissors) const;
         void CreatePipeline(bool keepState, const RenderPass& renderPass, unsigned int subpass, const PipelineLayout& pipelineLayout);

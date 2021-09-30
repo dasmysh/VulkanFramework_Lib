@@ -13,14 +13,13 @@
 namespace vkfw_core::gfx {
 
     GraphicsPipeline::GraphicsPipeline(const LogicalDevice* device, std::string_view name,
-                                       const std::vector<std::shared_ptr<Shader>>& shaders, const glm::uvec2& size,
+                                       std::vector<std::shared_ptr<Shader>>&& shaders, const glm::uvec2& size,
                                        unsigned int numBlendAttachments)
         : VulkanObjectWrapper{device->GetHandle(), name, vk::UniquePipeline{}}
         , m_device{ device }
-        , m_shaders{ shaders }
         , m_state{std::make_unique<State>()}
     {
-        ResetShaders(shaders);
+        ResetShaders(std::move(shaders));
 
         m_state->m_inputAssemblyCreateInfo.setTopology(vk::PrimitiveTopology::eTriangleList);
         m_state->m_tesselation.setPatchControlPoints(1);
@@ -105,12 +104,14 @@ namespace vkfw_core::gfx {
 
     GraphicsPipeline::~GraphicsPipeline() = default;
 
-    void GraphicsPipeline::ResetShaders(const std::vector<std::shared_ptr<Shader>>& shaders)
+    void GraphicsPipeline::ResetShaders(std::vector<std::shared_ptr<Shader>>&& shaders)
     {
         assert(m_state);
-        m_shaders = shaders;
-        m_state->m_shaderStageInfos.resize(shaders.size());
-        for (auto i = 0U; i < shaders.size(); ++i) { shaders[i]->FillShaderStageInfo(m_state->m_shaderStageInfos[i]); }
+        m_shaders = std::move(shaders);
+        m_state->m_shaderStageInfos.resize(m_shaders.size());
+        for (auto i = 0U; i < m_shaders.size(); ++i) {
+            m_shaders[i]->FillShaderStageInfo(m_state->m_shaderStageInfos[i]);
+        }
     }
 
     void GraphicsPipeline::ResetFramebuffer(const glm::uvec2& size, unsigned int numViewports, unsigned int numScissors) const

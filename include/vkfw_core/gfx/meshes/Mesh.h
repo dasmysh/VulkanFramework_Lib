@@ -45,17 +45,21 @@ namespace vkfw_core::gfx {
         ~Mesh();
 
         template<Vertex VertexType, class MaterialType>
-        static Mesh CreateWithInternalMemoryGroup(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
+        static Mesh CreateWithInternalMemoryGroup(
+            std::string_view name, const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
             const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags = vk::MemoryPropertyFlags(),
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         template<Vertex VertexType, class MaterialType>
-        static Mesh CreateWithMemoryGroup(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
-            const LogicalDevice* device, MemoryGroup& memoryGroup,
-            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
+        static Mesh
+        CreateWithMemoryGroup(std::string_view name, const std::shared_ptr<const MeshInfo>& meshInfo,
+                              std::size_t numBackbuffers, const LogicalDevice* device, MemoryGroup& memoryGroup,
+                              const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         template<Vertex VertexType, class MaterialType>
-        static Mesh CreateInExternalBuffer(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
-            const LogicalDevice* device, MemoryGroup& memoryGroup, unsigned int bufferIdx, std::size_t offset,
-            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
+        static Mesh
+        CreateInExternalBuffer(std::string_view name, const std::shared_ptr<const MeshInfo>& meshInfo,
+                               std::size_t numBackbuffers, const LogicalDevice* device, MemoryGroup& memoryGroup,
+                               unsigned int bufferIdx, std::size_t offset,
+                               const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
 
         template<Vertex VertexType, class MaterialType>
         static std::size_t CalculateBufferSize(const LogicalDevice* device, const MeshInfo* meshInfo,
@@ -147,31 +151,35 @@ namespace vkfw_core::gfx {
     };
 
     template<Vertex VertexType, class MaterialType>
-    inline Mesh Mesh::CreateWithInternalMemoryGroup(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
+    inline Mesh Mesh::CreateWithInternalMemoryGroup(std::string_view name,
+                                                    const std::shared_ptr<const MeshInfo>& meshInfo,
+                                                    std::size_t numBackbuffers,
         const LogicalDevice* device, vk::MemoryPropertyFlags memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
-        Mesh result{ device, meshInfo, UniformBufferObject::Create<MaterialType>(device, meshInfo->GetMaterials().size()),
+        Mesh result{ device, name, meshInfo, UniformBufferObject::Create<MaterialType>(device, meshInfo->GetMaterials().size()),
             numBackbuffers, memoryFlags, queueFamilyIndices };
         result.CreateBuffersInMemoryGroup<VertexType, MaterialType>(0, numBackbuffers, queueFamilyIndices);
         return result;
     }
 
     template<Vertex VertexType, class MaterialType>
-    inline Mesh Mesh::CreateWithMemoryGroup(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
+    inline Mesh Mesh::CreateWithMemoryGroup(std::string_view name, const std::shared_ptr<const MeshInfo>& meshInfo,
+                                            std::size_t numBackbuffers,
         const LogicalDevice* device, MemoryGroup& memoryGroup, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
-        Mesh result{ device, meshInfo, UniformBufferObject::Create<MaterialType>(device, meshInfo->GetMaterials().size()),
+        Mesh result{ device, name, meshInfo, UniformBufferObject::Create<MaterialType>(device, meshInfo->GetMaterials().size()),
             numBackbuffers, memoryGroup, m_bufferIdx, queueFamilyIndices };
         result.CreateBuffersInMemoryGroup<VertexType, MaterialType>(0, numBackbuffers, queueFamilyIndices);
         return result;
     }
 
     template<Vertex VertexType, class MaterialType>
-    inline Mesh Mesh::CreateInExternalBuffer(const std::shared_ptr<const MeshInfo>& meshInfo, std::size_t numBackbuffers,
+    inline Mesh Mesh::CreateInExternalBuffer(std::string_view name, const std::shared_ptr<const MeshInfo>& meshInfo,
+                                             std::size_t numBackbuffers,
         const LogicalDevice* device, MemoryGroup& memoryGroup, unsigned int bufferIdx, std::size_t offset,
         const std::vector<std::uint32_t>& queueFamilyIndices)
     {
-        Mesh result{ device, meshInfo, UniformBufferObject::Create<MaterialType>(device, meshInfo->GetMaterials().size()),
+        Mesh result{ device, name, meshInfo, UniformBufferObject::Create<MaterialType>(device, meshInfo->GetMaterials().size()),
             numBackbuffers, memoryGroup, m_bufferIdx, queueFamilyIndices };
         result.CreateBuffersInMemoryGroup<VertexType, MaterialType>(offset, numBackbuffers, queueFamilyIndices);
         return result;
@@ -205,7 +213,9 @@ namespace vkfw_core::gfx {
         auto materialBufferAlignment = m_device->CalculateUniformBufferAlignment(offset + vertexBufferSize + indexBufferSize);
         auto worldMatricesBufferAlignment = m_device->CalculateUniformBufferAlignment(materialBufferAlignment + materialBufferSize);
 
-        if (m_bufferIdx == DeviceMemoryGroup::INVALID_INDEX) m_bufferIdx = m_memoryGroup->AddBufferToGroup(
+        if (m_bufferIdx == DeviceMemoryGroup::INVALID_INDEX)
+            m_bufferIdx = m_memoryGroup->AddBufferToGroup(
+                fmt::format("{}:Buffer", m_name),
             vk::BufferUsageFlagBits::eVertexBuffer | vk::BufferUsageFlagBits::eIndexBuffer | vk::BufferUsageFlagBits::eUniformBuffer,
             worldMatricesBufferAlignment + m_worldMatricesUBO.GetCompleteSize(), queueFamilyIndices);
 
