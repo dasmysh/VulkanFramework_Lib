@@ -65,7 +65,7 @@ namespace vkfw_core::gfx {
 
         void SetHandle(vk::Device device, T handle)
         {
-            assert(m_handle && "Setting a handle is only allowed if initialized with nullptr.");
+            assert(!m_handle && "Setting a handle is only allowed if initialized with nullptr.");
             m_handle = std::move(handle);
             CheckSetName(device);
         }

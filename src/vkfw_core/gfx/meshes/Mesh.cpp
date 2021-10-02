@@ -121,7 +121,7 @@ namespace vkfw_core::gfx {
 
     void Mesh::CreateDescriptorSets(const DescriptorPool& descriptorPool)
     {
-        m_materialDescriptorSetLayout.CreateDescriptorLayout(m_device);
+        if (!m_materialDescriptorSetLayout) { m_materialDescriptorSetLayout.CreateDescriptorLayout(m_device); }
         m_worldMatricesDescriptorSetLayout.CreateDescriptorLayout(m_device);
 
         auto numMaterials = m_materials.size();
