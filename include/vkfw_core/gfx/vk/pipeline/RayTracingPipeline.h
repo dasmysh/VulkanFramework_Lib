@@ -45,6 +45,8 @@ namespace vkfw_core::gfx {
         std::array<std::vector<std::uint32_t>, 4> m_shaderGroupIndexesByType;
         /** Offsets into the shader binding table for each group type. */
         std::array<vk::DeviceSize, 4> m_shaderGroupTypeOffset;
+        /** Size of a single entry in the shader binding table for each group type. */
+        std::array<vk::DeviceSize, 4> m_shaderGroupTypeEntrySize;
         /** Strided device address regions for each group type. */
         std::array<vk::StridedDeviceAddressRegionKHR, 4> m_sbtDeviceAddressRegions;
 

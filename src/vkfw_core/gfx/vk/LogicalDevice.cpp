@@ -222,7 +222,9 @@ namespace vkfw_core::gfx {
 
     constexpr std::size_t CalcAlignedSize(std::size_t size, std::size_t alignment)
     {
-        return size + alignment - 1 - ((size + alignment - 1) % alignment);
+        // return size + alignment - 1 - ((size + alignment - 1) % alignment);
+        // return (size + alignment - 1) & ~(alignment - 1);
+        return alignment * ((size + alignment - 1) / alignment);
     }
 
     std::size_t LogicalDevice::CalculateUniformBufferAlignment(std::size_t size) const
@@ -271,6 +273,18 @@ namespace vkfw_core::gfx {
         }
 
         throw std::runtime_error("No candidate format supported.");
+    }
+
+    std::size_t LogicalDevice::CalculateSBTBufferAlignment(std::size_t size) const
+    {
+        auto factor = m_raytracingPipelineProperties.shaderGroupBaseAlignment;
+        return CalcAlignedSize(size, factor);
+    }
+
+    std::size_t LogicalDevice::CalculateSBTHandleAlignment(std::size_t size) const
+    {
+        auto factor = m_raytracingPipelineProperties.shaderGroupHandleAlignment;
+        return CalcAlignedSize(size, factor);
     }
 
 }

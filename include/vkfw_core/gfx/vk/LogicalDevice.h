@@ -97,6 +97,8 @@ namespace vkfw_core::gfx {
         [[nodiscard]] std::size_t CalculateUniformBufferAlignment(std::size_t size) const;
         [[nodiscard]] std::size_t CalculateStorageBufferAlignment(std::size_t size) const;
         [[nodiscard]] std::size_t CalculateASScratchBufferBufferAlignment(std::size_t size) const;
+        [[nodiscard]] std::size_t CalculateSBTBufferAlignment(std::size_t size) const;
+        [[nodiscard]] std::size_t CalculateSBTHandleAlignment(std::size_t size) const;
         [[nodiscard]] std::size_t CalculateBufferImageOffset(const Texture& second, std::size_t currentOffset) const;
         [[nodiscard]] std::size_t CalculateImageImageOffset(const Texture& first, const Texture& second,
                                                             std::size_t currentOffset) const;

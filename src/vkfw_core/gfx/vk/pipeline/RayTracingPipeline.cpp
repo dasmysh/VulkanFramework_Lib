@@ -107,17 +107,19 @@ namespace vkfw_core::gfx {
 
     void RayTracingPipeline::InitializeShaderBindingTable()
     {
-        auto shaderGroupBaseAlignment = m_device->GetDeviceRayTracingPipelineProperties().shaderGroupBaseAlignment;
+        auto shaderGroupHandleSize = m_device->GetDeviceRayTracingPipelineProperties().shaderGroupHandleSize;
+        auto shaderGroupHandleSizeAligned = m_device->CalculateSBTHandleAlignment(shaderGroupHandleSize);
         {
             // TODO: allow shader record parameters. [10/1/2021 Sebastian Maisch]
             // Parameters are memory after the shader group handle (see shaderGroupHandleSize in rt properties)
             // that can contain any variables that can fit into a uniform buffer.
             // max amount is maxShaderGroupStride - shaderGroupHandleSize (see both in rt properties)
-            const std::uint32_t sbtSize = m_device->GetDeviceRayTracingPipelineProperties().shaderGroupBaseAlignment
-                                          * static_cast<std::uint32_t>(m_shaderGroups.size());
+            std::array<vk::DeviceSize, 4> shaderRecordParameterSize = {0, 0, 0, 0};
+
+            auto shaderHandleStorageSize = shaderGroupHandleSizeAligned * m_shaderGroups.size();
 
             std::vector<std::uint8_t> shaderHandleStorage;
-            shaderHandleStorage.resize(sbtSize, 0);
+            shaderHandleStorage.resize(shaderHandleStorageSize, 0);
 
             m_shaderBindingTable = std::make_unique<vkfw_core::gfx::HostBuffer>(
                 m_device, fmt::format("{}:ShaderBindingTable", GetName()),
@@ -128,52 +130,53 @@ namespace vkfw_core::gfx {
                                                                      static_cast<std::uint32_t>(m_shaderGroups.size()),
                                                                      vk::ArrayProxy<std::uint8_t>(shaderHandleStorage));
 
-            std::vector<std::uint8_t> shaderBindingTable;
-            shaderBindingTable.resize(sbtSize, 0);
-            auto* data = shaderBindingTable.data();
             {
-                // This part is required, as the alignment and handle size may differ
-                auto shaderGroupHandleSize = m_device->GetDeviceRayTracingPipelineProperties().shaderGroupHandleSize;
-
+                std::size_t shaderBindingTableTotalSize = 0;
+                std::array<std::vector<std::uint8_t>, 4> shaderBindingTables;
                 for (std::size_t i_type = 0; i_type < m_shaderGroupIndexesByType.size(); ++i_type) {
-                    m_shaderGroupTypeOffset[i_type] = data - shaderBindingTable.data();
+
+                    m_shaderGroupTypeEntrySize[i_type] = m_device->CalculateSBTHandleAlignment(shaderGroupHandleSize
+                                                                                  + shaderRecordParameterSize[i_type]);
+                    shaderBindingTables[i_type].resize(
+                        m_shaderGroupTypeEntrySize[i_type] * m_shaderGroupIndexesByType[i_type].size(), 0);
+                    auto* data = shaderBindingTables[i_type].data();
+                    m_shaderGroupTypeOffset[i_type] = shaderBindingTableTotalSize;
+                    shaderBindingTableTotalSize += m_device->CalculateSBTBufferAlignment(shaderBindingTables[i_type].size());
+
                     for (std::size_t i_group = 0; i_group < m_shaderGroupIndexesByType[i_type].size(); ++i_group) {
                         memcpy(data,
                                shaderHandleStorage.data()
-                                   + m_shaderGroupIndexesByType[i_type][i_group]
-                                         * static_cast<std::size_t>(shaderGroupHandleSize),
+                                   + m_shaderGroupIndexesByType[i_type][i_group] * shaderGroupHandleSizeAligned,
                                shaderGroupHandleSize);
-                        data += shaderGroupBaseAlignment;
+                        // TODO: copy shader record parameters. [10/3/2021 Sebastian Maisch]
+                        data += m_shaderGroupTypeEntrySize[i_type];
                     }
                 }
-                // for (uint32_t i = 0; i < m_shaderGroups.size(); i++) {
-                //     memcpy(data, shaderHandleStorage.data() + i * static_cast<std::size_t>(shaderGroupHandleSize),
-                //            shaderGroupHandleSize);
-                //     data += shaderGroupBaseAlignment;
-                // }
-            }
 
-            m_shaderBindingTable->InitializeData(shaderBindingTable);
+                std::vector<std::uint8_t> shaderBindingTableTotal;
+                shaderBindingTableTotal.resize(shaderBindingTableTotalSize, 0);
+                for (std::size_t i_type = 0; i_type < m_shaderGroupIndexesByType.size(); ++i_type) {
+                    memcpy(shaderBindingTableTotal.data() + m_shaderGroupTypeOffset[i_type],
+                           shaderBindingTables[i_type].data(), shaderBindingTables[i_type].size());
+                }
+
+                m_shaderBindingTable->InitializeData(shaderBindingTableTotal);
+                // TODO: might be (slightly) faster to have a device memory SBT. [10/1/2021 Sebastian Maisch]
+            }
         }
 
-        // TODO: might be (slightly) faster to have a device memory SBT. [10/1/2021 Sebastian Maisch]
-
-
-        vk::DeviceSize shaderBindingTableSize = shaderGroupBaseAlignment * m_shaderGroups.size();
-
         auto sbtDeviceAddress = m_shaderBindingTable->GetDeviceAddress().deviceAddress;
-        auto rayGenDeviceAddress = sbtDeviceAddress + m_shaderGroupTypeOffset[0];
-        m_sbtDeviceAddressRegions[0] =
-            vk::StridedDeviceAddressRegionKHR{rayGenDeviceAddress, shaderBindingTableSize, shaderBindingTableSize};
-        auto missDeviceAddress = sbtDeviceAddress + sbtDeviceAddress + m_shaderGroupTypeOffset[1];
-        m_sbtDeviceAddressRegions[1] =
-            vk::StridedDeviceAddressRegionKHR{missDeviceAddress, shaderBindingTableSize, shaderBindingTableSize};
-        auto hitDeviceAddress = sbtDeviceAddress + sbtDeviceAddress + m_shaderGroupTypeOffset[2];
-        m_sbtDeviceAddressRegions[2] =
-            vk::StridedDeviceAddressRegionKHR{hitDeviceAddress, shaderBindingTableSize, shaderBindingTableSize};
-        auto callableDeviceAddress = sbtDeviceAddress + sbtDeviceAddress + m_shaderGroupTypeOffset[3];
-        m_sbtDeviceAddressRegions[3] =
-            vk::StridedDeviceAddressRegionKHR{callableDeviceAddress, shaderBindingTableSize, shaderBindingTableSize};
+        if (m_shaderGroupIndexesByType[0].size() != 1) {
+            spdlog::error("Only a single ray generation shader is allowed per pipeline.");
+            throw std::runtime_error("Only a single ray generation shader is allowed per pipeline.");
+        }
+
+        for (std::size_t i_type = 0; i_type < m_shaderGroupIndexesByType.size(); ++i_type) {
+            auto deviceAddress = sbtDeviceAddress + m_shaderGroupTypeOffset[i_type];
+            auto elementStride = m_shaderGroupTypeEntrySize[i_type];
+            m_sbtDeviceAddressRegions[i_type] = vk::StridedDeviceAddressRegionKHR{
+                deviceAddress, elementStride, m_shaderGroupIndexesByType[i_type].size() * elementStride};
+        }
     }
 
     template<typename... Args> void RayTracingPipeline::AddShaderGroup(Args&&... args)
