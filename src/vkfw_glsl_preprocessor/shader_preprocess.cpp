@@ -84,13 +84,46 @@ namespace vkfw_glsl {
         std::size_t lineCount = 1;
         auto next_file_id = file_id + 1;
 
+        bool inCppCode = false;
+        bool inCppIfdef = false;
+        std::size_t cppIfdefStack = 0;
+
         while (file.good()) {
             std::getline(file, line);
             auto trimed_line = trim_copy(line);
 
+            if (trimed_line.starts_with("#ifdef __cplusplus") || trimed_line.starts_with("#if defined(__cplusplus)")
+                || trimed_line.starts_with("#ifdef defined( __cplusplus )")) {
+                inCppCode = true;
+                inCppIfdef = true;
+                cppIfdefStack = 1;
+            } else if (trimed_line.starts_with("#ifndef __cplusplus") || trimed_line.starts_with("#if !defined(__cplusplus)")
+                || trimed_line.starts_with("#ifdef !defined( __cplusplus )")) {
+                inCppCode = false;
+                inCppIfdef = true;
+                cppIfdefStack = 0;
+            } else if (inCppIfdef && trimed_line.starts_with("#if")) {
+                cppIfdefStack += 1;
+            } else if (inCppIfdef && trimed_line.starts_with("#endif")) {
+                cppIfdefStack -= 1;
+                if (cppIfdefStack == 0) {
+                    inCppCode = false;
+                    inCppIfdef = false;
+                }
+            } else if (inCppIfdef && (trimed_line.starts_with("#else"))) {
+                inCppCode = !inCppCode;
+            } else if (inCppCode && (trimed_line.starts_with("#elseif"))) {
+                inCppCode = false;
+            } else if (inCppIfdef
+                       && (trimed_line.starts_with("#elseif defined(__cplusplus)")
+                            || (trimed_line.starts_with("#elseif defined( __cplusplus )")))) {
+                inCppCode = true;
+            }
+
+
             static const std::regex include_regex(R"(^[ ]*#[ ]*include[ ]+["<](.*)[">].*)");
             std::smatch include_matches;
-            if (std::regex_search(line, include_matches, include_regex)) {
+            if (!inCppCode && std::regex_search(line, include_matches, include_regex)) {
                 filesystem::path relative_filename{shader_file.parent_path() / include_matches[1].str()};
                 auto include_file = find_file_location(relative_filename);
                 if (!filesystem::exists(include_file)) {
@@ -99,9 +132,10 @@ namespace vkfw_glsl {
                     throw std::runtime_error(fmt::format("{}({}): fatal error: cannot open include file \"{}\".",
                                                          shader_file.string(), lineCount, include_file.string()));
                 }
-                content.append(fmt::format("#line {} {}\n", 1, next_file_id));
+                content.append(fmt::format("#line {} \"{}\"\n", 1, include_file.string()));
                 content.append(process_shader_recursive(include_file, next_file_id, recursion_depth + 1));
-                content.append(fmt::format("#line {} {}\n", lineCount + 1, file_id));
+                content.append(
+                    fmt::format("#line {} \"{}\"\n", lineCount + 1, shader_file.string()));
             } else {
                 content.append(line).append("\n");
             }
@@ -111,7 +145,9 @@ namespace vkfw_glsl {
                     auto trimedDefine = trim_copy(def);
                     content.append(fmt::format("#define {}\n", trimedDefine));
                 }
-                content.append(fmt::format("#line {} {}\n", lineCount + 1, file_id));
+                content.append("#extension GL_GOOGLE_cpp_style_line_directive : require\n");
+                content.append(
+                    fmt::format("#line {} \"{}\"\n", lineCount + 1, shader_file.string()));
             }
             ++lineCount;
         }
