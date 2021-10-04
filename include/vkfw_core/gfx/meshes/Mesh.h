@@ -17,6 +17,7 @@
 #include "gfx/vk/wrappers/DescriptorSet.h"
 #include "gfx/vk/wrappers/PipelineLayout.h"
 #include "core/concepts.h"
+#include "mesh/mesh_host_interface.h"
 #include <tuple>
 
 namespace vkfw_core::gfx {
@@ -28,12 +29,6 @@ namespace vkfw_core::gfx {
     class RenderElement;
     class RenderList;
     class CameraBase;
-
-    struct WorldMatrixUBO
-    {
-        glm::mat4 m_model;
-        glm::mat4 m_normalMatrix;
-    };
 
     class Mesh
     {
@@ -197,18 +192,19 @@ namespace vkfw_core::gfx {
         aligned_vector<MaterialType> materialUBOContent{ materialAlignment }; materialUBOContent.reserve(m_materials.size());
         for (const auto& material : m_materials) materialUBOContent.emplace_back(material);
 
-        WorldMatrixUBO worldMatrices;
-        worldMatrices.m_model = glm::mat4{ 1.0f };
-        worldMatrices.m_normalMatrix = glm::mat4{ 1.0f };
+        mesh::WorldUniformBufferObject worldMatrices;
+        worldMatrices.model = glm::mat4{ 1.0f };
+        worldMatrices.normalMatrix = glm::mat4{ 1.0f };
 
         auto vertexBufferSize = vkfw_core::byteSizeOf(vertices);
         auto indexBufferSize = vkfw_core::byteSizeOf(m_meshInfo->GetIndices());
         auto materialBufferSize = m_device->CalculateUniformBufferAlignment(byteSizeOf(materialUBOContent));
 
-        m_vertexMaterialData.resize(vertexBufferSize + materialBufferSize + sizeof(WorldMatrixUBO));
+        m_vertexMaterialData.resize(vertexBufferSize + materialBufferSize + sizeof(mesh::WorldUniformBufferObject));
         memcpy(m_vertexMaterialData.data(), vertices.data(), vertexBufferSize);
         memcpy(m_vertexMaterialData.data() + vertexBufferSize, materialUBOContent.data(), materialBufferSize);
-        memcpy(m_vertexMaterialData.data() + vertexBufferSize + materialBufferSize, &worldMatrices, sizeof(WorldMatrixUBO));
+        memcpy(m_vertexMaterialData.data() + vertexBufferSize + materialBufferSize, &worldMatrices,
+               sizeof(mesh::WorldUniformBufferObject));
 
         auto materialBufferAlignment = m_device->CalculateUniformBufferAlignment(offset + vertexBufferSize + indexBufferSize);
         auto worldMatricesBufferAlignment = m_device->CalculateUniformBufferAlignment(materialBufferAlignment + materialBufferSize);
@@ -225,7 +221,8 @@ namespace vkfw_core::gfx {
         m_materialsUBO.AddUBOToBufferPrefill(m_memoryGroup, m_bufferIdx, materialBufferAlignment,
             materialBufferSize, m_vertexMaterialData.data() + vertexBufferSize);
         m_worldMatricesUBO.AddUBOToBuffer(m_memoryGroup, m_bufferIdx, worldMatricesBufferAlignment,
-            *reinterpret_cast<const WorldMatrixUBO*>(m_vertexMaterialData.data() + vertexBufferSize + materialBufferSize));
+                                          *reinterpret_cast<const mesh::WorldUniformBufferObject*>(
+                                              m_vertexMaterialData.data() + vertexBufferSize + materialBufferSize));
 
         auto buffer = m_memoryGroup->GetBuffer(m_bufferIdx);
         SetVertexBuffer(buffer, offset);

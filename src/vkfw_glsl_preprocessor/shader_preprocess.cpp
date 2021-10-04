@@ -55,11 +55,15 @@ namespace vkfw_glsl {
         return process_shader_recursive(shader_file, file_id, 0);
     }
 
-    std::filesystem::path shader_processor::find_file_location(const std::filesystem::path& relative_path)
+    std::filesystem::path shader_processor::find_file_location(const std::filesystem::path& parent_path,
+                                                               const std::filesystem::path& relative_path)
     {
         for (const auto& dir : m_file_paths) {
-            auto filename = dir / relative_path;
-            if (dir.empty()) { filename = relative_path; }
+            auto filename = relative_path;
+            if (!dir.empty()) { filename = dir / relative_path; }
+            if (std::filesystem::exists(filename)) { return filename; }
+            filename = parent_path / relative_path;
+            if (!dir.empty()) { filename = dir / parent_path / relative_path; }
             if (std::filesystem::exists(filename)) { return filename; }
         }
 
@@ -124,8 +128,8 @@ namespace vkfw_glsl {
             static const std::regex include_regex(R"(^[ ]*#[ ]*include[ ]+["<](.*)[">].*)");
             std::smatch include_matches;
             if (!inCppCode && std::regex_search(line, include_matches, include_regex)) {
-                filesystem::path relative_filename{shader_file.parent_path() / include_matches[1].str()};
-                auto include_file = find_file_location(relative_filename);
+                // filesystem::path relative_filename{shader_file.parent_path() / include_matches[1].str()};
+                auto include_file = find_file_location(shader_file.parent_path(), include_matches[1].str());
                 if (!filesystem::exists(include_file)) {
                     spdlog::critical("{}({}): fatal error: cannot open include file \"{}\".", shader_file.string(),
                                      lineCount, include_file.string());

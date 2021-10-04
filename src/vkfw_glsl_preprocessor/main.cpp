@@ -74,6 +74,7 @@ int main(int argc, const char** argv)
         std::cerr << "Log initialization failed: " << ex.what() << std::endl;
         return 1;
     }
+    std::copy(argv, argv + argc, std::ostream_iterator<const char*>(std::cout, " "));
 
     try {
         std::map<std::string, docopt::value> args =

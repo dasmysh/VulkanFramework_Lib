@@ -43,6 +43,8 @@ namespace vkfw_core::gfx::rt {
 
     void AccelerationStructureGeometry::FinalizeGeometry()
     {
+        // std::uint32_t nextDiffuseTextureIndex = 0;
+        // std::uint32_t nextBumpTextureIndex = 0;
         for (auto& meshInfo : m_meshGeometryInfos) {
             const std::size_t bufferSize = meshInfo.iboOffset + meshInfo.iboRange;
             meshInfo.bufferIndex = m_memGroup.AddBufferToGroup(
@@ -56,6 +58,9 @@ namespace vkfw_core::gfx::rt {
             auto materialOffset = m_materials.size();
             for (const auto& mat : meshInfo.mesh->GetMaterials()) {
                 m_materials.emplace_back(&mat, m_device, m_memGroup, std::vector<std::uint32_t>{{0, 1}});
+                // auto diffuseIndex = m_materials.back().m_diffuseTexture ? nextDiffuseTextureIndex++ : -1;
+                // auto bumpIndex = m_materials.back().m_bumpMap ? nextBumpTextureIndex++ : -1;
+                // m_materialTextureIndices.emplace_back(diffuseIndex, bumpIndex);
             }
             AddMeshNodeInstance(meshInfo, meshInfo.mesh->GetRootNode(), meshInfo.transform,
                                 static_cast<std::uint32_t>(materialOffset));
@@ -93,7 +98,8 @@ namespace vkfw_core::gfx::rt {
 
         auto localTransform = transform * node->GetLocalTransform();
         for (unsigned int i = 0; i < node->GetNumberOfSubMeshes(); ++i) {
-            auto materialIndex = mesh.mesh->GetSubMeshes()[node->GetSubMeshID(i)].GetMaterialID() + materialOffset;
+            auto meshMaterialId = mesh.mesh->GetSubMeshes()[node->GetSubMeshID(i)].GetMaterialID();
+            auto materialIndex = meshMaterialId + materialOffset;
             AddInstanceInfo(static_cast<std::uint32_t>(mesh.vertexSize), static_cast<std::uint32_t>(mesh.index),
                             materialIndex, transform,
                             mesh.mesh->GetSubMeshes()[node->GetSubMeshID(i)].GetIndexOffset());
@@ -141,6 +147,8 @@ namespace vkfw_core::gfx::rt {
     {
         auto& instanceInfo =
             m_instanceInfos.emplace_back(vertexSize, bufferIndex, materialIndex, indexOffset);
+        // instanceInfo.diffuseTextureIndex = m_materialTextureIndices[materialIndex].first;
+        // instanceInfo.bumpTextureIndex = m_materialTextureIndices[materialIndex].second;
         instanceInfo.transform = transform;
         instanceInfo.transformInverseTranspose =
             glm::mat4(glm::mat3(glm::transpose(glm::inverse(instanceInfo.transform))));
@@ -227,6 +235,7 @@ namespace vkfw_core::gfx::rt {
                           static_cast<std::uint32_t>(m_triangleGeometryInfos.size() + m_meshGeometryInfos.size()),
                           shaderFlags);
         layout.AddBinding(bindingInstanceBuffer, vk::DescriptorType::eStorageBuffer, 1, shaderFlags);
+        // TODO: set correct count [10/4/2021 Sebastian Maisch]
         layout.AddBinding(bindingDiffuseTexture, vk::DescriptorType::eCombinedImageSampler,
                           static_cast<std::uint32_t>(m_materials.size()), shaderFlags);
         layout.AddBinding(bindingBumpTexture, vk::DescriptorType::eCombinedImageSampler,
@@ -275,8 +284,8 @@ namespace vkfw_core::gfx::rt {
                 diffuseTextureInfos.emplace_back(m_textureSampler.GetHandle(), mat.m_diffuseTexture->GetTexture().GetImageView().GetHandle(),
                                                  vk::ImageLayout::eShaderReadOnlyOptimal);
             } else {
-                diffuseTextureInfos.emplace_back(m_textureSampler.GetHandle(),
-                                                 m_device->GetDummyTexture()->GetTexture().GetImageView().GetHandle(),
+                diffuseTextureInfos.emplace_back(m_textureSampler.GetHandle(), nullptr,
+                                                 // m_device->GetDummyTexture()->GetTexture().GetImageView().GetHandle(),
                                                  vk::ImageLayout::eShaderReadOnlyOptimal);
             }
 
@@ -285,8 +294,8 @@ namespace vkfw_core::gfx::rt {
                                               mat.m_bumpMap->GetTexture().GetImageView().GetHandle(),
                                               vk::ImageLayout::eShaderReadOnlyOptimal);
             } else {
-                bumpTextureInfos.emplace_back(m_textureSampler.GetHandle(),
-                                              m_device->GetDummyTexture()->GetTexture().GetImageView().GetHandle(),
+                bumpTextureInfos.emplace_back(m_textureSampler.GetHandle(), nullptr,
+                                              // m_device->GetDummyTexture()->GetTexture().GetImageView().GetHandle(),
                                               vk::ImageLayout::eShaderReadOnlyOptimal);
             }
         }

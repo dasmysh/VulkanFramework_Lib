@@ -17,6 +17,7 @@
 #include "gfx/vk/memory/MemoryGroup.h"
 #include "core/concepts.h"
 #include <glm/mat4x4.hpp>
+#include "rt/ray_tracing_host_interface.h"
 
 namespace vkfw_core::gfx {
     class DescriptorSetLayout;
@@ -92,16 +93,6 @@ namespace vkfw_core::gfx::rt {
             std::size_t iboRange = 0;
         };
 
-        struct InstanceInfo
-        {
-            std::uint32_t vertexSize = 0;
-            std::uint32_t bufferIndex = 0;
-            std::uint32_t materialIndex = static_cast<std::uint32_t>(-1);
-            std::uint32_t indexOffset = 0;
-            glm::mat4 transform = glm::mat4{1.0f};
-            glm::mat4 transformInverseTranspose = glm::mat4{1.0f};
-        };
-
         void AddInstanceBufferAndTransferMemGroup();
         [[nodiscard]] std::size_t AddBottomLevelAccelerationStructure(std::string_view name, std::uint32_t bufferIndex,
                                                                       const glm::mat3x4& transform);
@@ -137,11 +128,13 @@ namespace vkfw_core::gfx::rt {
         /** Contains for each geometry index an index to a vbo/ibo pair. */
         std::vector<std::uint32_t> m_bufferIndices;
         /** Contains further information about each instance like material indices. */
-        std::vector<InstanceInfo> m_instanceInfos;
+        std::vector<::rt::InstanceDesc> m_instanceInfos;
         /** The index to the instances buffer. */
         std::uint32_t m_instanceBufferIndex = 0;
         /** Holds the materials. */
         std::vector<Material> m_materials;
+        /** Holds the texture indices for each material (removed - for now). */
+        // std::vector<std::pair<std::uint32_t, std::uint32_t>> m_materialTextureIndices;
     };
 
     template<Vertex VertexType> void AccelerationStructureGeometry::FinalizeGeometry()

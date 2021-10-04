@@ -38,7 +38,7 @@ if(NOT "${GEN_SHADER_FILES}" STREQUAL "")
 endif()
 set(COMPILED_SHADERS "")
 foreach(SHADER ${SHADER_FILES})
-    compile_spirv_shader("${SHADER}" "${VKFWCORE_RESOURCE_BASE_PATH}")
+    compile_spirv_shader("${SHADER}" "${VKFWCORE_RESOURCE_BASE_PATH}/shader")
     list(APPEND COMPILED_SHADERS ${COMPILE_SPIRV_SHADER_RETURN})
 endforeach()
 if(NOT "${COMPILED_SHADERS}" STREQUAL "")
@@ -92,6 +92,7 @@ target_link_libraries(vk_framework_core PRIVATE CONAN_PKG::glfw CONAN_PKG::stb C
 add_dependencies(vk_framework_core compile_shaders_core)
 target_include_directories(vk_framework_core PUBLIC
     ${PROJECT_SOURCE_DIR}/include/${PROJECT_REL_PATH}
+    ${PROJECT_SOURCE_DIR}/resources/shader
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}/extern/imgui/cpp)
 target_compile_definitions(vk_framework_core PUBLIC STBI_MSC_SECURE_CRT CEREAL_THREAD_SAFE=1)

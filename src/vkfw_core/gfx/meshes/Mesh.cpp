@@ -29,7 +29,7 @@ namespace vkfw_core::gfx {
         , m_bufferIdx{DeviceMemoryGroup::INVALID_INDEX}
         , m_vertexBuffer{nullptr, 0}
         , m_indexBuffer{nullptr, 0}
-        , m_worldMatricesUBO{vkfw_core::gfx::UniformBufferObject::Create<WorldMatrixUBO>(
+        , m_worldMatricesUBO{vkfw_core::gfx::UniformBufferObject::Create<mesh::WorldUniformBufferObject>(
               device, numBackbuffers * meshInfo->GetNodes().size())}
         , m_materialsUBO{std::move(materialsUBO)}
         , m_textureSampler{device->GetHandle(), fmt::format("MeshSampler:{}", name), vk::UniqueSampler{}}
@@ -52,7 +52,7 @@ namespace vkfw_core::gfx {
         , m_bufferIdx{bufferIndex}
         , m_vertexBuffer{nullptr, 0}
         , m_indexBuffer{nullptr, 0}
-        , m_worldMatricesUBO{vkfw_core::gfx::UniformBufferObject::Create<WorldMatrixUBO>(
+        , m_worldMatricesUBO{vkfw_core::gfx::UniformBufferObject::Create<mesh::WorldUniformBufferObject>(
               device, numBackbuffers * meshInfo->GetNodes().size())}
         , m_materialsUBO{std::move(materialsUBO)}
         , m_textureSampler{device->GetHandle(), fmt::format("MeshSampler:{}", name), vk::UniqueSampler{}}
@@ -204,7 +204,7 @@ namespace vkfw_core::gfx {
     {
         for (const auto& node : m_meshInfo->GetNodes()) {
             auto i = backbufferIdx * m_meshInfo->GetNodes().size() + node->GetNodeIndex();
-            m_worldMatricesUBO.FillUploadCmdBuffer<WorldMatrixUBO>(transferCmdBuffer, i);
+            m_worldMatricesUBO.FillUploadCmdBuffer<mesh::WorldUniformBufferObject>(transferCmdBuffer, i);
         }
     }
 
@@ -220,9 +220,9 @@ namespace vkfw_core::gfx {
 
         auto nodeWorld = worldMatrix * node->GetLocalTransform();
 
-        WorldMatrixUBO worldMatrices{glm::mat4{1.0f}, glm::mat4{1.0f}};
-        worldMatrices.m_model = nodeWorld;
-        worldMatrices.m_normalMatrix = glm::mat4(glm::inverseTranspose(glm::mat3(nodeWorld)));
+        mesh::WorldUniformBufferObject worldMatrices{glm::mat4{1.0f}, glm::mat4{1.0f}};
+        worldMatrices.model = nodeWorld;
+        worldMatrices.normalMatrix = glm::mat4(glm::inverseTranspose(glm::mat3(nodeWorld)));
 
         auto instanceIndex = backbufferIndex * m_meshInfo->GetNodes().size() + node->GetNodeIndex();
         m_worldMatricesUBO.UpdateInstanceData(instanceIndex, worldMatrices);
