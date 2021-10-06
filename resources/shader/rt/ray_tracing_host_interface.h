@@ -3,7 +3,9 @@
 
 #include "../shader_interface.h"
 
-BEGIN_INTERFACE(rt)
+BEGIN_INTERFACE(vkfw_core::gfx::rt)
+
+CONSTANT uint INVALID_TEXTURE_INDEX = 0xffffffff;
 
 struct InstanceDesc
 {
@@ -13,6 +15,13 @@ struct InstanceDesc
     uint indexOffset;
     mat4 transform;
     mat4 transformInverseTranspose;
+};
+
+struct MaterialDesc
+{
+    uint diffuseTextureIndex;
+    uint bumpTextureIndex;
+    vec4 diffuseColor;
 };
 
 END_INTERFACE()

@@ -38,24 +38,6 @@ namespace vkfw_core::gfx {
         }
     }
 
-    Texture2D::Texture2D(const std::string& textureFilename, const LogicalDevice* device, bool useSRGB,
-                         bool flipTexture, QueuedDeviceTransfer& transfer,
-                         const std::vector<std::uint32_t>& queueFamilyIndices)
-        : Texture2D{textureFilename, flipTexture, device}
-    {
-        auto loadFn = [this, &transfer, &queueFamilyIndices](const glm::u32vec4& size, const TextureDescriptor& desc,
-                                                             void* data) {
-            m_texturePtr = transfer.CreateDeviceTextureWithData(GetId(), desc, queueFamilyIndices, size, 1, data);
-            m_texture = m_texturePtr.get();
-            stbi_image_free(data);
-        };
-        if (stbi_is_hdr(m_textureFilename.c_str()) != 0) {
-            LoadTextureHDR(m_textureFilename, loadFn);
-        } else {
-            LoadTextureLDR(m_textureFilename, useSRGB, loadFn);
-        }
-    }
-
     Texture2D::Texture2D(const std::string& textureFilename, const LogicalDevice* device,
                          bool useSRGB, bool flipTexture, MemoryGroup& memGroup,
                          const std::vector<std::uint32_t>& queueFamilyIndices)

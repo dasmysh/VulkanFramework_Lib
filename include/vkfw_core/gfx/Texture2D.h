@@ -32,9 +32,6 @@ namespace vkfw_core::gfx {
     class Texture2D final : public Resource
     {
     public:
-        Texture2D(const std::string& textureFilename, const LogicalDevice* device, bool useSRGB, bool flipTexture,
-                  QueuedDeviceTransfer& transfer,
-                  const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         Texture2D(const std::string& textureFilename, const LogicalDevice* device,
                   bool useSRGB, bool flipTexture, MemoryGroup& memGroup,
                   const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});

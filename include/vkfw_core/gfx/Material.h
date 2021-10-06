@@ -44,18 +44,19 @@ namespace vkfw_core::gfx {
         bool m_hasAlpha = false;
 
         template <class Archive>
-        void serialize(Archive& ar, const std::uint32_t) // NOLINT
+        void serialize(Archive& ar, const std::uint32_t version) // NOLINT
         {
+            if (version >= 2) { ar(cereal::make_nvp("materialName", m_materialName)); }
             ar(cereal::make_nvp("ambientColor", m_ambient),
-                cereal::make_nvp("diffuseColor", m_diffuse),
-                cereal::make_nvp("specularColor", m_specular),
-                cereal::make_nvp("alpha", m_alpha),
-                cereal::make_nvp("specularExponent", m_specularExponent),
-                cereal::make_nvp("refractionIndex", m_refraction),
-                cereal::make_nvp("diffuseTextureFilename", m_diffuseTextureFilename),
-                cereal::make_nvp("bumpMapFilename", m_bumpMapFilename),
-                cereal::make_nvp("bumpMultiplier", m_bumpMultiplier),
-                cereal::make_nvp("hasAlpha", m_hasAlpha));
+               cereal::make_nvp("diffuseColor", m_diffuse),
+               cereal::make_nvp("specularColor", m_specular),
+               cereal::make_nvp("alpha", m_alpha),
+               cereal::make_nvp("specularExponent", m_specularExponent),
+               cereal::make_nvp("refractionIndex", m_refraction),
+               cereal::make_nvp("diffuseTextureFilename", m_diffuseTextureFilename),
+               cereal::make_nvp("bumpMapFilename", m_bumpMapFilename),
+               cereal::make_nvp("bumpMultiplier", m_bumpMultiplier),
+               cereal::make_nvp("hasAlpha", m_hasAlpha));
         }
     };
 
@@ -80,4 +81,4 @@ namespace vkfw_core::gfx {
 }
 
 // NOLINTNEXTLINE
-CEREAL_CLASS_VERSION(vkfw_core::gfx::MaterialInfo, 1)
+CEREAL_CLASS_VERSION(vkfw_core::gfx::MaterialInfo, 2)
