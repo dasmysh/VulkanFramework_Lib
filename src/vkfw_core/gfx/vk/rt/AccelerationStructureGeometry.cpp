@@ -101,8 +101,9 @@ namespace vkfw_core::gfx::rt {
         auto blasIndex =
             AddBottomLevelAccelerationStructure(fmt::format("BLAS:{}-{}", m_name, m_BLAS.size()),
                                                 static_cast<std::uint32_t>(mesh.index), glm::transpose(transform));
-        m_BLAS[blasIndex].AddTriangleGeometry(subMesh.GetNumberOfTriangles(), subMesh.GetNumberOfIndices(),
-                                              mesh.vertexSize, vboDeviceAddress, indexBufferAddress);
+        m_BLAS[blasIndex].AddTriangleGeometry(
+            subMesh.GetNumberOfTriangles(), subMesh.GetNumberOfIndices(), mesh.vertexSize,
+            mesh.mesh->GetMaterial(subMesh.GetMaterialID())->m_hasAlpha, vboDeviceAddress, indexBufferAddress);
     }
 
     void AccelerationStructureGeometry::AddInstanceInfo(std::uint32_t vertexSize, std::uint32_t bufferIndex,
@@ -144,7 +145,7 @@ namespace vkfw_core::gfx::rt {
         m_materials.emplace_back(&materialInfo, m_device, m_textureMemGroup, m_queueFamilyIndices);
         AddInstanceInfo(static_cast<std::uint32_t>(vertexSize), static_cast<std::uint32_t>(m_geometryIndex),
                         materialIndex, transform);
-        m_BLAS[blasIndex].AddTriangleGeometry(primitiveCount, vertexCount, vertexSize, vertexBufferDeviceAddress,
+        m_BLAS[blasIndex].AddTriangleGeometry(primitiveCount, vertexCount, vertexSize, false, vertexBufferDeviceAddress,
                                               indexBufferDeviceAddress);
         m_triangleGeometryInfos.emplace_back(m_geometryIndex++, vboBuffer, vboOffset, vertexCount * vertexSize,
                                              iboBuffer, iboOffset, primitiveCount * 3 * sizeof(std::uint32_t));

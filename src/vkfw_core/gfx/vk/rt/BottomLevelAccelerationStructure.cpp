@@ -25,7 +25,7 @@ namespace vkfw_core::gfx::rt {
     BottomLevelAccelerationStructure::~BottomLevelAccelerationStructure() {}
 
     void BottomLevelAccelerationStructure::AddTriangleGeometry(
-        std::size_t primitiveCount, std::size_t vertexCount, std::size_t vertexSize,
+        std::size_t primitiveCount, std::size_t vertexCount, std::size_t vertexSize, bool hasTransparency,
         vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress,
         vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress,
         vk::DeviceOrHostAddressConstKHR transformDeviceAddress /*= nullptr*/)
@@ -35,10 +35,13 @@ namespace vkfw_core::gfx::rt {
             vertexBufferDeviceAddress,
             vertexSize,
             static_cast<std::uint32_t>(vertexCount - 1),
-            vk::IndexType::eUint32,       indexBufferDeviceAddress,  transformDeviceAddress};
+            vk::IndexType::eUint32,
+            indexBufferDeviceAddress,
+            transformDeviceAddress};
         vk::AccelerationStructureGeometryDataKHR asGeometryData{asGeometryDataTriangles};
         vk::AccelerationStructureGeometryKHR asGeometry{vk::GeometryTypeKHR::eTriangles, asGeometryData,
-                                                        vk::GeometryFlagBitsKHR::eOpaque};
+                                                        hasTransparency ? vk::GeometryFlagsKHR{}
+                                                                        : vk::GeometryFlagBitsKHR::eOpaque};
         vk::AccelerationStructureBuildRangeInfoKHR asBuildRange{static_cast<std::uint32_t>(primitiveCount), 0x0, 0,
                                                                 0x0};
         AddGeometry(asGeometry, asBuildRange);
