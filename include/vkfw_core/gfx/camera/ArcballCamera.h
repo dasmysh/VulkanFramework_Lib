@@ -27,7 +27,7 @@ namespace vkfw_core::gfx {
         ~ArcballCamera() override;
 
         bool HandleMouse(int button, int action, float mouseWheelDelta, const VKWindow* sender) override;
-        void UpdateCamera(double elapsedTime, const VKWindow* sender) override;
+        bool UpdateCamera(double elapsedTime, const VKWindow* sender) override;
 
     private:
         /** The initial camera position. */
@@ -40,5 +40,7 @@ namespace vkfw_core::gfx {
         float m_zNear;
         /** Far clipping plane. */
         float m_zFar;
+        /** Has the camera changed this frame. */
+        bool m_hasCameraChangedThisFrame = true;
     };
 }

@@ -47,15 +47,34 @@ namespace vkfw_core::gfx {
      *  @param elapsedTime the time elapsed since the last frame.
      *  @param sender the application to retrieve key and mouse inputs from.
      */
-    void FreeCamera::UpdateCamera(double elapsedTime, const VKWindow* sender)
+    bool FreeCamera::UpdateCamera(double elapsedTime, const VKWindow* sender)
     {
+        bool result = false;
         glm::vec3 camMove{ 0.0f };
-        if (sender->IsKeyPressed(GLFW_KEY_W)) { camMove -= glm::vec3(0.0f, 0.0f, 1.0f); }
-        if (sender->IsKeyPressed(GLFW_KEY_A)) { camMove -= glm::vec3(1.0f, 0.0f, 0.0f); }
-        if (sender->IsKeyPressed(GLFW_KEY_S)) { camMove += glm::vec3(0.0f, 0.0f, 1.0f); }
-        if (sender->IsKeyPressed(GLFW_KEY_D)) { camMove += glm::vec3(1.0f, 0.0f, 0.0f); }
-        if (sender->IsKeyPressed(GLFW_KEY_LEFT_SHIFT)) { camMove -= glm::vec3(0.0f, 1.0f, 0.0f); }
-        if (sender->IsKeyPressed(GLFW_KEY_SPACE)) { camMove += glm::vec3(0.0f, 1.0f, 0.0f); }
+        if (sender->IsKeyPressed(GLFW_KEY_W)) {
+            camMove -= glm::vec3(0.0f, 0.0f, 1.0f);
+            result = true;
+        }
+        if (sender->IsKeyPressed(GLFW_KEY_A)) {
+            camMove -= glm::vec3(1.0f, 0.0f, 0.0f);
+            result = true;
+        }
+        if (sender->IsKeyPressed(GLFW_KEY_S)) {
+            camMove += glm::vec3(0.0f, 0.0f, 1.0f);
+            result = true;
+        }
+        if (sender->IsKeyPressed(GLFW_KEY_D)) {
+            camMove += glm::vec3(1.0f, 0.0f, 0.0f);
+            result = true;
+        }
+        if (sender->IsKeyPressed(GLFW_KEY_LEFT_SHIFT)) {
+            camMove -= glm::vec3(0.0f, 1.0f, 0.0f);
+            result = true;
+        }
+        if (sender->IsKeyPressed(GLFW_KEY_SPACE)) {
+            camMove += glm::vec3(0.0f, 1.0f, 0.0f);
+            result = true;
+        }
 
         float moveLength = glm::length(camMove);
         if (moveLength > glm::epsilon<float>()) {
@@ -69,11 +88,13 @@ namespace vkfw_core::gfx {
         if (m_firstRun) {
             m_currentMousePosition = sender->GetMousePositionNormalized();
             m_firstRun = false;
+            result = true;
         }
 
         auto previousMousePosition = m_currentMousePosition;
         m_currentMousePosition = sender->GetMousePositionNormalized();
         auto mouseDiff = m_currentMousePosition - previousMousePosition;
+        if (glm::length(mouseDiff) > 0.0001f) { result = true; }
 
         auto pitch_delta = -static_cast<float>(mouseDiff.y * rotSpeed * elapsedTime);
         auto yaw_delta = static_cast<float>(mouseDiff.x * rotSpeed * elapsedTime);
@@ -87,6 +108,7 @@ namespace vkfw_core::gfx {
 
         auto aspectRatio = static_cast<float>(sender->GetClientSize().x) / static_cast<float>(sender->GetClientSize().y);
         SetPositionOrientationProj(camPos, newOrientation, glm::perspective(m_fovY, aspectRatio, m_zNear, m_zFar));
+        return result;
     }
 
     /**

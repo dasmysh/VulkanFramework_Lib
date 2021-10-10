@@ -31,6 +31,6 @@ namespace vkfw_core::gfx {
         ~UserControlledCamera() override = default;
 
         virtual bool HandleMouse(int button, int action, float mouseWheelDelta, const VKWindow* sender) = 0;
-        virtual void UpdateCamera(double elapsedTime, const VKWindow* sender) = 0;
+        virtual bool UpdateCamera(double elapsedTime, const VKWindow* sender) = 0;
     };
 }

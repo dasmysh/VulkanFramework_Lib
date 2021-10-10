@@ -24,7 +24,7 @@ namespace vkfw_core::gfx {
                    float zFar, double speed = DEFAULT_CAMERA_SPEED) noexcept;
 
         bool HandleMouse(int button, int action, float mouseWheelDelta, const VKWindow* sender) override;
-        void UpdateCamera(double elapsedTime, const VKWindow* sender) override;
+        bool UpdateCamera(double elapsedTime, const VKWindow* sender) override;
         void SetMoveSpeed(double speed);
         double GetMoveSpeed();
 

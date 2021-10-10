@@ -38,12 +38,20 @@ namespace vkfw_core::gfx {
     /**
      *  Updates the camera parameters using the internal arc-ball.
      */
-    void ArcballCamera::UpdateCamera(double elapsedTime, const VKWindow* sender)
+    bool ArcballCamera::UpdateCamera(double elapsedTime, const VKWindow* sender)
     {
+        bool result = m_hasCameraChangedThisFrame;
+        m_hasCameraChangedThisFrame = false;
         const double mouseWheelSpeed = 8.0;
         float radius = glm::length(GetPosition());
-        if (sender->IsKeyPressed(GLFW_KEY_W)) { radius -= static_cast<float>(mouseWheelSpeed * elapsedTime); }
-        if (sender->IsKeyPressed(GLFW_KEY_S)) { radius += static_cast<float>(mouseWheelSpeed * elapsedTime); }
+        if (sender->IsKeyPressed(GLFW_KEY_W)) {
+            radius -= static_cast<float>(mouseWheelSpeed * elapsedTime);
+            result = true;
+        }
+        if (sender->IsKeyPressed(GLFW_KEY_S)) {
+            radius += static_cast<float>(mouseWheelSpeed * elapsedTime);
+            result = true;
+        }
 
         radius = glm::max(radius, 0.0f);
 
@@ -56,6 +64,8 @@ namespace vkfw_core::gfx {
         auto aspectRatio = static_cast<float>(sender->GetClientSize().x) / static_cast<float>(sender->GetClientSize().y);
         SetPositionOrientationProj(camPos, camOrient,
                                    glm::perspective(m_fovY, aspectRatio, m_zNear, m_zFar));
+
+        return result;
     }
 
     /**
@@ -68,6 +78,7 @@ namespace vkfw_core::gfx {
     bool ArcballCamera::HandleMouse(int button, int action, float mouseWheelDelta, const VKWindow* sender)
     {
         bool handled = m_camArcball.HandleMouse(button, action, sender);
+        m_hasCameraChangedThisFrame = m_hasCameraChangedThisFrame || handled;
 
         if (mouseWheelDelta != 0) {
             if (sender->IsKeyPressed(GLFW_KEY_LEFT_CONTROL)) {
@@ -79,6 +90,7 @@ namespace vkfw_core::gfx {
                 m_fovY = glm::clamp(fov, glm::radians(1.0f), glm::radians(ARCBALL_MAX_ANGLE));
             }
             handled = true;
+            m_hasCameraChangedThisFrame = true;
         }
 
         return handled;
