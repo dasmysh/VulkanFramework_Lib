@@ -18,11 +18,10 @@
 namespace vkfw_core::gfx {
 
     Texture2D::Texture2D(const std::string& textureFilename, bool flipTexture, const LogicalDevice* device)
-        : Resource{textureFilename, device},
-          m_textureFilename{FindResourceLocation(textureFilename)},
-          m_textureIdx{std::numeric_limits<unsigned int>::max()},
-          m_memoryGroup{nullptr},
-          m_texture{nullptr}
+        : Resource{textureFilename, device}
+        , m_textureFilename{FindResourceLocation(textureFilename)}
+        , m_textureIdx{std::numeric_limits<unsigned int>::max()}
+        , m_memoryGroup{nullptr}
     {
         if (!std::filesystem::exists(m_textureFilename)) {
             spdlog::error(
@@ -41,8 +40,7 @@ namespace vkfw_core::gfx {
     Texture2D::Texture2D(const std::string& textureFilename, const LogicalDevice* device,
                          bool useSRGB, bool flipTexture, MemoryGroup& memGroup,
                          const std::vector<std::uint32_t>& queueFamilyIndices)
-        :
-        Texture2D{ textureFilename, flipTexture, device }
+        : Texture2D{ textureFilename, flipTexture, device }
     {
         m_memoryGroup = &memGroup;
         auto loadFn = [this, &memGroup, &queueFamilyIndices](const glm::u32vec4& size, const TextureDescriptor& desc, void* data)
@@ -51,7 +49,6 @@ namespace vkfw_core::gfx {
             glm::u32vec3 dataSize(size.x * memGroup.GetHostTexture(m_textureIdx)->GetDescriptor().m_bytesPP, size.y, size.z);
             memGroup.AddDataToTextureInGroup(m_textureIdx, vk::ImageAspectFlagBits::eColor, 0, 0, dataSize, data,
                                              stbi_image_free);
-            m_texture = memGroup.GetTexture(m_textureIdx);
         };
         if (stbi_is_hdr(m_textureFilename.c_str()) != 0) {
             LoadTextureHDR(m_textureFilename, loadFn);
@@ -171,5 +168,10 @@ namespace vkfw_core::gfx {
         int singleChannelBytes = fmtProps == FormatProperties::USE_HDR ? 4 : 1;
         imgChannels = static_cast<int>(fmt.first) / singleChannelBytes;
         return fmt;
+    }
+
+    const DeviceTexture& Texture2D::GetTexture() const
+    {
+        return *m_memoryGroup->GetTexture(m_textureIdx);
     }
 }

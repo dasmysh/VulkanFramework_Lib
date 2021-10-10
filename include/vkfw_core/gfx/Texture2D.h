@@ -41,7 +41,7 @@ namespace vkfw_core::gfx {
         Texture2D& operator=(Texture2D&&) = delete;
         ~Texture2D() override;
 
-        [[nodiscard]] const DeviceTexture& GetTexture() const { return *m_texture; }
+        [[nodiscard]] const DeviceTexture& GetTexture() const;
 
     private:
         enum class FormatProperties {
@@ -59,13 +59,9 @@ namespace vkfw_core::gfx {
 
         /** Holds the texture file name. */
         std::string m_textureFilename;
-        /** Holds the unique pointer to the texture used. */
-        std::unique_ptr<DeviceTexture> m_texturePtr;
         /** Holds the index in the memory group to the texture used. */
         unsigned int m_textureIdx;
         /** Holds the memory group containing the texture. */
         MemoryGroup* m_memoryGroup;
-        /** Holds the pointer to the texture used. */
-        DeviceTexture* m_texture;
     };
 }

@@ -46,6 +46,7 @@ namespace vkfw_core::gfx::rt {
     void AccelerationStructureGeometry::AddInstanceBufferAndTransferMemGroup()
     {
         m_bufferMemGroup.AddDataToBufferInGroup(m_bufferIndex, m_instanceBufferOffset, m_instanceInfos);
+        m_bufferMemGroup.AddDataToBufferInGroup(m_bufferIndex, m_materialBufferOffset, m_materialInfos);
         vkfw_core::gfx::QueuedDeviceTransfer transfer{m_device, m_device->GetQueue(0, 0)};
         m_bufferMemGroup.FinalizeDeviceGroup();
         m_bufferMemGroup.TransferData(transfer);

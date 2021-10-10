@@ -99,7 +99,7 @@ namespace vkfw_core {
                 }
                 wpResource = spResource;
                 m_resources.insert(std::move(std::make_pair(resId, wpResource)));
-                return std::move(spResource);
+                return spResource;
             }
             return wpResource.lock();
         }

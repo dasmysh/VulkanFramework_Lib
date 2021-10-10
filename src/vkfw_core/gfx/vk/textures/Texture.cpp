@@ -62,7 +62,8 @@ namespace vkfw_core::gfx {
     Texture::Texture(const LogicalDevice* device, std::string_view name, const TextureDescriptor& desc,
         std::vector<std::uint32_t> queueFamilyIndices)
         : VulkanObjectWrapper{device->GetHandle(), name, vk::UniqueImage{}}
-        , m_device{ device }, m_imageDeviceMemory{device, fmt::format("DeviceMemory:{}", name), desc.m_memoryProperties}
+        , m_device{ device }
+        , m_imageDeviceMemory{device, fmt::format("DeviceMemory:{}", name), desc.m_memoryProperties}
         , m_imageView{device->GetHandle(), fmt::format("View:{}", name), vk::UniqueImageView{}}
         , m_size{ 0 },
         m_mipLevels{ 0 },
@@ -288,7 +289,9 @@ namespace vkfw_core::gfx {
         assert(size.w > 0);
         assert(mipLevels > 0);
 
-        this->~Texture();
+        // not sure if this is needed again at some point.
+        assert(!GetHandle());
+        // this->~Texture();
 
         m_pixelSize = size;
         m_size = glm::u32vec4(size.x * m_desc.m_bytesPP, size.y, size.z, size.w);

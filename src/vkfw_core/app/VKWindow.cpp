@@ -52,6 +52,7 @@ namespace vkfw_core {
         enableVulkan12Features.setScalarBlockLayout(true);
         enableVulkan12Features.setRuntimeDescriptorArray(true);
         enableVulkan12Features.setShaderStorageBufferArrayNonUniformIndexing(true);
+        enableVulkan12Features.setShaderSampledImageArrayNonUniformIndexing(true);
         vk::PhysicalDeviceRayTracingPipelineFeaturesKHR enabledRayTracingPipelineFeatures{VK_TRUE};
         vk::PhysicalDeviceAccelerationStructureFeaturesKHR enabledAccelerationStructureFeatures{VK_TRUE};
         std::vector<std::string> reqDeviceExtensions = requiredDeviceExtensions;

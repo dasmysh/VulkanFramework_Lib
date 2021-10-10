@@ -133,8 +133,6 @@ namespace vkfw_core::gfx::rt {
         std::size_t m_instanceBufferRange = 0;
         /** Holds the materials. */
         std::vector<Material> m_materials;
-        /** Holds the texture indices for each material (removed - for now). */
-        // std::vector<std::pair<std::uint32_t, std::uint32_t>> m_materialTextureIndices;
         std::vector<MaterialDesc> m_materialInfos;
         std::vector<vk::ImageView> m_diffuseTextureHandles;
         std::vector<vk::ImageView> m_bumpTextureHandles;
@@ -154,6 +152,7 @@ namespace vkfw_core::gfx::rt {
             meshInfo.mesh->GetVertices(vertices[i_mesh]);
             indices[i_mesh] = meshInfo.mesh->GetIndices();
 
+            meshInfo.vertexSize = sizeof(VertexType);
             meshInfo.vboRange = byteSizeOf(vertices[i_mesh]);
             meshInfo.vboOffset = m_device->CalculateStorageBufferAlignment(totalBufferSize);
             meshInfo.iboRange = byteSizeOf(indices[i_mesh]);
@@ -176,12 +175,11 @@ namespace vkfw_core::gfx::rt {
         for (std::size_t i = 0; i < m_materials.size(); ++i) {
             if (m_materials[i].m_diffuseTexture) {
                 m_materialInfos[i].diffuseTextureIndex = static_cast<std::uint32_t>(m_diffuseTextureHandles.size());
-                m_diffuseTextureHandles.emplace_back(
-                    m_materials[i].m_diffuseTexture->GetTexture().GetImageView().GetHandle());
+                m_diffuseTextureHandles.emplace_back(nullptr);
             }
             if (m_materials[i].m_bumpMap) {
                 m_materialInfos[i].bumpTextureIndex = static_cast<std::uint32_t>(m_bumpTextureHandles.size());
-                m_bumpTextureHandles.emplace_back(m_materials[i].m_bumpMap->GetTexture().GetImageView().GetHandle());
+                m_bumpTextureHandles.emplace_back(nullptr);
             }
             m_materialInfos[i].diffuseColor = glm::vec4{m_materials[i].m_materialInfo->m_diffuse, 1.0f};
         }
@@ -204,32 +202,20 @@ namespace vkfw_core::gfx::rt {
         }
 
         AddInstanceBufferAndTransferMemGroup();
+        for (std::size_t i = 0; i < m_materials.size(); ++i) {
+            if (m_materials[i].m_diffuseTexture) {
+                m_diffuseTextureHandles[m_materialInfos[i].diffuseTextureIndex] =
+                    m_materials[i].m_diffuseTexture->GetTexture().GetImageView().GetHandle();
+            }
+            if (m_materials[i].m_bumpMap) {
+                m_bumpTextureHandles[m_materialInfos[i].bumpTextureIndex] =
+                    m_materials[i].m_bumpMap->GetTexture().GetImageView().GetHandle();
+            }
+        }
 
         for (std::size_t i_mesh = 0; i_mesh < m_meshGeometryInfos.size(); ++i_mesh) {
             const auto& meshInfo = m_meshGeometryInfos[i_mesh];
             AddMeshNodeGeometry(meshInfo, meshInfo.mesh->GetRootNode(), meshInfo.transform);
         }
     }
-
-    // template<Vertex VertexType>
-    // std::size_t AccelerationStructureGeometry::AddMeshGeometry(const MeshInfo& mesh, const glm::mat4& transform)
-    // {
-    //     auto meshIndex = m_meshGeometryInfos.size();
-    //
-    //     auto& meshInfo = m_meshGeometryInfos.emplace_back(m_geometryIndex++, &mesh, transform);
-    //     meshInfo.indices = mesh.GetIndices();
-    //
-    //     std::vector<VertexType> vertices;
-    //     mesh.GetVertices(vertices);
-    //
-    //     meshInfo.vertexSize = sizeof(VertexType);
-    //     meshInfo.vboRange = byteSizeOf(vertices);
-    //     meshInfo.vboOffset = 0;
-    //     meshInfo.iboRange = byteSizeOf(meshInfo.indices);
-    //     meshInfo.iboOffset = m_device->CalculateStorageBufferAlignment(meshInfo.vboRange);
-    //     meshInfo.vertices.resize(byteSizeOf(vertices));
-    //     memcpy(meshInfo.vertices.data(), vertices.data(), byteSizeOf(vertices));
-    //
-    //     return meshIndex;
-    // }
 }
