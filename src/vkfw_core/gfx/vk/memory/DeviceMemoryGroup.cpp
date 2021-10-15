@@ -63,11 +63,12 @@ namespace vkfw_core::gfx {
     }
 
     unsigned int DeviceMemoryGroup::AddTextureToGroup(std::string_view name, const TextureDescriptor& desc,
+                                                      vk::ImageLayout initialLayout,
                                                       const glm::u32vec4& size,
         std::uint32_t mipLevels, const std::vector<std::uint32_t>& queueFamilyIndices)
     {
         m_deviceImages.emplace_back(m_device, name, TextureDescriptor(desc, vk::ImageUsageFlagBits::eTransferDst),
-                                    queueFamilyIndices);
+                                    initialLayout, queueFamilyIndices);
         m_deviceImages.back().InitializeImage(size, mipLevels, false);
 
         return static_cast<unsigned int>(m_deviceImages.size() - 1);
@@ -112,7 +113,7 @@ namespace vkfw_core::gfx {
             memory.BindToBuffer(buffers[i], offsets[i]);
         }
         for (auto i = 0U; i < images.size(); ++i) {
-            memory.BindToTexture(images[i], offsets[i + buffers.size()]);
+            images[i].BindMemory(memory.GetHandle(), offsets[i + buffers.size()]);
         }
     }
 

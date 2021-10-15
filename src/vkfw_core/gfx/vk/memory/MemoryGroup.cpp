@@ -92,14 +92,15 @@ namespace vkfw_core::gfx {
     }
 
     unsigned int MemoryGroup::AddTextureToGroup(std::string_view name, const TextureDescriptor& desc,
-                                                const glm::u32vec4& size,
-        std::uint32_t mipLevels, const std::vector<std::uint32_t>& queueFamilyIndices)
+                                                vk::ImageLayout initialLayout, const glm::u32vec4& size,
+                                                std::uint32_t mipLevels,
+                                                const std::vector<std::uint32_t>& queueFamilyIndices)
     {
-        auto idx = DeviceMemoryGroup::AddTextureToGroup(name, desc, size, mipLevels, queueFamilyIndices);
+        auto idx = DeviceMemoryGroup::AddTextureToGroup(name, desc, initialLayout, size, mipLevels, queueFamilyIndices);
 
-        TextureDescriptor stagingTexDesc{ desc, vk::ImageUsageFlagBits::eTransferSrc };
+        TextureDescriptor stagingTexDesc{desc, vk::ImageUsageFlagBits::eTransferSrc};
         stagingTexDesc.m_imageTiling = vk::ImageTiling::eLinear;
-        m_hostImages.emplace_back(GetDevice(), fmt::format("Host:{}", name), stagingTexDesc, queueFamilyIndices);
+        m_hostImages.emplace_back(GetDevice(), fmt::format("Host:{}", name), stagingTexDesc, initialLayout, queueFamilyIndices);
         m_hostImages.back().InitializeImage(size, mipLevels, false);
 
         return idx;

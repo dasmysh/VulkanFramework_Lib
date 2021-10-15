@@ -42,22 +42,20 @@ namespace vkfw_core::gfx {
                                                                  const std::vector<std::uint32_t>& deviceBufferQueues,
                                                                  std::size_t bufferSize, std::size_t dataSize,
                                                                  const void* data);
-        std::unique_ptr<DeviceTexture> CreateDeviceTextureWithData(std::string_view name,
-                                                                   const TextureDescriptor& textureDesc,
-                                                                   const std::vector<std::uint32_t>& deviceBufferQueues,
-                                                                   const glm::u32vec4& textureSize,
-                                                                   std::uint32_t mipLevels,
-                                                                   const glm::u32vec4& dataSize, const void* data);
+        std::unique_ptr<DeviceTexture>
+        CreateDeviceTextureWithData(std::string_view name, const TextureDescriptor& textureDesc,
+                                    vk::ImageLayout initialLayout, const std::vector<std::uint32_t>& deviceBufferQueues,
+                                    const glm::u32vec4& textureSize, std::uint32_t mipLevels,
+                                    const glm::u32vec4& dataSize, const void* data);
         std::unique_ptr<DeviceBuffer> CreateDeviceBufferWithData(std::string_view name,
                                                                  const vk::BufferUsageFlags& deviceBufferUsage,
                                                                  const vk::MemoryPropertyFlags& memoryFlags,
                                                                  const std::vector<std::uint32_t>& deviceBufferQueues,
                                                                  std::size_t size, const void* data);
-        std::unique_ptr<DeviceTexture> CreateDeviceTextureWithData(std::string_view name,
-                                                                   const TextureDescriptor& textureDesc,
-                                                                   const std::vector<std::uint32_t>& deviceBufferQueues,
-                                                                   const glm::u32vec4& size, std::uint32_t mipLevels,
-                                                                   const void* data);
+        std::unique_ptr<DeviceTexture>
+        CreateDeviceTextureWithData(std::string_view name, const TextureDescriptor& textureDesc,
+                                    vk::ImageLayout initialLayout, const std::vector<std::uint32_t>& deviceBufferQueues,
+                                    const glm::u32vec4& size, std::uint32_t mipLevels, const void* data);
 
         void TransferDataToBuffer(std::size_t dataSize, const void* data, const Buffer& dst, std::size_t dstOffset);
 

@@ -75,11 +75,6 @@ namespace vkfw_core::gfx {
         m_device->GetHandle().bindBufferMemory(buffer.GetHandle(), GetHandle(), offset);
     }
 
-    void DeviceMemory::BindToTexture(Texture& texture, std::size_t offset) const
-    {
-        m_device->GetHandle().bindImageMemory(texture.GetHandle(), GetHandle(), offset);
-    }
-
     void DeviceMemory::CopyToHostMemory(std::size_t offset, std::size_t size, const void* data) const
     {
         assert(GetHandle() && "Device memory must be valid.");

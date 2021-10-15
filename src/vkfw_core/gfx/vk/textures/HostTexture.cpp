@@ -12,8 +12,11 @@
 namespace vkfw_core::gfx {
 
     HostTexture::HostTexture(const LogicalDevice* device, std::string_view name, const TextureDescriptor& desc,
-        const std::vector<std::uint32_t>& queueFamilyIndices) :
-        Texture{ device, name, TextureDescriptor(desc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent), queueFamilyIndices }
+                             vk::ImageLayout initialLayout, const std::vector<std::uint32_t>& queueFamilyIndices)
+        : Texture{device, name,
+                  TextureDescriptor(desc, vk::MemoryPropertyFlagBits::eHostVisible
+                                              | vk::MemoryPropertyFlagBits::eHostCoherent),
+                  initialLayout, queueFamilyIndices}
     {
     }
 

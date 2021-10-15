@@ -17,7 +17,8 @@ namespace vkfw_core::gfx {
     {
     public:
         DeviceTexture(const LogicalDevice* device, std::string_view name, const TextureDescriptor& desc,
-            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
+                      vk::ImageLayout initialLayout,
+                      const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         ~DeviceTexture() override;
         DeviceTexture(const DeviceTexture&) = delete;
         DeviceTexture& operator=(const DeviceTexture&) = delete;

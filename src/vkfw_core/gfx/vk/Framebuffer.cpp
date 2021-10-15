@@ -9,6 +9,7 @@
 #include "gfx/vk/Framebuffer.h"
 #include "gfx/vk/LogicalDevice.h"
 #include "gfx/vk/wrappers/CommandBuffer.h"
+#include "gfx/vk/wrappers/PipelineBarriers.h"
 
 namespace vkfw_core::gfx {
 
@@ -26,7 +27,8 @@ namespace vkfw_core::gfx {
         , m_queueFamilyIndices{std::move(queueFamilyIndices)}
     {
         for (std::size_t i = 0; i < m_extImages.size(); ++i) {
-            m_extTextures.emplace_back(m_device, fmt::format("FBO:{}-ExtTex:{}", name, i), desc.m_tex[i], m_queueFamilyIndices);
+            m_extTextures.emplace_back(m_device, fmt::format("FBO:{}-ExtTex:{}", name, i), desc.m_tex[i],
+                                       vk::ImageLayout::eUndefined, m_queueFamilyIndices);
             m_extTextures.back().InitializeExternalImage(m_extImages[i], glm::u32vec4(m_size, 1, 1), 1, false);
         }
 
@@ -106,7 +108,8 @@ namespace vkfw_core::gfx {
                                                          ? vk::ImageLayout::eDepthStencilAttachmentOptimal
                                                          : vk::ImageLayout::eColorAttachmentOptimal;
             m_memoryGroup.AddTextureToGroup(fmt::format("FBO:{}-Tex{}", GetName(), i), m_desc.m_tex[i],
-                                            glm::u32vec4(m_size, 1, 1), 1, m_queueFamilyIndices);
+                                            vk::ImageLayout::eUndefined, glm::u32vec4(m_size, 1, 1), 1,
+                                            m_queueFamilyIndices);
         }
         m_memoryGroup.FinalizeDeviceGroup();
 
@@ -116,9 +119,20 @@ namespace vkfw_core::gfx {
                 m_device, fmt::format("FBO:{} CreateImagesCmdBuffer", GetName()),
                 fmt::format("FBO:{} CreateImages", GetName()), m_device->GetCommandPool(0));
         }
+        PipelineBarrier barrier{m_device, vk::PipelineStageFlagBits::eColorAttachmentOutput};
         for (auto i = 0U; i < m_memoryGroup.GetImagesInGroup(); ++i) {
-            m_memoryGroup.GetTexture(i)->TransitionLayout(imageLayouts[i], cmdBuffer ? cmdBuffer : ucmdBuffer);
+            vk::AccessFlags access = vk::AccessFlagBits::eColorAttachmentWrite;
+            vk::PipelineStageFlags pipelineStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
+            if (IsDepthStencilFormat(m_desc.m_tex[i].m_format)) {
+                access = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+                pipelineStage = vk::PipelineStageFlagBits::eEarlyFragmentTests;
+            }
+
+            auto accessor = m_memoryGroup.GetTexture(i)->GetAccess();
+            [[maybe_unused]] auto dummy = accessor.Get(access, pipelineStage, imageLayouts[i], barrier);
+            // m_memoryGroup.GetTexture(i)->TransitionLayout(imageLayouts[i], cmdBuffer ? cmdBuffer : ucmdBuffer);
         }
+        barrier.Record(cmdBuffer ? cmdBuffer : ucmdBuffer);
         if (!cmdBuffer) {
             auto& queue = m_device->GetQueue(0, 0);
             CommandBuffer::endSingleTimeSubmit(queue, ucmdBuffer);

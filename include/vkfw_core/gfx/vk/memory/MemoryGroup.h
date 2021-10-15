@@ -37,8 +37,8 @@ namespace vkfw_core::gfx {
         AddBufferToGroup(std::string_view name, const vk::BufferUsageFlags& usage, std::size_t size,
                          const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{}) override;
         unsigned int
-        AddTextureToGroup(std::string_view name, const TextureDescriptor& desc, const glm::u32vec4& size,
-                          std::uint32_t mipLevels,
+        AddTextureToGroup(std::string_view name, const TextureDescriptor& desc, vk::ImageLayout initialLayout,
+                          const glm::u32vec4& size, std::uint32_t mipLevels,
                           const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{}) override;
         unsigned int
         AddBufferToGroup(std::string_view name, const vk::BufferUsageFlags& usage, std::size_t size,

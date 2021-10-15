@@ -12,7 +12,8 @@
 
 namespace vkfw_core::gfx {
 
-    template<typename T> requires VulkanObject<T> || UniqueVulkanObject<T>
+    template<typename T>
+    requires VulkanObject<T> || UniqueVulkanObject<T>
     struct VulkanObjectWrapperHelper
     {
         using BaseType = void;
@@ -28,37 +29,16 @@ namespace vkfw_core::gfx {
         using BaseType = typename T::element_type;
     };
 
-
-
-    template<typename T>
-    class VulkanObjectWrapper
+    template<typename T> class VulkanObjectPrivateWrapper
     {
     public:
         using BaseType = VulkanObjectWrapperHelper<T>::BaseType;
         using CType = BaseType::CType;
 
-        VulkanObjectWrapper(vk::Device device, std::string_view name, T handle)
+        VulkanObjectPrivateWrapper(vk::Device device, std::string_view name, T handle)
             : m_name{name}, m_handle{std::move(handle)}
         {
             CheckSetName(device);
-        }
-
-        BaseType GetHandle() const
-        {
-            if constexpr (UniqueVulkanObject<T>) {
-                return *m_handle;
-            } else {
-                return m_handle;
-            }
-        }
-
-        const BaseType* GetHandlePtr() const
-        {
-            if constexpr (UniqueVulkanObject<T>) {
-                return &(*m_handle);
-            } else {
-                return &m_handle;
-            }
         }
 
         const std::string& GetName() const { return m_name; }
@@ -82,6 +62,24 @@ namespace vkfw_core::gfx {
         void CheckSetName(vk::Device device) const
         {
             if (device && m_handle) { SetObjectName(device, GetHandle(), m_name); }
+        }
+
+        BaseType GetHandle() const
+        {
+            if constexpr (UniqueVulkanObject<T>) {
+                return *m_handle;
+            } else {
+                return m_handle;
+            }
+        }
+
+        const BaseType* GetHandlePtr() const
+        {
+            if constexpr (UniqueVulkanObject<T>) {
+                return &(*m_handle);
+            } else {
+                return &m_handle;
+            }
         }
 
     private:
@@ -114,5 +112,13 @@ namespace vkfw_core::gfx {
 
         std::string m_name;
         T m_handle;
+    };
+
+    template<typename T> class VulkanObjectWrapper : public VulkanObjectPrivateWrapper<T>
+    {
+    public:
+        using VulkanObjectPrivateWrapper<T>::VulkanObjectPrivateWrapper;
+        using VulkanObjectPrivateWrapper<T>::GetHandle;
+        using VulkanObjectPrivateWrapper<T>::GetHandlePtr;
     };
 }

@@ -608,12 +608,12 @@ namespace vkfw_core {
                                                      glm::uvec2(m_vkSurfaceExtend.width, m_vkSurfaceExtend.height),
                                                      attachments, m_swapchainRenderPass, fbDesc);
 
-                m_commandPools[i] = gfx::CommandPool{m_logicalDevice->GetHandle(),
-                                                     fmt::format("Win-{} CommandPool{}", m_config->m_windowTitle, i),
-                                                     m_logicalDevice->GetHandle().createCommandPoolUnique(poolInfo)};
+                m_commandPools[i] = gfx::CommandPool{
+                    m_logicalDevice->GetHandle(), fmt::format("Win-{} CommandPool{}", m_config->m_windowTitle, i),
+                    m_graphicsQueue, m_logicalDevice->GetHandle().createCommandPoolUnique(poolInfo)};
                 m_imGuiCommandPools[i] = gfx::CommandPool{
                     m_logicalDevice->GetHandle(), fmt::format("Win-{} ImGuiCommandPool{}", m_config->m_windowTitle, i),
-                    m_logicalDevice->GetHandle().createCommandPoolUnique(poolInfo)};
+                    m_graphicsQueue, m_logicalDevice->GetHandle().createCommandPoolUnique(poolInfo)};
 
                 vk::CommandBufferAllocateInfo allocInfo{m_commandPools[i].GetHandle(), vk::CommandBufferLevel::ePrimary,
                                                         1};
@@ -623,10 +623,11 @@ namespace vkfw_core {
                 try {
                     m_commandBuffers[i] = gfx::CommandBuffer{
                         m_logicalDevice->GetHandle(), fmt::format("Win-{} CommandBuffer{}", m_config->m_windowTitle, i),
+                        m_graphicsQueue,
                         std::move(m_logicalDevice->GetHandle().allocateCommandBuffersUnique(allocInfo)[0])};
                     m_imGuiCommandBuffers[i] = gfx::CommandBuffer{
                         m_logicalDevice->GetHandle(),
-                        fmt::format("Win-{} ImGuiCommandBuffer{}", m_config->m_windowTitle, i),
+                        fmt::format("Win-{} ImGuiCommandBuffer{}", m_config->m_windowTitle, i), m_graphicsQueue,
                         std::move(m_logicalDevice->GetHandle().allocateCommandBuffersUnique(imgui_allocInfo)[0])};
                 } catch (vk::SystemError& e) {
                     spdlog::critical("Could not allocate command buffers ({}).", e.what());

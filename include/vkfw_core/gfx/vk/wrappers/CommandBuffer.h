@@ -21,8 +21,8 @@ namespace vkfw_core::gfx {
     {
     public:
         CommandBuffer() : VulkanObjectWrapper{nullptr, "", vk::UniqueCommandBuffer{}} {}
-        CommandBuffer(vk::Device device, std::string_view name, vk::UniqueCommandBuffer commandBuffer)
-            : VulkanObjectWrapper{device, name, std::move(commandBuffer)}
+        CommandBuffer(vk::Device device, std::string_view name, unsigned int queueFamily, vk::UniqueCommandBuffer commandBuffer)
+            : VulkanObjectWrapper{device, name, std::move(commandBuffer)}, m_queueFamily{queueFamily}
         {
         }
 
@@ -36,15 +36,17 @@ namespace vkfw_core::gfx {
         void InsertLabel(std::string_view label_name, const glm::vec4& color) const;
         void EndLabel() const;
 
-        static std::vector<CommandBuffer> Initialize(vk::Device device, std::string_view name,
+        static std::vector<CommandBuffer> Initialize(vk::Device device, std::string_view name, unsigned int queueFamily,
                                                      std::vector<vk::UniqueCommandBuffer>&& commandBuffers)
         {
             std::vector<CommandBuffer> result;
             for (std::size_t i = 0; i < commandBuffers.size(); ++i) {
-                result.emplace_back(device, fmt::format("{}-{}", name, i), std::move(commandBuffers[i]));
+                result.emplace_back(device, fmt::format("{}-{}", name, i), queueFamily, std::move(commandBuffers[i]));
             }
             return result;
         }
+
+        unsigned int GetQueueFamily() const { return m_queueFamily; }
 
         static CommandBuffer beginSingleTimeSubmit(const LogicalDevice* device, std::string_view cmdBufferName,
                                                    std::string_view regionName, const CommandPool& commandPool);
@@ -57,10 +59,10 @@ namespace vkfw_core::gfx {
                                                const CommandBuffer& cmdBuffer);
 
     private:
-        CommandBuffer(const LogicalDevice* device, std::string_view name, vk::UniqueCommandBuffer commandBuffer);
-        // /** Holds the device. */
-        // const LogicalDevice* m_device;
-        // /** Holds the queue family for this buffers. */
-        // unsigned int m_queueFamily;
+        CommandBuffer(const LogicalDevice* device, std::string_view name, unsigned int queueFamily,
+                      vk::UniqueCommandBuffer commandBuffer);
+
+        /** Holds the queue family for this command buffer. */
+        unsigned int m_queueFamily = static_cast<unsigned int>(-1);
     };
 }

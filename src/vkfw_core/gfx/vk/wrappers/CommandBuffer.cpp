@@ -26,9 +26,9 @@ namespace vkfw_core::gfx {
         device->GetHandle().allocateCommandBuffersUnique(cmdBufferallocInfo);
     }
 
-    CommandBuffer::CommandBuffer(const LogicalDevice* device, std::string_view name,
+    CommandBuffer::CommandBuffer(const LogicalDevice* device, std::string_view name, unsigned int queueFamily,
                                  vk::UniqueCommandBuffer commandBuffer)
-        : CommandBuffer{device->GetHandle(), name, std::move(commandBuffer)}
+        : CommandBuffer{device->GetHandle(), name, queueFamily, std::move(commandBuffer)}
     {
     }
 
@@ -40,8 +40,8 @@ namespace vkfw_core::gfx {
                                                        std::string_view regionName, const CommandPool& commandPool)
     {
         vk::CommandBufferAllocateInfo cmdBufferallocInfo{commandPool.GetHandle(), vk::CommandBufferLevel::ePrimary, 1};
-        auto cmdBuffer = CommandBuffer{
-            device, cmdBufferName, std::move(device->GetHandle().allocateCommandBuffersUnique(cmdBufferallocInfo)[0])};
+        auto cmdBuffer = CommandBuffer{device, cmdBufferName, commandPool.GetQueueFamily(),
+                          std::move(device->GetHandle().allocateCommandBuffersUnique(cmdBufferallocInfo)[0])};
 
         vk::CommandBufferBeginInfo beginInfo{vk::CommandBufferUsageFlagBits::eOneTimeSubmit};
         cmdBuffer.Begin(beginInfo);

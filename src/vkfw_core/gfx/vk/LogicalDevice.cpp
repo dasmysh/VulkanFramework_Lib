@@ -145,12 +145,12 @@ namespace vkfw_core::gfx {
                                                    m_singleQueueOnly ? 0 : deviceQueueDesc.first};
                 m_vkCmdPoolsByDeviceQFamily[deviceQueueDesc.first] = CommandPool{
                     GetHandle(), fmt::format("Dev-{} QueueCommandPool{}", windowCfg.m_windowTitle, mappings[0].first),
-                                GetHandle().createCommandPoolUnique(poolInfo)};
+                    mappings[0].first, GetHandle().createCommandPoolUnique(poolInfo)};
             } else {
                 vk::CommandPoolCreateInfo poolInfo{vk::CommandPoolCreateFlags(), deviceQueueDesc.first};
                 m_vkCmdPoolsByDeviceQFamily[deviceQueueDesc.first] = CommandPool{
                     GetHandle(), fmt::format("Dev-{} QueueCommandPool{}", windowCfg.m_windowTitle, mappings[0].first),
-                                GetHandle().createCommandPoolUnique(poolInfo)};
+                    mappings[0].first, GetHandle().createCommandPoolUnique(poolInfo)};
             }
 
             vk::Queue vkSingleQueue;
@@ -202,11 +202,11 @@ namespace vkfw_core::gfx {
     CommandPool LogicalDevice::CreateCommandPoolForQueue(std::string_view name, unsigned int familyIndex, const vk::CommandPoolCreateFlags& flags) const
     {
         if constexpr (use_debug_pipeline) {
-            vk::CommandPoolCreateInfo poolInfo{flags, m_singleQueueOnly ? 0 : familyIndex};
-            return CommandPool{GetHandle(), name, GetHandle().createCommandPoolUnique(poolInfo)};
+            vk::CommandPoolCreateInfo poolInfo{flags, m_singleQueueOnly ? 0 : m_queueDescriptions[familyIndex].m_familyIndex};
+            return CommandPool{GetHandle(), name, familyIndex, GetHandle().createCommandPoolUnique(poolInfo)};
         } else {
             vk::CommandPoolCreateInfo poolInfo{flags, familyIndex};
-            return CommandPool{GetHandle(), name, GetHandle().createCommandPoolUnique(poolInfo)};
+            return CommandPool{GetHandle(), name, familyIndex, GetHandle().createCommandPoolUnique(poolInfo)};
         }
     }
 
