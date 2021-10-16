@@ -157,7 +157,7 @@ namespace vkfw_core::gfx {
         const Texture* lastImage, const Texture& image,
         std::size_t& imageOffset, vk::MemoryAllocateInfo& allocInfo)
     {
-        auto memRequirements = device->GetHandle().getImageMemoryRequirements(image.GetImage());
+        auto memRequirements = image.GetMemoryRequirements();
         std::size_t newOffset;
         if (lastImage == nullptr) {
             newOffset = device->CalculateBufferImageOffset(image, imageOffset);

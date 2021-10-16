@@ -21,7 +21,6 @@ namespace vkfw_core::gfx {
         texDesc.m_imageTiling = vk::ImageTiling::eLinear;
         texDesc.m_imageUsage = vk::ImageUsageFlagBits::eTransferSrc;
         texDesc.m_sharingMode = vk::SharingMode::eExclusive;
-        texDesc.m_imageLayout = vk::ImageLayout::ePreinitialized;
         return texDesc;
     }
 
@@ -31,7 +30,6 @@ namespace vkfw_core::gfx {
         texDesc.m_imageTiling = vk::ImageTiling::eLinear;
         texDesc.m_imageUsage = vk::ImageUsageFlagBits::eTransferSrc;
         texDesc.m_sharingMode = vk::SharingMode::eExclusive;
-        texDesc.m_imageLayout = vk::ImageLayout::ePreinitialized;
         return texDesc;
     }
 
@@ -43,7 +41,6 @@ namespace vkfw_core::gfx {
         texDesc.m_imageTiling = vk::ImageTiling::eOptimal;
         texDesc.m_imageUsage = vk::ImageUsageFlagBits::eSampled;
         texDesc.m_sharingMode = vk::SharingMode::eExclusive;
-        texDesc.m_imageLayout = vk::ImageLayout::ePreinitialized;
         return texDesc;
     }
 
@@ -55,7 +52,6 @@ namespace vkfw_core::gfx {
         texDesc.m_imageTiling = vk::ImageTiling::eOptimal;
         texDesc.m_imageUsage = vk::ImageUsageFlagBits::eDepthStencilAttachment;
         texDesc.m_sharingMode = vk::SharingMode::eExclusive;
-        texDesc.m_imageLayout = vk::ImageLayout::eUndefined;
         return texDesc;
     }
 
@@ -135,8 +131,7 @@ namespace vkfw_core::gfx {
         m_image = GetHandle();
 
         if (initMemory) {
-            vk::MemoryRequirements memRequirements =
-                m_device->GetHandle().getImageMemoryRequirements(GetHandle());
+            vk::MemoryRequirements memRequirements = GetMemoryRequirements();
             m_imageDeviceMemory.InitializeMemory(memRequirements);
             BindMemory(m_imageDeviceMemory.GetHandle(), 0);
             InitializeImageView();
@@ -158,35 +153,6 @@ namespace vkfw_core::gfx {
 
         vk::ImageViewCreateInfo imgViewCreateInfo{ vk::ImageViewCreateFlags(), m_image, m_viewType, m_desc.m_format, vk::ComponentMapping(), imgSubresourceRange };
         m_imageView.SetHandle(m_device->GetHandle(), m_device->GetHandle().createImageViewUnique(imgViewCreateInfo));
-    }
-
-    void Texture::TransitionLayout(vk::ImageLayout newLayout, const CommandBuffer& cmdBuffer)
-    {
-        vk::ImageSubresourceRange subresourceRange{ GetValidAspects(), 0, m_mipLevels, 0, m_size.w };
-        vk::ImageMemoryBarrier transitionBarrier{ vk::AccessFlags(), vk::AccessFlags(), m_desc.m_imageLayout,
-            newLayout, VK_QUEUE_FAMILY_IGNORED, VK_QUEUE_FAMILY_IGNORED, m_image, subresourceRange };
-
-        transitionBarrier.srcAccessMask = GetAccessFlagsForLayout(m_desc.m_imageLayout);
-        transitionBarrier.dstAccessMask = GetAccessFlagsForLayout(newLayout);
-
-        cmdBuffer.GetHandle().pipelineBarrier(GetStageFlagsForLayout(m_desc.m_imageLayout), GetStageFlagsForLayout(newLayout),
-            vk::DependencyFlags(), nullptr, nullptr, transitionBarrier);
-        m_desc.m_imageLayout = newLayout;
-    }
-
-    CommandBuffer Texture::TransitionLayout(vk::ImageLayout newLayout, const Queue& transitionQueue,
-                                            std::span<vk::Semaphore> waitSemaphores,
-                                            std::span<vk::Semaphore> signalSemaphores, const Fence& fence)
-    {
-        if (m_desc.m_imageLayout == newLayout) { return CommandBuffer{}; }
-
-        auto transitionCmdBuffer = CommandBuffer::beginSingleTimeSubmit(
-            m_device, fmt::format("TransitionLayoutCmdBuffer:{}", GetName()), "TransitionLayout",
-            transitionQueue.GetCommandPool());
-        TransitionLayout(newLayout, transitionCmdBuffer);
-        CommandBuffer::endSingleTimeSubmit(transitionQueue, transitionCmdBuffer, waitSemaphores, signalSemaphores,
-                                           fence);
-        return transitionCmdBuffer;
     }
 
     void Texture::CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, Texture& dstImage,
@@ -270,37 +236,6 @@ namespace vkfw_core::gfx {
         return vk::ImageAspectFlagBits::eColor;
     }
 
-    ImageAccessor Texture::GetAccess() { return ImageAccessor{m_device, GetHandle(), this}; }
-
-    vk::AccessFlags Texture::GetAccessFlagsForLayout(vk::ImageLayout layout)
-    {
-        switch (layout) {
-        case vk::ImageLayout::eUndefined: return vk::AccessFlags();
-        case vk::ImageLayout::ePreinitialized: return vk::AccessFlagBits::eHostWrite;
-        case vk::ImageLayout::eTransferDstOptimal: return vk::AccessFlagBits::eTransferWrite;
-        case vk::ImageLayout::eTransferSrcOptimal: return vk::AccessFlagBits::eTransferRead;
-        case vk::ImageLayout::eColorAttachmentOptimal: return vk::AccessFlagBits::eColorAttachmentWrite;
-        case vk::ImageLayout::eDepthStencilAttachmentOptimal:
-            return vk::AccessFlagBits::eDepthStencilAttachmentRead | vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-        case vk::ImageLayout::eShaderReadOnlyOptimal: return vk::AccessFlagBits::eShaderRead;
-        default: return vk::AccessFlags();
-        }
-    }
-
-    vk::PipelineStageFlags Texture::GetStageFlagsForLayout(vk::ImageLayout layout)
-    {
-        switch (layout) {
-        case vk::ImageLayout::eUndefined: return vk::PipelineStageFlagBits::eTopOfPipe;
-        case vk::ImageLayout::ePreinitialized: return vk::PipelineStageFlagBits::eHost;
-        case vk::ImageLayout::eTransferDstOptimal:
-        case vk::ImageLayout::eTransferSrcOptimal: return vk::PipelineStageFlagBits::eTransfer;
-        case vk::ImageLayout::eColorAttachmentOptimal: return vk::PipelineStageFlagBits::eColorAttachmentOutput;
-        case vk::ImageLayout::eDepthStencilAttachmentOptimal: return vk::PipelineStageFlagBits::eEarlyFragmentTests;
-        case vk::ImageLayout::eShaderReadOnlyOptimal: return vk::PipelineStageFlagBits::eFragmentShader;
-        default: return vk::PipelineStageFlagBits::eTopOfPipe;
-        }
-    }
-
     void Texture::InitSize(const glm::u32vec4& size, std::uint32_t mipLevels)
     {
         assert(size.x > 0);
@@ -310,7 +245,7 @@ namespace vkfw_core::gfx {
         assert(mipLevels > 0);
 
         // not sure if this is needed again at some point.
-        assert(!GetHandle());
+        assert(!m_image);
         // this->~Texture();
 
         m_pixelSize = size;
@@ -341,13 +276,30 @@ namespace vkfw_core::gfx {
         layout.AddBinding(binding, type, 1, shaderFlags);
     }
 
-    void Texture::FillDescriptorImageInfo(vk::DescriptorImageInfo& descInfo, const Sampler& sampler) const
+    void Texture::FillDescriptorImageInfo(vk::DescriptorImageInfo& descInfo, const Sampler& sampler,
+                                          vk::ImageLayout imageLayout) const
     {
         descInfo.sampler = sampler.GetHandle();
         descInfo.imageView = m_imageView.GetHandle();
-        descInfo.imageLayout = GetImageLayout();
+        descInfo.imageLayout = imageLayout;
     }
 
+    ImageAccessor Texture::GetAccess() { return ImageAccessor{m_device, m_image, this}; }
+
+    inline void Texture::BindMemory(vk::DeviceMemory deviceMemory, std::size_t offset)
+    {
+        m_device->GetHandle().bindImageMemory(GetHandle(), deviceMemory, offset);
+    }
+
+    vk::MemoryRequirements Texture::GetMemoryRequirements() const
+    {
+        return m_device->GetHandle().getImageMemoryRequirements(m_image);
+    }
+
+    vk::SubresourceLayout Texture::GetSubresourceLayout(const vk::ImageSubresource& subresource) const
+    {
+        return GetDevice().getImageSubresourceLayout(m_image, subresource);
+    }
 
     ImageAccessor::ImageAccessor(const LogicalDevice* device, vk::Image image, Texture* texture)
         : m_device{device}, m_image{image}, m_texture{texture}

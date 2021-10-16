@@ -174,8 +174,7 @@ namespace vkfw_core::gfx {
         }
         for (const auto& contentDesc : m_imageContents) {
             vk::ImageSubresource imgSubresource{ contentDesc.m_aspectFlags, contentDesc.m_mipLevel, contentDesc.m_arrayLayer };
-            auto subresourceLayout = GetDevice()->GetHandle().getImageSubresourceLayout(
-                m_hostImages[contentDesc.m_imageIdx].GetImage(), imgSubresource);
+            auto subresourceLayout = m_hostImages[contentDesc.m_imageIdx].GetSubresourceLayout(imgSubresource);
             m_hostMemory.CopyToHostMemory(m_hostOffsets[contentDesc.m_imageIdx + m_hostBuffers.size()], glm::u32vec3(0),
                                          subresourceLayout, contentDesc.m_size,
                                          contentDesc.m_deleter ? std::get<void*>(contentDesc.m_data)

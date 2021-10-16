@@ -82,14 +82,14 @@ namespace vkfw_core::gfx {
         assert(mipLevel < GetMipLevels());
 
         vk::ImageSubresource subresource{ GetValidAspects(), mipLevel, arrayLayer };
-        auto layout = GetDevice().getImageSubresourceLayout(GetImage(), subresource);
+        auto layout = GetSubresourceLayout(subresource);
         GetDeviceMemory().CopyToHostMemory(0, offset, layout, size, data);
     }
 
     void HostTexture::DownloadData(std::uint32_t mipLevel, std::uint32_t arrayLayer, const glm::u32vec3& size, void* data) const
     {
         vk::ImageSubresource subresource{ GetValidAspects(), mipLevel, arrayLayer };
-        auto layout = GetDevice().getImageSubresourceLayout(GetImage(), subresource);
+        auto layout = GetSubresourceLayout(subresource);
 
         GetDeviceMemory().CopyFromHostMemory(0, glm::u32vec3(0), layout, size, data);
     }
