@@ -104,9 +104,7 @@ namespace vkfw_core::gfx {
         std::vector<vk::ImageLayout> imageLayouts;
         imageLayouts.resize(m_desc.m_tex.size() - m_extTextures.size());
         for (auto i = m_extTextures.size(); i < m_desc.m_tex.size(); ++i) {
-            imageLayouts[i - m_extTextures.size()] = IsDepthStencilFormat(m_desc.m_tex[i].m_format)
-                                                         ? vk::ImageLayout::eDepthStencilAttachmentOptimal
-                                                         : vk::ImageLayout::eColorAttachmentOptimal;
+            imageLayouts[i - m_extTextures.size()] = GetFittingAttachmentLayout(m_desc.m_tex[i].m_format);
             m_memoryGroup.AddTextureToGroup(fmt::format("FBO:{}-Tex{}", GetName(), i), m_desc.m_tex[i],
                                             vk::ImageLayout::eUndefined, glm::u32vec4(m_size, 1, 1), 1,
                                             m_queueFamilyIndices);
@@ -121,16 +119,10 @@ namespace vkfw_core::gfx {
         }
         PipelineBarrier barrier{m_device, vk::PipelineStageFlagBits::eColorAttachmentOutput};
         for (auto i = 0U; i < m_memoryGroup.GetImagesInGroup(); ++i) {
-            vk::AccessFlags access = vk::AccessFlagBits::eColorAttachmentWrite;
-            vk::PipelineStageFlags pipelineStage = vk::PipelineStageFlagBits::eColorAttachmentOutput;
-            if (IsDepthStencilFormat(m_desc.m_tex[i].m_format)) {
-                access = vk::AccessFlagBits::eDepthStencilAttachmentWrite;
-                pipelineStage = vk::PipelineStageFlagBits::eEarlyFragmentTests;
-            }
-
+            vk::AccessFlags access = GetFittingAttachmentAccessFlags(m_desc.m_tex[i].m_format);
+            vk::PipelineStageFlags pipelineStage = GetFittingAttachmentPipelineStage(m_desc.m_tex[i].m_format);
             auto accessor = m_memoryGroup.GetTexture(i)->GetAccess();
-            [[maybe_unused]] auto dummy = accessor.Get(access, pipelineStage, imageLayouts[i], barrier);
-            // m_memoryGroup.GetTexture(i)->TransitionLayout(imageLayouts[i], cmdBuffer ? cmdBuffer : ucmdBuffer);
+            accessor.SetAccess(access, pipelineStage, imageLayouts[i], barrier);
         }
         barrier.Record(cmdBuffer ? cmdBuffer : ucmdBuffer);
         if (!cmdBuffer) {
@@ -169,17 +161,14 @@ namespace vkfw_core::gfx {
         SetHandle(m_device->GetHandle(), m_device->GetHandle().createFramebufferUnique(fbCreateInfo));
     }
 
+    bool Framebuffer::IsAnyDepthOrStencilFormat(vk::Format format)
+    {
+        return IsDepthFormat(format) || IsStencilFormat(format) || IsDepthStencilFormat(format);
+    }
+
     bool Framebuffer::IsDepthStencilFormat(vk::Format format)
     {
-        if (format == vk::Format::eD16Unorm) {
-            return true;
-        } else if (format == vk::Format::eX8D24UnormPack32) {
-            return true;
-        } else if (format == vk::Format::eD32Sfloat) {
-            return true;
-        } else if (format == vk::Format::eS8Uint) {
-            return true;
-        } else if (format == vk::Format::eD16UnormS8Uint) {
+        if (format == vk::Format::eD16UnormS8Uint) {
             return true;
         } else if (format == vk::Format::eD24UnormS8Uint) {
             return true;
@@ -187,5 +176,57 @@ namespace vkfw_core::gfx {
             return true;
         }
         return false;
+    }
+
+    bool Framebuffer::IsStencilFormat(vk::Format format)
+    {
+        if (format == vk::Format::eS8Uint) {
+            return true;
+        }
+        return false;
+    }
+
+    bool Framebuffer::IsDepthFormat(vk::Format format)
+    {
+        if (format == vk::Format::eD16Unorm) {
+            return true;
+        } else if (format == vk::Format::eX8D24UnormPack32) {
+            return true;
+        } else if (format == vk::Format::eD32Sfloat) {
+            return true;
+        }
+        return false;
+    }
+
+    vk::ImageLayout Framebuffer::GetFittingAttachmentLayout(vk::Format format)
+    {
+        // at this point feature separateDepthStencilLayouts is not enabled -> all layouts that fit depth or stencil are d/s layouts.
+        // if (IsDepthFormat(format)) {
+        //     return vk::ImageLayout::eDepthAttachmentOptimal;
+        // } else if (IsStencilFormat(format)) {
+        //     return vk::ImageLayout::eStencilAttachmentOptimal;
+        // } else if (IsDepthStencilFormat(format)) {
+        //     return vk::ImageLayout::eDepthStencilAttachmentOptimal;
+        // }
+        if (IsAnyDepthOrStencilFormat(format)) {
+            return vk::ImageLayout::eDepthStencilAttachmentOptimal;
+        }
+        return vk::ImageLayout::eColorAttachmentOptimal;
+    }
+
+    vk::AccessFlags Framebuffer::GetFittingAttachmentAccessFlags(vk::Format format)
+    {
+        if (IsAnyDepthOrStencilFormat(format)) {
+            return vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+        }
+        return vk::AccessFlagBits::eColorAttachmentWrite;
+    }
+
+    vk::PipelineStageFlags Framebuffer::GetFittingAttachmentPipelineStage(vk::Format format)
+    {
+        if (IsAnyDepthOrStencilFormat(format)) {
+            return vk::PipelineStageFlagBits::eEarlyFragmentTests;
+        }
+        return vk::PipelineStageFlagBits::eColorAttachmentOutput;
     }
 }

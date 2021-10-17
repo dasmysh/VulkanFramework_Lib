@@ -28,6 +28,7 @@ namespace vkfw_core::gfx {
     class SceneMeshNode;
     class SubMesh;
     class DeviceBuffer;
+    class PipelineBarrier;
 }
 
 namespace vkfw_core::gfx::rt {
@@ -62,6 +63,8 @@ namespace vkfw_core::gfx::rt {
                                        vk::DescriptorBufferInfo& materialBufferInfo,
                                        std::vector<vk::DescriptorImageInfo>& diffuseTextureInfos,
                                        std::vector<vk::DescriptorImageInfo>& bumpTextureInfos) const;
+        void CreateResourceUseBarriers(vk::AccessFlags access, vk::PipelineStageFlags pipelineStage,
+                                       vk::ImageLayout newLayout, PipelineBarrier& barrier);
 
     private:
         struct MeshGeometryInfo

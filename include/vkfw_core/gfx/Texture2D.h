@@ -42,6 +42,7 @@ namespace vkfw_core::gfx {
         ~Texture2D() override;
 
         [[nodiscard]] const DeviceTexture& GetTexture() const;
+        [[nodiscard]] DeviceTexture& GetTexture();
 
     private:
         enum class FormatProperties {

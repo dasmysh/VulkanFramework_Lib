@@ -175,10 +175,10 @@ namespace vkfw_core::gfx {
         auto dstAccessor = dstImage.GetAccess();
 
         PipelineBarrier barrier{m_device, vk::PipelineStageFlagBits::eTransfer};
-        srcAccessor.Get(vk::AccessFlagBits::eTransferRead, vk::PipelineStageFlagBits::eTransfer,
-                        vk::ImageLayout::eTransferSrcOptimal, barrier);
-        dstAccessor.Get(vk::AccessFlagBits::eTransferWrite, vk::PipelineStageFlagBits::eTransfer,
-                        vk::ImageLayout::eTransferDstOptimal, barrier);
+        srcAccessor.SetAccess(vk::AccessFlagBits::eTransferRead, vk::PipelineStageFlagBits::eTransfer,
+                              vk::ImageLayout::eTransferSrcOptimal, barrier);
+        dstAccessor.SetAccess(vk::AccessFlagBits::eTransferWrite, vk::PipelineStageFlagBits::eTransfer,
+                              vk::ImageLayout::eTransferDstOptimal, barrier);
         barrier.Record(cmdBuffer);
 
         vk::ImageSubresourceLayers subresourceLayersSrc{ GetValidAspects(), srcMipLevel, srcOffset.w, size.w };
@@ -325,6 +325,12 @@ namespace vkfw_core::gfx {
         return *this;
     }
 
+    void ImageAccessor::SetAccess(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
+                                  vk::ImageLayout imageLayout, PipelineBarrier& barrier)
+    {
+        barrier.AddSingleBarrier(m_texture, m_image, imageLayout, access, pipelineStages);
+    }
+
     inline vk::Image ImageAccessor::Get(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
                                         vk::ImageLayout imageLayout, SingleResourcePipelineBarrier& barrier)
     {
@@ -335,7 +341,7 @@ namespace vkfw_core::gfx {
     inline vk::Image ImageAccessor::Get(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
                                         vk::ImageLayout imageLayout, PipelineBarrier& barrier)
     {
-        barrier.AddSingleBarrier(m_texture, m_image, imageLayout, access, pipelineStages);
+        SetAccess(access, pipelineStages, imageLayout, barrier);
         return m_image;
     }
 

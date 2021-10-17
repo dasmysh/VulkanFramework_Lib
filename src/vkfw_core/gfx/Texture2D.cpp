@@ -171,8 +171,6 @@ namespace vkfw_core::gfx {
         return fmt;
     }
 
-    const DeviceTexture& Texture2D::GetTexture() const
-    {
-        return *m_memoryGroup->GetTexture(m_textureIdx);
-    }
+    const DeviceTexture& Texture2D::GetTexture() const { return *m_memoryGroup->GetTexture(m_textureIdx); }
+    DeviceTexture& Texture2D::GetTexture() { return *m_memoryGroup->GetTexture(m_textureIdx); }
 }

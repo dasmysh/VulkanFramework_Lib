@@ -258,4 +258,20 @@ namespace vkfw_core::gfx::rt {
         }
     }
 
+    void AccelerationStructureGeometry::CreateResourceUseBarriers(vk::AccessFlags access, vk::PipelineStageFlags pipelineStage, vk::ImageLayout newLayout, PipelineBarrier& barrier)
+    {
+        // TODO: buffer barriers.
+
+        for (auto& mat : m_materials) {
+            if (mat.m_diffuseTexture) { auto accessor = mat.m_diffuseTexture->GetTexture().GetAccess();
+                accessor.SetAccess(access, pipelineStage, newLayout, barrier);
+            }
+
+            if (mat.m_bumpMap) {
+                auto accessor = mat.m_bumpMap->GetTexture().GetAccess();
+                accessor.SetAccess(access, pipelineStage, newLayout, barrier);
+            }
+        }
+    }
+
 }

@@ -89,10 +89,12 @@ namespace vkfw_core::gfx {
         ImageAccessor(const ImageAccessor&) = delete;
         ImageAccessor& operator=(const ImageAccessor&) = delete;
 
-        vk::Image Get(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages, vk::ImageLayout imageLayout,
-                      SingleResourcePipelineBarrier& barrier);
-        vk::Image Get(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages, vk::ImageLayout imageLayout,
-                      PipelineBarrier& barrier);
+        void SetAccess(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages, vk::ImageLayout imageLayout,
+                       PipelineBarrier& barrier);
+        [[nodiscard]] vk::Image Get(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
+                                    vk::ImageLayout imageLayout, SingleResourcePipelineBarrier& barrier);
+        [[nodiscard]] vk::Image Get(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
+                                    vk::ImageLayout imageLayout, PipelineBarrier& barrier);
 
     private:
         const LogicalDevice* m_device;

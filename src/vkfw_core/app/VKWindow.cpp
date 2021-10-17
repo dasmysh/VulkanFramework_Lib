@@ -19,6 +19,7 @@
 #include "imgui.h"
 #include "core/imgui/imgui_impl_glfw.h"
 #include "core/imgui/imgui_impl_vulkan.h"
+#include "gfx/vk/wrappers/PipelineBarriers.h"
 
 namespace vkfw_core {
 
@@ -473,6 +474,7 @@ namespace vkfw_core {
             auto swapchainImages = m_logicalDevice->GetHandle().getSwapchainImagesKHR(m_swapchain.GetHandle());
 
             auto dsFormat = FindSupportedDepthFormat();
+            auto dsAttachementLayout = gfx::Framebuffer::GetFittingAttachmentLayout(dsFormat.second);
             {
                 // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
                 vk::AttachmentDescription colorAttachment{vk::AttachmentDescriptionFlags(),
@@ -493,9 +495,9 @@ namespace vkfw_core {
                                                           vk::AttachmentStoreOp::eDontCare,
                                                           vk::AttachmentLoadOp::eClear,
                                                           vk::AttachmentStoreOp::eDontCare,
-                                                          vk::ImageLayout::eDepthStencilAttachmentOptimal,
-                                                          vk::ImageLayout::eDepthStencilAttachmentOptimal};
-                vk::AttachmentReference depthAttachmentRef{1, vk::ImageLayout::eDepthStencilAttachmentOptimal};
+                                                          dsAttachementLayout,
+                                                          dsAttachementLayout};
+                vk::AttachmentReference depthAttachmentRef{1, dsAttachementLayout};
 
                 vk::SubpassDescription subPass{vk::SubpassDescriptionFlags(),
                                                vk::PipelineBindPoint::eGraphics,
@@ -546,9 +548,9 @@ namespace vkfw_core {
                                                           vk::AttachmentStoreOp::eDontCare,
                                                           vk::AttachmentLoadOp::eDontCare,
                                                           vk::AttachmentStoreOp::eDontCare,
-                                                          vk::ImageLayout::eDepthStencilAttachmentOptimal,
-                                                          vk::ImageLayout::eDepthStencilAttachmentOptimal};
-                vk::AttachmentReference depthAttachmentRef{1, vk::ImageLayout::eDepthStencilAttachmentOptimal};
+                                                          dsAttachementLayout,
+                                                          dsAttachementLayout};
+                vk::AttachmentReference depthAttachmentRef{1, dsAttachementLayout};
 
                 vk::SubpassDescription subPass{vk::SubpassDescriptionFlags(),
                                                vk::PipelineBindPoint::eGraphics,
@@ -747,7 +749,7 @@ namespace vkfw_core {
         }
     }
 
-    void VKWindow::DrawCurrentCommandBuffer() const
+    void VKWindow::DrawCurrentCommandBuffer()
     {
         {
             auto syncResult =
@@ -777,6 +779,20 @@ namespace vkfw_core {
             }
 
             {
+                const auto& fboDesc = m_swapchainFramebuffers[m_currentlyRenderedImage].GetDescriptor();
+                gfx::PipelineBarrier barrier{m_logicalDevice.get(), vk::PipelineStageFlagBits::eColorAttachmentOutput};
+                for (std::size_t iTex = 0; iTex < fboDesc.m_tex.size(); ++iTex) {
+                    const auto& texDesc = fboDesc.m_tex[iTex];
+                    auto& texture = m_swapchainFramebuffers[m_currentlyRenderedImage].GetTexture(iTex);
+                    auto accessor = texture.GetAccess();
+
+                    vk::AccessFlags access = gfx::Framebuffer::GetFittingAttachmentAccessFlags(texDesc.m_format);
+                    vk::PipelineStageFlags pipelineStage =
+                        gfx::Framebuffer::GetFittingAttachmentPipelineStage(texDesc.m_format);
+                    vk::ImageLayout layout = gfx::Framebuffer::GetFittingAttachmentLayout(texDesc.m_format);
+                    accessor.SetAccess(access, pipelineStage, layout, barrier);
+                }
+                barrier.Record(m_imGuiCommandBuffers[m_currentlyRenderedImage]);
                 vk::RenderPassBeginInfo imGuiRenderPassBeginInfo{
                     m_imGuiRenderPass.GetHandle(), m_swapchainFramebuffers[m_currentlyRenderedImage].GetHandle(),
                     vk::Rect2D(vk::Offset2D(0, 0), m_vkSurfaceExtend), 0, nullptr };

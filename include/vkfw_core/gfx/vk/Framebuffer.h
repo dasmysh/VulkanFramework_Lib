@@ -49,10 +49,18 @@ namespace vkfw_core::gfx {
         [[nodiscard]] const FramebufferDescriptor& GetDescriptor() const { return m_desc; }
         [[nodiscard]] Texture& GetTexture(std::size_t index);
 
+        static [[nodiscard]] bool IsAnyDepthOrStencilFormat(vk::Format format);
+        static [[nodiscard]] bool IsDepthStencilFormat(vk::Format format);
+        static [[nodiscard]] bool IsStencilFormat(vk::Format format);
+        static [[nodiscard]] bool IsDepthFormat(vk::Format format);
+
+        static [[nodiscard]] vk::ImageLayout GetFittingAttachmentLayout(vk::Format format);
+        static [[nodiscard]] vk::AccessFlags GetFittingAttachmentAccessFlags(vk::Format format);
+        static [[nodiscard]] vk::PipelineStageFlags GetFittingAttachmentPipelineStage(vk::Format format);
+
     private:
         void CreateImages(const CommandBuffer& cmdBuffer);
         void CreateFB();
-        bool IsDepthStencilFormat(vk::Format format);
 
         /** Holds the logical device. */
         const LogicalDevice* m_device;

@@ -75,7 +75,7 @@ namespace vkfw_core {
         void ForceResizeEvent() { m_frameBufferResize = true; }
         void PrepareFrame();
         // TODO: submit other command buffers to queue. [10/26/2016 Sebastian Maisch]
-        void DrawCurrentCommandBuffer() const;
+        void DrawCurrentCommandBuffer();
         void SubmitFrame();
 
         // for primary cmd buffer: dirty bit, update if needed. (start cmd buffer, end cmd buffer; render pass needs to be started and ended with BeginSwapchainRenderPass and EndSwapchainRenderpass.)
