@@ -82,16 +82,6 @@ namespace vkfw_core::gfx {
             }
         }
 
-    private:
-        static vk::ObjectType GetObjectType()
-        {
-            if constexpr (UniqueVulkanObject<T>) {
-                return T::element_type::objectType;
-            } else {
-                return T::objectType;
-            }
-        }
-
 #ifndef NDEBUG
         template<VulkanObject T> static void SetObjectName(vk::Device device, T object, std::string_view name)
         {
@@ -109,6 +99,16 @@ namespace vkfw_core::gfx {
         template<VulkanObject T> static void SetObjectName(vk::Device, T, std::string_view) {}
         template<VulkanObject T, typename Tag> static void SetObjectTag(vk::Device, T, std::uint64_t, const Tag&) {}
 #endif
+
+    private:
+        static vk::ObjectType GetObjectType()
+        {
+            if constexpr (UniqueVulkanObject<T>) {
+                return T::element_type::objectType;
+            } else {
+                return T::objectType;
+            }
+        }
 
         std::string m_name;
         T m_handle;

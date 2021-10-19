@@ -33,8 +33,8 @@ namespace vkfw_core {
         , m_config{&conf}
         , m_surface{nullptr, fmt::format("Win-{} Surface", conf.m_windowTitle), vk::UniqueSurfaceKHR{}}
         , m_swapchain{nullptr, fmt::format("Win-{} Swapchain", conf.m_windowTitle), vk::UniqueSwapchainKHR{}}
-        , m_swapchainRenderPass{nullptr, fmt::format("Win-{} SCRenderPass", conf.m_windowTitle), vk::UniqueRenderPass{}}
-        , m_imGuiRenderPass{nullptr, fmt::format("Win-{} ImGuiRenderPass", conf.m_windowTitle), vk::UniqueRenderPass{}}
+        , m_mainRenderingRenderPass{nullptr, fmt::format("Win-{} MainRenderPass", conf.m_windowTitle)}
+        , m_imGuiRenderPass{nullptr, fmt::format("Win-{} ImGuiRenderPass", conf.m_windowTitle)}
         , m_imguiDescPool{nullptr, fmt::format("Win-{} ImGuiDescriptorPool", conf.m_windowTitle), vk::UniqueDescriptorPool{}}
         , m_currMousePosition(0.0f),
         m_prevMousePosition(0.0f),
@@ -94,15 +94,15 @@ namespace vkfw_core {
         if (useGUI) { InitGUI(); }
     }
 
-    VKWindow::VKWindow(VKWindow&& rhs) noexcept :
-        m_window{ rhs.m_window },
-        m_config{ rhs.m_config },
-        m_surface{ std::move(rhs.m_surface) },
-        m_vkSurfaceExtend{ rhs.m_vkSurfaceExtend },
-        m_logicalDevice{ std::move(rhs.m_logicalDevice) },
-        m_graphicsQueue{ rhs.m_graphicsQueue },
-        m_swapchain{ std::move(rhs.m_swapchain) },
-        m_swapchainRenderPass{ std::move(rhs.m_swapchainRenderPass) }
+    VKWindow::VKWindow(VKWindow&& rhs) noexcept
+        : m_window{ rhs.m_window }
+        , m_config{ rhs.m_config }
+        , m_surface{ std::move(rhs.m_surface) }
+        , m_vkSurfaceExtent{rhs.m_vkSurfaceExtent}
+        , m_logicalDevice{ std::move(rhs.m_logicalDevice) }
+        , m_graphicsQueue{ rhs.m_graphicsQueue }
+        , m_swapchain{std::move(rhs.m_swapchain)}
+        , m_mainRenderingRenderPass{std::move(rhs.m_mainRenderingRenderPass)}
         , m_imGuiRenderPass{ std::move(rhs.m_imGuiRenderPass)}
         ,m_swapchainFramebuffers{ std::move(rhs.m_swapchainFramebuffers) },
         m_commandPools{ std::move(rhs.m_commandPools) },
@@ -134,11 +134,11 @@ namespace vkfw_core {
             m_window = rhs.m_window;
             m_config = rhs.m_config;
             m_surface = std::move(rhs.m_surface);
-            m_vkSurfaceExtend = rhs.m_vkSurfaceExtend;
+            m_vkSurfaceExtent = rhs.m_vkSurfaceExtent;
             m_logicalDevice = std::move(rhs.m_logicalDevice);
             m_graphicsQueue = rhs.m_graphicsQueue;
             m_swapchain = std::move(rhs.m_swapchain);
-            m_swapchainRenderPass = std::move(rhs.m_swapchainRenderPass);
+            m_mainRenderingRenderPass = std::move(rhs.m_mainRenderingRenderPass);
             m_imGuiRenderPass = std::move(rhs.m_imGuiRenderPass);
             m_swapchainFramebuffers = std::move(rhs.m_swapchainFramebuffers);
             m_commandPools = std::move(rhs.m_commandPools);
@@ -174,8 +174,8 @@ namespace vkfw_core {
             spdlog::critical("Error while releasing vulkan and window. Unknown exception.");
         }
         m_config->m_fullscreen = m_maximized;
-        m_config->m_windowWidth = m_vkSurfaceExtend.width;
-        m_config->m_windowHeight = m_vkSurfaceExtend.height;
+        m_config->m_windowWidth = m_vkSurfaceExtent.width;
+        m_config->m_windowHeight = m_vkSurfaceExtent.height;
     }
 
     bool VKWindow::IsClosing() const { return glfwWindowShouldClose(m_window) == GLFW_TRUE; }
@@ -431,8 +431,8 @@ namespace vkfw_core {
                                     surfaceCapabilities.minImageExtent.height);
         glm::u32vec2 maxSurfaceSize(surfaceCapabilities.maxImageExtent.width,
                                     surfaceCapabilities.maxImageExtent.height);
-        auto surfaceExtend = glm::clamp(configSurfaceSize, minSurfaceSize, maxSurfaceSize);
-        m_vkSurfaceExtend = vk::Extent2D{surfaceExtend.x, surfaceExtend.y};
+        auto surfaceExtent = glm::clamp(configSurfaceSize, minSurfaceSize, maxSurfaceSize);
+        m_vkSurfaceExtent = vk::Extent2D{surfaceExtent.x, surfaceExtent.y};
         auto imageCount = surfaceCapabilities.minImageCount + cfg::GetVulkanAdditionalImageCountFromConfig(*m_config);
 
         {
@@ -441,7 +441,7 @@ namespace vkfw_core {
                                                            imageCount,
                                                            surfaceFormat.format,
                                                            surfaceFormat.colorSpace,
-                                                           m_vkSurfaceExtend,
+                                                           m_vkSurfaceExtent,
                                                            1,
                                                            vk::ImageUsageFlagBits::eColorAttachment,
                                                            vk::SharingMode::eExclusive,
@@ -465,8 +465,8 @@ namespace vkfw_core {
             m_swapchain =
                 gfx::Swapchain{m_logicalDevice->GetHandle(), fmt::format("Win-{} Swapchain", m_config->m_windowTitle),
                                m_logicalDevice->GetHandle().createSwapchainKHRUnique(swapChainCreateInfo)};
-            m_windowData->Width = m_vkSurfaceExtend.width;
-            m_windowData->Height = m_vkSurfaceExtend.height;
+            m_windowData->Width = m_vkSurfaceExtent.width;
+            m_windowData->Height = m_vkSurfaceExtent.height;
             m_windowData->Swapchain = m_swapchain.GetHandle();
             m_windowData->PresentMode = static_cast<VkPresentModeKHR>(presentMode);
             m_windowData->SurfaceFormat = surfaceFormat;
@@ -475,123 +475,38 @@ namespace vkfw_core {
 
             auto dsFormat = FindSupportedDepthFormat();
             auto dsAttachementLayout = gfx::Framebuffer::GetFittingAttachmentLayout(dsFormat.second);
-            {
-                // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
-                vk::AttachmentDescription colorAttachment{vk::AttachmentDescriptionFlags(),
-                                                          surfaceFormat.format,
-                                                          vk::SampleCountFlagBits::e1,
-                                                          vk::AttachmentLoadOp::eClear,
-                                                          vk::AttachmentStoreOp::eStore,
-                                                          vk::AttachmentLoadOp::eDontCare,
-                                                          vk::AttachmentStoreOp::eDontCare,
-                                                          vk::ImageLayout::eUndefined,
-                                                          vk::ImageLayout::eColorAttachmentOptimal};
-                vk::AttachmentReference colorAttachmentRef{0, vk::ImageLayout::eColorAttachmentOptimal};
-                // TODO: check the stencil load/store operations. [3/20/2017 Sebastian Maisch]
-                vk::AttachmentDescription depthAttachment{vk::AttachmentDescriptionFlags(),
-                                                          dsFormat.second,
-                                                          vk::SampleCountFlagBits::e1,
-                                                          vk::AttachmentLoadOp::eClear,
-                                                          vk::AttachmentStoreOp::eDontCare,
-                                                          vk::AttachmentLoadOp::eClear,
-                                                          vk::AttachmentStoreOp::eDontCare,
-                                                          dsAttachementLayout,
-                                                          dsAttachementLayout};
-                vk::AttachmentReference depthAttachmentRef{1, dsAttachementLayout};
-
-                vk::SubpassDescription subPass{vk::SubpassDescriptionFlags(),
-                                               vk::PipelineBindPoint::eGraphics,
-                                               0,
-                                               nullptr,
-                                               1,
-                                               &colorAttachmentRef,
-                                               nullptr,
-                                               &depthAttachmentRef,
-                                               0,
-                                               nullptr};
-
-                vk::SubpassDependency dependency{VK_SUBPASS_EXTERNAL,
-                                                 0,
-                                                 vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                                                 vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                                                 vk::AccessFlags(),
-                                                 vk::AccessFlagBits::eColorAttachmentRead
-                                                     | vk::AccessFlagBits::eColorAttachmentWrite};
-                std::array<vk::AttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
-                vk::RenderPassCreateInfo renderPassInfo{vk::RenderPassCreateFlags(),
-                                                        static_cast<std::uint32_t>(attachments.size()),
-                                                        attachments.data(),
-                                                        1,
-                                                        &subPass,
-                                                        1,
-                                                        &dependency};
-
-                m_swapchainRenderPass = gfx::RenderPass{
-                    m_logicalDevice->GetHandle(), fmt::format("Win-{} SwapchainRenderPass", m_config->m_windowTitle),
-                    m_logicalDevice->GetHandle().createRenderPassUnique(renderPassInfo)};
-            }
-
-            {
-                // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
-                vk::AttachmentDescription colorAttachment{
-                    vk::AttachmentDescriptionFlags(), surfaceFormat.format,
-                    vk::SampleCountFlagBits::e1,      vk::AttachmentLoadOp::eLoad,
-                    vk::AttachmentStoreOp::eStore,    vk::AttachmentLoadOp::eDontCare,
-                    vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
-                    vk::ImageLayout::ePresentSrcKHR};
-                vk::AttachmentReference colorAttachmentRef{0, vk::ImageLayout::eColorAttachmentOptimal};
-                // TODO: check the stencil load/store operations. [3/20/2017 Sebastian Maisch]
-                vk::AttachmentDescription depthAttachment{vk::AttachmentDescriptionFlags(),
-                                                          dsFormat.second,
-                                                          vk::SampleCountFlagBits::e1,
-                                                          vk::AttachmentLoadOp::eLoad,
-                                                          vk::AttachmentStoreOp::eDontCare,
-                                                          vk::AttachmentLoadOp::eDontCare,
-                                                          vk::AttachmentStoreOp::eDontCare,
-                                                          dsAttachementLayout,
-                                                          dsAttachementLayout};
-                vk::AttachmentReference depthAttachmentRef{1, dsAttachementLayout};
-
-                vk::SubpassDescription subPass{vk::SubpassDescriptionFlags(),
-                                               vk::PipelineBindPoint::eGraphics,
-                                               0,
-                                               nullptr,
-                                               1,
-                                               &colorAttachmentRef,
-                                               nullptr,
-                                               &depthAttachmentRef,
-                                               0,
-                                               nullptr};
-
-                vk::SubpassDependency dependency{VK_SUBPASS_EXTERNAL,
-                                                 0,
-                                                 vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                                                 vk::PipelineStageFlagBits::eColorAttachmentOutput,
-                                                 vk::AccessFlags(),
-                                                 vk::AccessFlagBits::eColorAttachmentWrite};
-                std::array<vk::AttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
-                vk::RenderPassCreateInfo renderPassInfo{vk::RenderPassCreateFlags(),
-                                                        static_cast<std::uint32_t>(attachments.size()),
-                                                        attachments.data(),
-                                                        1,
-                                                        &subPass,
-                                                        1,
-                                                        &dependency};
-
-                m_imGuiRenderPass = gfx::RenderPass{
-                    m_logicalDevice->GetHandle(), fmt::format("Win-{} ImGuiRenderPass", m_config->m_windowTitle),
-                    m_logicalDevice->GetHandle().createRenderPassUnique(renderPassInfo)};
-                m_windowData->RenderPass = m_imGuiRenderPass.GetHandle();
-            }
 
             // TODO: set correct multisampling flags. [11/2/2016 Sebastian Maisch]
-            gfx::FramebufferDescriptor fbDesc;
-            fbDesc.m_tex.emplace_back(m_config->m_backbufferBits / 8, surfaceFormat.format,
-                                      vk::SampleCountFlagBits::e1);
-            if (m_config->m_useRayTracing) { fbDesc.m_tex.back().m_imageUsage |= vk::ImageUsageFlagBits::eTransferDst; }
-            fbDesc.m_tex.push_back(gfx::TextureDescriptor::DepthBufferTextureDesc(dsFormat.first, dsFormat.second,
-                                                                                  vk::SampleCountFlagBits::e1));
+            gfx::FramebufferDescriptor mainRenderingFbDesc;
+            mainRenderingFbDesc.m_attachments.emplace_back(
+                vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+                vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal,
+                m_config->m_backbufferBits / 8, surfaceFormat.format, vk::SampleCountFlagBits::e1);
+
+            if (m_config->m_useRayTracing) {
+                mainRenderingFbDesc.m_attachments.back().m_tex.m_imageUsage |= vk::ImageUsageFlagBits::eTransferDst;
+            }
+
+            mainRenderingFbDesc.m_attachments.emplace_back(
+                vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eDontCare, vk::AttachmentLoadOp::eClear,
+                vk::AttachmentStoreOp::eDontCare, dsAttachementLayout, dsAttachementLayout,
+                gfx::TextureDescriptor::DepthBufferTextureDesc(dsFormat.first, dsFormat.second,
+                                                               vk::SampleCountFlagBits::e1));
+            m_mainRenderingRenderPass.Create(m_logicalDevice->GetHandle(), mainRenderingFbDesc);
             m_swapchainFramebuffers.reserve(swapchainImages.size());
+
+
+            gfx::FramebufferDescriptor imGuiFbDesc;
+            imGuiFbDesc.m_attachments.emplace_back(
+                vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
+                vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
+                vk::ImageLayout::ePresentSrcKHR, mainRenderingFbDesc.m_attachments[0].m_tex);
+            imGuiFbDesc.m_attachments.emplace_back(vk::AttachmentLoadOp::eLoad, vk::AttachmentStoreOp::eDontCare,
+                                                   vk::AttachmentLoadOp::eDontCare, vk::AttachmentStoreOp::eDontCare,
+                                                   dsAttachementLayout, dsAttachementLayout,
+                                                   mainRenderingFbDesc.m_attachments[1].m_tex);
+            m_imGuiRenderPass.Create(m_logicalDevice->GetHandle(), imGuiFbDesc);
+            m_windowData->RenderPass = m_imGuiRenderPass.GetHandle();
 
             m_commandPools.resize(swapchainImages.size());
             m_imGuiCommandPools.resize(swapchainImages.size());
@@ -606,9 +521,9 @@ namespace vkfw_core {
             for (std::size_t i = 0; i < swapchainImages.size(); ++i) {
                 std::vector<vk::Image> attachments{swapchainImages[i]};
                 m_swapchainFramebuffers.emplace_back(m_logicalDevice.get(),
-                                                     fmt::format("Win-{} SwapchainImage{}", m_config->m_windowTitle, i),
-                                                     glm::uvec2(m_vkSurfaceExtend.width, m_vkSurfaceExtend.height),
-                                                     attachments, m_swapchainRenderPass, fbDesc);
+                                                     fmt::format("Win-{} SwapchainFBO{}", m_config->m_windowTitle, i),
+                                                     glm::uvec2(m_vkSurfaceExtent.width, m_vkSurfaceExtent.height),
+                                                     attachments, m_mainRenderingRenderPass, mainRenderingFbDesc);
 
                 m_commandPools[i] = gfx::CommandPool{
                     m_logicalDevice->GetHandle(), fmt::format("Win-{} CommandPool{}", m_config->m_windowTitle, i),
@@ -647,7 +562,6 @@ namespace vkfw_core {
     void VKWindow::DestroySwapchainImages()
     {
         m_swapchainFramebuffers.clear();
-        m_swapchainRenderPass = gfx::RenderPass{};
     }
 
     void VKWindow::ReleaseVulkan()
@@ -666,6 +580,7 @@ namespace vkfw_core {
         m_imGuiCommandBuffers.clear();
         m_commandPools.clear();
 
+        m_mainRenderingRenderPass = gfx::RenderPass{};
         m_imGuiRenderPass = gfx::RenderPass{};
         m_imguiDescPool = gfx::DescriptorPool{};
         m_imGuiCommandPools.clear();
@@ -778,26 +693,9 @@ namespace vkfw_core {
                 m_imGuiCommandBuffers[m_currentlyRenderedImage].Begin(cmdBufferBeginInfo);
             }
 
-            {
-                const auto& fboDesc = m_swapchainFramebuffers[m_currentlyRenderedImage].GetDescriptor();
-                gfx::PipelineBarrier barrier{m_logicalDevice.get(), vk::PipelineStageFlagBits::eColorAttachmentOutput};
-                for (std::size_t iTex = 0; iTex < fboDesc.m_tex.size(); ++iTex) {
-                    const auto& texDesc = fboDesc.m_tex[iTex];
-                    auto& texture = m_swapchainFramebuffers[m_currentlyRenderedImage].GetTexture(iTex);
-                    auto accessor = texture.GetAccess();
-
-                    vk::AccessFlags access = gfx::Framebuffer::GetFittingAttachmentAccessFlags(texDesc.m_format);
-                    vk::PipelineStageFlags pipelineStage =
-                        gfx::Framebuffer::GetFittingAttachmentPipelineStage(texDesc.m_format);
-                    vk::ImageLayout layout = gfx::Framebuffer::GetFittingAttachmentLayout(texDesc.m_format);
-                    accessor.SetAccess(access, pipelineStage, layout, barrier);
-                }
-                barrier.Record(m_imGuiCommandBuffers[m_currentlyRenderedImage]);
-                vk::RenderPassBeginInfo imGuiRenderPassBeginInfo{
-                    m_imGuiRenderPass.GetHandle(), m_swapchainFramebuffers[m_currentlyRenderedImage].GetHandle(),
-                    vk::Rect2D(vk::Offset2D(0, 0), m_vkSurfaceExtend), 0, nullptr };
-                m_imGuiCommandBuffers[m_currentlyRenderedImage].GetHandle().beginRenderPass(imGuiRenderPassBeginInfo, vk::SubpassContents::eInline);
-            }
+            m_swapchainFramebuffers[m_currentlyRenderedImage].BeginRenderPass(
+                m_imGuiCommandBuffers[m_currentlyRenderedImage], m_imGuiRenderPass,
+                vk::Rect2D(vk::Offset2D(0, 0), m_vkSurfaceExtent), {}, vk::SubpassContents::eInline);
 
             // Record ImGui Draw Data and draw funcs into command buffer
             ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), m_imGuiCommandBuffers[m_currentlyRenderedImage].GetHandle());
@@ -875,16 +773,14 @@ namespace vkfw_core {
         }
     }
 
-    void VKWindow::BeginSwapchainRenderPass(std::size_t cmdBufferIndex) const
+    void VKWindow::BeginSwapchainRenderPass(std::size_t cmdBufferIndex)
     {
         std::array<vk::ClearValue, 2> clearColor;
         clearColor[0].setColor(vk::ClearColorValue{std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f}});
         clearColor[1].setDepthStencil(vk::ClearDepthStencilValue{1.0f, 0});
-        vk::RenderPassBeginInfo renderPassBeginInfo{m_swapchainRenderPass.GetHandle(),
-                                                    m_swapchainFramebuffers[cmdBufferIndex].GetHandle(),
-                                                    vk::Rect2D(vk::Offset2D(0, 0), m_vkSurfaceExtend),
-                                                    static_cast<std::uint32_t>(clearColor.size()), clearColor.data()};
-        m_commandBuffers[cmdBufferIndex].GetHandle().beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
+        m_swapchainFramebuffers[cmdBufferIndex].BeginRenderPass(
+            m_commandBuffers[cmdBufferIndex], m_mainRenderingRenderPass,
+            vk::Rect2D(vk::Offset2D(0, 0), m_vkSurfaceExtent), clearColor, vk::SubpassContents::eInline);
     }
 
     void VKWindow::EndSwapchainRenderPass(std::size_t cmdBufferIndex) const
@@ -1032,7 +928,7 @@ namespace vkfw_core {
 
         auto mousePos = glm::dvec2{ xpos, ypos };
         mousePos /=
-            glm::dvec2(static_cast<double>(m_vkSurfaceExtend.width), static_cast<double>(m_vkSurfaceExtend.height));
+            glm::dvec2(static_cast<double>(m_vkSurfaceExtent.width), static_cast<double>(m_vkSurfaceExtent.height));
         m_currMousePositionNormalized.x = static_cast<float>(2.0 * mousePos.x - 1.0);
         m_currMousePositionNormalized.y = static_cast<float>(-2.0 * mousePos.y + 1.0);
     }

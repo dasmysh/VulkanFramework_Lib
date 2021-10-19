@@ -62,6 +62,7 @@ namespace vkfw_core::gfx {
         , m_imageDeviceMemory{device, fmt::format("DeviceMemory:{}", name), desc.m_memoryProperties}
         , m_imageView{device->GetHandle(), fmt::format("View:{}", name), vk::UniqueImageView{}}
         , m_size{ 0 }
+        , m_pixelSize{ 0 }
         , m_mipLevels{ 0 }
         , m_desc{ desc }
         , m_imageLayout{initialLayout}
@@ -143,6 +144,8 @@ namespace vkfw_core::gfx {
     {
         InitSize(size, mipLevels);
         m_image = externalImage;
+
+        SetObjectName(m_device->GetHandle(), m_image, GetName());
 
         if (initView) { InitializeImageView(); }
     }
@@ -285,6 +288,8 @@ namespace vkfw_core::gfx {
     }
 
     ImageAccessor Texture::GetAccess() { return ImageAccessor{m_device, m_image, this}; }
+
+    vk::Image Texture::GetAccessNoBarrier() const { return m_image; }
 
     inline void Texture::BindMemory(vk::DeviceMemory deviceMemory, std::size_t offset)
     {

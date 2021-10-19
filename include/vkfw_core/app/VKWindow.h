@@ -54,7 +54,7 @@ namespace vkfw_core {
         [[nodiscard]] gfx::LogicalDevice& GetDevice() const { return *m_logicalDevice; }
         [[nodiscard]] const std::vector<gfx::Framebuffer>& GetFramebuffers() const { return m_swapchainFramebuffers; }
         [[nodiscard]] std::vector<gfx::Framebuffer>& GetFramebuffers() { return m_swapchainFramebuffers; }
-        [[nodiscard]] const gfx::RenderPass& GetRenderPass() const { return m_swapchainRenderPass; }
+        [[nodiscard]] const gfx::RenderPass& GetRenderPass() const { return m_mainRenderingRenderPass; }
 
         [[nodiscard]] bool IsMouseButtonPressed(int button) const;
         [[nodiscard]] bool IsKeyPressed(int key) const;
@@ -62,13 +62,13 @@ namespace vkfw_core {
         [[nodiscard]] glm::vec2 GetMousePositionNormalized() const { return m_currMousePositionNormalized; }
 
         /** Returns the windows width. */
-        [[nodiscard]] unsigned int GetWidth() const { return m_vkSurfaceExtend.width; }
+        [[nodiscard]] unsigned int GetWidth() const { return m_vkSurfaceExtent.width; }
         /** Returns the windows height. */
-        [[nodiscard]] unsigned int GetHeight() const { return m_vkSurfaceExtend.height; }
+        [[nodiscard]] unsigned int GetHeight() const { return m_vkSurfaceExtent.height; }
         /** Returns the windows client size. */
         [[nodiscard]] glm::vec2 GetClientSize() const
         {
-            return glm::vec2(static_cast<float>(m_vkSurfaceExtend.width), static_cast<float>(m_vkSurfaceExtend.height));
+            return glm::vec2(static_cast<float>(m_vkSurfaceExtent.width), static_cast<float>(m_vkSurfaceExtent.height));
         }
 
 
@@ -81,7 +81,7 @@ namespace vkfw_core {
         // for primary cmd buffer: dirty bit, update if needed. (start cmd buffer, end cmd buffer; render pass needs to be started and ended with BeginSwapchainRenderPass and EndSwapchainRenderpass.)
         void UpdatePrimaryCommandBuffers(const function_view<void(const gfx::CommandBuffer& commandBuffer,
                                                                   std::size_t cmdBufferIndex)>& fillFunc) const;
-        void BeginSwapchainRenderPass(std::size_t cmdBufferIndex) const;
+        void BeginSwapchainRenderPass(std::size_t cmdBufferIndex);
         void EndSwapchainRenderPass(std::size_t cmdBufferIndex) const;
 
         [[nodiscard]] std::uint32_t GetCurrentlyRenderedImageIndex() const { return m_currentlyRenderedImage; }
@@ -114,7 +114,7 @@ namespace vkfw_core {
         /** Holds the Vulkan surface. */
         gfx::Surface m_surface;
         /** Holds the size of the surface. */
-        vk::Extent2D m_vkSurfaceExtend;
+        vk::Extent2D m_vkSurfaceExtent;
         /** Holds the logical device. */
         std::unique_ptr<gfx::LogicalDevice> m_logicalDevice;
         /** Holds the queue number used for graphics output. */
@@ -122,7 +122,7 @@ namespace vkfw_core {
         /** Holds the swap chain. */
         gfx::Swapchain m_swapchain;
         /** Holds the swap chain render pass. */
-        gfx::RenderPass m_swapchainRenderPass;
+        gfx::RenderPass m_mainRenderingRenderPass;
         /** Render pass for ImGui. */
         gfx::RenderPass m_imGuiRenderPass;
         /** Holds the swap chain frame buffers. */

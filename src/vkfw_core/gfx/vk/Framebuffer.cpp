@@ -17,17 +17,17 @@ namespace vkfw_core::gfx {
                              const std::vector<vk::Image>& images, const RenderPass& renderPass,
                              const FramebufferDescriptor& desc, const std::vector<std::uint32_t>& queueFamilyIndices,
                              const CommandBuffer& cmdBuffer)
-        : VulkanObjectWrapper{logicalDevice->GetHandle(), name, vk::UniqueFramebuffer{}}
+        : VulkanObjectPrivateWrapper{logicalDevice->GetHandle(), name, vk::UniqueFramebuffer{}}
         , m_device{logicalDevice}
         , m_size{size}
         , m_renderPass{&renderPass}
         , m_desc(desc)
         , m_memoryGroup{logicalDevice, fmt::format("Mem:{}", name), vk::MemoryPropertyFlags()}
-        , m_extImages{std::move(images)}
-        , m_queueFamilyIndices{std::move(queueFamilyIndices)}
+        , m_extImages{images}
+        , m_queueFamilyIndices{queueFamilyIndices}
     {
         for (std::size_t i = 0; i < m_extImages.size(); ++i) {
-            m_extTextures.emplace_back(m_device, fmt::format("FBO:{}-ExtTex:{}", name, i), desc.m_tex[i],
+            m_extTextures.emplace_back(m_device, fmt::format("FBO:{}-ExtTex:{}", name, i), desc.m_attachments[i].m_tex,
                                        vk::ImageLayout::eUndefined, m_queueFamilyIndices);
             m_extTextures.back().InitializeExternalImage(m_extImages[i], glm::u32vec4(m_size, 1, 1), 1, false);
         }
@@ -60,7 +60,7 @@ namespace vkfw_core::gfx {
     }
 
     Framebuffer::Framebuffer(Framebuffer&& rhs) noexcept
-        : VulkanObjectWrapper{std::move(rhs)}
+        : VulkanObjectPrivateWrapper{std::move(rhs)}
         , m_device{rhs.m_device}
         , m_size{rhs.m_size}
         , m_renderPass{rhs.m_renderPass}
@@ -75,7 +75,7 @@ namespace vkfw_core::gfx {
     Framebuffer& Framebuffer::operator=(Framebuffer&& rhs) noexcept
     {
         this->~Framebuffer();
-        VulkanObjectWrapper::operator=(std::move(rhs));
+        VulkanObjectPrivateWrapper::operator=(std::move(rhs));
         m_device = rhs.m_device;
         m_size = rhs.m_size;
         m_renderPass = rhs.m_renderPass;
@@ -91,7 +91,7 @@ namespace vkfw_core::gfx {
 
     Texture& Framebuffer::GetTexture(std::size_t index)
     {
-        assert(index < m_desc.m_tex.size());
+        assert(index < m_desc.m_attachments.size());
         if (index < m_extTextures.size()) {
             return m_extTextures[index];
         } else {
@@ -102,10 +102,10 @@ namespace vkfw_core::gfx {
     void Framebuffer::CreateImages(const CommandBuffer& cmdBuffer)
     {
         std::vector<vk::ImageLayout> imageLayouts;
-        imageLayouts.resize(m_desc.m_tex.size() - m_extTextures.size());
-        for (auto i = m_extTextures.size(); i < m_desc.m_tex.size(); ++i) {
-            imageLayouts[i - m_extTextures.size()] = GetFittingAttachmentLayout(m_desc.m_tex[i].m_format);
-            m_memoryGroup.AddTextureToGroup(fmt::format("FBO:{}-Tex{}", GetName(), i), m_desc.m_tex[i],
+        imageLayouts.resize(m_desc.m_attachments.size() - m_extTextures.size());
+        for (auto i = m_extTextures.size(); i < m_desc.m_attachments.size(); ++i) {
+            imageLayouts[i - m_extTextures.size()] = GetFittingAttachmentLayout(m_desc.m_attachments[i].m_tex.m_format);
+            m_memoryGroup.AddTextureToGroup(fmt::format("FBO:{}-Tex{}", GetName(), i), m_desc.m_attachments[i].m_tex,
                                             vk::ImageLayout::eUndefined, glm::u32vec4(m_size, 1, 1), 1,
                                             m_queueFamilyIndices);
         }
@@ -119,8 +119,9 @@ namespace vkfw_core::gfx {
         }
         PipelineBarrier barrier{m_device, vk::PipelineStageFlagBits::eColorAttachmentOutput};
         for (auto i = 0U; i < m_memoryGroup.GetImagesInGroup(); ++i) {
-            vk::AccessFlags access = GetFittingAttachmentAccessFlags(m_desc.m_tex[i].m_format);
-            vk::PipelineStageFlags pipelineStage = GetFittingAttachmentPipelineStage(m_desc.m_tex[i].m_format);
+            vk::AccessFlags access = GetFittingAttachmentAccessFlags(m_desc.m_attachments[i].m_tex.m_format);
+            vk::PipelineStageFlags pipelineStage =
+                GetFittingAttachmentPipelineStage(m_desc.m_attachments[i].m_tex.m_format);
             auto accessor = m_memoryGroup.GetTexture(i)->GetAccess();
             accessor.SetAccess(access, pipelineStage, imageLayouts[i], barrier);
         }
@@ -135,7 +136,7 @@ namespace vkfw_core::gfx {
     void Framebuffer::CreateFB()
     {
         assert(m_desc.m_type == vk::ImageViewType::e2D || m_desc.m_type == vk::ImageViewType::eCube);
-        assert(m_extTextures.size() + m_memoryGroup.GetImagesInGroup() == m_desc.m_tex.size());
+        assert(m_extTextures.size() + m_memoryGroup.GetImagesInGroup() == m_desc.m_attachments.size());
         constexpr std::uint32_t CUBE_MAP_LAYERS = 6;
         std::uint32_t layerCount = 1;
         if (m_desc.m_type == vk::ImageViewType::eCube) { layerCount = CUBE_MAP_LAYERS; }
@@ -146,6 +147,7 @@ namespace vkfw_core::gfx {
             tex.InitializeImageView();
             attachments.push_back(tex.GetImageView().GetHandle());
         }
+        attachments.reserve(m_desc.m_attachments.size());
 
         for (auto i = 0U; i < m_memoryGroup.GetImagesInGroup(); ++i) {
             attachments.push_back(m_memoryGroup.GetTexture(i)->GetImageView().GetHandle());
@@ -153,12 +155,48 @@ namespace vkfw_core::gfx {
 
         vk::FramebufferCreateInfo fbCreateInfo{vk::FramebufferCreateFlags(),
                                                m_renderPass->GetHandle(),
-                                               static_cast<std::uint32_t>(m_desc.m_tex.size()),
+                                               static_cast<std::uint32_t>(m_desc.m_attachments.size()),
                                                attachments.data(),
                                                m_size.x,
                                                m_size.y,
                                                layerCount};
+
         SetHandle(m_device->GetHandle(), m_device->GetHandle().createFramebufferUnique(fbCreateInfo));
+    }
+
+    Framebuffer Framebuffer::CreateWithSameImages(std::string_view name, const FramebufferDescriptor& desc,
+                                                  const std::vector<std::uint32_t>& queueFamilyIndices,
+                                                  const CommandBuffer& cmdBuffer) const
+    {
+        std::vector<vk::Image> images;
+        for (const auto& tex : m_extTextures) { images.push_back(tex.GetAccessNoBarrier()); }
+
+        for (auto i = 0U; i < m_memoryGroup.GetImagesInGroup(); ++i) {
+            images.push_back(m_memoryGroup.GetTexture(i)->GetAccessNoBarrier());
+        }
+        return Framebuffer(m_device, name, m_size, images, *m_renderPass, desc, queueFamilyIndices, cmdBuffer);
+    }
+
+    void Framebuffer::BeginRenderPass(const CommandBuffer& cmdBuffer, const RenderPass& renderPass,
+                                      const vk::Rect2D& renderArea, std::span<vk::ClearValue> clearColor,
+                                      vk::SubpassContents subpassContents)
+    {
+        gfx::PipelineBarrier barrier{m_device, vk::PipelineStageFlagBits{}};
+        for (std::size_t iTex = 0; iTex < m_desc.m_attachments.size(); ++iTex) {
+            const auto& attachmentDesc = renderPass.GetDescriptor().m_attachments[iTex];
+            auto& texture = GetTexture(iTex);
+            auto accessor = texture.GetAccess();
+
+            vk::AccessFlags access = GetFittingAttachmentAccessFlags(attachmentDesc.m_tex.m_format);
+            vk::PipelineStageFlags pipelineStage = GetFittingAttachmentPipelineStage(attachmentDesc.m_tex.m_format);
+            vk::ImageLayout layout = attachmentDesc.m_initialLayout;
+            accessor.SetAccess(access, pipelineStage, layout, barrier);
+        }
+        barrier.Record(cmdBuffer);
+
+        vk::RenderPassBeginInfo renderPassBeginInfo{renderPass.GetHandle(), GetHandle(), renderArea,
+                                                    static_cast<std::uint32_t>(clearColor.size()), clearColor.data()};
+        cmdBuffer.GetHandle().beginRenderPass(renderPassBeginInfo, subpassContents);
     }
 
     bool Framebuffer::IsAnyDepthOrStencilFormat(vk::Format format)

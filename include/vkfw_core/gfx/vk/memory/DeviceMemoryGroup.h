@@ -46,6 +46,7 @@ namespace vkfw_core::gfx {
         [[nodiscard]] DeviceBuffer* GetBuffer(unsigned int bufferIdx) { return &m_deviceBuffers[bufferIdx]; }
         [[nodiscard]] const DeviceBuffer* GetBuffer(unsigned int bufferIdx) const { return &m_deviceBuffers[bufferIdx]; }
         [[nodiscard]] DeviceTexture* GetTexture(unsigned int textureIdx) { return &m_deviceImages[textureIdx]; }
+        [[nodiscard]] const DeviceTexture* GetTexture(unsigned int textureIdx) const { return &m_deviceImages[textureIdx]; }
         [[nodiscard]] std::size_t GetBuffersInGroup() const { return m_deviceBuffers.size(); }
         [[nodiscard]] std::size_t GetImagesInGroup() const { return m_deviceImages.size(); }
 

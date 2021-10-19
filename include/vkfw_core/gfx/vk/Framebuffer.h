@@ -17,15 +17,7 @@ namespace vkfw_core::gfx {
 
     class LogicalDevice;
 
-    struct FramebufferDescriptor final
-    {
-        /** Holds the texture descriptors. */
-        std::vector<TextureDescriptor> m_tex;
-        /** Holds the textures image type. */
-        vk::ImageViewType m_type = vk::ImageViewType::e2D;
-    };
-
-    class Framebuffer final : public VulkanObjectWrapper<vk::UniqueFramebuffer>
+    class Framebuffer final : public VulkanObjectPrivateWrapper<vk::UniqueFramebuffer>
     {
     public:
         Framebuffer(const LogicalDevice* logicalDevice, std::string_view name, const glm::uvec2& size,
@@ -48,6 +40,14 @@ namespace vkfw_core::gfx {
         [[nodiscard]] unsigned int GetHeight() const { return m_size.y; }
         [[nodiscard]] const FramebufferDescriptor& GetDescriptor() const { return m_desc; }
         [[nodiscard]] Texture& GetTexture(std::size_t index);
+
+        [[nodiscard]] Framebuffer
+        CreateWithSameImages(std::string_view name, const FramebufferDescriptor& desc,
+                             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{},
+                             const CommandBuffer& cmdBuffer = CommandBuffer{}) const;
+
+        void BeginRenderPass(const CommandBuffer& cmdBuffer, const RenderPass& renderPass, const vk::Rect2D& renderArea,
+                             std::span<vk::ClearValue> clearColor, vk::SubpassContents subpassContents);
 
         static [[nodiscard]] bool IsAnyDepthOrStencilFormat(vk::Format format);
         static [[nodiscard]] bool IsDepthStencilFormat(vk::Format format);

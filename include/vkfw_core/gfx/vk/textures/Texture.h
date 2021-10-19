@@ -149,6 +149,7 @@ namespace vkfw_core::gfx {
         [[nodiscard]] const TextureDescriptor& GetDescriptor() const { return m_desc; }
         [[nodiscard]] vk::ImageAspectFlags GetValidAspects() const;
         [[nodiscard]] ImageAccessor GetAccess();
+        [[nodiscard]] vk::Image GetAccessNoBarrier() const;
         [[nodiscard]] vk::ImageLayout GetImageLayout() const { return m_imageLayout; }
         [[nodiscard]] vk::MemoryRequirements GetMemoryRequirements() const;
         [[nodiscard]] vk::SubresourceLayout GetSubresourceLayout(const vk::ImageSubresource& subresource) const;
