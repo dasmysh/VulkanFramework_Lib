@@ -480,7 +480,8 @@ namespace vkfw_core {
             gfx::FramebufferDescriptor mainRenderingFbDesc;
             mainRenderingFbDesc.m_attachments.emplace_back(
                 vk::AttachmentLoadOp::eClear, vk::AttachmentStoreOp::eStore, vk::AttachmentLoadOp::eDontCare,
-                vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eUndefined, vk::ImageLayout::eColorAttachmentOptimal,
+                vk::AttachmentStoreOp::eDontCare, vk::ImageLayout::eColorAttachmentOptimal,
+                vk::ImageLayout::eColorAttachmentOptimal,
                 m_config->m_backbufferBits / 8, surfaceFormat.format, vk::SampleCountFlagBits::e1);
 
             if (m_config->m_useRayTracing) {

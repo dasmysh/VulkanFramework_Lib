@@ -50,10 +50,16 @@ namespace vkfw_core::gfx {
             CheckSetName(device);
         }
 
+        void ResetHandle(vk::Device device, T handle)
+        {
+            m_handle = std::move(handle);
+            CheckSetName(device);
+        }
+
         void SetHandle(vk::Device device, std::string_view name, T handle)
         {
             m_name = name;
-            SetHandle(device, handle);
+            SetHandle(device, std::move(handle));
         }
 
         operator bool() const { return GetHandle(); }

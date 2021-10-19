@@ -189,7 +189,9 @@ namespace vkfw_core::gfx {
 
             vk::AccessFlags access = GetFittingAttachmentAccessFlags(attachmentDesc.m_tex.m_format);
             vk::PipelineStageFlags pipelineStage = GetFittingAttachmentPipelineStage(attachmentDesc.m_tex.m_format);
-            vk::ImageLayout layout = attachmentDesc.m_initialLayout;
+            vk::ImageLayout layout = attachmentDesc.m_initialLayout == vk::ImageLayout::eUndefined
+                                         ? texture.GetImageLayout()
+                                         : attachmentDesc.m_initialLayout;
             accessor.SetAccess(access, pipelineStage, layout, barrier);
         }
         barrier.Record(cmdBuffer);
