@@ -14,6 +14,7 @@
 namespace vkfw_core::gfx {
     class LogicalDevice;
     class DeviceBuffer;
+    struct BufferRange;
 }
 
 namespace vkfw_core::gfx::rt {
@@ -32,6 +33,7 @@ namespace vkfw_core::gfx::rt {
         virtual void BuildAccelerationStructure();
 
         vk::DeviceAddress GetAddressHandle() const { return m_handle; }
+        void FillBufferRange(BufferRange& bufferRange) const;
 
     protected:
         vkfw_core::gfx::LogicalDevice* GetDevice() { return m_device; }

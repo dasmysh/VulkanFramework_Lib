@@ -29,6 +29,8 @@ namespace vkfw_core::gfx {
     class SubMesh;
     class DeviceBuffer;
     class PipelineBarrier;
+    struct BufferRange;
+    struct AccelerationStructureInfo;
 }
 
 namespace vkfw_core::gfx::rt {
@@ -42,7 +44,7 @@ namespace vkfw_core::gfx::rt {
 
         void AddTriangleGeometry(const glm::mat4& transform, const MaterialInfo& materialInfo,
                                  std::size_t primitiveCount, std::size_t vertexCount, std::size_t vertexSize,
-                                 const DeviceBuffer* vbo, std::size_t vboOffset = 0, const DeviceBuffer* ibo = nullptr,
+                                 DeviceBuffer* vbo, std::size_t vboOffset = 0, DeviceBuffer* ibo = nullptr,
                                  std::size_t iboOffset = 0);
 
         void AddMeshGeometry(const MeshInfo& mesh, const glm::mat4& transform);
@@ -56,13 +58,11 @@ namespace vkfw_core::gfx::rt {
                                                std::uint32_t bindingVBO, std::uint32_t bindingIBO,
                                                std::uint32_t bindingInstanceBuffer, std::uint32_t bindingMaterialBuffer,
                                                std::uint32_t bindingDiffuseTexture, std::uint32_t bindingBumpTexture);
-        void FillDescriptorAccelerationStructureInfo(vk::WriteDescriptorSetAccelerationStructureKHR& descInfo) const;
-        void FillDescriptorBuffersInfo(std::vector<vk::DescriptorBufferInfo>& vboBufferInfos,
-                                       std::vector<vk::DescriptorBufferInfo>& iboBufferInfos,
-                                       vk::DescriptorBufferInfo& instanceBufferInfo,
-                                       vk::DescriptorBufferInfo& materialBufferInfo,
-                                       std::vector<vk::DescriptorImageInfo>& diffuseTextureInfos,
-                                       std::vector<vk::DescriptorImageInfo>& bumpTextureInfos) const;
+        void FillAccelerationStructureInfo(AccelerationStructureInfo& accelerationStructureInfo) const;
+        void FillGeometryInfo(std::vector<BufferRange>& vbos, std::vector<BufferRange>& ibos,
+                              BufferRange& instanceBuffer);
+        void FillMaterialInfo(BufferRange& materialBuffer, std::vector<Texture*>& diffuseTextures,
+                              std::vector<Texture*>& bumpMaps);
         void CreateResourceUseBarriers(vk::AccessFlags access, vk::PipelineStageFlags pipelineStage,
                                        vk::ImageLayout newLayout, PipelineBarrier& barrier);
 
@@ -82,10 +82,10 @@ namespace vkfw_core::gfx::rt {
         struct TriangleGeometryInfo
         {
             std::size_t index = 0;
-            vk::Buffer vboBuffer;
+            Buffer* vboBuffer;
             std::size_t vboOffset = 0;
             std::size_t vboRange = 0;
-            vk::Buffer iboBuffer;
+            Buffer* iboBuffer;
             std::size_t iboOffset = 0;
             std::size_t iboRange = 0;
         };
@@ -114,7 +114,7 @@ namespace vkfw_core::gfx::rt {
         /** The top level acceleration structure for the scene. */
         TopLevelAccelerationStructure m_TLAS;
         /** The sampler for the materials textures. */
-        Sampler m_textureSampler;
+        // Sampler m_textureSampler;
 
         /** Holds the memory for geometry and instance buffers. */
         MemoryGroup m_bufferMemGroup;
@@ -137,8 +137,8 @@ namespace vkfw_core::gfx::rt {
         /** Holds the materials. */
         std::vector<Material> m_materials;
         std::vector<MaterialDesc> m_materialInfos;
-        std::vector<vk::ImageView> m_diffuseTextureHandles;
-        std::vector<vk::ImageView> m_bumpTextureHandles;
+        std::vector<Texture*> m_diffuseTextures;
+        std::vector<Texture*> m_bumpMaps;
         /** The offset and range of the material buffer. */
         std::size_t m_materialBufferOffset = 0;
         std::size_t m_materialBufferRange = 0;
@@ -177,12 +177,12 @@ namespace vkfw_core::gfx::rt {
                                MaterialDesc{INVALID_TEXTURE_INDEX, INVALID_TEXTURE_INDEX, glm::vec4{1.0f}});
         for (std::size_t i = 0; i < m_materials.size(); ++i) {
             if (m_materials[i].m_diffuseTexture) {
-                m_materialInfos[i].diffuseTextureIndex = static_cast<std::uint32_t>(m_diffuseTextureHandles.size());
-                m_diffuseTextureHandles.emplace_back(nullptr);
+                m_materialInfos[i].diffuseTextureIndex = static_cast<std::uint32_t>(m_diffuseTextures.size());
+                m_diffuseTextures.emplace_back(nullptr);
             }
             if (m_materials[i].m_bumpMap) {
-                m_materialInfos[i].bumpTextureIndex = static_cast<std::uint32_t>(m_bumpTextureHandles.size());
-                m_bumpTextureHandles.emplace_back(nullptr);
+                m_materialInfos[i].bumpTextureIndex = static_cast<std::uint32_t>(m_bumpMaps.size());
+                m_bumpMaps.emplace_back(nullptr);
             }
             m_materialInfos[i].diffuseColor = glm::vec4{m_materials[i].m_materialInfo->m_diffuse, 1.0f};
         }
@@ -207,12 +207,11 @@ namespace vkfw_core::gfx::rt {
         AddInstanceBufferAndTransferMemGroup();
         for (std::size_t i = 0; i < m_materials.size(); ++i) {
             if (m_materials[i].m_diffuseTexture) {
-                m_diffuseTextureHandles[m_materialInfos[i].diffuseTextureIndex] =
-                    m_materials[i].m_diffuseTexture->GetTexture().GetImageView().GetHandle();
+                m_diffuseTextures[m_materialInfos[i].diffuseTextureIndex] =
+                    &m_materials[i].m_diffuseTexture->GetTexture();
             }
             if (m_materials[i].m_bumpMap) {
-                m_bumpTextureHandles[m_materialInfos[i].bumpTextureIndex] =
-                    m_materials[i].m_bumpMap->GetTexture().GetImageView().GetHandle();
+                m_bumpMaps[m_materialInfos[i].bumpTextureIndex] = &m_materials[i].m_bumpMap->GetTexture();
             }
         }
 

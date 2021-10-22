@@ -15,6 +15,8 @@
 
 namespace vkfw_core::gfx {
     class LogicalDevice;
+    class Texture;
+    class Buffer;
 }
 
 namespace vkfw_core::gfx {
@@ -37,40 +39,16 @@ namespace vkfw_core::gfx {
         void AddDescriptorPoolSizes(std::vector<vk::DescriptorPoolSize>& poolSizes, std::size_t setCount) const;
         [[nodiscard]] static DescriptorPool CreateDescriptorPool(const LogicalDevice* device, std::string_view name,
                                                                  const std::vector<vk::DescriptorPoolSize>& poolSizes,
-                             std::size_t setCount);
+                                                                 std::size_t setCount);
 
-        [[nodiscard]] vk::WriteDescriptorSet MakeWrite(const DescriptorSet& descriptorSet,
-                                                       std::uint32_t binding,
-                                                       std::uint32_t arrayElement = 0);
-        [[nodiscard]] vk::WriteDescriptorSet MakeWrite(const DescriptorSet& descriptorSet,
-                                                       std::uint32_t binding,
-                                                       const vk::DescriptorImageInfo* imageInfo,
-                                                       std::uint32_t arrayElement = 0);
-        [[nodiscard]] vk::WriteDescriptorSet MakeWrite(const DescriptorSet& descriptorSet,
-                                                       std::uint32_t binding,
-                                                       const vk::DescriptorBufferInfo* bufferInfo,
-                                                       std::uint32_t arrayElement = 0);
-        [[nodiscard]] vk::WriteDescriptorSet
-        MakeWrite(const DescriptorSet& descriptorSet, std::uint32_t binding,
-                  const vk::WriteDescriptorSetAccelerationStructureKHR* accelerationStructureInfo,
-                  std::uint32_t arrayElement = 0);
-
-        [[nodiscard]] vk::WriteDescriptorSet MakeWriteArray(const DescriptorSet& descriptorSet,
-                                                            std::uint32_t binding) const;
-        [[nodiscard]] vk::WriteDescriptorSet MakeWriteArray(const DescriptorSet& descriptorSet,
-                                                            std::uint32_t binding,
-                                                            const vk::DescriptorImageInfo* imageInfo) const;
-        [[nodiscard]] vk::WriteDescriptorSet MakeWriteArray(const DescriptorSet& descriptorSet,
-                                                            std::uint32_t binding,
-                                                            const vk::DescriptorBufferInfo* bufferInfo) const;
-        [[nodiscard]] vk::WriteDescriptorSet
-        MakeWriteArray(const DescriptorSet& descriptorSet, std::uint32_t binding,
-                       const vk::WriteDescriptorSetAccelerationStructureKHR* accelerationStructureInfo) const;
+        [[nodiscard]] const auto& GetBindings() const { return m_bindings; }
+        [[nodiscard]] static bool IsBufferBindingType(vk::DescriptorType type);
+        [[nodiscard]] static bool IsTexelBufferBindingType(vk::DescriptorType type);
+        [[nodiscard]] static bool IsImageBindingType(vk::DescriptorType type);
 
     private:
+
         /** The bindings of the descriptor set. */
         std::vector<vk::DescriptorSetLayoutBinding> m_bindings;
-        /** The descriptor layout. */
-        // vk::UniqueDescriptorSetLayout m_layout;
     };
 }

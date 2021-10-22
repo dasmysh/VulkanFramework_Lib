@@ -13,6 +13,7 @@
 namespace vkfw_core::gfx {
 
     class DescriptorSetLayout;
+    struct BufferRange;
 
     class UniformBufferObject
     {
@@ -34,7 +35,8 @@ namespace vkfw_core::gfx {
                                                bool isDynamicBuffer = false, std::uint32_t binding = 0);
 
         void FillUploadCmdBuffer(const CommandBuffer& cmdBuffer, std::size_t instanceIdx, std::size_t size) const;
-        void FillDescriptorBufferInfo(vk::DescriptorBufferInfo& descInfo) const;
+        void FillBufferRange(BufferRange& bufferRange) const;
+        void FillBufferRanges(std::vector<BufferRange>& bufferRanges) const;
         void UpdateInstanceData(std::size_t instanceIdx, std::size_t size, const void* data) const;
 
         [[nodiscard]] std::size_t GetInstanceSize() const { return m_singleSize; }

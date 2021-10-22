@@ -63,11 +63,17 @@ namespace vkfw_core::gfx {
         layout.AddBinding(binding, descType, 1, shaderFlags);
     }
 
-    void UniformBufferObject::FillDescriptorBufferInfo(vk::DescriptorBufferInfo& descInfo) const
+    void UniformBufferObject::FillBufferRange(BufferRange& bufferRange) const
     {
-        descInfo.buffer = m_memoryGroup->GetBuffer(m_bufferIdx)->GetHandle();
-        descInfo.offset = m_bufferOffset;
-        descInfo.range = m_singleSize;
+        bufferRange.m_buffer = m_memoryGroup->GetBuffer(m_bufferIdx);
+        bufferRange.m_offset = m_bufferOffset;
+        bufferRange.m_range = m_singleSize;
+    }
+
+    void UniformBufferObject::FillBufferRanges(std::vector<BufferRange>& bufferRanges) const
+    {
+        auto& bufferRange = bufferRanges.emplace_back();
+        FillBufferRange(bufferRange);
     }
 
     void UniformBufferObject::UpdateInstanceData(std::size_t instanceIdx, std::size_t size, const void* data) const

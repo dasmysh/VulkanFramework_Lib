@@ -49,7 +49,8 @@ namespace vkfw_core::gfx {
 
     void Buffer::InitializeBuffer(std::size_t size, bool initMemory)
     {
-        this->~Buffer();
+        // not sure if this is needed again at some point.
+        assert(!GetHandle());
 
         m_size = size;
         vk::BufferCreateInfo bufferCreateInfo{vk::BufferCreateFlags(), static_cast<vk::DeviceSize>(m_size), m_usage,

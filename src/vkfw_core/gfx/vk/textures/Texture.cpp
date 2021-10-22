@@ -279,14 +279,6 @@ namespace vkfw_core::gfx {
         layout.AddBinding(binding, type, 1, shaderFlags);
     }
 
-    void Texture::FillDescriptorImageInfo(vk::DescriptorImageInfo& descInfo, const Sampler& sampler,
-                                          vk::ImageLayout imageLayout) const
-    {
-        descInfo.sampler = sampler.GetHandle();
-        descInfo.imageView = m_imageView.GetHandle();
-        descInfo.imageLayout = imageLayout;
-    }
-
     ImageAccessor Texture::GetAccess() { return ImageAccessor{m_device, m_image, this}; }
 
     vk::Image Texture::GetAccessNoBarrier() const { return m_image; }

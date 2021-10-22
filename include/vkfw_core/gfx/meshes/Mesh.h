@@ -78,18 +78,18 @@ namespace vkfw_core::gfx {
         void UpdateWorldMatricesNode(std::size_t backbufferIndex, const SceneMeshNode* node, const glm::mat4& worldMatrix) const;
 
         void Draw(const CommandBuffer& cmdBuffer, std::size_t backbufferIdx,
-                  const PipelineLayout& pipelineLayout) const;
+                  const PipelineLayout& pipelineLayout);
         void DrawNode(const CommandBuffer& cmdBuffer, std::size_t backbufferIdx, const PipelineLayout& pipelineLayout,
-                      const SceneMeshNode* node) const;
+                      const SceneMeshNode* node);
         void DrawSubMesh(const CommandBuffer& cmdBuffer, const PipelineLayout& pipelineLayout,
-                         const SubMesh& subMesh) const;
+                         const SubMesh& subMesh);
 
         void GetDrawElements(const glm::mat4& worldMatrix, const CameraBase& camera, std::size_t backbufferIdx,
-            RenderList& renderList) const;
+            RenderList& renderList);
         void GetDrawElementsNode(const glm::mat4& worldMatrix, const CameraBase& camera, std::size_t backbufferIdx,
-            const SceneMeshNode* node, RenderList& renderList) const;
+            const SceneMeshNode* node, RenderList& renderList);
         void GetDrawElementsSubMesh(const glm::mat4& worldMatrix, const CameraBase& camera,
-            const SubMesh& subMesh, RenderList& renderList) const;
+            const SubMesh& subMesh, RenderList& renderList);
 
     private:
         Mesh(const LogicalDevice* device, std::string_view name, const std::shared_ptr<const MeshInfo>& meshInfo,

@@ -10,6 +10,7 @@
 #include "gfx/vk/buffers/DeviceBuffer.h"
 #include "gfx/vk/LogicalDevice.h"
 #include "gfx/vk/wrappers/CommandBuffer.h"
+#include "gfx/vk/wrappers/DescriptorSet.h"
 
 namespace vkfw_core::gfx::rt {
 
@@ -73,6 +74,13 @@ namespace vkfw_core::gfx::rt {
             vkfw_core::gfx::CommandBuffer::endSingleTimeSubmitAndWait(m_device, m_device->GetQueue(0, 0),
                                                                       accStructureCmdBuffer);
         }
+    }
+
+    void AccelerationStructure::FillBufferRange(BufferRange& bufferRange) const
+    {
+        bufferRange.m_buffer = m_buffer.get();
+        bufferRange.m_offset = 0;
+        bufferRange.m_range = m_buffer->GetSize();
     }
 
     void AccelerationStructure::CreateAccelerationStructure()

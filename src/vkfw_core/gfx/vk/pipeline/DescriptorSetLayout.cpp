@@ -73,121 +73,21 @@ namespace vkfw_core::gfx {
                               device->GetHandle().createDescriptorPoolUnique(descriptorPoolCreateInfo)};
     }
 
-    vk::WriteDescriptorSet DescriptorSetLayout::MakeWrite(const DescriptorSet& descriptorSet, std::uint32_t binding,
-                                                          std::uint32_t arrayElement /*= 0*/)
+    bool DescriptorSetLayout::IsBufferBindingType(vk::DescriptorType type)
     {
-        vk::WriteDescriptorSet writeSet;
-        for (std::size_t i = 0; i < m_bindings.size(); i++) {
-            if (m_bindings[i].binding == binding) {
-                writeSet.descriptorCount = 1;
-                writeSet.descriptorType = m_bindings[i].descriptorType;
-                writeSet.dstBinding = binding;
-                writeSet.dstSet = descriptorSet.GetHandle();
-                writeSet.dstArrayElement = arrayElement;
-                return writeSet;
-            }
-        }
-        assert(false && "binding not found");
-        return writeSet;
+        return type == vk::DescriptorType::eStorageBuffer || type == vk::DescriptorType::eStorageBufferDynamic
+               || type == vk::DescriptorType::eUniformBuffer || type == vk::DescriptorType::eUniformBufferDynamic;
     }
 
-    vk::WriteDescriptorSet DescriptorSetLayout::MakeWrite(const DescriptorSet& descriptorSet, std::uint32_t binding,
-                                                          const vk::DescriptorImageInfo* imageInfo,
-                                                          std::uint32_t arrayElement /*= 0*/)
+    bool DescriptorSetLayout::IsTexelBufferBindingType(vk::DescriptorType type)
     {
-        vk::WriteDescriptorSet writeSet = MakeWrite(descriptorSet, binding, arrayElement);
-        assert(writeSet.descriptorType == vk::DescriptorType::eSampler
-               || writeSet.descriptorType == vk::DescriptorType::eCombinedImageSampler
-               || writeSet.descriptorType == vk::DescriptorType::eSampledImage
-               || writeSet.descriptorType == vk::DescriptorType::eStorageImage
-               || writeSet.descriptorType == vk::DescriptorType::eInputAttachment);
-
-        writeSet.pImageInfo = imageInfo;
-        return writeSet;
+        return type == vk::DescriptorType::eStorageTexelBuffer || type == vk::DescriptorType::eUniformTexelBuffer;
     }
 
-    vk::WriteDescriptorSet DescriptorSetLayout::MakeWrite(const DescriptorSet& descriptorSet, std::uint32_t binding,
-                                                          const vk::DescriptorBufferInfo* bufferInfo,
-                                                          std::uint32_t arrayElement /*= 0*/)
+    bool DescriptorSetLayout::IsImageBindingType(vk::DescriptorType type)
     {
-        vk::WriteDescriptorSet writeSet = MakeWrite(descriptorSet, binding, arrayElement);
-        assert(writeSet.descriptorType == vk::DescriptorType::eStorageBuffer
-               || writeSet.descriptorType == vk::DescriptorType::eStorageBufferDynamic
-               || writeSet.descriptorType == vk::DescriptorType::eUniformBuffer
-               || writeSet.descriptorType == vk::DescriptorType::eUniformBufferDynamic);
-
-        writeSet.pBufferInfo = bufferInfo;
-        return writeSet;
-    }
-
-    vk::WriteDescriptorSet
-    DescriptorSetLayout::MakeWrite(const DescriptorSet& descriptorSet, std::uint32_t binding,
-                                   const vk::WriteDescriptorSetAccelerationStructureKHR* accelerationStructureInfo,
-                                   std::uint32_t arrayElement /*= 0*/)
-    {
-        vk::WriteDescriptorSet writeSet = MakeWrite(descriptorSet, binding, arrayElement);
-        assert(writeSet.descriptorType == vk::DescriptorType::eAccelerationStructureKHR);
-
-        writeSet.pNext = accelerationStructureInfo;
-        return writeSet;
-    }
-
-    vk::WriteDescriptorSet DescriptorSetLayout::MakeWriteArray(const DescriptorSet& descriptorSet,
-                                                               std::uint32_t binding) const
-    {
-        vk::WriteDescriptorSet writeSet;
-        for (std::size_t i = 0; i < m_bindings.size(); i++) {
-            if (m_bindings[i].binding == binding) {
-                writeSet.descriptorCount = m_bindings[i].descriptorCount;
-                writeSet.descriptorType = m_bindings[i].descriptorType;
-                writeSet.dstBinding = binding;
-                writeSet.dstSet = descriptorSet.GetHandle();
-                writeSet.dstArrayElement = 0;
-                return writeSet;
-            }
-        }
-        assert(false && "binding not found");
-        return writeSet;
-    }
-
-    vk::WriteDescriptorSet DescriptorSetLayout::MakeWriteArray(const DescriptorSet& descriptorSet,
-                                                               std::uint32_t binding,
-                                                               const vk::DescriptorImageInfo* imageInfo) const
-    {
-        vk::WriteDescriptorSet writeSet = MakeWriteArray(descriptorSet, binding);
-        assert(writeSet.descriptorType == vk::DescriptorType::eSampler
-               || writeSet.descriptorType == vk::DescriptorType::eCombinedImageSampler
-               || writeSet.descriptorType == vk::DescriptorType::eSampledImage
-               || writeSet.descriptorType == vk::DescriptorType::eStorageImage
-               || writeSet.descriptorType == vk::DescriptorType::eInputAttachment);
-
-        writeSet.pImageInfo = imageInfo;
-        return writeSet;
-    }
-
-    vk::WriteDescriptorSet DescriptorSetLayout::MakeWriteArray(const DescriptorSet& descriptorSet,
-                                                               std::uint32_t binding,
-                                                               const vk::DescriptorBufferInfo* bufferInfo) const
-    {
-        vk::WriteDescriptorSet writeSet = MakeWriteArray(descriptorSet, binding);
-        assert(writeSet.descriptorType == vk::DescriptorType::eStorageBuffer
-               || writeSet.descriptorType == vk::DescriptorType::eStorageBufferDynamic
-               || writeSet.descriptorType == vk::DescriptorType::eUniformBuffer
-               || writeSet.descriptorType == vk::DescriptorType::eUniformBufferDynamic);
-
-        writeSet.pBufferInfo = bufferInfo;
-        return writeSet;
-    }
-
-    vk::WriteDescriptorSet DescriptorSetLayout::MakeWriteArray(
-        const DescriptorSet& descriptorSet, std::uint32_t binding,
-        const vk::WriteDescriptorSetAccelerationStructureKHR* accelerationStructureInfo) const
-    {
-        vk::WriteDescriptorSet writeSet = MakeWriteArray(descriptorSet, binding);
-        assert(writeSet.descriptorType == vk::DescriptorType::eAccelerationStructureKHR);
-
-        writeSet.pNext = accelerationStructureInfo;
-        return writeSet;
+        return type == vk::DescriptorType::eCombinedImageSampler || type == vk::DescriptorType::eSampledImage
+               || type == vk::DescriptorType::eStorageImage || type == vk::DescriptorType::eInputAttachment;
     }
 
 }

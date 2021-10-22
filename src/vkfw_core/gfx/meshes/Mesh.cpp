@@ -126,13 +126,6 @@ namespace vkfw_core::gfx {
 
         auto numMaterials = m_materials.size();
 
-        std::vector<vk::WriteDescriptorSet> descSetWrites;
-        descSetWrites.resize(3 * numMaterials + 1);
-        std::vector<vk::DescriptorBufferInfo> descBufferInfos;
-        descBufferInfos.resize(numMaterials + 1);
-        std::vector<vk::DescriptorImageInfo> descImageInfos;
-        descImageInfos.resize(2 * numMaterials);
-
         {
             std::vector<vk::DescriptorSetLayout> materialDescSetLayouts;
             materialDescSetLayouts.resize(numMaterials, m_materialDescriptorSetLayout.GetHandle());
@@ -144,36 +137,33 @@ namespace vkfw_core::gfx {
                                           m_device->GetHandle().allocateDescriptorSets(materialDescSetAllocInfo));
 
             for (std::size_t i = 0; i < m_materials.size(); ++i) {
+                m_materialDescriptorSets[i].InitializeWrites(m_materialDescriptorSetLayout);
+
+                std::array<Texture*, 1> diffuseTexture = {nullptr};
                 if (m_materials[i].m_diffuseTexture) {
-                    descImageInfos[2 * i] = vk::DescriptorImageInfo{
-                        m_textureSampler.GetHandle(),
-                        m_materials[i].m_diffuseTexture->GetTexture().GetImageView().GetHandle(),
-                        vk::ImageLayout::eShaderReadOnlyOptimal};
+                    diffuseTexture[0] = &m_materials[i].m_diffuseTexture->GetTexture();
                 } else {
-                    descImageInfos[2 * i] =
-                        vk::DescriptorImageInfo{m_textureSampler.GetHandle(),
-                                                m_device->GetDummyTexture()->GetTexture().GetImageView().GetHandle(),
-                        vk::ImageLayout::eShaderReadOnlyOptimal};
+                    diffuseTexture[0] = &m_device->GetDummyTexture()->GetTexture();
                 }
-                descSetWrites[3 * i] =
-                    m_materialDescriptorSetLayout.MakeWrite(m_materialDescriptorSets[i], 0, &descImageInfos[2 * i]);
+                m_materialDescriptorSets[i].WriteImageDescriptor(0, 0, diffuseTexture, m_textureSampler,
+                                                                 vk::AccessFlagBits::eShaderRead,
+                                                                 vk::ImageLayout::eShaderReadOnlyOptimal);
 
+                std::array<Texture*, 1> bumpMap = {nullptr};
                 if (m_materials[i].m_bumpMap) {
-                    descImageInfos[2 * i + 1] = vk::DescriptorImageInfo{
-                        m_textureSampler.GetHandle(), m_materials[i].m_bumpMap->GetTexture().GetImageView().GetHandle(),
-                        vk::ImageLayout::eShaderReadOnlyOptimal};
+                    bumpMap[0] = &m_materials[i].m_bumpMap->GetTexture();
                 } else {
-                    descImageInfos[2 * i + 1] =
-                        vk::DescriptorImageInfo{m_textureSampler.GetHandle(),
-                                                m_device->GetDummyTexture()->GetTexture().GetImageView().GetHandle(),
-                        vk::ImageLayout::eShaderReadOnlyOptimal};
+                    bumpMap[0] = &m_device->GetDummyTexture()->GetTexture();
                 }
-                descSetWrites[3 * i + 1] =
-                    m_materialDescriptorSetLayout.MakeWrite(m_materialDescriptorSets[i], 1, &descImageInfos[2 * i + 1]);
+                m_materialDescriptorSets[i].WriteImageDescriptor(1, 0, bumpMap, m_textureSampler,
+                                                                 vk::AccessFlagBits::eShaderRead,
+                                                                 vk::ImageLayout::eShaderReadOnlyOptimal);
 
-                m_materialsUBO.FillDescriptorBufferInfo(descBufferInfos[i]);
-                descSetWrites[3 * i + 2] =
-                    m_materialDescriptorSetLayout.MakeWrite(m_materialDescriptorSets[i], 2, &descBufferInfos[i]);
+                std::array<BufferRange, 1> bufferRange;
+                m_materialsUBO.FillBufferRange(bufferRange[0]);
+                m_materialDescriptorSets[i].WriteBufferDescriptor(2, 0, bufferRange, vk::AccessFlagBits::eShaderRead);
+
+                m_materialDescriptorSets[i].FinalizeWrite(m_device);
             }
         }
 
@@ -184,12 +174,12 @@ namespace vkfw_core::gfx {
                 m_device->GetHandle(), fmt::format("{}:WorldMatrixDescriptorSet", m_name),
                 std::move(m_device->GetHandle().allocateDescriptorSets(worldMatrixDescSetAllocInfo)[0]));
 
-            m_worldMatricesUBO.FillDescriptorBufferInfo(descBufferInfos[numMaterials]);
-            descSetWrites[3 * numMaterials] = m_worldMatricesDescriptorSetLayout.MakeWrite(
-                m_worldMatrixDescriptorSet, 0, &descBufferInfos[numMaterials]);
+            std::array<BufferRange, 1> bufferRange;
+            m_worldMatricesUBO.FillBufferRange(bufferRange[0]);
+            m_worldMatrixDescriptorSet.InitializeWrites(m_worldMatricesDescriptorSetLayout);
+            m_worldMatrixDescriptorSet.WriteBufferDescriptor(0, 0, bufferRange, vk::AccessFlagBits::eShaderRead);
+            m_worldMatrixDescriptorSet.FinalizeWrite(m_device);
         }
-
-        m_device->GetHandle().updateDescriptorSets(descSetWrites, nullptr);
     }
 
     void Mesh::UploadMeshData(QueuedDeviceTransfer& transfer)
@@ -233,7 +223,7 @@ namespace vkfw_core::gfx {
     }
 
     void Mesh::Draw(const CommandBuffer& cmdBuffer, std::size_t backbufferIdx,
-                    const PipelineLayout& pipelineLayout) const
+                    const PipelineLayout& pipelineLayout)
     {
         cmdBuffer.GetHandle().bindVertexBuffers(0, 1, m_vertexBuffer.first->GetHandlePtr(), &m_vertexBuffer.second);
         cmdBuffer.GetHandle().bindIndexBuffer(m_indexBuffer.first->GetHandle(), m_indexBuffer.second,
@@ -243,15 +233,15 @@ namespace vkfw_core::gfx {
     }
 
     void Mesh::DrawNode(const CommandBuffer& cmdBuffer, std::size_t backbufferIdx, const PipelineLayout& pipelineLayout,
-                        const SceneMeshNode* node) const
+                        const SceneMeshNode* node)
     {
         if (!node->HasMeshes()) { return; }
 
         // bind world matrices
         auto instanceIndex = backbufferIdx * m_meshInfo->GetNodes().size() + node->GetNodeIndex();
-        cmdBuffer.GetHandle().bindDescriptorSets(
-            vk::PipelineBindPoint::eGraphics, pipelineLayout.GetHandle(), 0, m_worldMatrixDescriptorSet.GetHandle(),
-                                     static_cast<std::uint32_t>(instanceIndex * m_worldMatricesUBO.GetInstanceSize()));
+        m_worldMatrixDescriptorSet.Bind(
+            m_device, cmdBuffer, vk::PipelineBindPoint::eGraphics, pipelineLayout, 0,
+            static_cast<std::uint32_t>(instanceIndex * m_worldMatricesUBO.GetInstanceSize()));
 
         for (unsigned int i = 0; i < node->GetNumberOfSubMeshes(); ++i) {
             DrawSubMesh(cmdBuffer, pipelineLayout, m_meshInfo->GetSubMeshes()[node->GetSubMeshID(i)]);
@@ -262,19 +252,18 @@ namespace vkfw_core::gfx {
     }
 
     void Mesh::DrawSubMesh(const CommandBuffer& cmdBuffer, const PipelineLayout& pipelineLayout,
-                           const SubMesh& subMesh) const
+                           const SubMesh& subMesh)
     {
         // bind material.
         auto& matDescSet = m_materialDescriptorSets[subMesh.GetMaterialID()];
-        cmdBuffer.GetHandle().bindDescriptorSets(vk::PipelineBindPoint::eGraphics, pipelineLayout.GetHandle(), 1,
-                                                 matDescSet.GetHandle(), nullptr);
+        matDescSet.Bind(m_device, cmdBuffer, vk::PipelineBindPoint::eGraphics, pipelineLayout, 1);
 
         cmdBuffer.GetHandle().drawIndexed(static_cast<std::uint32_t>(subMesh.GetNumberOfIndices()), 1,
                               static_cast<std::uint32_t>(subMesh.GetIndexOffset()), 0, 0);
     }
 
     void Mesh::GetDrawElements(const glm::mat4& worldMatrix, const CameraBase& camera, std::size_t backbufferIdx,
-                               RenderList& renderList) const
+                               RenderList& renderList)
     {
         renderList.SetCurrentGeometry(m_vertexBuffer, m_indexBuffer);
 
@@ -282,7 +271,7 @@ namespace vkfw_core::gfx {
     }
 
     void Mesh::GetDrawElementsNode(const glm::mat4& worldMatrix, const CameraBase& camera, std::size_t backbufferIdx,
-                                   const SceneMeshNode* node, RenderList& renderList) const
+                                   const SceneMeshNode* node, RenderList& renderList)
     {
         auto nodeWorld = node->GetLocalTransform() * worldMatrix;
 
@@ -304,7 +293,7 @@ namespace vkfw_core::gfx {
     }
 
     void Mesh::GetDrawElementsSubMesh(const glm::mat4& worldMatrix, const CameraBase& camera, const SubMesh& subMesh,
-                                      RenderList& renderList) const
+                                      RenderList& renderList)
     {
         auto aabb = subMesh.GetLocalAABB().NewFromTransform(worldMatrix);
         if (!math::AABBInFrustumTest(camera.GetViewFrustum(), aabb)) { return; }
@@ -313,8 +302,8 @@ namespace vkfw_core::gfx {
         const auto mat = m_meshInfo->GetMaterial(subMesh.GetMaterialID());
         auto hasTransparency = (mat->m_alpha < 1.0f) || mat->m_hasAlpha;
 
-        const auto& matDescSet = m_materialDescriptorSets[subMesh.GetMaterialID()];
-        RenderElement::DescSetBinding materialBinding(&matDescSet, 1);
+        auto& matDescSet = m_materialDescriptorSets[subMesh.GetMaterialID()];
+        RenderElement::DescSetBinding materialBinding{&matDescSet, 1};
 
         RenderElement* re = nullptr;
         if (hasTransparency) {

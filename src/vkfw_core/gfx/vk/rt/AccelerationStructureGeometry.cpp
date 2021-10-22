@@ -22,18 +22,9 @@ namespace vkfw_core::gfx::rt {
         , m_name{name}
         , m_queueFamilyIndices{queueFamilyIndices}
         , m_TLAS{device, fmt::format("TLAS:", name), vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace}
-        , m_textureSampler{device->GetHandle(), fmt::format("ASSampler:{}", name), vk::UniqueSampler{}}
         , m_bufferMemGroup{m_device, fmt::format("ASBufferMemGroup:{}", name), vk::MemoryPropertyFlags{}}
         , m_textureMemGroup{m_device, fmt::format("ASTextureMemGroup:{}", name), vk::MemoryPropertyFlags{}}
     {
-        vk::SamplerCreateInfo samplerCreateInfo{vk::SamplerCreateFlags(),
-                                                vk::Filter::eLinear,
-                                                vk::Filter::eLinear,
-                                                vk::SamplerMipmapMode::eNearest,
-                                                vk::SamplerAddressMode::eRepeat,
-                                                vk::SamplerAddressMode::eRepeat,
-                                                vk::SamplerAddressMode::eRepeat};
-        m_textureSampler.SetHandle(device->GetHandle(), m_device->GetHandle().createSamplerUnique(samplerCreateInfo));
     }
 
     AccelerationStructureGeometry::~AccelerationStructureGeometry() {}
@@ -119,16 +110,13 @@ namespace vkfw_core::gfx::rt {
 
     void AccelerationStructureGeometry::AddTriangleGeometry(
         const glm::mat4& transform, const MaterialInfo& materialInfo, std::size_t primitiveCount,
-        std::size_t vertexCount, std::size_t vertexSize, const DeviceBuffer* vbo, std::size_t vboOffset /* = 0*/,
-        const DeviceBuffer* ibo /*= nullptr*/, std::size_t iboOffset /*= 0*/)
+        std::size_t vertexCount, std::size_t vertexSize, DeviceBuffer* vbo, std::size_t vboOffset /* = 0*/,
+        DeviceBuffer* ibo /*= nullptr*/, std::size_t iboOffset /*= 0*/)
     {
         vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress =
             vbo->GetDeviceAddressConst().deviceAddress + vboOffset;
-        auto vboBuffer = vbo->GetHandle();
-        auto iboBuffer = vboBuffer;
         vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress = vertexBufferDeviceAddress;
         if (ibo != nullptr) {
-            iboBuffer = ibo->GetHandle();
             indexBufferDeviceAddress = ibo->GetDeviceAddressConst().deviceAddress + iboOffset;
         } else {
             if (iboOffset == 0) {
@@ -147,8 +135,8 @@ namespace vkfw_core::gfx::rt {
                         materialIndex, transform);
         m_BLAS[blasIndex].AddTriangleGeometry(primitiveCount, vertexCount, vertexSize, false, vertexBufferDeviceAddress,
                                               indexBufferDeviceAddress);
-        m_triangleGeometryInfos.emplace_back(m_geometryIndex++, vboBuffer, vboOffset, vertexCount * vertexSize,
-                                             iboBuffer, iboOffset, primitiveCount * 3 * sizeof(std::uint32_t));
+        m_triangleGeometryInfos.emplace_back(m_geometryIndex++, vbo, vboOffset, vertexCount * vertexSize,
+                                             ibo ? ibo : vbo, iboOffset, primitiveCount * 3 * sizeof(std::uint32_t));
     }
 
     void AccelerationStructureGeometry::BuildAccelerationStructure()
@@ -203,59 +191,55 @@ namespace vkfw_core::gfx::rt {
         layout.AddBinding(bindingInstanceBuffer, vk::DescriptorType::eStorageBuffer, 1, shaderFlags);
         layout.AddBinding(bindingMaterialBuffer, vk::DescriptorType::eStorageBuffer, 1, shaderFlags);
         layout.AddBinding(bindingDiffuseTexture, vk::DescriptorType::eCombinedImageSampler,
-                          static_cast<std::uint32_t>(m_diffuseTextureHandles.size()), shaderFlags);
+                          static_cast<std::uint32_t>(m_diffuseTextures.size()), shaderFlags);
         layout.AddBinding(bindingBumpTexture, vk::DescriptorType::eCombinedImageSampler,
-                          static_cast<std::uint32_t>(m_bumpTextureHandles.size()), shaderFlags);
+                          static_cast<std::uint32_t>(m_bumpMaps.size()), shaderFlags);
     }
 
-    void AccelerationStructureGeometry::FillDescriptorAccelerationStructureInfo(
-        vk::WriteDescriptorSetAccelerationStructureKHR& descInfo) const
+    void AccelerationStructureGeometry::FillAccelerationStructureInfo(AccelerationStructureInfo& accelerationStructureInfo) const
     {
-        descInfo.setAccelerationStructureCount(1);
-        descInfo.setPAccelerationStructures(m_TLAS.GetHandlePtr());
+        accelerationStructureInfo.m_accelerationStructure = &m_TLAS;
+        m_TLAS.FillBufferRange(accelerationStructureInfo.m_bufferRange);
     }
 
-    void AccelerationStructureGeometry::FillDescriptorBuffersInfo(
-        std::vector<vk::DescriptorBufferInfo>& vboBufferInfos, std::vector<vk::DescriptorBufferInfo>& iboBufferInfos,
-        vk::DescriptorBufferInfo& instanceBufferInfo, vk::DescriptorBufferInfo& materialBufferInfo,
-        std::vector<vk::DescriptorImageInfo>& diffuseTextureInfos,
-        std::vector<vk::DescriptorImageInfo>& bumpTextureInfos) const
+    void AccelerationStructureGeometry::FillGeometryInfo(std::vector<BufferRange>& vbos, std::vector<BufferRange>& ibos,
+                                                         BufferRange& instanceBuffer)
     {
-        auto vboIOffset = vboBufferInfos.size();
-        auto iboIOffset = iboBufferInfos.size();
-        vboBufferInfos.resize(vboIOffset + m_triangleGeometryInfos.size() + m_meshGeometryInfos.size());
-        iboBufferInfos.resize(iboIOffset + m_triangleGeometryInfos.size() + m_meshGeometryInfos.size());
+        auto vboIOffset = vbos.size();
+        auto iboIOffset = ibos.size();
+        vbos.resize(vboIOffset + m_triangleGeometryInfos.size() + m_meshGeometryInfos.size());
+        ibos.resize(iboIOffset + m_triangleGeometryInfos.size() + m_meshGeometryInfos.size());
 
         for (const auto& triangleGeometry : m_triangleGeometryInfos) {
-            vboBufferInfos[vboIOffset + triangleGeometry.index] = vk::DescriptorBufferInfo{
-                triangleGeometry.vboBuffer, triangleGeometry.vboOffset, triangleGeometry.vboRange};
-            iboBufferInfos[iboIOffset + triangleGeometry.index] = vk::DescriptorBufferInfo{
-                triangleGeometry.iboBuffer, triangleGeometry.iboOffset, triangleGeometry.iboRange};
+            vbos[vboIOffset + triangleGeometry.index] =
+                BufferRange{triangleGeometry.vboBuffer, triangleGeometry.vboOffset, triangleGeometry.vboRange};
+            ibos[iboIOffset + triangleGeometry.index] =
+                BufferRange{triangleGeometry.iboBuffer, triangleGeometry.iboOffset, triangleGeometry.iboRange};
         }
 
         for (const auto& meshGeometry : m_meshGeometryInfos) {
-            vboBufferInfos[vboIOffset + meshGeometry.index] = vk::DescriptorBufferInfo{
-                m_bufferMemGroup.GetBuffer(m_bufferIndex)->GetHandle(), meshGeometry.vboOffset, meshGeometry.vboRange};
-            iboBufferInfos[iboIOffset + meshGeometry.index] = vk::DescriptorBufferInfo{
-                m_bufferMemGroup.GetBuffer(m_bufferIndex)->GetHandle(), meshGeometry.iboOffset, meshGeometry.iboRange};
+            vbos[vboIOffset + meshGeometry.index] =
+                BufferRange{m_bufferMemGroup.GetBuffer(m_bufferIndex), meshGeometry.vboOffset, meshGeometry.vboRange};
+            ibos[iboIOffset + meshGeometry.index] =
+                BufferRange{m_bufferMemGroup.GetBuffer(m_bufferIndex), meshGeometry.iboOffset, meshGeometry.iboRange};
         }
 
-        instanceBufferInfo.setBuffer(m_bufferMemGroup.GetBuffer(m_bufferIndex)->GetHandle());
-        instanceBufferInfo.setOffset(m_instanceBufferOffset);
-        instanceBufferInfo.setRange(m_instanceBufferRange);
+        instanceBuffer.m_buffer = m_bufferMemGroup.GetBuffer(m_bufferIndex);
+        instanceBuffer.m_offset = m_instanceBufferOffset;
+        instanceBuffer.m_range = m_instanceBufferRange;
+    }
 
-        materialBufferInfo.setBuffer(m_bufferMemGroup.GetBuffer(m_bufferIndex)->GetHandle());
-        materialBufferInfo.setOffset(m_materialBufferOffset);
-        materialBufferInfo.setRange(m_materialBufferRange);
+    void AccelerationStructureGeometry::FillMaterialInfo(BufferRange& materialBuffer,
+                                                         std::vector<Texture*>& diffuseTextures,
+                                                         std::vector<Texture*>& bumpMaps)
+    {
+        materialBuffer.m_buffer = m_bufferMemGroup.GetBuffer(m_bufferIndex);
+        materialBuffer.m_offset = m_materialBufferOffset;
+        materialBuffer.m_range = m_materialBufferRange;
 
-        for (auto tex : m_diffuseTextureHandles) {
-            diffuseTextureInfos.emplace_back(m_textureSampler.GetHandle(), tex,
-                                             vk::ImageLayout::eShaderReadOnlyOptimal);
-        }
+        for (auto tex : m_diffuseTextures) { diffuseTextures.emplace_back(tex); }
 
-        for (auto tex : m_bumpTextureHandles) {
-            bumpTextureInfos.emplace_back(m_textureSampler.GetHandle(), tex, vk::ImageLayout::eShaderReadOnlyOptimal);
-        }
+        for (auto tex : m_bumpMaps) { bumpMaps.emplace_back(tex); }
     }
 
     void AccelerationStructureGeometry::CreateResourceUseBarriers(vk::AccessFlags access, vk::PipelineStageFlags pipelineStage, vk::ImageLayout newLayout, PipelineBarrier& barrier)

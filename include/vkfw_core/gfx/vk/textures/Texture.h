@@ -11,7 +11,7 @@
 #include "gfx/vk/LogicalDevice.h"
 #include "gfx/vk/memory/DeviceMemory.h"
 #include "gfx/vk/wrappers/CommandBuffer.h"
-#include "gfx/vk/wrappers/ImageResources.h"
+#include "gfx/vk/wrappers/ResourceViews.h"
 #include "gfx/vk/wrappers/MemoryBoundResource.h"
 #include "gfx/vk/wrappers/Sampler.h"
 #include "main.h"
@@ -117,7 +117,6 @@ namespace vkfw_core::gfx {
 
         static void AddDescriptorLayoutBinding(DescriptorSetLayout& layout, vk::DescriptorType type,
                                                vk::ShaderStageFlags shaderFlags, std::uint32_t binding = 0);
-        void FillDescriptorImageInfo(vk::DescriptorImageInfo& descInfo, const Sampler& sampler, vk::ImageLayout imageLayout) const;
 
         void InitializeImage(const glm::u32vec4& size, std::uint32_t mipLevels, bool initMemory = true);
         void InitializeExternalImage(vk::Image externalImage, const glm::u32vec4& size, std::uint32_t mipLevels,
