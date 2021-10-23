@@ -77,5 +77,7 @@ namespace vkfw_core::gfx {
         std::vector<vk::Image> m_extImages;
         /** Holds the queue family indices. */
         std::vector<std::uint32_t> m_queueFamilyIndices;
+        /** Pipeline barrier for using this framebuffer. */
+        gfx::PipelineBarrier m_barrier;
     };
 }

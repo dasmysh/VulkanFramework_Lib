@@ -44,7 +44,7 @@ namespace vkfw_core::gfx {
             std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix,
             const math::AABB3<float>& boundingBox);
 
-        inline const RenderElement& DrawElement(const LogicalDevice* device, const CommandBuffer& cmdBuffer, const RenderElement* lastElement = nullptr) const;
+        inline const RenderElement& DrawElement(const CommandBuffer& cmdBuffer, const RenderElement* lastElement = nullptr) const;
 
         friend bool operator<(const RenderElement& l, const RenderElement& r)
         {
@@ -155,7 +155,7 @@ namespace vkfw_core::gfx {
         return *this;
     }
 
-    const RenderElement& RenderElement::DrawElement(const LogicalDevice* device, const CommandBuffer& cmdBuffer, const RenderElement* lastElement /*= nullptr*/) const
+    const RenderElement& RenderElement::DrawElement(const CommandBuffer& cmdBuffer, const RenderElement* lastElement /*= nullptr*/) const
     {
         if ((lastElement == nullptr) || lastElement->m_pipeline == m_pipeline) {
             cmdBuffer.GetHandle().bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline->GetHandle());
@@ -169,20 +169,20 @@ namespace vkfw_core::gfx {
         }
 
         std::get<0>(m_cameraMatricesUBO)
-            ->Bind(device, cmdBuffer, vk::PipelineBindPoint::eGraphics, *m_pipelineLayout,
+            ->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, *m_pipelineLayout,
                    std::get<1>(m_cameraMatricesUBO), std::get<2>(m_cameraMatricesUBO));
 
         std::get<0>(m_worldMatricesUBO)
-            ->Bind(device, cmdBuffer, vk::PipelineBindPoint::eGraphics, *m_pipelineLayout,
+            ->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, *m_pipelineLayout,
                    std::get<1>(m_worldMatricesUBO), std::get<2>(m_worldMatricesUBO));
 
         for (const auto& ubo : m_generalUBOs) {
-            std::get<0>(ubo)->Bind(device, cmdBuffer, vk::PipelineBindPoint::eGraphics, *m_pipelineLayout,
+            std::get<0>(ubo)->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, *m_pipelineLayout,
                                    std::get<1>(ubo), std::get<2>(ubo));
         }
 
         for (const auto& ds : m_generalDescSets) {
-            ds.first->Bind(device, cmdBuffer, vk::PipelineBindPoint::eGraphics, *m_pipelineLayout, ds.second);
+            ds.first->Bind(cmdBuffer, vk::PipelineBindPoint::eGraphics, *m_pipelineLayout, ds.second);
         }
 
         cmdBuffer.GetHandle().drawIndexed(m_indexCount, m_instanceCount, m_firstIndex, m_vertexOffset, m_firstInstance);

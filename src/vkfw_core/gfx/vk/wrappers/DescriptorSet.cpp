@@ -17,10 +17,15 @@
 
 namespace vkfw_core::gfx {
 
-    void DescriptorSet::InitializeWrites(const DescriptorSetLayout& layout)
+    DescriptorSet::DescriptorSet(const LogicalDevice* device, std::string_view name, vk::DescriptorSet descriptorSet)
+        : VulkanObjectPrivateWrapper{device->GetHandle(), name, std::move(descriptorSet)}, m_barrier{device}
     {
+    }
+
+    void DescriptorSet::InitializeWrites(const LogicalDevice* device, const DescriptorSetLayout& layout)
+    {
+        m_barrier = PipelineBarrier{device};
         m_layoutBindings = layout.GetBindings();
-        m_boundResources.clear();
         m_descriptorSetWrites.clear();
     }
 
@@ -28,16 +33,14 @@ namespace vkfw_core::gfx {
                                              std::span<Texture*> textures, const Sampler& sampler,
                                              vk::AccessFlags access, vk::ImageLayout layout)
     {
-        auto [writeSet, resource] = WriteGeneralDescriptor(binding, arrayElement, textures.size(), access);
+        auto [writeSet, pipelineStage] = WriteGeneralDescriptor(binding, arrayElement, textures.size());
         assert(DescriptorSetLayout::IsImageBindingType(writeSet.descriptorType));
         auto& imageWrite = AddImageWrite(textures.size());
-        auto& imageResources = std::get<std::vector<Texture*>>(resource.m_resources = std::vector<Texture*>{});
 
-        imageResources.resize(textures.size());
+        // imageResources.resize(textures.size());
         for (std::size_t i = 0; i < textures.size(); ++i) {
-            imageResources[i] = textures[i];
             imageWrite[i].sampler = sampler.GetHandle();
-            imageWrite[i].imageView = textures[i]->GetImageView().GetHandle();
+            imageWrite[i].imageView = textures[i]->GetImageView(access, pipelineStage, layout, m_barrier).GetHandle();
             imageWrite[i].imageLayout = layout;
         }
 
@@ -45,15 +48,14 @@ namespace vkfw_core::gfx {
     }
 
     void DescriptorSet::WriteBufferDescriptor(std::uint32_t binding, std::uint32_t arrayElement,
-                                              std::span<BufferRange> buffers, vk::AccessFlags access)
+                                              std::span<BufferRange> buffers, [[maybe_unused]] vk::AccessFlags access)
     {
-        auto [writeSet, resource] = WriteGeneralDescriptor(binding, arrayElement, buffers.size(), access);
+        auto [writeSet, pipelineStage] = WriteGeneralDescriptor(binding, arrayElement, buffers.size());
         assert(DescriptorSetLayout::IsBufferBindingType(writeSet.descriptorType));
         auto& bufferWrite = AddBufferWrite(buffers.size());
-        auto& bufferResources = resource.AddBufferResources(buffers.size());
 
         for (std::size_t i = 0; i < buffers.size(); ++i) {
-            bufferResources[i] = buffers[i].m_buffer;
+            // bufferResources[i] = buffers[i].m_buffer;
             bufferWrite[i].buffer = buffers[i].m_buffer->GetHandle();
             bufferWrite[i].offset = buffers[i].m_offset;
             bufferWrite[i].range = buffers[i].m_range;
@@ -63,17 +65,17 @@ namespace vkfw_core::gfx {
     }
 
     void DescriptorSet::WriteTexelBufferDescriptor(std::uint32_t binding, std::uint32_t arrayElement,
-                                                   std::span<TexelBufferInfo> buffers, vk::AccessFlags access)
+                                                   std::span<TexelBufferInfo> buffers,
+                                                   [[maybe_unused]] vk::AccessFlags access)
     {
-        auto [writeSet, resource] = WriteGeneralDescriptor(binding, arrayElement, buffers.size(), access);
+        auto [writeSet, pipelineStage] = WriteGeneralDescriptor(binding, arrayElement, buffers.size());
         assert(DescriptorSetLayout::IsTexelBufferBindingType(writeSet.descriptorType));
         auto& bufferWrite = std::get<std::vector<vk::BufferView>>(
             m_descriptorResourceWrites.emplace_back(std::vector<vk::BufferView>{}));
-        auto& bufferResources = resource.AddBufferResources(buffers.size());
 
         bufferWrite.resize(buffers.size());
         for (std::size_t i = 0; i < buffers.size(); ++i) {
-            bufferResources[i] = buffers[i].m_bufferRange.m_buffer;
+            // bufferResources[i] = buffers[i].m_bufferRange.m_buffer;
             bufferWrite[i] = buffers[i].m_bufferView->GetHandle();
         }
 
@@ -83,7 +85,7 @@ namespace vkfw_core::gfx {
     void DescriptorSet::WriteSamplerDescriptor(std::uint32_t binding, std::uint32_t arrayElement,
                                                std::span<const Sampler*> samplers)
     {
-        auto [writeSet, resource] = WriteGeneralDescriptor(binding, arrayElement, samplers.size(), vk::AccessFlags{});
+        auto [writeSet, pipelineStage] = WriteGeneralDescriptor(binding, arrayElement, samplers.size());
         assert(writeSet.descriptorType == vk::DescriptorType::eSampler);
         auto& imageWrite = AddImageWrite(samplers.size());
 
@@ -100,16 +102,15 @@ namespace vkfw_core::gfx {
     DescriptorSet::WriteAccelerationStructureDescriptor(std::uint32_t binding, std::uint32_t arrayElement,
                                                         std::span<AccelerationStructureInfo> accelerationStructures)
     {
-        auto [writeSet, resource] = WriteGeneralDescriptor(binding, arrayElement, accelerationStructures.size(),
-                                                           vk::AccessFlagBits::eAccelerationStructureReadKHR);
+        auto [writeSet, pipelineStage] = WriteGeneralDescriptor(binding, arrayElement, accelerationStructures.size());
+        // vk::AccessFlagBits::eAccelerationStructureReadKHR
         assert(writeSet.descriptorType == vk::DescriptorType::eAccelerationStructureKHR);
         auto& asWrite = std::get<AccelerationStructureWriteInfo>(
             m_descriptorResourceWrites.emplace_back(AccelerationStructureWriteInfo{}));
-        auto& bufferResources = resource.AddBufferResources(accelerationStructures.size());
 
         asWrite.second.resize(accelerationStructures.size());
         for (std::size_t i = 0; i < accelerationStructures.size(); ++i) {
-            bufferResources[i] = accelerationStructures[i].m_bufferRange.m_buffer;
+            // bufferResources[i] = accelerationStructures[i].m_bufferRange.m_buffer;
             asWrite.second[i] = accelerationStructures[i].m_accelerationStructure->GetHandle();
         }
         asWrite.first = std::make_unique<vk::WriteDescriptorSetAccelerationStructureKHR>(asWrite.second);
@@ -122,22 +123,18 @@ namespace vkfw_core::gfx {
         device->GetHandle().updateDescriptorSets(m_descriptorSetWrites, nullptr);
     }
 
-    std::pair<vk::WriteDescriptorSet&, DescriptorSet::ResourceInfo&>
-    DescriptorSet::WriteGeneralDescriptor(std::uint32_t binding, std::uint32_t arrayElement, std::size_t arraySize, vk::AccessFlags access)
+    std::pair<vk::WriteDescriptorSet&, vk::PipelineStageFlags>
+    DescriptorSet::WriteGeneralDescriptor(std::uint32_t binding, std::uint32_t arrayElement, std::size_t arraySize)
     {
         assert(arrayElement == 0 || arraySize == 1);
         const auto& bindingLayout = GetBindingLayout(binding);
         assert(bindingLayout.descriptorCount == arraySize);
         auto& writeSet =
             m_descriptorSetWrites.emplace_back(GetHandle(), bindingLayout.binding, arrayElement,
-                                               static_cast<std::uint32_t>(arraySize), bindingLayout.descriptorType);
+                                                  static_cast<std::uint32_t>(arraySize), bindingLayout.descriptorType);
 
-        auto& resource = m_boundResources.emplace_back();
-        resource.m_access = access;
-        resource.m_pipelineStage = GetCorrespondingPipelineStage(bindingLayout.stageFlags);
-        resource.m_resourceWriteIndex = m_descriptorResourceWrites.size();
-
-        return std::pair<vk::WriteDescriptorSet&, ResourceInfo&>{writeSet, resource};
+        return std::pair<vk::WriteDescriptorSet&, vk::PipelineStageFlags>{
+            writeSet, GetCorrespondingPipelineStage(bindingLayout.stageFlags)};
     }
 
     std::vector<vk::DescriptorImageInfo>& DescriptorSet::AddImageWrite(std::size_t elements)
@@ -156,33 +153,11 @@ namespace vkfw_core::gfx {
         return bufferWrite;
     }
 
-    void DescriptorSet::Bind(const LogicalDevice* device, const CommandBuffer& cmdBuffer,
-                             vk::PipelineBindPoint bindingPoint, const PipelineLayout& pipelineLayout,
-                             std::uint32_t firstSet, const vk::ArrayProxy<const std::uint32_t>& dynamicOffsets)
+    void DescriptorSet::Bind(const CommandBuffer& cmdBuffer, vk::PipelineBindPoint bindingPoint,
+                             const PipelineLayout& pipelineLayout, std::uint32_t firstSet,
+                             const vk::ArrayProxy<const std::uint32_t>& dynamicOffsets)
     {
-        PipelineBarrier barrier{device, vk::PipelineStageFlags{}};
-        for (auto& resource : m_boundResources) {
-            if (std::holds_alternative<std::vector<Buffer*>>(resource.m_resources)) {
-                auto buffers = std::get<std::vector<Buffer*>>(resource.m_resources);
-                for (std::size_t i = 0; i < buffers.size(); ++i) {
-                    // auto access = buffers[i]->GetAccess();
-                    // access.SetAccess(resource.m_access, resource.m_pipelineStage, barrier);
-                }
-            } else if (std::holds_alternative<std::vector<Texture*>>(resource.m_resources)) {
-                auto images = std::get<std::vector<Texture*>>(resource.m_resources);
-                assert(std::holds_alternative<std::vector<vk::DescriptorImageInfo>>(
-                    m_descriptorResourceWrites[resource.m_resourceWriteIndex]));
-                const auto& imageWrites = std::get<std::vector<vk::DescriptorImageInfo>>(
-                    m_descriptorResourceWrites[resource.m_resourceWriteIndex]);
-
-                for (std::size_t i = 0; i < images.size(); ++i) {
-                    auto access = images[i]->GetAccess();
-                    access.SetAccess(resource.m_access, resource.m_pipelineStage, imageWrites[i].imageLayout, barrier);
-                }
-            }
-        }
-
-        barrier.Record(cmdBuffer);
+        m_barrier.Record(cmdBuffer);
 
         cmdBuffer.GetHandle().bindDescriptorSets(bindingPoint, pipelineLayout.GetHandle(), firstSet, GetHandle(),
                                                  dynamicOffsets);
@@ -253,12 +228,5 @@ namespace vkfw_core::gfx {
         } else {
             return pipelineStages;
         }
-    }
-
-    std::vector<Buffer*>& DescriptorSet::ResourceInfo::AddBufferResources(std::size_t elements)
-    {
-        auto& bufferResources = std::get<std::vector<Buffer*>>(m_resources = std::vector<Buffer*>{});
-        bufferResources.resize(elements);
-        return bufferResources;
     }
 }

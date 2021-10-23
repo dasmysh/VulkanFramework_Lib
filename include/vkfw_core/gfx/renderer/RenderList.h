@@ -35,7 +35,7 @@ namespace vkfw_core::gfx {
             std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix,
             const math::AABB3<float>& boundingBox);
 
-        inline void Render(const LogicalDevice* device, const CommandBuffer& cmdBuffer);
+        inline void Render(const CommandBuffer& cmdBuffer);
 
     private:
         std::vector<RenderElement> m_opaqueElements;
@@ -104,16 +104,16 @@ namespace vkfw_core::gfx {
         return result;
     }
 
-    void RenderList::Render(const LogicalDevice* device, const CommandBuffer& cmdBuffer)
+    void RenderList::Render(const CommandBuffer& cmdBuffer)
     {
         std::sort(m_opaqueElements.begin(), m_opaqueElements.end());
         std::sort(m_transparentElements.begin(), m_transparentElements.end());
 
         const RenderElement* lastElement = nullptr;
-        for (const auto& re : m_opaqueElements) { lastElement = &re.DrawElement(device, cmdBuffer, lastElement); }
+        for (const auto& re : m_opaqueElements) { lastElement = &re.DrawElement(cmdBuffer, lastElement); }
 
         lastElement = nullptr;
-        for (const auto& re : m_transparentElements) { lastElement = &re.DrawElement(device, cmdBuffer, lastElement); }
+        for (const auto& re : m_transparentElements) { lastElement = &re.DrawElement(cmdBuffer, lastElement); }
     }
 
 }

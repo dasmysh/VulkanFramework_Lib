@@ -247,13 +247,12 @@ namespace vkfw_core::gfx::rt {
         // TODO: buffer barriers.
 
         for (auto& mat : m_materials) {
-            if (mat.m_diffuseTexture) { auto accessor = mat.m_diffuseTexture->GetTexture().GetAccess();
-                accessor.SetAccess(access, pipelineStage, newLayout, barrier);
+            if (mat.m_diffuseTexture) {
+                mat.m_diffuseTexture->GetTexture().AccessBarrier(access, pipelineStage, newLayout, barrier);
             }
 
             if (mat.m_bumpMap) {
-                auto accessor = mat.m_bumpMap->GetTexture().GetAccess();
-                accessor.SetAccess(access, pipelineStage, newLayout, barrier);
+                mat.m_bumpMap->GetTexture().AccessBarrier(access, pipelineStage, newLayout, barrier);
             }
         }
     }

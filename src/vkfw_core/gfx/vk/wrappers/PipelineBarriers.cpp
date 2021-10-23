@@ -124,6 +124,10 @@ namespace vkfw_core::gfx {
             }
         }
 
+        if (totalSrcPipelineStages == vk::PipelineStageFlags{} && m_dstPipelineStages == vk::PipelineStageFlags{} && bufferBarriers.empty() && imageBarriers.empty()) {
+            return;
+        }
+
         cmdBuffer.GetHandle().pipelineBarrier(totalSrcPipelineStages, m_dstPipelineStages, vk::DependencyFlags{}, {},
                                               bufferBarriers, imageBarriers);
     }

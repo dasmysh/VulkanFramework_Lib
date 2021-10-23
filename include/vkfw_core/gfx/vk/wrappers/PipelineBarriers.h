@@ -73,7 +73,8 @@ namespace vkfw_core::gfx {
     class PipelineBarrier
     {
     public:
-        PipelineBarrier(const LogicalDevice* device, vk::PipelineStageFlags dstPipelineStages);
+        PipelineBarrier(const LogicalDevice* device,
+                        vk::PipelineStageFlags dstPipelineStages = vk::PipelineStageFlags{});
 
         void AddSingleBarrier(Texture* texture, vk::Image image, vk::ImageLayout dstImageLayout,
                               vk::AccessFlags dstAccess, vk::PipelineStageFlags dstPipelineStages);

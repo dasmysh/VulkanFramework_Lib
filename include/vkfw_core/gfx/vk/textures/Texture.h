@@ -80,28 +80,6 @@ namespace vkfw_core::gfx {
                                                         vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1);
     };
 
-    class ImageAccessor
-    {
-    public:
-        ImageAccessor(const LogicalDevice* device, vk::Image image, Texture* texture);
-        ImageAccessor(ImageAccessor&& rhs) noexcept;
-        ImageAccessor& operator=(ImageAccessor&&) noexcept;
-        ImageAccessor(const ImageAccessor&) = delete;
-        ImageAccessor& operator=(const ImageAccessor&) = delete;
-
-        void SetAccess(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages, vk::ImageLayout imageLayout,
-                       PipelineBarrier& barrier);
-        [[nodiscard]] vk::Image Get(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
-                                    vk::ImageLayout imageLayout, SingleResourcePipelineBarrier& barrier);
-        [[nodiscard]] vk::Image Get(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
-                                    vk::ImageLayout imageLayout, PipelineBarrier& barrier);
-
-    private:
-        const LogicalDevice* m_device;
-        vk::Image m_image;
-        Texture* m_texture;
-    };
-
     class Texture : public VulkanObjectPrivateWrapper<vk::UniqueImage>, public MemoryBoundResource
     {
     public:
@@ -139,15 +117,19 @@ namespace vkfw_core::gfx {
                        const Fence& fence = Fence{});
         void CopyImageSync(Texture& dstImage, const Queue& copyQueue);
 
+        void AccessBarrier(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages, vk::ImageLayout imageLayout,
+                           PipelineBarrier& barrier);
+        [[nodiscard]] vk::Image GetImage(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
+                                         vk::ImageLayout imageLayout, PipelineBarrier& barrier);
+        [[nodiscard]] const ImageView& GetImageView(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
+                                                    vk::ImageLayout imageLayout, PipelineBarrier& barrier);
+
         [[nodiscard]] const glm::u32vec4& GetSize() const { return m_size; }
         [[nodiscard]] const glm::u32vec4& GetPixelSize() const { return m_pixelSize; }
         [[nodiscard]] std::uint32_t GetMipLevels() const { return m_mipLevels; }
-        // [[nodiscard]] vk::Image GetImage() const { return m_image; }
-        [[nodiscard]] const ImageView& GetImageView() const { return m_imageView; }
         [[nodiscard]] const DeviceMemory& GetDeviceMemory() const { return m_imageDeviceMemory; }
         [[nodiscard]] const TextureDescriptor& GetDescriptor() const { return m_desc; }
         [[nodiscard]] vk::ImageAspectFlags GetValidAspects() const;
-        [[nodiscard]] ImageAccessor GetAccess();
         [[nodiscard]] vk::Image GetAccessNoBarrier() const;
         [[nodiscard]] vk::ImageLayout GetImageLayout() const { return m_imageLayout; }
         [[nodiscard]] vk::MemoryRequirements GetMemoryRequirements() const;

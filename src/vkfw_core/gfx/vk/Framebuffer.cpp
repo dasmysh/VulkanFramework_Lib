@@ -25,6 +25,7 @@ namespace vkfw_core::gfx {
         , m_memoryGroup{logicalDevice, fmt::format("Mem:{}", name), vk::MemoryPropertyFlags()}
         , m_extImages{images}
         , m_queueFamilyIndices{queueFamilyIndices}
+        , m_barrier{m_device}
     {
         for (std::size_t i = 0; i < m_extImages.size(); ++i) {
             m_extTextures.emplace_back(m_device, fmt::format("FBO:{}-ExtTex:{}", name, i), desc.m_attachments[i].m_tex,
@@ -69,6 +70,7 @@ namespace vkfw_core::gfx {
         , m_extTextures{std::move(rhs.m_extTextures)}
         , m_extImages{std::move(rhs.m_extImages)}
         , m_queueFamilyIndices{std::move(rhs.m_queueFamilyIndices)}
+        , m_barrier{std::move(rhs.m_barrier)}
     {
     }
 
@@ -84,6 +86,7 @@ namespace vkfw_core::gfx {
         m_extTextures = std::move(rhs.m_extTextures);
         m_extImages = std::move(rhs.m_extImages);
         m_queueFamilyIndices = std::move(rhs.m_queueFamilyIndices);
+        m_barrier = std::move(rhs.m_barrier);
         return *this;
     }
 
@@ -122,8 +125,7 @@ namespace vkfw_core::gfx {
             vk::AccessFlags access = GetFittingAttachmentAccessFlags(m_desc.m_attachments[i].m_tex.m_format);
             vk::PipelineStageFlags pipelineStage =
                 GetFittingAttachmentPipelineStage(m_desc.m_attachments[i].m_tex.m_format);
-            auto accessor = m_memoryGroup.GetTexture(i)->GetAccess();
-            accessor.SetAccess(access, pipelineStage, imageLayouts[i], barrier);
+            m_memoryGroup.GetTexture(i)->AccessBarrier(access, pipelineStage, imageLayouts[i], barrier);
         }
         barrier.Record(cmdBuffer ? cmdBuffer : ucmdBuffer);
         if (!cmdBuffer) {
@@ -145,12 +147,32 @@ namespace vkfw_core::gfx {
         std::vector<vk::ImageView> attachments;
         for (auto& tex : m_extTextures) {
             tex.InitializeImageView();
-            attachments.push_back(tex.GetImageView().GetHandle());
+            auto descriptorIndex = attachments.size();
+            vk::AccessFlags access =
+                GetFittingAttachmentAccessFlags(m_desc.m_attachments[descriptorIndex].m_tex.m_format);
+            vk::PipelineStageFlags pipelineStage =
+                GetFittingAttachmentPipelineStage(m_desc.m_attachments[descriptorIndex].m_tex.m_format);
+            vk::ImageLayout layout =
+                m_desc.m_attachments[descriptorIndex].m_initialLayout == vk::ImageLayout::eUndefined
+                    ? tex.GetImageLayout()
+                    : m_desc.m_attachments[descriptorIndex].m_initialLayout;
+            attachments.push_back(tex.GetImageView(access, pipelineStage, layout, m_barrier).GetHandle());
         }
         attachments.reserve(m_desc.m_attachments.size());
 
         for (auto i = 0U; i < m_memoryGroup.GetImagesInGroup(); ++i) {
-            attachments.push_back(m_memoryGroup.GetTexture(i)->GetImageView().GetHandle());
+            auto descriptorIndex = attachments.size();
+
+            vk::AccessFlags access =
+                GetFittingAttachmentAccessFlags(m_desc.m_attachments[descriptorIndex].m_tex.m_format);
+            vk::PipelineStageFlags pipelineStage =
+                GetFittingAttachmentPipelineStage(m_desc.m_attachments[descriptorIndex].m_tex.m_format);
+            vk::ImageLayout layout =
+                m_desc.m_attachments[descriptorIndex].m_initialLayout == vk::ImageLayout::eUndefined
+                    ? m_memoryGroup.GetTexture(i)->GetImageLayout()
+                    : m_desc.m_attachments[descriptorIndex].m_initialLayout;
+            attachments.push_back(
+                m_memoryGroup.GetTexture(i)->GetImageView(access, pipelineStage, layout, m_barrier).GetHandle());
         }
 
         vk::FramebufferCreateInfo fbCreateInfo{vk::FramebufferCreateFlags(),
@@ -181,20 +203,20 @@ namespace vkfw_core::gfx {
                                       const vk::Rect2D& renderArea, std::span<vk::ClearValue> clearColor,
                                       vk::SubpassContents subpassContents)
     {
-        gfx::PipelineBarrier barrier{m_device, vk::PipelineStageFlagBits{}};
-        for (std::size_t iTex = 0; iTex < m_desc.m_attachments.size(); ++iTex) {
-            const auto& attachmentDesc = renderPass.GetDescriptor().m_attachments[iTex];
-            auto& texture = GetTexture(iTex);
-            auto accessor = texture.GetAccess();
-
-            vk::AccessFlags access = GetFittingAttachmentAccessFlags(attachmentDesc.m_tex.m_format);
-            vk::PipelineStageFlags pipelineStage = GetFittingAttachmentPipelineStage(attachmentDesc.m_tex.m_format);
-            vk::ImageLayout layout = attachmentDesc.m_initialLayout == vk::ImageLayout::eUndefined
-                                         ? texture.GetImageLayout()
-                                         : attachmentDesc.m_initialLayout;
-            accessor.SetAccess(access, pipelineStage, layout, barrier);
-        }
-        barrier.Record(cmdBuffer);
+        // gfx::PipelineBarrier barrier{m_device, vk::PipelineStageFlagBits{}};
+        // for (std::size_t iTex = 0; iTex < m_desc.m_attachments.size(); ++iTex) {
+        //     const auto& attachmentDesc = renderPass.GetDescriptor().m_attachments[iTex];
+        //     auto& texture = GetTexture(iTex);
+        //     auto accessor = texture.GetAccess();
+        //
+        //     vk::AccessFlags access = GetFittingAttachmentAccessFlags(attachmentDesc.m_tex.m_format);
+        //     vk::PipelineStageFlags pipelineStage = GetFittingAttachmentPipelineStage(attachmentDesc.m_tex.m_format);
+        //     vk::ImageLayout layout = attachmentDesc.m_initialLayout == vk::ImageLayout::eUndefined
+        //                                  ? texture.GetImageLayout()
+        //                                  : attachmentDesc.m_initialLayout;
+        //     accessor.SetAccess(access, pipelineStage, layout, barrier);
+        // }
+        m_barrier.Record(cmdBuffer);
 
         vk::RenderPassBeginInfo renderPassBeginInfo{renderPass.GetHandle(), GetHandle(), renderArea,
                                                     static_cast<std::uint32_t>(clearColor.size()), clearColor.data()};

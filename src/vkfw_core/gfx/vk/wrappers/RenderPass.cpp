@@ -76,8 +76,6 @@ namespace vkfw_core::gfx {
 
     void RenderPass::Create(vk::Device device)
     {
-
-
         std::vector<vk::AttachmentDescription> attachmentDescriptions;
         attachmentDescriptions.reserve(m_desc.m_attachments.size());
         std::vector<vk::AttachmentReference> colorAttachmentReferences;

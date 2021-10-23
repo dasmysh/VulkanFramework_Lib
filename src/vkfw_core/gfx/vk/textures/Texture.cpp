@@ -174,14 +174,11 @@ namespace vkfw_core::gfx {
         assert(srcMipLevel < m_mipLevels);
         assert(dstMipLevel < dstImage.m_mipLevels);
 
-        auto srcAccessor = GetAccess();
-        auto dstAccessor = dstImage.GetAccess();
-
         PipelineBarrier barrier{m_device, vk::PipelineStageFlagBits::eTransfer};
-        srcAccessor.SetAccess(vk::AccessFlagBits::eTransferRead, vk::PipelineStageFlagBits::eTransfer,
-                              vk::ImageLayout::eTransferSrcOptimal, barrier);
-        dstAccessor.SetAccess(vk::AccessFlagBits::eTransferWrite, vk::PipelineStageFlagBits::eTransfer,
-                              vk::ImageLayout::eTransferDstOptimal, barrier);
+        AccessBarrier(vk::AccessFlagBits::eTransferRead, vk::PipelineStageFlagBits::eTransfer,
+                      vk::ImageLayout::eTransferSrcOptimal, barrier);
+        dstImage.AccessBarrier(vk::AccessFlagBits::eTransferWrite, vk::PipelineStageFlagBits::eTransfer,
+                               vk::ImageLayout::eTransferDstOptimal, barrier);
         barrier.Record(cmdBuffer);
 
         vk::ImageSubresourceLayers subresourceLayersSrc{ GetValidAspects(), srcMipLevel, srcOffset.w, size.w };
@@ -222,6 +219,27 @@ namespace vkfw_core::gfx {
     {
         auto cmdBuffer = CopyImageAsync(dstImage, copyQueue);
         copyQueue.WaitIdle();
+    }
+
+    void Texture::AccessBarrier(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
+                                vk::ImageLayout imageLayout, PipelineBarrier& barrier)
+    {
+        barrier.AddSingleBarrier(this, m_image, imageLayout, access, pipelineStages);
+    }
+
+    vk::Image Texture::GetImage(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
+                                vk::ImageLayout imageLayout, PipelineBarrier& barrier)
+    {
+        barrier.AddSingleBarrier(this, m_image, imageLayout, access, pipelineStages);
+        return m_image;
+    }
+
+    const ImageView& Texture::GetImageView(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
+                                           vk::ImageLayout imageLayout, PipelineBarrier& barrier)
+    {
+
+        barrier.AddSingleBarrier(this, m_image, imageLayout, access, pipelineStages);
+        return m_imageView;
     }
 
     vk::ImageAspectFlags Texture::GetValidAspects() const
@@ -279,67 +297,21 @@ namespace vkfw_core::gfx {
         layout.AddBinding(binding, type, 1, shaderFlags);
     }
 
-    ImageAccessor Texture::GetAccess() { return ImageAccessor{m_device, m_image, this}; }
-
     vk::Image Texture::GetAccessNoBarrier() const { return m_image; }
 
-    inline void Texture::BindMemory(vk::DeviceMemory deviceMemory, std::size_t offset)
-    {
-        m_device->GetHandle().bindImageMemory(GetHandle(), deviceMemory, offset);
-    }
+     inline void Texture::BindMemory(vk::DeviceMemory deviceMemory, std::size_t offset)
+     {
+         m_device->GetHandle().bindImageMemory(GetHandle(), deviceMemory, offset);
+     }
 
-    vk::MemoryRequirements Texture::GetMemoryRequirements() const
-    {
-        return m_device->GetHandle().getImageMemoryRequirements(m_image);
-    }
+     vk::MemoryRequirements Texture::GetMemoryRequirements() const
+     {
+         return m_device->GetHandle().getImageMemoryRequirements(m_image);
+     }
 
-    vk::SubresourceLayout Texture::GetSubresourceLayout(const vk::ImageSubresource& subresource) const
-    {
-        return GetDevice().getImageSubresourceLayout(m_image, subresource);
-    }
-
-    ImageAccessor::ImageAccessor(const LogicalDevice* device, vk::Image image, Texture* texture)
-        : m_device{device}, m_image{image}, m_texture{texture}
-    {
-    }
-
-    ImageAccessor::ImageAccessor(ImageAccessor&& rhs) noexcept
-        : m_device{rhs.m_device}, m_image{rhs.m_image}, m_texture{rhs.m_texture}
-    {
-        rhs.m_device = nullptr;
-        rhs.m_image = nullptr;
-        rhs.m_texture = nullptr;
-    }
-
-    ImageAccessor& ImageAccessor::operator=(ImageAccessor&& rhs) noexcept
-    {
-        m_device = rhs.m_device;
-        m_image = rhs.m_image;
-        m_texture = rhs.m_texture;
-        rhs.m_device = nullptr;
-        rhs.m_image = nullptr;
-        rhs.m_texture = nullptr;
-        return *this;
-    }
-
-    void ImageAccessor::SetAccess(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
-                                  vk::ImageLayout imageLayout, PipelineBarrier& barrier)
-    {
-        barrier.AddSingleBarrier(m_texture, m_image, imageLayout, access, pipelineStages);
-    }
-
-    inline vk::Image ImageAccessor::Get(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
-                                        vk::ImageLayout imageLayout, SingleResourcePipelineBarrier& barrier)
-    {
-        barrier = SingleResourcePipelineBarrier{m_device, m_texture, m_image, imageLayout, access, pipelineStages};
-        return m_image;
-    }
-
-    inline vk::Image ImageAccessor::Get(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
-                                        vk::ImageLayout imageLayout, PipelineBarrier& barrier)
-    {
-        SetAccess(access, pipelineStages, imageLayout, barrier);
-        return m_image;
-    }
+     vk::SubresourceLayout Texture::GetSubresourceLayout(const vk::ImageSubresource& subresource) const
+     {
+         return GetDevice().getImageSubresourceLayout(m_image, subresource);
+     }
 
 }

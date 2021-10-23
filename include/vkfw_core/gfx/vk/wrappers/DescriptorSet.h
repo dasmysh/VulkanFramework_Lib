@@ -9,11 +9,13 @@
 #pragma once
 
 #include "VulkanObjectWrapper.h"
+#include "PipelineBarriers.h"
 #include "main.h"
 #include <variant>
 
 namespace vkfw_core::gfx {
 
+    class LogicalDevice;
     class CommandBuffer;
     class PipelineLayout;
     class DescriptorSetLayout;
@@ -49,12 +51,10 @@ namespace vkfw_core::gfx {
     class DescriptorSet : public VulkanObjectPrivateWrapper<vk::DescriptorSet>
     {
     public:
-        DescriptorSet(vk::Device device, std::string_view name, vk::DescriptorSet descriptorSet)
-            : VulkanObjectPrivateWrapper{device, name, std::move(descriptorSet)}
-        {
-        }
+        DescriptorSet(const LogicalDevice* device, std::string_view name, vk::DescriptorSet descriptorSet);
 
-        static std::vector<DescriptorSet> Initialize(vk::Device device, std::string_view name, const std::vector<vk::DescriptorSet>& descriptorSets)
+        static std::vector<DescriptorSet> Initialize(const LogicalDevice* device, std::string_view name,
+                                                     const std::vector<vk::DescriptorSet>& descriptorSets)
         {
             std::vector<DescriptorSet> result;
             for (std::size_t i = 0; i < descriptorSets.size(); ++i) {
@@ -63,7 +63,7 @@ namespace vkfw_core::gfx {
             return result;
         }
 
-        void InitializeWrites(const DescriptorSetLayout& layout);
+        void InitializeWrites(const LogicalDevice* device, const DescriptorSetLayout& layout);
         void WriteImageDescriptor(std::uint32_t binding, std::uint32_t arrayElement, std::span<Texture*> textures,
                                   const Sampler& sampler, vk::AccessFlags access, vk::ImageLayout layout);
         void WriteBufferDescriptor(std::uint32_t binding, std::uint32_t arrayElement, std::span<BufferRange> buffers,
@@ -75,26 +75,13 @@ namespace vkfw_core::gfx {
                                                   std::span<AccelerationStructureInfo> accelerationStructures);
         void FinalizeWrite(const LogicalDevice* device);
 
-        void Bind(const LogicalDevice* device, const CommandBuffer& cmdBuffer, vk::PipelineBindPoint bindingPoint,
+        void Bind(const CommandBuffer& cmdBuffer, vk::PipelineBindPoint bindingPoint,
                   const PipelineLayout& pipelineLayout, std::uint32_t firstSet,
                   const vk::ArrayProxy<const std::uint32_t>& dynamicOffsets = {});
 
     private:
-        using ResourceListType = std::variant<std::vector<Buffer*>, std::vector<Texture*>>;
-
-        struct ResourceInfo
-        {
-            ResourceListType m_resources;
-            vk::AccessFlags m_access = vk::AccessFlags{};
-            vk::PipelineStageFlags m_pipelineStage = vk::PipelineStageFlags{};
-            std::size_t m_resourceWriteIndex = 0;
-
-            [[nodiscard]] std::vector<Buffer*>& AddBufferResources(std::size_t elements);
-        };
-
-        [[nodiscard]] std::pair<vk::WriteDescriptorSet&, ResourceInfo&>
-        WriteGeneralDescriptor(std::uint32_t binding, std::uint32_t arrayElement, std::size_t arraySize,
-                               vk::AccessFlags access);
+        [[nodiscard]] std::pair<vk::WriteDescriptorSet&, vk::PipelineStageFlags>
+        WriteGeneralDescriptor(std::uint32_t binding, std::uint32_t arrayElement, std::size_t arraySize);
         [[nodiscard]] std::vector<vk::DescriptorImageInfo>& AddImageWrite(std::size_t elements);
         [[nodiscard]] std::vector<vk::DescriptorBufferInfo>& AddBufferWrite(std::size_t elements);
         [[nodiscard]] const vk::DescriptorSetLayoutBinding& GetBindingLayout(std::uint32_t binding);
@@ -106,8 +93,9 @@ namespace vkfw_core::gfx {
         using DescriptorWriteResourceType = std::variant<std::vector<vk::DescriptorImageInfo>, std::vector<vk::DescriptorBufferInfo>, std::vector<vk::BufferView>, AccelerationStructureWriteInfo>;
 
         std::vector<DescriptorWriteResourceType> m_descriptorResourceWrites;
-        std::vector<ResourceInfo> m_boundResources;
 
         std::vector<vk::WriteDescriptorSet> m_descriptorSetWrites;
+        /** Pipeline barrier for using this descriptor set. */
+        gfx::PipelineBarrier m_barrier;
     };
 }
