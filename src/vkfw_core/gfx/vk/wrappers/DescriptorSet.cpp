@@ -153,11 +153,21 @@ namespace vkfw_core::gfx {
         return bufferWrite;
     }
 
+    void DescriptorSet::BindBarrier(const CommandBuffer& cmdBuffer)
+    {
+        m_barrier.Record(cmdBuffer);
+        m_skipNextBindBarriers += 1;
+    }
+
     void DescriptorSet::Bind(const CommandBuffer& cmdBuffer, vk::PipelineBindPoint bindingPoint,
                              const PipelineLayout& pipelineLayout, std::uint32_t firstSet,
                              const vk::ArrayProxy<const std::uint32_t>& dynamicOffsets)
     {
-        m_barrier.Record(cmdBuffer);
+        if (m_skipNextBindBarriers == 0) {
+            m_barrier.Record(cmdBuffer);
+        } else {
+            m_skipNextBindBarriers -= 1;
+        }
 
         cmdBuffer.GetHandle().bindDescriptorSets(bindingPoint, pipelineLayout.GetHandle(), firstSet, GetHandle(),
                                                  dynamicOffsets);

@@ -24,6 +24,7 @@ struct GLFWwindow;
 namespace vkfw_core::gfx {
     class Framebuffer;
     class LogicalDevice;
+    class DescriptorSet;
 }
 
 struct ImGui_ImplVulkanH_Window;
@@ -81,7 +82,7 @@ namespace vkfw_core {
         // for primary cmd buffer: dirty bit, update if needed. (start cmd buffer, end cmd buffer; render pass needs to be started and ended with BeginSwapchainRenderPass and EndSwapchainRenderpass.)
         void UpdatePrimaryCommandBuffers(const function_view<void(const gfx::CommandBuffer& commandBuffer,
                                                                   std::size_t cmdBufferIndex)>& fillFunc) const;
-        void BeginSwapchainRenderPass(std::size_t cmdBufferIndex);
+        void BeginSwapchainRenderPass(std::size_t cmdBufferIndex, std::span<gfx::DescriptorSet*> descriptorSets);
         void EndSwapchainRenderPass(std::size_t cmdBufferIndex) const;
 
         [[nodiscard]] std::uint32_t GetCurrentlyRenderedImageIndex() const { return m_currentlyRenderedImage; }

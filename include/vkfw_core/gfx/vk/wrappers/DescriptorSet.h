@@ -75,6 +75,7 @@ namespace vkfw_core::gfx {
                                                   std::span<AccelerationStructureInfo> accelerationStructures);
         void FinalizeWrite(const LogicalDevice* device);
 
+        void BindBarrier(const CommandBuffer& cmdBuffer);
         void Bind(const CommandBuffer& cmdBuffer, vk::PipelineBindPoint bindingPoint,
                   const PipelineLayout& pipelineLayout, std::uint32_t firstSet,
                   const vk::ArrayProxy<const std::uint32_t>& dynamicOffsets = {});
@@ -97,5 +98,7 @@ namespace vkfw_core::gfx {
         std::vector<vk::WriteDescriptorSet> m_descriptorSetWrites;
         /** Pipeline barrier for using this descriptor set. */
         gfx::PipelineBarrier m_barrier;
+        /** Flags the descriptor set to skip the next bind barrier since it was already set from the framebuffer. */
+        unsigned int m_skipNextBindBarriers = 0;
     };
 }

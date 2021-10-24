@@ -188,6 +188,24 @@ namespace vkfw_core::gfx {
         m_dummyMemGroup->FinalizeDeviceGroup();
         m_dummyMemGroup->TransferData(transfer);
         transfer.FinishTransfer();
+
+        {
+            vk::FenceCreateInfo fenceInfo;
+            Fence fence{GetHandle(), "TransferDummyLayoutsInitialFence", GetHandle().createFenceUnique(fenceInfo)};
+            auto cmdBuffer = CommandBuffer::beginSingleTimeSubmit(this, "TransferImageLayoutsInitialCommandBuffer",
+                                                                  "TransferImageLayoutsInitial", GetCommandPool(0));
+            PipelineBarrier barrier{this, vk::PipelineStageFlagBits::eFragmentShader};
+            m_dummyTexture->GetTexture().AccessBarrier(vk::AccessFlagBits::eShaderRead,
+                                                       vk::PipelineStageFlagBits::eFragmentShader,
+                                                       vk::ImageLayout::eShaderReadOnlyOptimal, barrier);
+            barrier.Record(cmdBuffer);
+            CommandBuffer::endSingleTimeSubmit(GetQueue(0, 0), cmdBuffer, {}, {}, fence);
+            if (auto r = GetHandle().waitForFences({fence.GetHandle()}, VK_TRUE, vkfw_core::defaultFenceTimeout);
+                r != vk::Result::eSuccess) {
+                spdlog::error("Could not wait for fence while transitioning layout: {}.", r);
+                throw std::runtime_error("Could not wait for fence while transitioning layout.");
+            }
+        }
     }
 
 

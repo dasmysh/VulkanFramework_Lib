@@ -10,6 +10,7 @@
 #include "gfx/vk/LogicalDevice.h"
 #include "gfx/vk/wrappers/CommandBuffer.h"
 #include "gfx/vk/wrappers/PipelineBarriers.h"
+#include "gfx/vk/wrappers/DescriptorSet.h"
 
 namespace vkfw_core::gfx {
 
@@ -200,23 +201,11 @@ namespace vkfw_core::gfx {
     }
 
     void Framebuffer::BeginRenderPass(const CommandBuffer& cmdBuffer, const RenderPass& renderPass,
-                                      const vk::Rect2D& renderArea, std::span<vk::ClearValue> clearColor,
-                                      vk::SubpassContents subpassContents)
+                                      std::span<DescriptorSet*> descriptorSets, const vk::Rect2D& renderArea,
+                                      std::span<vk::ClearValue> clearColor, vk::SubpassContents subpassContents)
     {
-        // gfx::PipelineBarrier barrier{m_device, vk::PipelineStageFlagBits{}};
-        // for (std::size_t iTex = 0; iTex < m_desc.m_attachments.size(); ++iTex) {
-        //     const auto& attachmentDesc = renderPass.GetDescriptor().m_attachments[iTex];
-        //     auto& texture = GetTexture(iTex);
-        //     auto accessor = texture.GetAccess();
-        //
-        //     vk::AccessFlags access = GetFittingAttachmentAccessFlags(attachmentDesc.m_tex.m_format);
-        //     vk::PipelineStageFlags pipelineStage = GetFittingAttachmentPipelineStage(attachmentDesc.m_tex.m_format);
-        //     vk::ImageLayout layout = attachmentDesc.m_initialLayout == vk::ImageLayout::eUndefined
-        //                                  ? texture.GetImageLayout()
-        //                                  : attachmentDesc.m_initialLayout;
-        //     accessor.SetAccess(access, pipelineStage, layout, barrier);
-        // }
         m_barrier.Record(cmdBuffer);
+        for (auto descriptorSet : descriptorSets) { descriptorSet->BindBarrier(cmdBuffer); }
 
         vk::RenderPassBeginInfo renderPassBeginInfo{renderPass.GetHandle(), GetHandle(), renderArea,
                                                     static_cast<std::uint32_t>(clearColor.size()), clearColor.data()};

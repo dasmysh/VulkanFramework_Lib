@@ -101,11 +101,26 @@ namespace vkfw_core::gfx {
         std::vector<vk::ImageMemoryBarrier> imageBarriers;
         std::vector<vk::BufferMemoryBarrier> bufferBarriers;
         vk::PipelineStageFlags totalSrcPipelineStages;
+
+        Record(imageBarriers, bufferBarriers, totalSrcPipelineStages, cmdBuffer.GetQueueFamily());
+
+        if (totalSrcPipelineStages == vk::PipelineStageFlags{} && m_dstPipelineStages == vk::PipelineStageFlags{} && bufferBarriers.empty() && imageBarriers.empty()) {
+            return;
+        }
+
+        cmdBuffer.GetHandle().pipelineBarrier(totalSrcPipelineStages, m_dstPipelineStages, vk::DependencyFlags{}, {},
+                                              bufferBarriers, imageBarriers);
+    }
+
+    void PipelineBarrier::Record(std::vector<vk::ImageMemoryBarrier>& imageBarriers,
+                                 [[maybe_unused]] std::vector<vk::BufferMemoryBarrier>& bufferBarriers,
+                                 vk::PipelineStageFlags& totalSrcPipelineStages, unsigned int queueFamily)
+    {
         for (const auto& barrierEntryInfo : m_resources) {
             if (std::holds_alternative<ImageBarrierInfo>(barrierEntryInfo.m_resource)) {
                 auto& barrierInfo = std::get<ImageBarrierInfo>(barrierEntryInfo.m_resource);
                 auto [imageBarrier, srcPipelineStages] = barrierInfo.CreateBarrier(
-                    m_device, barrierEntryInfo.m_dstAccess, m_dstPipelineStages, cmdBuffer.GetQueueFamily());
+                    m_device, barrierEntryInfo.m_dstAccess, m_dstPipelineStages, queueFamily);
 
                 totalSrcPipelineStages |= srcPipelineStages;
                 imageBarriers.emplace_back(std::move(imageBarrier));
@@ -123,12 +138,5 @@ namespace vkfw_core::gfx {
                 // bufferInfo.m_buffer->SetAccess(m_dstAccess, m_dstPipelineStages, m_dstQueueFamily);
             }
         }
-
-        if (totalSrcPipelineStages == vk::PipelineStageFlags{} && m_dstPipelineStages == vk::PipelineStageFlags{} && bufferBarriers.empty() && imageBarriers.empty()) {
-            return;
-        }
-
-        cmdBuffer.GetHandle().pipelineBarrier(totalSrcPipelineStages, m_dstPipelineStages, vk::DependencyFlags{}, {},
-                                              bufferBarriers, imageBarriers);
     }
 }

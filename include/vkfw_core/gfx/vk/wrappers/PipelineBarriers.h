@@ -81,6 +81,9 @@ namespace vkfw_core::gfx {
         void AddSingleBarrier();
 
         void Record(const CommandBuffer& cmdBuffer);
+        void Record(std::vector<vk::ImageMemoryBarrier>& imageBarriers,
+                    std::vector<vk::BufferMemoryBarrier>& bufferBarriers,
+                    vk::PipelineStageFlags& totalSrcPipelineStages, unsigned int queueFamily);
 
     private:
         const LogicalDevice* m_device;

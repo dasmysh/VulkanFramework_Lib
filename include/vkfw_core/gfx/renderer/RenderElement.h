@@ -44,6 +44,7 @@ namespace vkfw_core::gfx {
             std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix,
             const math::AABB3<float>& boundingBox);
 
+        inline void AccessBarriers(std::vector<DescriptorSet*>& descriptorSets) const;
         inline const RenderElement& DrawElement(const CommandBuffer& cmdBuffer, const RenderElement* lastElement = nullptr) const;
 
         friend bool operator<(const RenderElement& l, const RenderElement& r)
@@ -155,7 +156,22 @@ namespace vkfw_core::gfx {
         return *this;
     }
 
-    const RenderElement& RenderElement::DrawElement(const CommandBuffer& cmdBuffer, const RenderElement* lastElement /*= nullptr*/) const
+    inline void RenderElement::AccessBarriers(std::vector<DescriptorSet*>& descriptorSets) const
+    {
+        descriptorSets.push_back(std::get<0>(m_cameraMatricesUBO));
+        descriptorSets.push_back(std::get<0>(m_worldMatricesUBO));
+
+        for (const auto& ubo : m_generalUBOs) {
+            descriptorSets.push_back(std::get<0>(ubo));
+        }
+
+        for (const auto& ds : m_generalDescSets) {
+            descriptorSets.push_back(ds.first);
+        }
+    }
+
+    const RenderElement& RenderElement::DrawElement(const CommandBuffer& cmdBuffer,
+                                                    const RenderElement* lastElement /*= nullptr*/) const
     {
         if ((lastElement == nullptr) || lastElement->m_pipeline == m_pipeline) {
             cmdBuffer.GetHandle().bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline->GetHandle());

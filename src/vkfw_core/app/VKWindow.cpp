@@ -695,7 +695,7 @@ namespace vkfw_core {
             }
 
             m_swapchainFramebuffers[m_currentlyRenderedImage].BeginRenderPass(
-                m_imGuiCommandBuffers[m_currentlyRenderedImage], m_imGuiRenderPass,
+                m_imGuiCommandBuffers[m_currentlyRenderedImage], m_imGuiRenderPass, {},
                 vk::Rect2D(vk::Offset2D(0, 0), m_vkSurfaceExtent), {}, vk::SubpassContents::eInline);
 
             // Record ImGui Draw Data and draw funcs into command buffer
@@ -774,13 +774,13 @@ namespace vkfw_core {
         }
     }
 
-    void VKWindow::BeginSwapchainRenderPass(std::size_t cmdBufferIndex)
+    void VKWindow::BeginSwapchainRenderPass(std::size_t cmdBufferIndex, std::span<gfx::DescriptorSet*> descriptorSets)
     {
         std::array<vk::ClearValue, 2> clearColor;
         clearColor[0].setColor(vk::ClearColorValue{std::array<float, 4>{0.0f, 0.0f, 0.0f, 1.0f}});
         clearColor[1].setDepthStencil(vk::ClearDepthStencilValue{1.0f, 0});
         m_swapchainFramebuffers[cmdBufferIndex].BeginRenderPass(
-            m_commandBuffers[cmdBufferIndex], m_mainRenderingRenderPass,
+            m_commandBuffers[cmdBufferIndex], m_mainRenderingRenderPass, descriptorSets,
             vk::Rect2D(vk::Offset2D(0, 0), m_vkSurfaceExtent), clearColor, vk::SubpassContents::eInline);
     }
 

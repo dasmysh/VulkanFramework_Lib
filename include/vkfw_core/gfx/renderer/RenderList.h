@@ -35,6 +35,7 @@ namespace vkfw_core::gfx {
             std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix,
             const math::AABB3<float>& boundingBox);
 
+        inline void AccessBarriers(std::vector<DescriptorSet*>& descriptorSets);
         inline void Render(const CommandBuffer& cmdBuffer);
 
     private:
@@ -102,6 +103,12 @@ namespace vkfw_core::gfx {
         result.BindWorldMatricesUBO(m_currentWorldMatrices);
         result.DrawGeometry(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance, viewMatrix, boundingBox);
         return result;
+    }
+
+    inline void RenderList::AccessBarriers(std::vector<DescriptorSet*>& descriptorSets)
+    {
+        for (const auto& re : m_opaqueElements) { re.AccessBarriers(descriptorSets); }
+        for (const auto& re : m_transparentElements) { re.AccessBarriers(descriptorSets); }
     }
 
     void RenderList::Render(const CommandBuffer& cmdBuffer)
