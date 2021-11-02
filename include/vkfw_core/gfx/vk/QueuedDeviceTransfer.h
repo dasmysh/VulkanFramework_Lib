@@ -57,10 +57,10 @@ namespace vkfw_core::gfx {
                                     vk::ImageLayout initialLayout, const std::vector<std::uint32_t>& deviceBufferQueues,
                                     const glm::u32vec4& size, std::uint32_t mipLevels, const void* data);
 
-        void TransferDataToBuffer(std::size_t dataSize, const void* data, const Buffer& dst, std::size_t dstOffset);
+        void TransferDataToBuffer(std::size_t dataSize, const void* data, Buffer& dst, std::size_t dstOffset);
 
-        void AddTransferToQueue(const Buffer& src, std::size_t srcOffset, const Buffer& dst, std::size_t dstOffset, std::size_t copySize);
-        void AddTransferToQueue(const Buffer& src, const Buffer& dst);
+        void AddTransferToQueue(Buffer& src, std::size_t srcOffset, Buffer& dst, std::size_t dstOffset, std::size_t copySize);
+        void AddTransferToQueue(Buffer& src, Buffer& dst);
         void AddTransferToQueue(Texture& src, Texture& dst);
 
         void FinishTransfer();
@@ -88,7 +88,7 @@ namespace vkfw_core::gfx {
         /** Holds all staging textures. */
         std::vector<HostTexture> m_stagingTextures;
         /** Holds all command buffers for transfer. */
-        std::vector<CommandBuffer> m_transferCmdBuffers;
+        std::vector<std::pair<std::shared_ptr<const Fence>, CommandBuffer>> m_transferCmdBuffers;
     };
 
     template <class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value, std::unique_ptr<DeviceBuffer>> QueuedDeviceTransfer::CreateDeviceBufferWithData(

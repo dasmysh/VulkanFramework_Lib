@@ -17,10 +17,11 @@ namespace vkfw_core::gfx::rt {
     AccelerationStructure::AccelerationStructure(vkfw_core::gfx::LogicalDevice* device, std::string_view name,
                                                  vk::AccelerationStructureTypeKHR type,
                                                  vk::BuildAccelerationStructureFlagsKHR flags)
-        : VulkanObjectWrapper{device->GetHandle(), name, vk::UniqueAccelerationStructureKHR{}}
+        : VulkanObjectPrivateWrapper{device->GetHandle(), name, vk::UniqueAccelerationStructureKHR{}}
         , m_device{device}
         , m_type{type}
         , m_flags{flags}
+        , m_buildBarrier{device}
     {
     }
 
@@ -37,7 +38,7 @@ namespace vkfw_core::gfx::rt {
         m_buildRanges.emplace_back(buildRange);
     }
 
-    void AccelerationStructure::BuildAccelerationStructure()
+    void AccelerationStructure::BuildAccelerationStructure(CommandBuffer& cmdBuffer)
     {
         vk::AccelerationStructureBuildGeometryInfoKHR asBuildInfo{ m_type, m_flags, vk::BuildAccelerationStructureModeKHR::eBuild,
             nullptr, nullptr, static_cast<std::uint32_t>(m_geometries.size()), m_geometries.data() };
@@ -51,39 +52,31 @@ namespace vkfw_core::gfx::rt {
         m_memoryRequirements = m_device->GetHandle().getAccelerationStructureBuildSizesKHR(
             vk::AccelerationStructureBuildTypeKHR::eDevice, asBuildInfo, asPrimitiveCounts);
 
-        CreateAccelerationStructure();
+        CreateAccelerationStructure(m_buildBarrier);
 
         auto scratchBuffer = CreateAccelerationStructureScratchBuffer();
 
         asBuildInfo.dstAccelerationStructure = GetHandle();
-        asBuildInfo.scratchData =
-            m_device->CalculateASScratchBufferBufferAlignment(scratchBuffer->GetDeviceAddress().deviceAddress);
+        asBuildInfo.scratchData = m_device->CalculateASScratchBufferBufferAlignment(
+            scratchBuffer
+                ->GetDeviceAddress(vk::AccessFlagBits2KHR::eAccelerationStructureRead
+                                       | vk::AccessFlagBits2KHR::eAccelerationStructureWrite,
+                                   vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild, m_buildBarrier)
+                .deviceAddress);
+        m_buildBarrier.Record(cmdBuffer);
 
-        if (m_device->GetDeviceAccelerationStructureFeatures().accelerationStructureHostCommands) {
-            if (m_device->GetHandle().buildAccelerationStructuresKHR(vk::DeferredOperationKHR{}, asBuildInfo,
-                                                                     m_buildRanges.data())
-                != vk::Result::eSuccess) {
-                spdlog::error("Could not build acceleration structure.");
-                assert(false);
-            }
-        } else {
-            auto accStructureCmdBuffer = vkfw_core::gfx::CommandBuffer::beginSingleTimeSubmit(
-                m_device, fmt::format("{} BuildCMDBuffer", GetName()), fmt::format("{} BuildAS", GetName()),
-                m_device->GetCommandPool(0));
-            accStructureCmdBuffer.GetHandle().buildAccelerationStructuresKHR(asBuildInfo, m_buildRanges.data());
-            vkfw_core::gfx::CommandBuffer::endSingleTimeSubmitAndWait(m_device, m_device->GetQueue(0, 0),
-                                                                      accStructureCmdBuffer);
-        }
+        cmdBuffer.GetHandle().buildAccelerationStructuresKHR(asBuildInfo, m_buildRanges.data());
     }
 
-    void AccelerationStructure::FillBufferRange(BufferRange& bufferRange) const
+    vk::DeviceAddress AccelerationStructure::GetAddressHandle(vk::AccessFlags2KHR access,
+                                                              vk::PipelineStageFlags2KHR pipelineStages,
+                                                              PipelineBarrier& barrier) const
     {
-        bufferRange.m_buffer = m_buffer.get();
-        bufferRange.m_offset = 0;
-        bufferRange.m_range = m_buffer->GetSize();
+        m_buffer->AccessBarrier(access, pipelineStages, barrier);
+        return m_handle;
     }
 
-    void AccelerationStructure::CreateAccelerationStructure()
+    void AccelerationStructure::CreateAccelerationStructure(PipelineBarrier& barrier)
     {
         m_buffer = std::make_unique<vkfw_core::gfx::DeviceBuffer>(
             m_device, fmt::format("ASBuffer:{}", GetName()),
@@ -91,12 +84,23 @@ namespace vkfw_core::gfx::rt {
         m_buffer->InitializeBuffer(m_memoryRequirements.accelerationStructureSize);
 
         vk::AccelerationStructureCreateInfoKHR asCreateInfo{
-            {}, m_buffer->GetHandle(), 0, m_memoryRequirements.accelerationStructureSize, m_type};
+            {},
+            m_buffer->GetBuffer(vk::AccessFlagBits2KHR::eAccelerationStructureWrite,
+                                vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild, barrier),
+            0,
+            m_memoryRequirements.accelerationStructureSize,
+            m_type};
 
         SetHandle(m_device->GetHandle(), m_device->GetHandle().createAccelerationStructureKHRUnique(asCreateInfo));
 
         vk::AccelerationStructureDeviceAddressInfoKHR asDeviceAddressInfo{GetHandle()};
         m_handle = m_device->GetHandle().getAccelerationStructureAddressKHR(asDeviceAddressInfo);
+    }
+
+    void AccelerationStructure::AccessBarrier(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
+                                              PipelineBarrier& barrier) const
+    {
+        m_buffer->AccessBarrier(access, pipelineStages, barrier);
     }
 
     std::unique_ptr<vkfw_core::gfx::DeviceBuffer> AccelerationStructure::CreateAccelerationStructureScratchBuffer() const

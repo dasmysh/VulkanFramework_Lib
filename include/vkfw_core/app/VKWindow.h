@@ -80,8 +80,8 @@ namespace vkfw_core {
         void SubmitFrame();
 
         // for primary cmd buffer: dirty bit, update if needed. (start cmd buffer, end cmd buffer; render pass needs to be started and ended with BeginSwapchainRenderPass and EndSwapchainRenderpass.)
-        void UpdatePrimaryCommandBuffers(const function_view<void(const gfx::CommandBuffer& commandBuffer,
-                                                                  std::size_t cmdBufferIndex)>& fillFunc) const;
+        void UpdatePrimaryCommandBuffers(const function_view<void(gfx::CommandBuffer& commandBuffer,
+                                                                  std::size_t cmdBufferIndex)>& fillFunc);
         void BeginSwapchainRenderPass(std::size_t cmdBufferIndex, std::span<gfx::DescriptorSet*> descriptorSets);
         void EndSwapchainRenderPass(std::size_t cmdBufferIndex) const;
 

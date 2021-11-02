@@ -17,8 +17,8 @@ namespace vkfw_core::gfx {
     CommandBuffer::CommandBuffer(const LogicalDevice* device, std::string_view name, unsigned int queueFamily,
                                  vk::CommandBufferLevel level, std::uint32_t numBuffers)
         : VulkanObjectWrapper{nullptr, name, vk::UniqueCommandBuffer{}}
-    // , m_device{ device }
-    // , m_queueFamily{ queueFamily }
+        , m_device{device}
+        , m_queueFamily{ queueFamily }
     {
         spdlog::warn("Command buffers are not fully implemented at the moment.");
         vk::CommandBufferAllocateInfo cmdBufferallocInfo{device->GetCommandPool(queueFamily).GetHandle(), level,
@@ -28,13 +28,57 @@ namespace vkfw_core::gfx {
 
     CommandBuffer::CommandBuffer(const LogicalDevice* device, std::string_view name, unsigned int queueFamily,
                                  vk::UniqueCommandBuffer commandBuffer)
-        : CommandBuffer{device->GetHandle(), name, queueFamily, std::move(commandBuffer)}
+        : VulkanObjectWrapper{device->GetHandle(), name, std::move(commandBuffer)}
+        , m_device{device}
+        , m_queueFamily{queueFamily}
+    {
+    }
+
+    CommandBuffer::~CommandBuffer()
     {
     }
 
     void CommandBuffer::Begin(const vk::CommandBufferBeginInfo& beginInfo) const { GetHandle().begin(beginInfo); }
 
     void CommandBuffer::End() const { GetHandle().end(); }
+
+    std::shared_ptr<Semaphore> CommandBuffer::AddWaitSemaphore()
+    {
+        return m_waitSemaphores.emplace_back(std::make_shared<Semaphore>(m_device->GetHandle(),
+                                             fmt::format("{}:WaitSemaphore-{}", GetName(), m_waitSemaphores.size()),
+                                             m_device->GetHandle().createSemaphoreUnique(vk::SemaphoreCreateInfo{})));
+    }
+
+    std::shared_ptr<Fence> CommandBuffer::SubmitToQueue(const Queue& queue, std::span<vk::Semaphore> waitSemaphores,
+                                                        std::span<vk::Semaphore> signalSemaphores)
+    {
+        auto submitFence = m_device->GetResourceReleaser().AddFence(fmt::format("{}:DestroyFence", GetName()));
+
+        std::vector<vk::Semaphore> submitWaitSemaphoreVector;
+        std::span<vk::Semaphore> submitWaitSemaphores;
+        if (m_waitSemaphores.empty()) {
+            submitWaitSemaphores = waitSemaphores;
+        } else {
+            submitWaitSemaphoreVector.resize(m_waitSemaphores.size() + waitSemaphores.size());
+            for (std::size_t i = 0; i < m_waitSemaphores.size(); ++i) {
+                submitWaitSemaphoreVector[i] = m_waitSemaphores[i]->GetHandle();
+                m_device->GetResourceReleaser().AddResource(submitFence, m_waitSemaphores[i]);
+            }
+
+            for (std::size_t i = 0; i < waitSemaphores.size(); ++i) {
+                submitWaitSemaphoreVector[m_waitSemaphores.size() + i] = waitSemaphores[i];
+            }
+            m_waitSemaphores.clear();
+
+            submitWaitSemaphores = std::span{submitWaitSemaphoreVector};
+        }
+
+        vk::SubmitInfo submitInfo{
+            static_cast<std::uint32_t>(waitSemaphores.size()),   waitSemaphores.data(),  nullptr, 1, GetHandlePtr(),
+            static_cast<std::uint32_t>(signalSemaphores.size()), signalSemaphores.data()};
+        queue.Submit(submitInfo, submitFence.get());
+        return submitFence;
+    }
 
     CommandBuffer CommandBuffer::beginSingleTimeSubmit(const LogicalDevice* device, std::string_view cmdBufferName,
                                                        std::string_view regionName, const CommandPool& commandPool)
@@ -49,33 +93,26 @@ namespace vkfw_core::gfx {
         return cmdBuffer;
     }
 
-    void CommandBuffer::endSingleTimeSubmit(const Queue& queue, const CommandBuffer& cmdBuffer,
-                                            std::span<vk::Semaphore> waitSemaphores,
-                                            std::span<vk::Semaphore> signalSemaphores, const Fence& fence)
+    std::shared_ptr<Fence> CommandBuffer::endSingleTimeSubmit(const Queue& queue, CommandBuffer& cmdBuffer,
+                                                              std::span<vk::Semaphore> waitSemaphores,
+                                                              std::span<vk::Semaphore> signalSemaphores)
     {
         cmdBuffer.EndLabel();
         cmdBuffer.End();
-        vk::SubmitInfo submitInfo{static_cast<std::uint32_t>(waitSemaphores.size()),
-                                  waitSemaphores.data(),
-                                  nullptr,
-                                  1,
-                                  cmdBuffer.GetHandlePtr(),
-            static_cast<std::uint32_t>(signalSemaphores.size()), signalSemaphores.data()};
-        queue.Submit(submitInfo, fence);
+        return cmdBuffer.SubmitToQueue(queue, waitSemaphores, signalSemaphores);
     }
 
     void CommandBuffer::endSingleTimeSubmitAndWait(const LogicalDevice* device, const Queue& queue,
-                                                   const CommandBuffer& cmdBuffer)
+                                                   CommandBuffer& cmdBuffer)
     {
-        vk::FenceCreateInfo fenceInfo{};
-        auto fence = Fence{device->GetHandle(), fmt::format("EndFence {}", cmdBuffer.GetName()), device->GetHandle().createFenceUnique(fenceInfo)};
-        endSingleTimeSubmit(queue, cmdBuffer, {}, {}, fence);
-        if (auto r = device->GetHandle().waitForFences(fence.GetHandle(), VK_TRUE, vkfw_core::defaultFenceTimeout);
+        auto fence = endSingleTimeSubmit(queue, cmdBuffer, {}, {});
+        if (auto r = device->GetHandle().waitForFences(fence->GetHandle(), VK_TRUE, vkfw_core::defaultFenceTimeout);
             r != vk::Result::eSuccess) {
             spdlog::error("Error while waiting for fence: {}.", r);
             throw std::runtime_error("Error while waiting for fence.");
         }
     }
+
 #ifndef NDEBUG
     void CommandBuffer::BeginLabel(std::string_view label_name, const glm::vec4& color) const
     {
@@ -99,20 +136,4 @@ namespace vkfw_core::gfx {
 
 #endif
 
-    /*void CommandBuffers::beginSingleTimeSubmit(unsigned int bufferIdx)
-    {
-        vk::CommandBufferBeginInfo beginInfo{ vk::CommandBufferUsageFlagBits::eOneTimeSubmit };
-        vkCmdBuffers_[bufferIdx].begin(beginInfo);
-    }
-
-    void CommandBuffers::endSingleTimeSubmit(unsigned bufferIdx, unsigned int queueIndex,
-        const std::vector<vk::Semaphore>& waitSemaphores, const std::vector<vk::Semaphore>& signalSemaphores,
-        vk::Fence fence)
-    {
-        vkCmdBuffers_[bufferIdx].end();
-
-        vk::SubmitInfo submitInfo{ static_cast<std::uint32_t>(waitSemaphores.size()), waitSemaphores.data(),
-            nullptr, 1, &vkCmdBuffers_[bufferIdx], static_cast<std::uint32_t>(signalSemaphores.size()), signalSemaphores.data() };
-        device_->GetQueue(queueFamily_, queueIndex).submit(submitInfo, fence);
-    }*/
 }

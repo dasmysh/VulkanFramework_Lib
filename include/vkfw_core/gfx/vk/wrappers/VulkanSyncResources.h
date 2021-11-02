@@ -10,8 +10,11 @@
 
 #include "main.h"
 #include "VulkanObjectWrapper.h"
+#include "ReleaseableResource.h"
 
 namespace vkfw_core::gfx {
+
+    class LogicalDevice;
 
     class Fence : public VulkanObjectWrapper<vk::UniqueFence>
     {
@@ -21,9 +24,13 @@ namespace vkfw_core::gfx {
             : VulkanObjectWrapper{device, name, std::move(fence)}
         {
         }
+
+        void Wait(const LogicalDevice* device, std::uint64_t timeout) const;
+        bool IsSignaled(const LogicalDevice* device) const;
+        void Reset(const LogicalDevice* device, std::string_view name = "");
     };
 
-    class Semaphore : public VulkanObjectWrapper<vk::UniqueSemaphore>
+    class Semaphore : public VulkanObjectWrapper<vk::UniqueSemaphore>, public ReleaseableResource
     {
     public:
         Semaphore() : VulkanObjectWrapper{nullptr, "", vk::UniqueSemaphore{}} {}

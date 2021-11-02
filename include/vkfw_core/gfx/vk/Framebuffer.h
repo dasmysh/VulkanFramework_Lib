@@ -25,11 +25,11 @@ namespace vkfw_core::gfx {
                     const std::vector<vk::Image>& images, const RenderPass& renderPass,
                     const FramebufferDescriptor& desc,
                     const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{},
-                    const CommandBuffer& cmdBuffer = CommandBuffer{});
+                    std::optional<std::reference_wrapper<CommandBuffer>> cmdBuffer = {});
         Framebuffer(const LogicalDevice* logicalDevice, std::string_view name, const glm::uvec2& size,
                     const RenderPass& renderPass, const FramebufferDescriptor& desc,
                     const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{},
-                    const CommandBuffer& cmdBuffer = CommandBuffer{});
+                    std::optional<std::reference_wrapper<CommandBuffer>> cmdBuffer = {});
         Framebuffer(const Framebuffer&);
         Framebuffer(Framebuffer&&) noexcept;
         Framebuffer& operator=(const Framebuffer&);
@@ -45,9 +45,9 @@ namespace vkfw_core::gfx {
         [[nodiscard]] Framebuffer
         CreateWithSameImages(std::string_view name, const FramebufferDescriptor& desc,
                              const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{},
-                             const CommandBuffer& cmdBuffer = CommandBuffer{}) const;
+                             std::optional<std::reference_wrapper<CommandBuffer>> cmdBuffer = {}) const;
 
-        void BeginRenderPass(const CommandBuffer& cmdBuffer, const RenderPass& renderPass,
+        void BeginRenderPass(CommandBuffer& cmdBuffer, const RenderPass& renderPass,
                              std::span<DescriptorSet*> descriptorSets, const vk::Rect2D& renderArea,
                              std::span<vk::ClearValue> clearColor, vk::SubpassContents subpassContents);
 
@@ -57,11 +57,11 @@ namespace vkfw_core::gfx {
         static [[nodiscard]] bool IsDepthFormat(vk::Format format);
 
         static [[nodiscard]] vk::ImageLayout GetFittingAttachmentLayout(vk::Format format);
-        static [[nodiscard]] vk::AccessFlags GetFittingAttachmentAccessFlags(vk::Format format);
-        static [[nodiscard]] vk::PipelineStageFlags GetFittingAttachmentPipelineStage(vk::Format format);
+        static [[nodiscard]] vk::AccessFlags2KHR GetFittingAttachmentAccessFlags(vk::Format format);
+        static [[nodiscard]] vk::PipelineStageFlags2KHR GetFittingAttachmentPipelineStage(vk::Format format);
 
     private:
-        void CreateImages(const CommandBuffer& cmdBuffer);
+        void CreateImages(std::optional<std::reference_wrapper<CommandBuffer>> cmdBuffer);
         void CreateFB();
 
         /** Holds the logical device. */

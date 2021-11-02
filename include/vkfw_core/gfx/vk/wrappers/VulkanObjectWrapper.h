@@ -40,6 +40,11 @@ namespace vkfw_core::gfx {
         {
             CheckSetName(device);
         }
+        VulkanObjectPrivateWrapper(const VulkanObjectPrivateWrapper& rhs) = default;
+        VulkanObjectPrivateWrapper(VulkanObjectPrivateWrapper&& rhs) noexcept = default;
+        VulkanObjectPrivateWrapper& operator=(const VulkanObjectPrivateWrapper& rhs) = default;
+        VulkanObjectPrivateWrapper& operator=(VulkanObjectPrivateWrapper&& rhs) noexcept = default;
+        virtual ~VulkanObjectPrivateWrapper() = default;
 
         const std::string& GetName() const { return m_name; }
 

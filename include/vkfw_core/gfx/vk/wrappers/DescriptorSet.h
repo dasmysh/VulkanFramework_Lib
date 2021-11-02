@@ -26,26 +26,13 @@ namespace vkfw_core::gfx {
     struct BufferRange;
 
     namespace rt {
-        class AccelerationStructure;
+        class AccelerationStructureGeometry;
     }
-
-    struct BufferRange
-    {
-        Buffer* m_buffer = nullptr;
-        std::size_t m_offset = 0;
-        std::size_t m_range = 0;
-    };
 
     struct TexelBufferInfo
     {
         BufferRange m_bufferRange;
         BufferView* m_bufferView;
-    };
-
-    struct AccelerationStructureInfo
-    {
-        BufferRange m_bufferRange;
-        const rt::AccelerationStructure* m_accelerationStructure;
     };
 
     class DescriptorSet : public VulkanObjectPrivateWrapper<vk::DescriptorSet>
@@ -65,28 +52,29 @@ namespace vkfw_core::gfx {
 
         void InitializeWrites(const LogicalDevice* device, const DescriptorSetLayout& layout);
         void WriteImageDescriptor(std::uint32_t binding, std::uint32_t arrayElement, std::span<Texture*> textures,
-                                  const Sampler& sampler, vk::AccessFlags access, vk::ImageLayout layout);
+                                  const Sampler& sampler, vk::AccessFlags2KHR access, vk::ImageLayout layout);
         void WriteBufferDescriptor(std::uint32_t binding, std::uint32_t arrayElement, std::span<BufferRange> buffers,
-                                   vk::AccessFlags access);
+                                   vk::AccessFlags2KHR access);
         void WriteTexelBufferDescriptor(std::uint32_t binding, std::uint32_t arrayElement,
-                                        std::span<TexelBufferInfo> buffers, vk::AccessFlags access);
+                                        std::span<TexelBufferInfo> buffers, vk::AccessFlags2KHR access);
         void WriteSamplerDescriptor(std::uint32_t binding, std::uint32_t arrayElement, std::span<const Sampler*> samplers);
-        void WriteAccelerationStructureDescriptor(std::uint32_t binding, std::uint32_t arrayElement,
-                                                  std::span<AccelerationStructureInfo> accelerationStructures);
+        void WriteAccelerationStructureDescriptor(
+            std::uint32_t binding, std::uint32_t arrayElement,
+            std::span<const rt::AccelerationStructureGeometry*> accelerationStructures);
         void FinalizeWrite(const LogicalDevice* device);
 
-        void BindBarrier(const CommandBuffer& cmdBuffer);
-        void Bind(const CommandBuffer& cmdBuffer, vk::PipelineBindPoint bindingPoint,
+        void BindBarrier(CommandBuffer& cmdBuffer);
+        void Bind(CommandBuffer& cmdBuffer, vk::PipelineBindPoint bindingPoint,
                   const PipelineLayout& pipelineLayout, std::uint32_t firstSet,
                   const vk::ArrayProxy<const std::uint32_t>& dynamicOffsets = {});
 
     private:
-        [[nodiscard]] std::pair<vk::WriteDescriptorSet&, vk::PipelineStageFlags>
+        [[nodiscard]] std::pair<vk::WriteDescriptorSet&, vk::PipelineStageFlags2KHR>
         WriteGeneralDescriptor(std::uint32_t binding, std::uint32_t arrayElement, std::size_t arraySize);
         [[nodiscard]] std::vector<vk::DescriptorImageInfo>& AddImageWrite(std::size_t elements);
         [[nodiscard]] std::vector<vk::DescriptorBufferInfo>& AddBufferWrite(std::size_t elements);
         [[nodiscard]] const vk::DescriptorSetLayoutBinding& GetBindingLayout(std::uint32_t binding);
-        static vk::PipelineStageFlags GetCorrespondingPipelineStage(vk::ShaderStageFlags shaderStage);
+        static vk::PipelineStageFlags2KHR GetCorrespondingPipelineStage(vk::ShaderStageFlags shaderStage);
 
         std::vector<vk::DescriptorSetLayoutBinding> m_layoutBindings;
 

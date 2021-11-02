@@ -54,9 +54,11 @@ namespace vkfw_core {
         enableVulkan12Features.setRuntimeDescriptorArray(true);
         enableVulkan12Features.setShaderStorageBufferArrayNonUniformIndexing(true);
         enableVulkan12Features.setShaderSampledImageArrayNonUniformIndexing(true);
+        vk::PhysicalDeviceSynchronization2FeaturesKHR enableSynchronization2FeaturesKHR{true};
         vk::PhysicalDeviceRayTracingPipelineFeaturesKHR enabledRayTracingPipelineFeatures{VK_TRUE};
         vk::PhysicalDeviceAccelerationStructureFeaturesKHR enabledAccelerationStructureFeatures{VK_TRUE};
         std::vector<std::string> reqDeviceExtensions = requiredDeviceExtensions;
+        reqDeviceExtensions.emplace_back(VK_KHR_SYNCHRONIZATION_2_EXTENSION_NAME);
         if (m_config->m_useRayTracing) {
             if (std::find(requiredDeviceExtensions.begin(), requiredDeviceExtensions.end(),
                           VK_KHR_RAY_TRACING_PIPELINE_EXTENSION_NAME)
@@ -85,10 +87,11 @@ namespace vkfw_core {
             // there is no way to check the next chain, so we just add and hope it is fine :).
             enabledAccelerationStructureFeatures.pNext = deviceFeaturesNextChain;
             enabledRayTracingPipelineFeatures.pNext = &enabledAccelerationStructureFeatures;
-            enableVulkan12Features.pNext = &enabledRayTracingPipelineFeatures;
+            enableSynchronization2FeaturesKHR.pNext = &enabledRayTracingPipelineFeatures;
         } else {
-            enableVulkan12Features.pNext = deviceFeaturesNextChain;
+            enableSynchronization2FeaturesKHR.pNext = deviceFeaturesNextChain;
         }
+        enableVulkan12Features.pNext = &enableSynchronization2FeaturesKHR;
 
         this->InitVulkan(reqDeviceExtensions, &enableVulkan12Features);
         if (useGUI) { InitGUI(); }
@@ -366,7 +369,7 @@ namespace vkfw_core {
             const auto& graphicsQueue = m_logicalDevice->GetQueue(m_graphicsQueue, 0);
             {
                 QUEUE_REGION(graphicsQueue, "Upload ImGui Fonts");
-                graphicsQueue.Submit(end_info, gfx::Fence{});
+                graphicsQueue.Submit(end_info, nullptr);
             }
 
             m_logicalDevice->GetHandle().waitIdle();
@@ -511,9 +514,9 @@ namespace vkfw_core {
 
             m_commandPools.resize(swapchainImages.size());
             m_imGuiCommandPools.resize(swapchainImages.size());
-            m_commandBuffers.resize(swapchainImages.size());
-            m_imGuiCommandBuffers.resize(swapchainImages.size());
-            m_cmdBufferFences.resize(m_commandBuffers.size());
+            m_commandBuffers.reserve(swapchainImages.size());
+            m_imGuiCommandBuffers.reserve(swapchainImages.size());
+            m_cmdBufferFences.resize(swapchainImages.size());
 
             vk::CommandPoolCreateInfo poolInfo{vk::CommandPoolCreateFlags(),
                                                m_logicalDevice->GetQueueInfo(m_graphicsQueue).m_familyIndex};
@@ -539,14 +542,14 @@ namespace vkfw_core {
                                                               vk::CommandBufferLevel::ePrimary, 1};
 
                 try {
-                    m_commandBuffers[i] = gfx::CommandBuffer{
-                        m_logicalDevice->GetHandle(), fmt::format("Win-{} CommandBuffer{}", m_config->m_windowTitle, i),
+                    m_commandBuffers.emplace_back(
+                        m_logicalDevice.get(), fmt::format("Win-{} CommandBuffer{}", m_config->m_windowTitle, i),
                         m_graphicsQueue,
-                        std::move(m_logicalDevice->GetHandle().allocateCommandBuffersUnique(allocInfo)[0])};
-                    m_imGuiCommandBuffers[i] = gfx::CommandBuffer{
-                        m_logicalDevice->GetHandle(),
-                        fmt::format("Win-{} ImGuiCommandBuffer{}", m_config->m_windowTitle, i), m_graphicsQueue,
-                        std::move(m_logicalDevice->GetHandle().allocateCommandBuffersUnique(imgui_allocInfo)[0])};
+                        std::move(m_logicalDevice->GetHandle().allocateCommandBuffersUnique(allocInfo)[0]));
+                    m_imGuiCommandBuffers.emplace_back(
+                        m_logicalDevice.get(), fmt::format("Win-{} ImGuiCommandBuffer{}", m_config->m_windowTitle, i),
+                        m_graphicsQueue,
+                        std::move(m_logicalDevice->GetHandle().allocateCommandBuffersUnique(imgui_allocInfo)[0]));
                 } catch (vk::SystemError& e) {
                     spdlog::critical("Could not allocate command buffers ({}).", e.what());
                     throw std::runtime_error("Could not allocate command buffers.");
@@ -713,7 +716,7 @@ namespace vkfw_core {
         const auto& graphicsQueue = m_logicalDevice->GetQueue(m_graphicsQueue, 0);
         {
             QUEUE_REGION(graphicsQueue, "Draw");
-            graphicsQueue.Submit(submitInfo, m_cmdBufferFences[m_currentlyRenderedImage]);
+            graphicsQueue.Submit(submitInfo, &m_cmdBufferFences[m_currentlyRenderedImage]);
         }
     }
 
@@ -743,11 +746,13 @@ namespace vkfw_core {
             throw std::runtime_error("Could not present swap chain image.");
         }
 
+        m_logicalDevice->GetResourceReleaser().TryRelease();
+
         ++m_frameCount;
     }
 
     void VKWindow::UpdatePrimaryCommandBuffers(
-        const function_view<void(const gfx::CommandBuffer& commandBuffer, std::size_t cmdBufferIndex)>& fillFunc) const
+        const function_view<void(gfx::CommandBuffer& commandBuffer, std::size_t cmdBufferIndex)>& fillFunc)
     {
         for (std::size_t i = 0U; i < m_commandBuffers.size(); ++i) {
             {

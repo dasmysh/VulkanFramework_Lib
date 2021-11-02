@@ -19,14 +19,24 @@ namespace vkfw_core::gfx {
     class Texture;
     class CommandBuffer;
     class LogicalDevice;
+    class PipelineBarrier;
+
+    struct BufferRange
+    {
+        Buffer* m_buffer = nullptr;
+        std::size_t m_offset = 0;
+        std::size_t m_range = 0;
+    };
 
     struct ImageBarrierInfo
     {
         ImageBarrierInfo(Texture* texture, vk::Image image, vk::ImageLayout dstImageLayout);
 
-        std::pair<vk::ImageMemoryBarrier, vk::PipelineStageFlags>
-        CreateBarrier(const LogicalDevice* device, vk::AccessFlags dstAccess, vk::PipelineStageFlags dstPipelineStages,
-                      unsigned int dstQueueFamily) const;
+        vk::ImageMemoryBarrier2KHR CreateBarrier(const LogicalDevice* device,
+                                                 std::vector<std::unique_ptr<PipelineBarrier>>& releaseBarriers,
+                                                 vk::AccessFlags2KHR dstAccess,
+                                                 vk::PipelineStageFlags2KHR dstPipelineStages,
+                                                 unsigned int dstQueueFamily) const;
 
         Texture* m_texture;
         vk::ImageLayout m_dstLayout;
@@ -36,54 +46,37 @@ namespace vkfw_core::gfx {
 
     struct BufferBarrierInfo
     {
-        Buffer* m_buffer;
-        vk::Buffer m_vkBuffer;
-        vk::DeviceSize m_offset;
-        vk::DeviceSize m_size;
-    };
+        BufferBarrierInfo(Buffer* buffer, vk::Buffer vkBuffer);
+        BufferBarrierInfo(BufferRange bufferRange, vk::Buffer buffer);
 
-    class SingleResourcePipelineBarrier
-    {
-    public:
-        SingleResourcePipelineBarrier(const LogicalDevice* device, Texture* texture, vk::Image image,
-                                      vk::ImageLayout dstImageLayout, vk::AccessFlags dstAccess,
-                                      vk::PipelineStageFlags dstPipelineStages);
-        SingleResourcePipelineBarrier(const LogicalDevice* device);
+        vk::BufferMemoryBarrier2KHR CreateBarrier(const LogicalDevice* device,
+                                                  std::vector<std::unique_ptr<PipelineBarrier>>& releaseBarriers,
+                                                  vk::AccessFlags2KHR dstAccess,
+                                                  vk::PipelineStageFlags2KHR dstPipelineStages,
+                                                  unsigned int dstQueueFamily) const;
 
-        void Record(const CommandBuffer& cmdBuffer);
-
-    private:
-        using ResourceType = std::variant<ImageBarrierInfo, BufferBarrierInfo>;
-
-        SingleResourcePipelineBarrier(const LogicalDevice* device, ResourceType resource, vk::AccessFlags dstAccess,
-                                      vk::PipelineStageFlags dstPipelineStages);
-
-        const LogicalDevice* m_device;
-        // needs info:
-        // memory: skip
-        // buffer:
-        // - buffer
-        // - offset
-        // - size
-        ResourceType m_resource;
-        vk::AccessFlags m_dstAccess;
-        vk::PipelineStageFlags m_dstPipelineStages;
+        BufferRange m_bufferRange;
+        vk::Buffer m_buffer;
     };
 
     class PipelineBarrier
     {
     public:
-        PipelineBarrier(const LogicalDevice* device,
-                        vk::PipelineStageFlags dstPipelineStages = vk::PipelineStageFlags{});
+        PipelineBarrier(const LogicalDevice* device);
 
         void AddSingleBarrier(Texture* texture, vk::Image image, vk::ImageLayout dstImageLayout,
-                              vk::AccessFlags dstAccess, vk::PipelineStageFlags dstPipelineStages);
-        void AddSingleBarrier();
+                              vk::AccessFlags2KHR dstAccess, vk::PipelineStageFlags2KHR dstPipelineStages);
+        void AddSingleBarrier(Buffer* buffer, vk::Buffer vkBuffer, vk::AccessFlags2KHR dstAccess,
+                              vk::PipelineStageFlags2KHR dstPipelineStages);
+        void AddSingleBarrier(BufferRange bufferRange, vk::Buffer buffer, vk::AccessFlags2KHR dstAccess,
+                              vk::PipelineStageFlags2KHR dstPipelineStages);
 
-        void Record(const CommandBuffer& cmdBuffer);
-        void Record(std::vector<vk::ImageMemoryBarrier>& imageBarriers,
-                    std::vector<vk::BufferMemoryBarrier>& bufferBarriers,
-                    vk::PipelineStageFlags& totalSrcPipelineStages, unsigned int queueFamily);
+        void Record(CommandBuffer& cmdBuffer);
+        void RecordRelease(CommandBuffer& cmdBuffer, unsigned int dstQueueFamily);
+        void Record(std::vector<vk::ImageMemoryBarrier2KHR>& imageBarriers,
+                    std::vector<vk::BufferMemoryBarrier2KHR>& bufferBarriers,
+                    std::vector<std::unique_ptr<PipelineBarrier>>& releaseBarriers,
+                    unsigned int dstQueueFamily);
 
     private:
         const LogicalDevice* m_device;
@@ -92,9 +85,9 @@ namespace vkfw_core::gfx {
         struct ResourcesEntry
         {
             ResourceType m_resource;
-            vk::AccessFlags m_dstAccess;
+            vk::AccessFlags2KHR m_dstAccess;
+            vk::PipelineStageFlags2KHR m_dstPipelineStages;
         };
         std::vector<ResourcesEntry> m_resources;
-        vk::PipelineStageFlags m_dstPipelineStages;
     };
 }

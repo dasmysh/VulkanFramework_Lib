@@ -56,7 +56,7 @@ namespace vkfw_core::gfx {
         void TransferData(QueuedDeviceTransfer& transfer);
         void RemoveHostMemory();
 
-        void FillUploadBufferCmdBuffer(unsigned int bufferIdx, const CommandBuffer& cmdBuffer,
+        void FillUploadBufferCmdBuffer(unsigned int bufferIdx, CommandBuffer& cmdBuffer,
             std::size_t offset, std::size_t dataSize);
 
         HostBuffer* GetHostBuffer(unsigned int bufferIdx) { return &m_hostBuffers[bufferIdx]; }

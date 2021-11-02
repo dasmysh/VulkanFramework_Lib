@@ -13,6 +13,7 @@
 #include "gfx/vk/wrappers/Queue.h"
 #include "gfx/vk/wrappers/CommandPool.h"
 #include "gfx/vk/wrappers/Swapchain.h"
+#include "gfx/vk/wrappers/ResourceReleaser.h"
 
 #include <glm/vec2.hpp>
 
@@ -93,6 +94,7 @@ namespace vkfw_core::gfx {
         [[nodiscard]] ShaderManager* GetShaderManager() const { return m_shaderManager.get(); }
         [[nodiscard]] TextureManager* GetTextureManager() const { return m_textureManager.get(); }
         [[nodiscard]] Texture2D* GetDummyTexture() const { return m_dummyTexture.get(); }
+        [[nodiscard]] ResourceReleaser& GetResourceReleaser() const { return *m_resourceReleaser; }
 
         [[nodiscard]] std::size_t CalculateUniformBufferAlignment(std::size_t size) const;
         [[nodiscard]] std::size_t CalculateStorageBufferAlignment(std::size_t size) const;
@@ -148,6 +150,9 @@ namespace vkfw_core::gfx {
         std::unique_ptr<MemoryGroup> m_dummyMemGroup;
         /** Holds the dummy texture. */
         std::shared_ptr<Texture2D> m_dummyTexture;
+
+        /** The resource releaser. */
+        std::unique_ptr<ResourceReleaser> m_resourceReleaser;
 
         bool m_singleQueueOnly = false;
     };

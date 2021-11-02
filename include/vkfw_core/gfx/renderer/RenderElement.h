@@ -14,6 +14,7 @@
 #include "main.h"
 #include "core/math/primitives.h"
 #include "gfx/vk/wrappers/PipelineLayout.h"
+#include "gfx/vk/wrappers/VertexInputResources.h"
 #include "gfx/vk/pipeline/GraphicsPipeline.h"
 
 namespace vkfw_core::gfx {
@@ -27,15 +28,13 @@ namespace vkfw_core::gfx {
     class RenderElement final
     {
     public:
-        using BufferReference = std::pair<const DeviceBuffer*, vk::DeviceSize>;
         using UBOBinding = std::tuple<DescriptorSet*, std::uint32_t, std::uint32_t>;
         using DescSetBinding = std::pair<DescriptorSet*, std::uint32_t>;
 
         inline RenderElement(bool isTransparent, const GraphicsPipeline& pipeline, const PipelineLayout& pipelineLayout);
         inline RenderElement(bool isTransparent, const RenderElement& referenceElement);
 
-        inline RenderElement& BindVertexBuffer(BufferReference vtxBuffer);
-        inline RenderElement& BindIndexBuffer(BufferReference idxBuffer);
+        inline RenderElement& BindVertexInput(VertexInputResources* vertexInput);
         inline RenderElement& BindCameraMatricesUBO(UBOBinding cameraMatricesUBO);
         inline RenderElement& BindWorldMatricesUBO(UBOBinding worldMatricesUBO);
         inline RenderElement& BindUBO(UBOBinding ubo);
@@ -45,7 +44,7 @@ namespace vkfw_core::gfx {
             const math::AABB3<float>& boundingBox);
 
         inline void AccessBarriers(std::vector<DescriptorSet*>& descriptorSets) const;
-        inline const RenderElement& DrawElement(const CommandBuffer& cmdBuffer, const RenderElement* lastElement = nullptr) const;
+        inline const RenderElement& DrawElement(CommandBuffer& cmdBuffer, const RenderElement* lastElement = nullptr) const;
 
         friend bool operator<(const RenderElement& l, const RenderElement& r)
         {
@@ -60,8 +59,7 @@ namespace vkfw_core::gfx {
             }
 
             if (l.m_pipeline < r.m_pipeline) { return true; }
-            if (l.m_vertexBuffer.first < r.m_vertexBuffer.first) { return true; }
-            if (l.m_indexBuffer.first < r.m_indexBuffer.first) { return true; }
+            if (l.m_vertexInput < r.m_vertexInput) { return true; }
             return l.m_cameraDistance > r.m_cameraDistance;
         }
 
@@ -70,8 +68,7 @@ namespace vkfw_core::gfx {
         const GraphicsPipeline* m_pipeline;
         const PipelineLayout* m_pipelineLayout;
 
-        BufferReference m_vertexBuffer = BufferReference(nullptr, 0);
-        BufferReference m_indexBuffer = BufferReference(nullptr, 0);
+        VertexInputResources* m_vertexInput = nullptr;
         UBOBinding m_cameraMatricesUBO = UBOBinding(nullptr, 0, 0);
         UBOBinding m_worldMatricesUBO = UBOBinding(nullptr, 0, 0);
         std::vector<UBOBinding> m_generalUBOs;
@@ -93,26 +90,19 @@ namespace vkfw_core::gfx {
     {
     }
 
-    RenderElement::RenderElement(bool isTransparent, const RenderElement& referenceElement) :
-        m_isTransparent{ isTransparent },
-        m_pipeline{ referenceElement.m_pipeline },
-        m_pipelineLayout{ referenceElement.m_pipelineLayout },
-        m_vertexBuffer{ referenceElement.m_vertexBuffer },
-        m_indexBuffer{ referenceElement.m_indexBuffer },
-        m_cameraMatricesUBO{ referenceElement.m_cameraMatricesUBO },
-        m_worldMatricesUBO{ referenceElement.m_worldMatricesUBO }
+    RenderElement::RenderElement(bool isTransparent, const RenderElement& referenceElement)
+        : m_isTransparent{ isTransparent }
+        , m_pipeline{ referenceElement.m_pipeline }
+        , m_pipelineLayout{ referenceElement.m_pipelineLayout }
+        , m_vertexInput{referenceElement.m_vertexInput}
+        , m_cameraMatricesUBO{ referenceElement.m_cameraMatricesUBO }
+        , m_worldMatricesUBO{ referenceElement.m_worldMatricesUBO }
     {
     }
 
-    RenderElement& RenderElement::BindVertexBuffer(BufferReference vtxBuffer)
+    RenderElement& RenderElement::BindVertexInput(VertexInputResources* vertexInput)
     {
-        m_vertexBuffer = vtxBuffer;
-        return *this;
-    }
-
-    RenderElement& RenderElement::BindIndexBuffer(BufferReference idxBuffer)
-    {
-        m_indexBuffer = idxBuffer;
+        m_vertexInput = vertexInput;
         return *this;
     }
 
@@ -170,18 +160,14 @@ namespace vkfw_core::gfx {
         }
     }
 
-    const RenderElement& RenderElement::DrawElement(const CommandBuffer& cmdBuffer,
+    const RenderElement& RenderElement::DrawElement(CommandBuffer& cmdBuffer,
                                                     const RenderElement* lastElement /*= nullptr*/) const
     {
-        if ((lastElement == nullptr) || lastElement->m_pipeline == m_pipeline) {
+        if (lastElement == nullptr || lastElement->m_pipeline != m_pipeline) {
             cmdBuffer.GetHandle().bindPipeline(vk::PipelineBindPoint::eGraphics, m_pipeline->GetHandle());
         }
-        if ((lastElement == nullptr) || lastElement->m_vertexBuffer == m_vertexBuffer) {
-            cmdBuffer.GetHandle().bindVertexBuffers(0, 1, m_vertexBuffer.first->GetHandlePtr(), &m_vertexBuffer.second);
-        }
-        if ((lastElement == nullptr) || lastElement->m_indexBuffer == m_indexBuffer) {
-            cmdBuffer.GetHandle().bindIndexBuffer(m_indexBuffer.first->GetHandle(), m_indexBuffer.second,
-                                                  vk::IndexType::eUint32);
+        if (lastElement == nullptr || lastElement->m_vertexInput != m_vertexInput) {
+            m_vertexInput->Bind(cmdBuffer);
         }
 
         std::get<0>(m_cameraMatricesUBO)

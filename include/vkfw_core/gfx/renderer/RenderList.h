@@ -16,7 +16,6 @@ namespace vkfw_core::gfx {
     class RenderList final
     {
     public:
-        using BufferReference = RenderElement::BufferReference;
         using DescSetBinding = RenderElement::DescSetBinding;
         using UBOBinding = RenderElement::UBOBinding;
 
@@ -25,7 +24,7 @@ namespace vkfw_core::gfx {
         inline void SetCurrentPipeline(const PipelineLayout& currentPipelineLayout,
                                        const GraphicsPipeline& currentOpaquePipeline,
                                        const GraphicsPipeline& currentTransparentPipeline);
-        inline void SetCurrentGeometry(BufferReference currentVertexBuffer, BufferReference currentIndexBuffer);
+        inline void SetCurrentGeometry(VertexInputResources* vertexInput);
         inline void SetCurrentWorldMatrices(const UBOBinding& currentWorldMatrices);
 
         inline RenderElement& AddOpaqueElement(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex,
@@ -36,7 +35,7 @@ namespace vkfw_core::gfx {
             const math::AABB3<float>& boundingBox);
 
         inline void AccessBarriers(std::vector<DescriptorSet*>& descriptorSets);
-        inline void Render(const CommandBuffer& cmdBuffer);
+        inline void Render(CommandBuffer& cmdBuffer);
 
     private:
         std::vector<RenderElement> m_opaqueElements;
@@ -48,8 +47,7 @@ namespace vkfw_core::gfx {
         const GraphicsPipeline* m_currentOpaquePipeline = nullptr;
         const GraphicsPipeline* m_currentTransparentPipeline = nullptr;
 
-        BufferReference m_currentVertexBuffer = BufferReference(nullptr, 0);
-        BufferReference m_currentIndexBuffer = BufferReference(nullptr, 0);
+        VertexInputResources* m_currentVertexInput = nullptr;
 
         UBOBinding m_currentWorldMatrices = UBOBinding(nullptr, 0, 0);
     };
@@ -70,10 +68,9 @@ namespace vkfw_core::gfx {
         m_currentTransparentPipeline = &currentTransparentPipeline;
     }
 
-    void RenderList::SetCurrentGeometry(BufferReference currentVertexBuffer, BufferReference currentIndexBuffer)
+    void RenderList::SetCurrentGeometry(VertexInputResources* vertexInput)
     {
-        m_currentVertexBuffer = currentVertexBuffer;
-        m_currentIndexBuffer = currentIndexBuffer;
+        m_currentVertexInput = vertexInput;
     }
 
     void RenderList::SetCurrentWorldMatrices(const UBOBinding& currentWorldMatrices)
@@ -86,8 +83,7 @@ namespace vkfw_core::gfx {
         const math::AABB3<float>& boundingBox)
     {
         auto& result = m_opaqueElements.emplace_back(false, *m_currentOpaquePipeline, *m_currentPipelineLayout);
-        result.BindVertexBuffer(m_currentVertexBuffer);
-        result.BindIndexBuffer(m_currentIndexBuffer);
+        result.BindVertexInput(m_currentVertexInput);
         result.BindCameraMatricesUBO(m_cameraMatricesUBO);
         result.BindWorldMatricesUBO(m_currentWorldMatrices);
         result.DrawGeometry(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance, viewMatrix, boundingBox);
@@ -96,9 +92,9 @@ namespace vkfw_core::gfx {
 
     vkfw_core::gfx::RenderElement& RenderList::AddTransparentElement(std::uint32_t indexCount, std::uint32_t instanceCount, std::uint32_t firstIndex, std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix, const math::AABB3<float>& boundingBox)
     {
-        auto& result = m_transparentElements.emplace_back(true, *m_currentTransparentPipeline, *m_currentPipelineLayout);
-        result.BindVertexBuffer(m_currentVertexBuffer);
-        result.BindIndexBuffer(m_currentIndexBuffer);
+        auto& result =
+            m_transparentElements.emplace_back(true, *m_currentTransparentPipeline, *m_currentPipelineLayout);
+        result.BindVertexInput(m_currentVertexInput);
         result.BindCameraMatricesUBO(m_cameraMatricesUBO);
         result.BindWorldMatricesUBO(m_currentWorldMatrices);
         result.DrawGeometry(indexCount, instanceCount, firstIndex, vertexOffset, firstInstance, viewMatrix, boundingBox);
@@ -111,7 +107,7 @@ namespace vkfw_core::gfx {
         for (const auto& re : m_transparentElements) { re.AccessBarriers(descriptorSets); }
     }
 
-    void RenderList::Render(const CommandBuffer& cmdBuffer)
+    void RenderList::Render(CommandBuffer& cmdBuffer)
     {
         std::sort(m_opaqueElements.begin(), m_opaqueElements.end());
         std::sort(m_transparentElements.begin(), m_transparentElements.end());

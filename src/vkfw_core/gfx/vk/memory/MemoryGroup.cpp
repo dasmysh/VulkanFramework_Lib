@@ -201,10 +201,9 @@ namespace vkfw_core::gfx {
         m_hostOffsets.clear();
     }
 
-    void MemoryGroup::FillUploadBufferCmdBuffer(unsigned int bufferIdx, const CommandBuffer& cmdBuffer,
+    void MemoryGroup::FillUploadBufferCmdBuffer(unsigned int bufferIdx, CommandBuffer& cmdBuffer,
         std::size_t offset, std::size_t dataSize)
     {
-        vk::BufferCopy copyRegion{ offset, offset, dataSize };
-        cmdBuffer.GetHandle().copyBuffer(m_hostBuffers[bufferIdx].GetHandle(), GetBuffer(bufferIdx)->GetHandle(), copyRegion);
+        m_hostBuffers[bufferIdx].CopyBufferAsync(offset, *GetBuffer(bufferIdx), offset, dataSize, cmdBuffer);
     }
 }

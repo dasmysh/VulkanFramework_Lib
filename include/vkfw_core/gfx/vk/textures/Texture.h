@@ -103,25 +103,26 @@ namespace vkfw_core::gfx {
 
         void CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, Texture& dstImage,
                             std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset, const glm::u32vec4& size,
-                            const CommandBuffer& cmdBuffer);
+                            CommandBuffer& cmdBuffer);
         [[nodiscard]] CommandBuffer
         CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, Texture& dstImage,
                        std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset, const glm::u32vec4& size,
                        const Queue& copyQueue, std::span<vk::Semaphore> waitSemaphores = std::span<vk::Semaphore>{},
                        std::span<vk::Semaphore> signalSemaphores = std::span<vk::Semaphore>{},
-                       const Fence& fence = Fence{});
+                       std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence = {});
         [[nodiscard]] CommandBuffer
         CopyImageAsync(Texture& dstImage, const Queue& transitionQueue,
                        std::span<vk::Semaphore> waitSemaphores = std::span<vk::Semaphore>{},
                        std::span<vk::Semaphore> signalSemaphores = std::span<vk::Semaphore>{},
-                       const Fence& fence = Fence{});
+                       std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence = {});
         void CopyImageSync(Texture& dstImage, const Queue& copyQueue);
 
-        void AccessBarrier(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages, vk::ImageLayout imageLayout,
-                           PipelineBarrier& barrier);
-        [[nodiscard]] vk::Image GetImage(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
+        void AccessBarrier(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
+                           vk::ImageLayout imageLayout, PipelineBarrier& barrier);
+        [[nodiscard]] vk::Image GetImage(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
                                          vk::ImageLayout imageLayout, PipelineBarrier& barrier);
-        [[nodiscard]] const ImageView& GetImageView(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
+        [[nodiscard]] const ImageView& GetImageView(vk::AccessFlags2KHR access,
+                                                    vk::PipelineStageFlags2KHR pipelineStages,
                                                     vk::ImageLayout imageLayout, PipelineBarrier& barrier);
 
         [[nodiscard]] const glm::u32vec4& GetSize() const { return m_size; }

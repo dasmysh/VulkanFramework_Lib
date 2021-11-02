@@ -13,6 +13,7 @@
 #include "gfx/renderer/RenderList.h"
 #include "gfx/vk/LogicalDevice.h"
 #include "gfx/vk/memory/MemoryGroup.h"
+#include "gfx/vk/wrappers/VertexInputResources.h"
 #include <glm/gtc/matrix_inverse.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
@@ -27,8 +28,6 @@ namespace vkfw_core::gfx {
         , m_internalMemoryGroup{std::make_unique<MemoryGroup>(device, fmt::format("MeshMemGroup:{}", name), memoryFlags)}
         , m_memoryGroup{m_internalMemoryGroup.get()}
         , m_bufferIdx{DeviceMemoryGroup::INVALID_INDEX}
-        , m_vertexBuffer{nullptr, 0}
-        , m_indexBuffer{nullptr, 0}
         , m_worldMatricesUBO{vkfw_core::gfx::UniformBufferObject::Create<mesh::WorldUniformBufferObject>(
               device, numBackbuffers * meshInfo->GetNodes().size())}
         , m_materialsUBO{std::move(materialsUBO)}
@@ -50,8 +49,6 @@ namespace vkfw_core::gfx {
         , m_meshInfo{meshInfo}
         , m_memoryGroup{&memoryGroup}
         , m_bufferIdx{bufferIndex}
-        , m_vertexBuffer{nullptr, 0}
-        , m_indexBuffer{nullptr, 0}
         , m_worldMatricesUBO{vkfw_core::gfx::UniformBufferObject::Create<mesh::WorldUniformBufferObject>(
               device, numBackbuffers * meshInfo->GetNodes().size())}
         , m_materialsUBO{std::move(materialsUBO)}
@@ -146,7 +143,7 @@ namespace vkfw_core::gfx {
                     diffuseTexture[0] = &m_device->GetDummyTexture()->GetTexture();
                 }
                 m_materialDescriptorSets[i].WriteImageDescriptor(0, 0, diffuseTexture, m_textureSampler,
-                                                                 vk::AccessFlagBits::eShaderRead,
+                                                                 vk::AccessFlagBits2KHR::eShaderRead,
                                                                  vk::ImageLayout::eShaderReadOnlyOptimal);
 
                 std::array<Texture*, 1> bumpMap = {nullptr};
@@ -156,12 +153,13 @@ namespace vkfw_core::gfx {
                     bumpMap[0] = &m_device->GetDummyTexture()->GetTexture();
                 }
                 m_materialDescriptorSets[i].WriteImageDescriptor(1, 0, bumpMap, m_textureSampler,
-                                                                 vk::AccessFlagBits::eShaderRead,
+                                                                 vk::AccessFlagBits2KHR::eShaderRead,
                                                                  vk::ImageLayout::eShaderReadOnlyOptimal);
 
                 std::array<BufferRange, 1> bufferRange;
                 m_materialsUBO.FillBufferRange(bufferRange[0]);
-                m_materialDescriptorSets[i].WriteBufferDescriptor(2, 0, bufferRange, vk::AccessFlagBits::eShaderRead);
+                m_materialDescriptorSets[i].WriteBufferDescriptor(2, 0, bufferRange,
+                                                                  vk::AccessFlagBits2KHR::eShaderRead);
 
                 m_materialDescriptorSets[i].FinalizeWrite(m_device);
             }
@@ -177,7 +175,7 @@ namespace vkfw_core::gfx {
             std::array<BufferRange, 1> bufferRange;
             m_worldMatricesUBO.FillBufferRange(bufferRange[0]);
             m_worldMatrixDescriptorSet.InitializeWrites(m_device, m_worldMatricesDescriptorSetLayout);
-            m_worldMatrixDescriptorSet.WriteBufferDescriptor(0, 0, bufferRange, vk::AccessFlagBits::eShaderRead);
+            m_worldMatrixDescriptorSet.WriteBufferDescriptor(0, 0, bufferRange, vk::AccessFlagBits2KHR::eShaderRead);
             m_worldMatrixDescriptorSet.FinalizeWrite(m_device);
         }
     }
@@ -190,7 +188,7 @@ namespace vkfw_core::gfx {
         m_vertexMaterialData.clear();
     }
 
-    void Mesh::TransferWorldMatrices(const CommandBuffer& transferCmdBuffer, std::size_t backbufferIdx) const
+    void Mesh::TransferWorldMatrices(CommandBuffer& transferCmdBuffer, std::size_t backbufferIdx) const
     {
         for (const auto& node : m_meshInfo->GetNodes()) {
             auto i = backbufferIdx * m_meshInfo->GetNodes().size() + node->GetNodeIndex();
@@ -222,17 +220,14 @@ namespace vkfw_core::gfx {
         }
     }
 
-    void Mesh::Draw(const CommandBuffer& cmdBuffer, std::size_t backbufferIdx,
+    void Mesh::Draw(CommandBuffer& cmdBuffer, std::size_t backbufferIdx,
                     const PipelineLayout& pipelineLayout)
     {
-        cmdBuffer.GetHandle().bindVertexBuffers(0, 1, m_vertexBuffer.first->GetHandlePtr(), &m_vertexBuffer.second);
-        cmdBuffer.GetHandle().bindIndexBuffer(m_indexBuffer.first->GetHandle(), m_indexBuffer.second,
-                                              vk::IndexType::eUint32);
-
+        m_vertexInput->Bind(cmdBuffer);
         DrawNode(cmdBuffer, backbufferIdx, pipelineLayout, m_meshInfo->GetRootNode());
     }
 
-    void Mesh::DrawNode(const CommandBuffer& cmdBuffer, std::size_t backbufferIdx, const PipelineLayout& pipelineLayout,
+    void Mesh::DrawNode(CommandBuffer& cmdBuffer, std::size_t backbufferIdx, const PipelineLayout& pipelineLayout,
                         const SceneMeshNode* node)
     {
         if (!node->HasMeshes()) { return; }
@@ -251,7 +246,7 @@ namespace vkfw_core::gfx {
         }
     }
 
-    void Mesh::DrawSubMesh(const CommandBuffer& cmdBuffer, const PipelineLayout& pipelineLayout,
+    void Mesh::DrawSubMesh(CommandBuffer& cmdBuffer, const PipelineLayout& pipelineLayout,
                            const SubMesh& subMesh)
     {
         // bind material.
@@ -265,7 +260,7 @@ namespace vkfw_core::gfx {
     void Mesh::GetDrawElements(const glm::mat4& worldMatrix, const CameraBase& camera, std::size_t backbufferIdx,
                                RenderList& renderList)
     {
-        renderList.SetCurrentGeometry(m_vertexBuffer, m_indexBuffer);
+        renderList.SetCurrentGeometry(m_vertexInput.get());
 
         GetDrawElementsNode(worldMatrix, camera, backbufferIdx, m_meshInfo->GetRootNode(), renderList);
     }
@@ -319,16 +314,13 @@ namespace vkfw_core::gfx {
         re->BindDescriptorSet(materialBinding);
     }
 
-    void Mesh::SetVertexBuffer(const DeviceBuffer* vtxBuffer, std::size_t offset)
+    void Mesh::SetVertexInput(DeviceBuffer* vtxBuffer, std::size_t vtxOffset, DeviceBuffer* idxBuffer,
+                              std::size_t idxOffset)
     {
-        m_vertexBuffer.first = vtxBuffer;
-        m_vertexBuffer.second = offset;
-    }
-
-    void Mesh::SetIndexBuffer(const DeviceBuffer* idxBuffer, std::size_t offset)
-    {
-        m_indexBuffer.first = idxBuffer;
-        m_indexBuffer.second = offset;
+        std::array<BufferDescription, 1> vertexBuffer{{vtxBuffer, vtxOffset}};
+        BufferDescription indexBuffer{idxBuffer, idxOffset};
+        m_vertexInput =
+            std::make_unique<VertexInputResources>(m_device, 0, vertexBuffer, indexBuffer, vk::IndexType::eUint32);
     }
 
 }

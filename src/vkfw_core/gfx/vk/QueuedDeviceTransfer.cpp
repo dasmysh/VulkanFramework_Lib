@@ -102,18 +102,18 @@ namespace vkfw_core::gfx {
         return CreateDeviceTextureWithData(name, textureDesc, initialLayout, deviceBufferQueues, size, mipLevels, size, data);
     }
 
-    void QueuedDeviceTransfer::TransferDataToBuffer(std::size_t dataSize, const void* data, const Buffer& dst, std::size_t dstOffset)
+    void QueuedDeviceTransfer::TransferDataToBuffer(std::size_t dataSize, const void* data, Buffer& dst, std::size_t dstOffset)
     {
         AddStagingBuffer(fmt::format("StagingBuffer:{}", dst.GetName()), dataSize, data);
         AddTransferToQueue(m_stagingBuffers.back(), 0, dst, dstOffset, dataSize);
     }
 
-    void QueuedDeviceTransfer::AddTransferToQueue(const Buffer& src, std::size_t srcOffset, const Buffer& dst, std::size_t dstOffset, std::size_t copySize)
+    void QueuedDeviceTransfer::AddTransferToQueue(Buffer& src, std::size_t srcOffset, Buffer& dst, std::size_t dstOffset, std::size_t copySize)
     {
-        m_transferCmdBuffers.emplace_back(src.CopyBufferAsync(srcOffset, dst, dstOffset, copySize, m_transferQueue));
+        m_transferCmdBuffers.emplace_back(nullptr, src.CopyBufferAsync(srcOffset, dst, dstOffset, copySize, m_transferQueue));
     }
 
-    void QueuedDeviceTransfer::AddTransferToQueue(const Buffer& src, const Buffer& dst)
+    void QueuedDeviceTransfer::AddTransferToQueue(Buffer& src, Buffer& dst)
     {
         AddTransferToQueue(src, 0, dst, 0, src.GetSize());
     }
@@ -123,13 +123,10 @@ namespace vkfw_core::gfx {
         auto imgCopyCmdBuffer = CommandBuffer::beginSingleTimeSubmit(
             m_device, fmt::format("{} to {} CmdBuffer", src.GetName(), dst.GetName()),
             fmt::format("{} to {} Transfer", src.GetName(), dst.GetName()), m_transferQueue.GetCommandPool());
-        // src.TransitionLayout(vk::ImageLayout::eTransferSrcOptimal, imgCopyCmdBuffer);
-        // dst.TransitionLayout(vk::ImageLayout::eTransferDstOptimal, imgCopyCmdBuffer);
         src.CopyImageAsync(0, glm::u32vec4(0), dst, 0, glm::u32vec4(0), src.GetSize(), imgCopyCmdBuffer);
-        // dst.TransitionLayout(vk::ImageLayout::eShaderReadOnlyOptimal, imgCopyCmdBuffer);
-        CommandBuffer::endSingleTimeSubmit(m_transferQueue, imgCopyCmdBuffer);
+        auto fence = CommandBuffer::endSingleTimeSubmit(m_transferQueue, imgCopyCmdBuffer);
 
-        m_transferCmdBuffers.emplace_back(std::move(imgCopyCmdBuffer));
+        m_transferCmdBuffers.emplace_back(fence, std::move(imgCopyCmdBuffer));
     }
 
     void QueuedDeviceTransfer::FinishTransfer()

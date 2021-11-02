@@ -13,7 +13,7 @@
 #include "gfx/vk/wrappers/PipelineLayout.h"
 #include "gfx/vk/textures/Texture.h"
 #include "gfx/vk/buffers/Buffer.h"
-#include "gfx/vk/rt/AccelerationStructure.h"
+#include "gfx/vk/rt/AccelerationStructureGeometry.h"
 
 namespace vkfw_core::gfx {
 
@@ -31,13 +31,12 @@ namespace vkfw_core::gfx {
 
     void DescriptorSet::WriteImageDescriptor(std::uint32_t binding, std::uint32_t arrayElement,
                                              std::span<Texture*> textures, const Sampler& sampler,
-                                             vk::AccessFlags access, vk::ImageLayout layout)
+                                             vk::AccessFlags2KHR access, vk::ImageLayout layout)
     {
         auto [writeSet, pipelineStage] = WriteGeneralDescriptor(binding, arrayElement, textures.size());
         assert(DescriptorSetLayout::IsImageBindingType(writeSet.descriptorType));
         auto& imageWrite = AddImageWrite(textures.size());
 
-        // imageResources.resize(textures.size());
         for (std::size_t i = 0; i < textures.size(); ++i) {
             imageWrite[i].sampler = sampler.GetHandle();
             imageWrite[i].imageView = textures[i]->GetImageView(access, pipelineStage, layout, m_barrier).GetHandle();
@@ -48,15 +47,15 @@ namespace vkfw_core::gfx {
     }
 
     void DescriptorSet::WriteBufferDescriptor(std::uint32_t binding, std::uint32_t arrayElement,
-                                              std::span<BufferRange> buffers, [[maybe_unused]] vk::AccessFlags access)
+                                              std::span<BufferRange> buffers,
+                                              [[maybe_unused]] vk::AccessFlags2KHR access)
     {
         auto [writeSet, pipelineStage] = WriteGeneralDescriptor(binding, arrayElement, buffers.size());
         assert(DescriptorSetLayout::IsBufferBindingType(writeSet.descriptorType));
         auto& bufferWrite = AddBufferWrite(buffers.size());
 
         for (std::size_t i = 0; i < buffers.size(); ++i) {
-            // bufferResources[i] = buffers[i].m_buffer;
-            bufferWrite[i].buffer = buffers[i].m_buffer->GetHandle();
+            bufferWrite[i].buffer = buffers[i].m_buffer->GetBuffer(access, pipelineStage, m_barrier);
             bufferWrite[i].offset = buffers[i].m_offset;
             bufferWrite[i].range = buffers[i].m_range;
         }
@@ -66,7 +65,7 @@ namespace vkfw_core::gfx {
 
     void DescriptorSet::WriteTexelBufferDescriptor(std::uint32_t binding, std::uint32_t arrayElement,
                                                    std::span<TexelBufferInfo> buffers,
-                                                   [[maybe_unused]] vk::AccessFlags access)
+                                                   [[maybe_unused]] vk::AccessFlags2KHR access)
     {
         auto [writeSet, pipelineStage] = WriteGeneralDescriptor(binding, arrayElement, buffers.size());
         assert(DescriptorSetLayout::IsTexelBufferBindingType(writeSet.descriptorType));
@@ -75,7 +74,7 @@ namespace vkfw_core::gfx {
 
         bufferWrite.resize(buffers.size());
         for (std::size_t i = 0; i < buffers.size(); ++i) {
-            // bufferResources[i] = buffers[i].m_bufferRange.m_buffer;
+            buffers[i].m_bufferRange.m_buffer->AccessBarrier(access, pipelineStage, m_barrier);
             bufferWrite[i] = buffers[i].m_bufferView->GetHandle();
         }
 
@@ -98,20 +97,19 @@ namespace vkfw_core::gfx {
         writeSet.pImageInfo = imageWrite.data();
     }
 
-    void
-    DescriptorSet::WriteAccelerationStructureDescriptor(std::uint32_t binding, std::uint32_t arrayElement,
-                                                        std::span<AccelerationStructureInfo> accelerationStructures)
+    void DescriptorSet::WriteAccelerationStructureDescriptor(
+        std::uint32_t binding, std::uint32_t arrayElement,
+        std::span<const rt::AccelerationStructureGeometry*> accelerationStructures)
     {
         auto [writeSet, pipelineStage] = WriteGeneralDescriptor(binding, arrayElement, accelerationStructures.size());
-        // vk::AccessFlagBits::eAccelerationStructureReadKHR
         assert(writeSet.descriptorType == vk::DescriptorType::eAccelerationStructureKHR);
         auto& asWrite = std::get<AccelerationStructureWriteInfo>(
             m_descriptorResourceWrites.emplace_back(AccelerationStructureWriteInfo{}));
 
         asWrite.second.resize(accelerationStructures.size());
         for (std::size_t i = 0; i < accelerationStructures.size(); ++i) {
-            // bufferResources[i] = accelerationStructures[i].m_bufferRange.m_buffer;
-            asWrite.second[i] = accelerationStructures[i].m_accelerationStructure->GetHandle();
+            asWrite.second[i] = accelerationStructures[i]->GetTopLevelAccelerationStructure(
+                vk::AccessFlagBits2KHR::eAccelerationStructureRead, pipelineStage, m_barrier);
         }
         asWrite.first = std::make_unique<vk::WriteDescriptorSetAccelerationStructureKHR>(asWrite.second);
 
@@ -123,7 +121,7 @@ namespace vkfw_core::gfx {
         device->GetHandle().updateDescriptorSets(m_descriptorSetWrites, nullptr);
     }
 
-    std::pair<vk::WriteDescriptorSet&, vk::PipelineStageFlags>
+    std::pair<vk::WriteDescriptorSet&, vk::PipelineStageFlags2KHR>
     DescriptorSet::WriteGeneralDescriptor(std::uint32_t binding, std::uint32_t arrayElement, std::size_t arraySize)
     {
         assert(arrayElement == 0 || arraySize == 1);
@@ -133,7 +131,7 @@ namespace vkfw_core::gfx {
             m_descriptorSetWrites.emplace_back(GetHandle(), bindingLayout.binding, arrayElement,
                                                   static_cast<std::uint32_t>(arraySize), bindingLayout.descriptorType);
 
-        return std::pair<vk::WriteDescriptorSet&, vk::PipelineStageFlags>{
+        return std::pair<vk::WriteDescriptorSet&, vk::PipelineStageFlags2KHR>{
             writeSet, GetCorrespondingPipelineStage(bindingLayout.stageFlags)};
     }
 
@@ -153,13 +151,13 @@ namespace vkfw_core::gfx {
         return bufferWrite;
     }
 
-    void DescriptorSet::BindBarrier(const CommandBuffer& cmdBuffer)
+    void DescriptorSet::BindBarrier(CommandBuffer& cmdBuffer)
     {
         m_barrier.Record(cmdBuffer);
         m_skipNextBindBarriers += 1;
     }
 
-    void DescriptorSet::Bind(const CommandBuffer& cmdBuffer, vk::PipelineBindPoint bindingPoint,
+    void DescriptorSet::Bind(CommandBuffer& cmdBuffer, vk::PipelineBindPoint bindingPoint,
                              const PipelineLayout& pipelineLayout, std::uint32_t firstSet,
                              const vk::ArrayProxy<const std::uint32_t>& dynamicOffsets)
     {
@@ -181,59 +179,59 @@ namespace vkfw_core::gfx {
         throw std::runtime_error("Binding does not exist.");
     }
 
-    vk::PipelineStageFlags DescriptorSet::GetCorrespondingPipelineStage(vk::ShaderStageFlags shaderStage)
+    vk::PipelineStageFlags2KHR DescriptorSet::GetCorrespondingPipelineStage(vk::ShaderStageFlags shaderStage)
     {
-        vk::PipelineStageFlags pipelineStages;
+        vk::PipelineStageFlags2KHR pipelineStages;
         if (shaderStage & vk::ShaderStageFlagBits::eVertex) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits::eVertexShader;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eVertexShader;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eTessellationControl) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits::eTessellationControlShader;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eTessellationControlShader;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eTessellationEvaluation) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits::eTessellationEvaluationShader;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eTessellationEvaluationShader;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eGeometry) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits::eGeometryShader;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eGeometryShader;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eFragment) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits::eFragmentShader;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eFragmentShader;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eCompute) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits::eComputeShader;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eComputeShader;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eAllGraphics) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits::eAllGraphics;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eAllGraphics;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eAll) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits::eAllCommands;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eAllCommands;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eRaygenKHR) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits::eRayTracingShaderKHR;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShader;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eAnyHitKHR) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits::eRayTracingShaderKHR;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShader;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eClosestHitKHR) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits::eRayTracingShaderKHR;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShader;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eMissKHR) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits::eRayTracingShaderKHR;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShader;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eIntersectionKHR) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits::eRayTracingShaderKHR;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShader;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eCallableKHR) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits::eRayTracingShaderKHR;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShader;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eTaskNV) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits::eTaskShaderNV;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eTaskShaderNV;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eMeshNV) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits::eMeshShaderNV;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eMeshShaderNV;
         }
 
-        if (pipelineStages == vk::PipelineStageFlags{}) {
+        if (pipelineStages == vk::PipelineStageFlags2KHR{}) {
             throw std::runtime_error{"Shader stage not supported."};
         } else {
             return pipelineStages;

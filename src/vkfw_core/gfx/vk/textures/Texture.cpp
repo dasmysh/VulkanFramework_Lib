@@ -159,7 +159,7 @@ namespace vkfw_core::gfx {
     }
 
     void Texture::CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, Texture& dstImage,
-        std::uint32_t dstMipLevel, const glm::u32vec4 & dstOffset, const glm::u32vec4 & size, const CommandBuffer& cmdBuffer)
+        std::uint32_t dstMipLevel, const glm::u32vec4 & dstOffset, const glm::u32vec4 & size, CommandBuffer& cmdBuffer)
     {
         assert(m_desc.m_imageUsage & vk::ImageUsageFlagBits::eTransferSrc);
         assert(dstImage.m_desc.m_imageUsage & vk::ImageUsageFlagBits::eTransferDst);
@@ -174,10 +174,10 @@ namespace vkfw_core::gfx {
         assert(srcMipLevel < m_mipLevels);
         assert(dstMipLevel < dstImage.m_mipLevels);
 
-        PipelineBarrier barrier{m_device, vk::PipelineStageFlagBits::eTransfer};
-        AccessBarrier(vk::AccessFlagBits::eTransferRead, vk::PipelineStageFlagBits::eTransfer,
+        PipelineBarrier barrier{m_device};
+        AccessBarrier(vk::AccessFlagBits2KHR::eTransferRead, vk::PipelineStageFlagBits2KHR::eTransfer,
                       vk::ImageLayout::eTransferSrcOptimal, barrier);
-        dstImage.AccessBarrier(vk::AccessFlagBits::eTransferWrite, vk::PipelineStageFlagBits::eTransfer,
+        dstImage.AccessBarrier(vk::AccessFlagBits2KHR::eTransferWrite, vk::PipelineStageFlagBits2KHR::eTransfer,
                                vk::ImageLayout::eTransferDstOptimal, barrier);
         barrier.Record(cmdBuffer);
 
@@ -192,24 +192,28 @@ namespace vkfw_core::gfx {
                                         copyRegion);
     }
 
-    CommandBuffer Texture::CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset,
-                                          Texture& dstImage, std::uint32_t dstMipLevel,
-                                          const glm::u32vec4& dstOffset, const glm::u32vec4& size,
-                                          const Queue& copyQueue, std::span<vk::Semaphore> waitSemaphores,
-                                          std::span<vk::Semaphore> signalSemaphores, const Fence& fence)
+    CommandBuffer Texture::CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, Texture& dstImage,
+                                          std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset,
+                                          const glm::u32vec4& size, const Queue& copyQueue,
+                                          std::span<vk::Semaphore> waitSemaphores,
+                                          std::span<vk::Semaphore> signalSemaphores,
+                                          std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence)
     {
         auto transferCmdBuffer = CommandBuffer::beginSingleTimeSubmit(
-            m_device, fmt::format("CopyImageAsyncCmdBuffer:{}-{}", GetName(), dstImage.GetName()),
-            "CopyImageAsync", copyQueue.GetCommandPool());
+            m_device, fmt::format("CopyImageAsyncCmdBuffer:{}-{}", GetName(), dstImage.GetName()), "CopyImageAsync",
+            copyQueue.GetCommandPool());
         CopyImageAsync(srcMipLevel, srcOffset, dstImage, dstMipLevel, dstOffset, size, transferCmdBuffer);
-        CommandBuffer::endSingleTimeSubmit(copyQueue, transferCmdBuffer, waitSemaphores, signalSemaphores, fence);
+        auto submitFence =
+            CommandBuffer::endSingleTimeSubmit(copyQueue, transferCmdBuffer, waitSemaphores, signalSemaphores);
+        if (fence.has_value()) { fence = submitFence; }
 
         return transferCmdBuffer;
     }
 
     CommandBuffer Texture::CopyImageAsync(Texture& dstImage, const Queue& copyQueue,
                                           std::span<vk::Semaphore> waitSemaphores,
-                                          std::span<vk::Semaphore> signalSemaphores, const Fence& fence)
+                                          std::span<vk::Semaphore> signalSemaphores,
+                                          std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence)
     {
         return CopyImageAsync(0, glm::u32vec4(0), dstImage, 0, glm::u32vec4(0), m_size, copyQueue, waitSemaphores,
                               signalSemaphores, fence);
@@ -221,20 +225,20 @@ namespace vkfw_core::gfx {
         copyQueue.WaitIdle();
     }
 
-    void Texture::AccessBarrier(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
+    void Texture::AccessBarrier(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
                                 vk::ImageLayout imageLayout, PipelineBarrier& barrier)
     {
         barrier.AddSingleBarrier(this, m_image, imageLayout, access, pipelineStages);
     }
 
-    vk::Image Texture::GetImage(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
+    vk::Image Texture::GetImage(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
                                 vk::ImageLayout imageLayout, PipelineBarrier& barrier)
     {
         barrier.AddSingleBarrier(this, m_image, imageLayout, access, pipelineStages);
         return m_image;
     }
 
-    const ImageView& Texture::GetImageView(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages,
+    const ImageView& Texture::GetImageView(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
                                            vk::ImageLayout imageLayout, PipelineBarrier& barrier)
     {
 

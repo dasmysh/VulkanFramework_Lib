@@ -31,7 +31,7 @@ namespace vkfw_core::gfx::rt {
         m_blasInstances.emplace_back(blasInstance);
     }
 
-    void TopLevelAccelerationStructure::BuildAccelerationStructure()
+    void TopLevelAccelerationStructure::BuildAccelerationStructure(CommandBuffer& cmdBuffer)
     {
         vkfw_core::gfx::HostBuffer instancesBuffer{
             GetDevice(), fmt::format("InstanceBuffer:{}", GetName()),
@@ -39,8 +39,11 @@ namespace vkfw_core::gfx::rt {
                 | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR};
         instancesBuffer.InitializeData(m_blasInstances);
 
+        PipelineBarrier barrier{GetDevice()};
         vk::AccelerationStructureGeometryInstancesDataKHR asGeometryDataInstances{
-            VK_FALSE, instancesBuffer.GetDeviceAddressConst()};
+            VK_FALSE,
+            instancesBuffer.GetDeviceAddressConst(vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+                                                  vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild, barrier)};
         vk::AccelerationStructureGeometryDataKHR asGeometryData{asGeometryDataInstances};
 
         vk::AccelerationStructureGeometryKHR asGeometry{vk::GeometryTypeKHR::eInstances, asGeometryData,
@@ -50,8 +53,16 @@ namespace vkfw_core::gfx::rt {
                                                                   0x0, 0, 0x0};
 
         AddGeometry(asGeometry, asBuildRange);
+        barrier.Record(cmdBuffer);
 
-        AccelerationStructure::BuildAccelerationStructure();
+        AccelerationStructure::BuildAccelerationStructure(cmdBuffer);
+    }
+
+    vk::AccelerationStructureKHR TopLevelAccelerationStructure::GetAccelerationStructure(
+        vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages, PipelineBarrier& barrier) const
+    {
+        AccessBarrier(access, pipelineStages, barrier);
+        return GetHandle();
     }
 
 }

@@ -17,7 +17,7 @@ namespace vkfw_core::gfx {
     Framebuffer::Framebuffer(const LogicalDevice* logicalDevice, std::string_view name, const glm::uvec2& size,
                              const std::vector<vk::Image>& images, const RenderPass& renderPass,
                              const FramebufferDescriptor& desc, const std::vector<std::uint32_t>& queueFamilyIndices,
-                             const CommandBuffer& cmdBuffer)
+                             std::optional<std::reference_wrapper<CommandBuffer>> cmdBuffer)
         : VulkanObjectPrivateWrapper{logicalDevice->GetHandle(), name, vk::UniqueFramebuffer{}}
         , m_device{logicalDevice}
         , m_size{size}
@@ -40,7 +40,8 @@ namespace vkfw_core::gfx {
 
     Framebuffer::Framebuffer(const LogicalDevice* logicalDevice, std::string_view name, const glm::uvec2& size,
                              const RenderPass& renderPass, const FramebufferDescriptor& desc,
-                             const std::vector<std::uint32_t>& queueFamilyIndices, const CommandBuffer& cmdBuffer)
+                             const std::vector<std::uint32_t>& queueFamilyIndices,
+                             std::optional<std::reference_wrapper<CommandBuffer>> cmdBuffer)
         : Framebuffer(logicalDevice, name, size, std::vector<vk::Image>(), renderPass, desc, queueFamilyIndices,
                       cmdBuffer)
     {
@@ -103,7 +104,7 @@ namespace vkfw_core::gfx {
         }
     }
 
-    void Framebuffer::CreateImages(const CommandBuffer& cmdBuffer)
+    void Framebuffer::CreateImages(std::optional<std::reference_wrapper<CommandBuffer>> cmdBuffer)
     {
         std::vector<vk::ImageLayout> imageLayouts;
         imageLayouts.resize(m_desc.m_attachments.size() - m_extTextures.size());
@@ -115,24 +116,25 @@ namespace vkfw_core::gfx {
         }
         m_memoryGroup.FinalizeDeviceGroup();
 
-        CommandBuffer ucmdBuffer;
-        if (!cmdBuffer) {
+        CommandBuffer ucmdBuffer{m_device};
+        if (!cmdBuffer.has_value()) {
             ucmdBuffer = CommandBuffer::beginSingleTimeSubmit(
                 m_device, fmt::format("FBO:{} CreateImagesCmdBuffer", GetName()),
                 fmt::format("FBO:{} CreateImages", GetName()), m_device->GetCommandPool(0));
         }
-        PipelineBarrier barrier{m_device, vk::PipelineStageFlagBits::eColorAttachmentOutput};
+        PipelineBarrier barrier{m_device};
         for (auto i = 0U; i < m_memoryGroup.GetImagesInGroup(); ++i) {
-            vk::AccessFlags access = GetFittingAttachmentAccessFlags(m_desc.m_attachments[i].m_tex.m_format);
-            vk::PipelineStageFlags pipelineStage =
+            vk::AccessFlags2KHR access = GetFittingAttachmentAccessFlags(m_desc.m_attachments[i].m_tex.m_format);
+            vk::PipelineStageFlags2KHR pipelineStage =
                 GetFittingAttachmentPipelineStage(m_desc.m_attachments[i].m_tex.m_format);
             m_memoryGroup.GetTexture(i)->AccessBarrier(access, pipelineStage, imageLayouts[i], barrier);
         }
-        barrier.Record(cmdBuffer ? cmdBuffer : ucmdBuffer);
-        if (!cmdBuffer) {
+        barrier.Record(cmdBuffer.has_value() ? cmdBuffer.value().get() : ucmdBuffer);
+        if (!cmdBuffer.has_value()) {
             auto& queue = m_device->GetQueue(0, 0);
-            CommandBuffer::endSingleTimeSubmit(queue, ucmdBuffer);
-            queue.WaitIdle();
+            auto fence = CommandBuffer::endSingleTimeSubmit(queue, ucmdBuffer);
+            fence->Wait(m_device, defaultFenceTimeout);
+            // queue.WaitIdle();
         }
     }
 
@@ -149,9 +151,9 @@ namespace vkfw_core::gfx {
         for (auto& tex : m_extTextures) {
             tex.InitializeImageView();
             auto descriptorIndex = attachments.size();
-            vk::AccessFlags access =
+            vk::AccessFlags2KHR access =
                 GetFittingAttachmentAccessFlags(m_desc.m_attachments[descriptorIndex].m_tex.m_format);
-            vk::PipelineStageFlags pipelineStage =
+            vk::PipelineStageFlags2KHR pipelineStage =
                 GetFittingAttachmentPipelineStage(m_desc.m_attachments[descriptorIndex].m_tex.m_format);
             vk::ImageLayout layout =
                 m_desc.m_attachments[descriptorIndex].m_initialLayout == vk::ImageLayout::eUndefined
@@ -164,9 +166,9 @@ namespace vkfw_core::gfx {
         for (auto i = 0U; i < m_memoryGroup.GetImagesInGroup(); ++i) {
             auto descriptorIndex = attachments.size();
 
-            vk::AccessFlags access =
+            vk::AccessFlags2KHR access =
                 GetFittingAttachmentAccessFlags(m_desc.m_attachments[descriptorIndex].m_tex.m_format);
-            vk::PipelineStageFlags pipelineStage =
+            vk::PipelineStageFlags2KHR pipelineStage =
                 GetFittingAttachmentPipelineStage(m_desc.m_attachments[descriptorIndex].m_tex.m_format);
             vk::ImageLayout layout =
                 m_desc.m_attachments[descriptorIndex].m_initialLayout == vk::ImageLayout::eUndefined
@@ -189,7 +191,7 @@ namespace vkfw_core::gfx {
 
     Framebuffer Framebuffer::CreateWithSameImages(std::string_view name, const FramebufferDescriptor& desc,
                                                   const std::vector<std::uint32_t>& queueFamilyIndices,
-                                                  const CommandBuffer& cmdBuffer) const
+                                                  std::optional<std::reference_wrapper<CommandBuffer>> cmdBuffer) const
     {
         std::vector<vk::Image> images;
         for (const auto& tex : m_extTextures) { images.push_back(tex.GetAccessNoBarrier()); }
@@ -200,7 +202,7 @@ namespace vkfw_core::gfx {
         return Framebuffer(m_device, name, m_size, images, *m_renderPass, desc, queueFamilyIndices, cmdBuffer);
     }
 
-    void Framebuffer::BeginRenderPass(const CommandBuffer& cmdBuffer, const RenderPass& renderPass,
+    void Framebuffer::BeginRenderPass(CommandBuffer& cmdBuffer, const RenderPass& renderPass,
                                       std::span<DescriptorSet*> descriptorSets, const vk::Rect2D& renderArea,
                                       std::span<vk::ClearValue> clearColor, vk::SubpassContents subpassContents)
     {
@@ -265,19 +267,19 @@ namespace vkfw_core::gfx {
         return vk::ImageLayout::eColorAttachmentOptimal;
     }
 
-    vk::AccessFlags Framebuffer::GetFittingAttachmentAccessFlags(vk::Format format)
+    vk::AccessFlags2KHR Framebuffer::GetFittingAttachmentAccessFlags(vk::Format format)
     {
         if (IsAnyDepthOrStencilFormat(format)) {
-            return vk::AccessFlagBits::eDepthStencilAttachmentWrite;
+            return vk::AccessFlagBits2KHR::eDepthStencilAttachmentWrite;
         }
-        return vk::AccessFlagBits::eColorAttachmentWrite;
+        return vk::AccessFlagBits2KHR::eColorAttachmentWrite;
     }
 
-    vk::PipelineStageFlags Framebuffer::GetFittingAttachmentPipelineStage(vk::Format format)
+    vk::PipelineStageFlags2KHR Framebuffer::GetFittingAttachmentPipelineStage(vk::Format format)
     {
         if (IsAnyDepthOrStencilFormat(format)) {
-            return vk::PipelineStageFlagBits::eEarlyFragmentTests;
+            return vk::PipelineStageFlagBits2KHR::eEarlyFragmentTests;
         }
-        return vk::PipelineStageFlagBits::eColorAttachmentOutput;
+        return vk::PipelineStageFlagBits2KHR::eColorAttachmentOutput;
     }
 }

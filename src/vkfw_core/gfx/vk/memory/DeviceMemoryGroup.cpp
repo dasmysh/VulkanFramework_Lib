@@ -110,7 +110,7 @@ namespace vkfw_core::gfx {
         std::vector<B>& buffers, std::vector<T>& images, DeviceMemory & memory)
     {
         for (auto i = 0U; i < buffers.size(); ++i) {
-            memory.BindToBuffer(buffers[i], offsets[i]);
+            buffers[i].BindMemory(memory.GetHandle(), offsets[i]);
         }
         for (auto i = 0U; i < images.size(); ++i) {
             images[i].BindMemory(memory.GetHandle(), offsets[i + buffers.size()]);
@@ -149,7 +149,7 @@ namespace vkfw_core::gfx {
                                                             bool& shaderDeviceAddress)
     {
         shaderDeviceAddress = shaderDeviceAddress || buffer.IsShaderDeviceAddress();
-        auto memRequirements = device->GetHandle().getBufferMemoryRequirements(buffer.GetHandle());
+        auto memRequirements = buffer.GetMemoryRequirements();
         return FillAllocationInfo(device, memRequirements, buffer.GetDeviceMemory().GetMemoryProperties(), allocInfo);
     }
 

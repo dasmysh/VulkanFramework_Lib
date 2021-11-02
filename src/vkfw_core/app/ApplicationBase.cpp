@@ -268,15 +268,6 @@ namespace vkfw_core {
             if (wc.m_useRayTracing) hasRayTracing = true;
         }
 
-        // std::vector<std::string> reqInstanceExtensions = requiredInstanceExtensions;
-        // if (hasRayTracing) {
-        //     if (std::find(requiredInstanceExtensions.begin(), requiredInstanceExtensions.end(),
-        //         VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME)
-        //         == requiredInstanceExtensions.end()) {
-        //         reqInstanceExtensions.emplace_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
-        //     }
-        // }
-
         InitVulkan(applicationName, applicationVersion, requiredInstanceExtensions);
         m_instance = this;
 

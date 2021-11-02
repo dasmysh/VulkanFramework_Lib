@@ -27,6 +27,7 @@ namespace vkfw_core::gfx {
         , m_vkPhysicalDevice{phDevice}
         , m_vkPhysicalDeviceLimits{phDevice.getProperties().limits} // NOLINT
         , m_queueDescriptions{std::move(queueDescs)}
+        , m_resourceReleaser{std::make_unique<ResourceReleaser>(this)}
     {
         std::map<std::uint32_t, std::vector<std::pair<std::uint32_t, std::uint32_t>>> deviceQFamilyToRequested;
         std::map<std::uint32_t, std::vector<float>> deviceQFamilyPriorities;
@@ -190,17 +191,15 @@ namespace vkfw_core::gfx {
         transfer.FinishTransfer();
 
         {
-            vk::FenceCreateInfo fenceInfo;
-            Fence fence{GetHandle(), "TransferDummyLayoutsInitialFence", GetHandle().createFenceUnique(fenceInfo)};
             auto cmdBuffer = CommandBuffer::beginSingleTimeSubmit(this, "TransferImageLayoutsInitialCommandBuffer",
                                                                   "TransferImageLayoutsInitial", GetCommandPool(0));
-            PipelineBarrier barrier{this, vk::PipelineStageFlagBits::eFragmentShader};
-            m_dummyTexture->GetTexture().AccessBarrier(vk::AccessFlagBits::eShaderRead,
-                                                       vk::PipelineStageFlagBits::eFragmentShader,
+            PipelineBarrier barrier{this};
+            m_dummyTexture->GetTexture().AccessBarrier(vk::AccessFlagBits2KHR::eShaderRead,
+                                                       vk::PipelineStageFlagBits2KHR::eFragmentShader,
                                                        vk::ImageLayout::eShaderReadOnlyOptimal, barrier);
             barrier.Record(cmdBuffer);
-            CommandBuffer::endSingleTimeSubmit(GetQueue(0, 0), cmdBuffer, {}, {}, fence);
-            if (auto r = GetHandle().waitForFences({fence.GetHandle()}, VK_TRUE, vkfw_core::defaultFenceTimeout);
+            auto fence = CommandBuffer::endSingleTimeSubmit(GetQueue(0, 0), cmdBuffer, {}, {});
+            if (auto r = GetHandle().waitForFences({fence->GetHandle()}, VK_TRUE, vkfw_core::defaultFenceTimeout);
                 r != vk::Result::eSuccess) {
                 spdlog::error("Could not wait for fence while transitioning layout: {}.", r);
                 throw std::runtime_error("Could not wait for fence while transitioning layout.");

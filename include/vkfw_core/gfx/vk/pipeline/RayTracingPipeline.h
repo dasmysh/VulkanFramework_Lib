@@ -9,6 +9,7 @@
 #pragma once
 
 #include "gfx/vk/wrappers/VulkanObjectWrapper.h"
+#include "gfx/vk/wrappers/PipelineBarriers.h"
 #include "main.h"
 
 namespace vkfw_core::gfx {
@@ -17,7 +18,7 @@ namespace vkfw_core::gfx {
     class HostBuffer;
     class PipelineLayout;
 
-    class RayTracingPipeline : public VulkanObjectWrapper<vk::UniquePipeline>
+    class RayTracingPipeline : public VulkanObjectPrivateWrapper<vk::UniquePipeline>
     {
     public:
         RayTracingPipeline(const LogicalDevice* device, std::string_view name,
@@ -27,6 +28,7 @@ namespace vkfw_core::gfx {
         void ResetShaders(std::vector<std::shared_ptr<Shader>>&& shaders);
         void CreatePipeline(std::uint32_t maxRecursionDepth, const PipelineLayout& pipelineLayout);
         const std::array<vk::StridedDeviceAddressRegionKHR, 4>& GetSBTDeviceAddresses() const { return m_sbtDeviceAddressRegions; }
+        void BindPipeline(CommandBuffer& cmdBuffer);
 
     private:
         void InitializeShaderBindingTable();
@@ -52,6 +54,8 @@ namespace vkfw_core::gfx {
 
         /** Holds the shader binding table. */
         std::unique_ptr<vkfw_core::gfx::HostBuffer> m_shaderBindingTable;
+        /** Holds the shader binding table barrier. */
+        PipelineBarrier m_barrier;
     };
 
 }

@@ -81,17 +81,20 @@ namespace vkfw_core::gfx::rt {
     void AccelerationStructureGeometry::AddSubMeshGeometry(const MeshGeometryInfo& mesh, const SubMesh& subMesh,
                                                            const glm::mat4& transform)
     {
+        auto blasIndex =
+            AddBottomLevelAccelerationStructure(static_cast<std::uint32_t>(mesh.index), glm::transpose(transform));
+
         vk::DeviceOrHostAddressConstKHR bufferDeviceAddress =
-            m_bufferMemGroup.GetBuffer(m_bufferIndex)->GetDeviceAddressConst();
+            m_bufferMemGroup.GetBuffer(m_bufferIndex)
+                ->GetDeviceAddressConst(vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+                                        vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+                                        m_BLAS[blasIndex].GetBuildBarrier());
         vk::DeviceOrHostAddressConstKHR vboDeviceAddress = bufferDeviceAddress.deviceAddress + mesh.vboOffset;
         vk::DeviceOrHostAddressConstKHR iboDeviceAddress = bufferDeviceAddress.deviceAddress + mesh.iboOffset;
 
         vk::DeviceOrHostAddressConstKHR indexBufferAddress{iboDeviceAddress.deviceAddress
                                                            + subMesh.GetIndexOffset() * sizeof(std::uint32_t)};
 
-        auto blasIndex =
-            AddBottomLevelAccelerationStructure(fmt::format("BLAS:{}-{}", m_name, m_BLAS.size()),
-                                                static_cast<std::uint32_t>(mesh.index), glm::transpose(transform));
         m_BLAS[blasIndex].AddTriangleGeometry(
             subMesh.GetNumberOfTriangles(), subMesh.GetNumberOfIndices(), mesh.vertexSize,
             mesh.mesh->GetMaterial(subMesh.GetMaterialID())->m_hasAlpha, vboDeviceAddress, indexBufferAddress);
@@ -113,11 +116,23 @@ namespace vkfw_core::gfx::rt {
         std::size_t vertexCount, std::size_t vertexSize, DeviceBuffer* vbo, std::size_t vboOffset /* = 0*/,
         DeviceBuffer* ibo /*= nullptr*/, std::size_t iboOffset /*= 0*/)
     {
+        auto blasIndex =
+            AddBottomLevelAccelerationStructure(static_cast<std::uint32_t>(m_geometryIndex), glm::transpose(transform));
+
         vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress =
-            vbo->GetDeviceAddressConst().deviceAddress + vboOffset;
+            vbo->GetDeviceAddressConst(vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+                                       vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+                                       m_BLAS[blasIndex].GetBuildBarrier())
+                .deviceAddress
+            + vboOffset;
         vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress = vertexBufferDeviceAddress;
         if (ibo != nullptr) {
-            indexBufferDeviceAddress = ibo->GetDeviceAddressConst().deviceAddress + iboOffset;
+            indexBufferDeviceAddress =
+                ibo->GetDeviceAddressConst(vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+                                           vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+                                           m_BLAS[blasIndex].GetBuildBarrier())
+                    .deviceAddress
+                + iboOffset;
         } else {
             if (iboOffset == 0) {
                 iboOffset = m_device->CalculateStorageBufferAlignment(vboOffset + vertexCount * vertexSize);
@@ -125,9 +140,6 @@ namespace vkfw_core::gfx::rt {
             indexBufferDeviceAddress = vertexBufferDeviceAddress.deviceAddress + iboOffset;
         }
 
-        auto blasIndex =
-            AddBottomLevelAccelerationStructure(fmt::format("BLAS:{}-{}", m_name, m_BLAS.size()),
-                                                static_cast<std::uint32_t>(m_geometryIndex), glm::transpose(transform));
 
         std::uint32_t materialIndex = static_cast<std::uint32_t>(m_materials.size());
         m_materials.emplace_back(&materialInfo, m_device, m_textureMemGroup, m_queueFamilyIndices);
@@ -141,9 +153,12 @@ namespace vkfw_core::gfx::rt {
 
     void AccelerationStructureGeometry::BuildAccelerationStructure()
     {
-        // TODO: a way to build all BLAS at once would be good. [11/22/2020 Sebastian Maisch]
+        PipelineBarrier barrier{m_device};
+        auto cmdBuffer = vkfw_core::gfx::CommandBuffer::beginSingleTimeSubmit(m_device, "ASBuildCmdBuffer", "ASBuild",
+                                                                              m_device->GetCommandPool(0));
+
         for (std::size_t i = 0; i < m_BLAS.size(); ++i) {
-            m_BLAS[i].BuildAccelerationStructure();
+            m_BLAS[i].BuildAccelerationStructure(cmdBuffer);
 
             vk::AccelerationStructureInstanceKHR blasInstance{
                 vk::TransformMatrixKHR{},
@@ -151,22 +166,27 @@ namespace vkfw_core::gfx::rt {
                 0xFF,
                 0,
                 vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable,
-                m_BLAS[i].GetAddressHandle()};
+                m_BLAS[i].GetAddressHandle(vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+                                           vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild, barrier)};
             memcpy(&blasInstance.transform, &m_BLASTransforms[i], sizeof(glm::mat3x4));
             m_TLAS.AddBottomLevelAccelerationStructureInstance(blasInstance);
         }
+        barrier.Record(cmdBuffer);
 
-        m_TLAS.BuildAccelerationStructure();
+        m_TLAS.BuildAccelerationStructure(cmdBuffer);
+        auto fence = vkfw_core::gfx::CommandBuffer::endSingleTimeSubmit(m_device->GetQueue(0, 0), cmdBuffer, {}, {});
+        fence->Wait(m_device, defaultFenceTimeout);
     }
 
-    std::size_t AccelerationStructureGeometry::AddBottomLevelAccelerationStructure(std::string_view name, std::uint32_t bufferIndex,
+    std::size_t AccelerationStructureGeometry::AddBottomLevelAccelerationStructure(std::uint32_t bufferIndex,
                                                                                    const glm::mat3x4& transform)
     {
-        auto result = m_BLAS.size();
-        m_BLAS.emplace_back(m_device, name, vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace);
+        auto blasIndex = m_BLAS.size();
+        m_BLAS.emplace_back(m_device, fmt::format("BLAS:{}-{}", m_name, blasIndex),
+                            vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace);
         m_BLASTransforms.emplace_back(transform);
         m_bufferIndices.push_back(bufferIndex);
-        return result;
+        return blasIndex;
     }
 
     void AccelerationStructureGeometry::AddDescriptorLayoutBindingAS(DescriptorSetLayout& layout,
@@ -196,10 +216,11 @@ namespace vkfw_core::gfx::rt {
                           static_cast<std::uint32_t>(m_bumpMaps.size()), shaderFlags);
     }
 
-    void AccelerationStructureGeometry::FillAccelerationStructureInfo(AccelerationStructureInfo& accelerationStructureInfo) const
+    vk::AccelerationStructureKHR AccelerationStructureGeometry::GetTopLevelAccelerationStructure(
+        vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages, PipelineBarrier& barrier) const
     {
-        accelerationStructureInfo.m_accelerationStructure = &m_TLAS;
-        m_TLAS.FillBufferRange(accelerationStructureInfo.m_bufferRange);
+        for (const auto& blas : m_BLAS) { blas.AccessBarrier(access, pipelineStages, barrier); }
+        return m_TLAS.GetAccelerationStructure(access, pipelineStages, barrier);
     }
 
     void AccelerationStructureGeometry::FillGeometryInfo(std::vector<BufferRange>& vbos, std::vector<BufferRange>& ibos,
@@ -242,7 +263,7 @@ namespace vkfw_core::gfx::rt {
         for (auto tex : m_bumpMaps) { bumpMaps.emplace_back(tex); }
     }
 
-    void AccelerationStructureGeometry::CreateResourceUseBarriers(vk::AccessFlags access, vk::PipelineStageFlags pipelineStage, vk::ImageLayout newLayout, PipelineBarrier& barrier)
+    void AccelerationStructureGeometry::CreateResourceUseBarriers(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStage, vk::ImageLayout newLayout, PipelineBarrier& barrier)
     {
         // TODO: buffer barriers.
 

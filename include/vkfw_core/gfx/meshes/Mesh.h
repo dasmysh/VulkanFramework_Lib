@@ -29,6 +29,7 @@ namespace vkfw_core::gfx {
     class RenderElement;
     class RenderList;
     class CameraBase;
+    class VertexInputResources;
 
     class Mesh
     {
@@ -72,16 +73,16 @@ namespace vkfw_core::gfx {
             return m_worldMatricesDescriptorSetLayout;
         }
 
-        void TransferWorldMatrices(const CommandBuffer& transferCmdBuffer, std::size_t backbufferIdx) const;
+        void TransferWorldMatrices(CommandBuffer& transferCmdBuffer, std::size_t backbufferIdx) const;
 
         void UpdateWorldMatrices(std::size_t backbufferIndex, const glm::mat4& worldMatrix) const;
         void UpdateWorldMatricesNode(std::size_t backbufferIndex, const SceneMeshNode* node, const glm::mat4& worldMatrix) const;
 
-        void Draw(const CommandBuffer& cmdBuffer, std::size_t backbufferIdx,
+        void Draw(CommandBuffer& cmdBuffer, std::size_t backbufferIdx,
                   const PipelineLayout& pipelineLayout);
-        void DrawNode(const CommandBuffer& cmdBuffer, std::size_t backbufferIdx, const PipelineLayout& pipelineLayout,
+        void DrawNode(CommandBuffer& cmdBuffer, std::size_t backbufferIdx, const PipelineLayout& pipelineLayout,
                       const SceneMeshNode* node);
-        void DrawSubMesh(const CommandBuffer& cmdBuffer, const PipelineLayout& pipelineLayout,
+        void DrawSubMesh(CommandBuffer& cmdBuffer, const PipelineLayout& pipelineLayout,
                          const SubMesh& subMesh);
 
         void GetDrawElements(const glm::mat4& worldMatrix, const CameraBase& camera, std::size_t backbufferIdx,
@@ -103,8 +104,7 @@ namespace vkfw_core::gfx {
         void CreateBuffersInMemoryGroup(std::size_t offset, std::size_t numBackbuffers, const std::vector<std::uint32_t>& queueFamilyIndices);
         void CreateMaterials(const std::vector<std::uint32_t>& queueFamilyIndices);
 
-        void SetVertexBuffer(const DeviceBuffer* vtxBuffer, std::size_t offset);
-        void SetIndexBuffer(const DeviceBuffer* idxBuffer, std::size_t offset);
+        void SetVertexInput(DeviceBuffer* vtxBuffer, std::size_t vtxOffset, DeviceBuffer* idxBuffer, std::size_t idxOffset);
 
         /** Holds the device. */
         const LogicalDevice* m_device;
@@ -118,10 +118,8 @@ namespace vkfw_core::gfx {
         MemoryGroup* m_memoryGroup;
         /** The index into the memory group. */
         unsigned int m_bufferIdx;
-        /** Holds a pointer to the vertex buffer and an offset to the vertex data. */
-        std::pair<const DeviceBuffer*, vk::DeviceSize> m_vertexBuffer;
-        /** Holds a pointer to the index buffer and an offset to the index data. */
-        std::pair<const DeviceBuffer*, vk::DeviceSize> m_indexBuffer;
+        /** Holds the vertex input resources. */
+        std::unique_ptr<VertexInputResources> m_vertexInput;
 
         /** Holds the uniform buffer for the world matrices. */
         UniformBufferObject m_worldMatricesUBO;
@@ -225,8 +223,9 @@ namespace vkfw_core::gfx {
                                               m_vertexMaterialData.data() + vertexBufferSize + materialBufferSize));
 
         auto buffer = m_memoryGroup->GetBuffer(m_bufferIdx);
-        SetVertexBuffer(buffer, offset);
-        SetIndexBuffer(buffer, offset + vertexBufferSize);
+        SetVertexInput(buffer, offset, buffer, offset + vertexBufferSize);
+        // SetVertexBuffer(buffer, offset);
+        // SetIndexBuffer(buffer, offset + vertexBufferSize);
     }
 
     template<Vertex VertexType, class MaterialType>

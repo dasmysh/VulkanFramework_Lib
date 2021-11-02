@@ -35,8 +35,6 @@ namespace vkfw_core::gfx {
         void InitializeMemory(const vk::MemoryRequirements& memRequirements, bool shaderDeviceAddress = false);
         void InitializeMemory(const vk::MemoryAllocateInfo& memAllocateInfo);
 
-        void BindToBuffer(Buffer& buffer, std::size_t offset) const;
-
         void CopyToHostMemory(std::size_t offset, std::size_t size, const void* data) const;
         void CopyToHostMemory(std::size_t offsetToTexture, const glm::u32vec3& offset,
             const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize, const void* data) const;

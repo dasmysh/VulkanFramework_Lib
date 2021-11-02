@@ -34,7 +34,7 @@ namespace vkfw_core::gfx {
         static void AddDescriptorLayoutBinding(DescriptorSetLayout& layout, vk::ShaderStageFlags shaderFlags,
                                                bool isDynamicBuffer = false, std::uint32_t binding = 0);
 
-        void FillUploadCmdBuffer(const CommandBuffer& cmdBuffer, std::size_t instanceIdx, std::size_t size) const;
+        void FillUploadCmdBuffer(CommandBuffer& cmdBuffer, std::size_t instanceIdx, std::size_t size) const;
         void FillBufferRange(BufferRange& bufferRange) const;
         void FillBufferRanges(std::vector<BufferRange>& bufferRanges) const;
         void UpdateInstanceData(std::size_t instanceIdx, std::size_t size, const void* data) const;
@@ -53,7 +53,7 @@ namespace vkfw_core::gfx {
         void AddUBOToBuffer(MemoryGroup* memoryGroup, unsigned int bufferIndex,
             std::size_t bufferOffset, const ContentType& data);
         template<class ContentType>
-        void FillUploadCmdBuffer(const CommandBuffer& cmdBuffer, std::size_t instanceIdx) const;
+        void FillUploadCmdBuffer(CommandBuffer& cmdBuffer, std::size_t instanceIdx) const;
         template<class ContentType>
         void UpdateInstanceData(std::size_t instanceIdx, const ContentType& data) const;
 
@@ -86,7 +86,7 @@ namespace vkfw_core::gfx {
     }
 
     template<class ContentType>
-    void vkfw_core::gfx::UniformBufferObject::FillUploadCmdBuffer(const CommandBuffer& cmdBuffer, std::size_t instanceIdx) const
+    void vkfw_core::gfx::UniformBufferObject::FillUploadCmdBuffer(CommandBuffer& cmdBuffer, std::size_t instanceIdx) const
     {
         FillUploadCmdBuffer(cmdBuffer, instanceIdx, sizeof(ContentType));
     }

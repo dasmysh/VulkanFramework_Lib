@@ -24,7 +24,11 @@ namespace vkfw_core::gfx::rt {
 
         void AddBottomLevelAccelerationStructureInstance(const vk::AccelerationStructureInstanceKHR& blasInstance);
 
-        void BuildAccelerationStructure() override;
+        void BuildAccelerationStructure(CommandBuffer& cmdBuffer) override;
+
+        [[nodiscard]] vk::AccelerationStructureKHR GetAccelerationStructure(vk::AccessFlags2KHR access,
+                                                                            vk::PipelineStageFlags2KHR pipelineStages,
+                                                                            PipelineBarrier& barrier) const;
 
     private:
         /** Contains all the bottom level acceleration structure instances added. */

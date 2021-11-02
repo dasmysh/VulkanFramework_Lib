@@ -30,7 +30,10 @@ namespace vkfw_core::gfx {
 
     RayTracingPipeline::RayTracingPipeline(const LogicalDevice* device, std::string_view name,
                                            std::vector<std::shared_ptr<Shader>>&& shaders)
-        : VulkanObjectWrapper{device->GetHandle(), name, vk::UniquePipeline{}}, m_device{device}, m_shaders{shaders}
+        : VulkanObjectPrivateWrapper{device->GetHandle(), name, vk::UniquePipeline{}}
+        , m_device{device}
+        , m_shaders{shaders}
+        , m_barrier{device}
     {
         ResetShaders(std::move(shaders));
     }
@@ -54,6 +57,12 @@ namespace vkfw_core::gfx {
             SetHandle(m_device->GetHandle(), std::move(result.value[0]));
         }
         InitializeShaderBindingTable();
+    }
+
+    void RayTracingPipeline::BindPipeline(CommandBuffer& cmdBuffer)
+    {
+        m_barrier.Record(cmdBuffer);
+        cmdBuffer.GetHandle().bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, GetHandle());
     }
 
     void RayTracingPipeline::ResetShaders(std::vector<std::shared_ptr<Shader>>&& shaders)
@@ -107,6 +116,7 @@ namespace vkfw_core::gfx {
 
     void RayTracingPipeline::InitializeShaderBindingTable()
     {
+        m_barrier = PipelineBarrier{m_device};
         auto shaderGroupHandleSize = m_device->GetDeviceRayTracingPipelineProperties().shaderGroupHandleSize;
         auto shaderGroupHandleSizeAligned = m_device->CalculateSBTHandleAlignment(shaderGroupHandleSize);
         {
@@ -165,7 +175,10 @@ namespace vkfw_core::gfx {
             }
         }
 
-        auto sbtDeviceAddress = m_shaderBindingTable->GetDeviceAddress().deviceAddress;
+        auto sbtDeviceAddress = m_shaderBindingTable
+                                    ->GetDeviceAddress(vk::AccessFlagBits2KHR::eShaderRead,
+                                                       vk::PipelineStageFlagBits2KHR::eRayTracingShader, m_barrier)
+                                    .deviceAddress;
         if (m_shaderGroupIndexesByType[0].size() != 1) {
             spdlog::error("Only a single ray generation shader is allowed per pipeline.");
             throw std::runtime_error("Only a single ray generation shader is allowed per pipeline.");

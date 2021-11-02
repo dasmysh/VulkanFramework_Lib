@@ -58,12 +58,14 @@ namespace vkfw_core::gfx::rt {
                                                std::uint32_t bindingVBO, std::uint32_t bindingIBO,
                                                std::uint32_t bindingInstanceBuffer, std::uint32_t bindingMaterialBuffer,
                                                std::uint32_t bindingDiffuseTexture, std::uint32_t bindingBumpTexture);
-        void FillAccelerationStructureInfo(AccelerationStructureInfo& accelerationStructureInfo) const;
+        [[nodiscard]] vk::AccelerationStructureKHR
+        GetTopLevelAccelerationStructure(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
+                                         PipelineBarrier& barrier) const;
         void FillGeometryInfo(std::vector<BufferRange>& vbos, std::vector<BufferRange>& ibos,
                               BufferRange& instanceBuffer);
         void FillMaterialInfo(BufferRange& materialBuffer, std::vector<Texture*>& diffuseTextures,
                               std::vector<Texture*>& bumpMaps);
-        void CreateResourceUseBarriers(vk::AccessFlags access, vk::PipelineStageFlags pipelineStage,
+        void CreateResourceUseBarriers(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStage,
                                        vk::ImageLayout newLayout, PipelineBarrier& barrier);
 
     private:
@@ -91,7 +93,7 @@ namespace vkfw_core::gfx::rt {
         };
 
         void AddInstanceBufferAndTransferMemGroup();
-        [[nodiscard]] std::size_t AddBottomLevelAccelerationStructure(std::string_view name, std::uint32_t bufferIndex,
+        [[nodiscard]] std::size_t AddBottomLevelAccelerationStructure(std::uint32_t bufferIndex,
                                                                       const glm::mat3x4& transform);
         void AddInstanceInfo(std::uint32_t vertexSize, std::uint32_t bufferIndex, std::uint32_t materialIndex,
                              const glm::mat4& transform, std::uint32_t indexOffset = 0);

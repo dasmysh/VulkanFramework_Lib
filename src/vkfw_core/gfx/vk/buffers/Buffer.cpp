@@ -13,8 +13,8 @@ namespace vkfw_core::gfx {
 
     Buffer::Buffer(const LogicalDevice* device, std::string_view name, const vk::BufferUsageFlags& usage,
                    const vk::MemoryPropertyFlags& memoryFlags, std::vector<std::uint32_t> queueFamilyIndices)
-        : VulkanObjectWrapper{nullptr, name, vk::UniqueBuffer{}}
-        , m_device{device}
+        : VulkanObjectPrivateWrapper{nullptr, name, vk::UniqueBuffer{}}
+        , MemoryBoundResource{device}
         , m_bufferDeviceMemory{device, fmt::format("ImgMem:{}", GetName()), memoryFlags}
         , m_size{0}
         , m_usage{usage}
@@ -24,8 +24,9 @@ namespace vkfw_core::gfx {
 
     Buffer::~Buffer() = default;
 
-    Buffer::Buffer(Buffer&& rhs) noexcept : VulkanObjectWrapper{std::move(rhs)},
-        m_device{rhs.m_device}
+    Buffer::Buffer(Buffer&& rhs) noexcept
+        : VulkanObjectPrivateWrapper{std::move(rhs)}
+        , MemoryBoundResource{std::move(rhs)}
         , m_bufferDeviceMemory{std::move(rhs.m_bufferDeviceMemory)}
         , m_size{rhs.m_size}
         , m_usage{rhs.m_usage}
@@ -37,8 +38,8 @@ namespace vkfw_core::gfx {
     Buffer& Buffer::operator=(Buffer&& rhs) noexcept
     {
         this->~Buffer();
-        VulkanObjectWrapper::operator=(std::move(rhs));
-        m_device = rhs.m_device;
+        VulkanObjectPrivateWrapper::operator=(std::move(rhs));
+        MemoryBoundResource::operator=(std::move(rhs));
         m_bufferDeviceMemory = std::move(rhs.m_bufferDeviceMemory);
         m_size = rhs.m_size;
         m_usage = rhs.m_usage;
@@ -65,61 +66,105 @@ namespace vkfw_core::gfx {
         if (initMemory) {
             auto memRequirements = m_device->GetHandle().getBufferMemoryRequirements(GetHandle());
             m_bufferDeviceMemory.InitializeMemory(memRequirements, IsShaderDeviceAddress());
-            m_bufferDeviceMemory.BindToBuffer(*this, 0);
+            BindMemory(m_bufferDeviceMemory.GetHandle(), 0);
         }
     }
 
-    void Buffer::CopyBufferAsync(std::size_t srcOffset, const Buffer& dstBuffer, std::size_t dstOffset,
-                                 std::size_t size, const CommandBuffer& cmdBuffer) const
+    void Buffer::CopyBufferAsync(std::size_t srcOffset, Buffer& dstBuffer, std::size_t dstOffset,
+                                 std::size_t size, CommandBuffer& cmdBuffer)
     {
         assert(m_usage & vk::BufferUsageFlagBits::eTransferSrc);
         assert(dstBuffer.m_usage & vk::BufferUsageFlagBits::eTransferDst);
         assert(srcOffset + size <= m_size);
         assert(dstOffset + size <= dstBuffer.m_size);
 
+        PipelineBarrier barrier{m_device};
+        AccessBarrier(vk::AccessFlagBits2KHR::eTransferRead, vk::PipelineStageFlagBits2KHR::eTransfer, barrier);
+        dstBuffer.AccessBarrier(vk::AccessFlagBits2KHR::eTransferWrite, vk::PipelineStageFlagBits2KHR::eTransfer, barrier);
+        barrier.Record(cmdBuffer);
+
         vk::BufferCopy copyRegion{srcOffset, dstOffset, size};
         cmdBuffer.GetHandle().copyBuffer(GetHandle(), dstBuffer.GetHandle(), copyRegion);
     }
 
-    CommandBuffer Buffer::CopyBufferAsync(std::size_t srcOffset, const Buffer& dstBuffer, std::size_t dstOffset,
+    CommandBuffer Buffer::CopyBufferAsync(std::size_t srcOffset, Buffer& dstBuffer, std::size_t dstOffset,
                                           std::size_t size, const Queue& copyQueue,
                                           std::span<vk::Semaphore> waitSemaphores,
-                                          std::span<vk::Semaphore> signalSemaphores, const Fence& fence) const
+                                          std::span<vk::Semaphore> signalSemaphores,
+                                          std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence)
     {
         auto transferCmdBuffer = CommandBuffer::beginSingleTimeSubmit(
             m_device, fmt::format("CopyCMDBuffer {}", GetName()),
             fmt::format("Copy {} to {}", GetName(), dstBuffer.GetName()), copyQueue.GetCommandPool());
         CopyBufferAsync(srcOffset, dstBuffer, dstOffset, size, transferCmdBuffer);
-        CommandBuffer::endSingleTimeSubmit(copyQueue, transferCmdBuffer, waitSemaphores, signalSemaphores, fence);
+        auto submitFence = CommandBuffer::endSingleTimeSubmit(copyQueue, transferCmdBuffer, waitSemaphores, signalSemaphores);
+        if (fence.has_value()) { fence = submitFence; }
 
         return transferCmdBuffer;
     }
 
-    CommandBuffer Buffer::CopyBufferAsync(const Buffer& dstBuffer, const Queue& copyQueue,
+    CommandBuffer Buffer::CopyBufferAsync(Buffer& dstBuffer, const Queue& copyQueue,
                                           std::span<vk::Semaphore> waitSemaphores,
-                                          std::span<vk::Semaphore> signalSemaphores, const Fence& fence) const
+                                          std::span<vk::Semaphore> signalSemaphores,
+                                          std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence)
     {
         return CopyBufferAsync(0, dstBuffer, 0, m_size, copyQueue, waitSemaphores, signalSemaphores, fence);
     }
 
-    void Buffer::CopyBufferSync(const Buffer& dstBuffer, const Queue& copyQueue) const
+    void Buffer::CopyBufferSync(Buffer& dstBuffer, const Queue& copyQueue)
     {
         auto cmdBuffer = CopyBufferAsync(dstBuffer, copyQueue);
         copyQueue.WaitIdle();
     }
 
-    vk::DeviceOrHostAddressConstKHR Buffer::GetDeviceAddressConst() const
+    void Buffer::AccessBarrier(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
+                               PipelineBarrier& barrier)
+    {
+        barrier.AddSingleBarrier(this, GetHandle(), access, pipelineStages);
+    }
+
+    vk::Buffer Buffer::GetBuffer(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
+                                 PipelineBarrier& barrier)
+    {
+        barrier.AddSingleBarrier(this, GetHandle(), access, pipelineStages);
+        return GetHandle();
+    }
+
+    const vk::Buffer* Buffer::GetBufferPtr(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
+                                     PipelineBarrier& barrier)
+    {
+        barrier.AddSingleBarrier(this, GetHandle(), access, pipelineStages);
+        return GetHandlePtr();
+    }
+
+    vk::MemoryRequirements Buffer::GetMemoryRequirements() const
+    {
+        return m_device->GetHandle().getBufferMemoryRequirements(GetHandle());
+    }
+
+    vk::DeviceOrHostAddressConstKHR Buffer::GetDeviceAddressConst(vk::AccessFlags2KHR access,
+                                                                  vk::PipelineStageFlags2KHR pipelineStages,
+                                                                  PipelineBarrier& barrier)
     {
         assert(IsShaderDeviceAddress());
+        barrier.AddSingleBarrier(this, GetHandle(), access, pipelineStages);
         vk::BufferDeviceAddressInfo bufferAddressInfo{GetHandle()};
         return m_device->GetHandle().getBufferAddress(bufferAddressInfo);
     }
 
-    vk::DeviceOrHostAddressKHR Buffer::GetDeviceAddress()
+    vk::DeviceOrHostAddressKHR Buffer::GetDeviceAddress(vk::AccessFlags2KHR access,
+                                                        vk::PipelineStageFlags2KHR pipelineStages,
+                                                        PipelineBarrier& barrier)
     {
         assert(IsShaderDeviceAddress());
+        barrier.AddSingleBarrier(this, GetHandle(), access, pipelineStages);
         vk::BufferDeviceAddressInfo bufferAddressInfo{GetHandle()};
         return m_device->GetHandle().getBufferAddress(bufferAddressInfo);
+    }
+
+    void Buffer::BindMemory(vk::DeviceMemory deviceMemory, std::size_t offset)
+    {
+        m_device->GetHandle().bindBufferMemory(GetHandle(), deviceMemory, offset);
     }
 
 }

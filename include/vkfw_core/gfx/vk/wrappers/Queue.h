@@ -23,7 +23,7 @@ namespace vkfw_core::gfx {
         Queue() : VulkanObjectWrapper{nullptr, "", nullptr} {}
         Queue(vk::Device device, std::string_view name, vk::Queue queue, const CommandPool& commandPool);
 
-        void Submit(const vk::SubmitInfo& submitInfo, const Fence& fence) const;
+        void Submit(const vk::SubmitInfo& submitInfo, const Fence* fence) const;
         [[nodiscard]] vk::Result Present(const vk::PresentInfoKHR& presentInfo) const;
         void WaitIdle() const;
 

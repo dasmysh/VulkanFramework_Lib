@@ -48,7 +48,7 @@ namespace vkfw_core::gfx {
         m_memoryGroup->AddDataToBufferInGroup(m_bufferIdx, m_bufferOffset, size, data);
     }
 
-    void UniformBufferObject::FillUploadCmdBuffer(const CommandBuffer& cmdBuffer, std::size_t instanceIdx,
+    void UniformBufferObject::FillUploadCmdBuffer(CommandBuffer& cmdBuffer, std::size_t instanceIdx,
                                                   std::size_t size) const
     {
         auto offset = m_bufferOffset + (instanceIdx * m_singleSize);

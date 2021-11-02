@@ -39,17 +39,19 @@ namespace vkfw_core::gfx {
             return *this;
         }
 
-        std::tuple<vk::AccessFlags, vk::PipelineStageFlags, unsigned int> GetPreviousAccess() const
+        std::tuple<vk::AccessFlags2KHR, vk::PipelineStageFlags2KHR, unsigned int> GetPreviousAccess() const
         {
             return std::make_tuple(m_prevAccess, m_prevPipelineStages, m_prevQueueFamily);
         }
 
-        void SetAccess(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages, unsigned int queueFamily)
+        void SetAccess(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages, unsigned int queueFamily)
         {
             m_prevAccess = access;
             m_prevPipelineStages = pipelineStages;
             m_prevQueueFamily = queueFamily;
         }
+
+        static constexpr unsigned int INVALID_QUEUE_FAMILY = static_cast<unsigned int>(-1);
 
     protected:
         /** Holds the device. */
@@ -57,28 +59,10 @@ namespace vkfw_core::gfx {
 
     private:
         /** The last accesses access flags. */
-        vk::AccessFlags m_prevAccess = vk::AccessFlags{};
+        vk::AccessFlags2KHR m_prevAccess = vk::AccessFlagBits2KHR::eNone;
         /** The last accesses pipeline stage(s). */
-        vk::PipelineStageFlags m_prevPipelineStages = vk::PipelineStageFlagBits::eTopOfPipe;
+        vk::PipelineStageFlags2KHR m_prevPipelineStages = vk::PipelineStageFlagBits2KHR::eNone;
         /** The last accesses queue family. */
-        unsigned int m_prevQueueFamily = 0;
-    };
-
-
-    template<class T> class BufferAccessor
-    {
-    public:
-        // TODO: move operators
-        T Get(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages, SingleResourcePipelineBarrier& barrier);
-        T Get(vk::AccessFlags access, vk::PipelineStageFlags pipelineStages, PipelineBarrier& barrier);
-
-        private:
-            T m_resource;
-    };
-
-    class AccessableBufferResource : public MemoryBoundResource
-    {
-    public:
-        BufferAccessor<vk::Buffer> GetAccess();
+        unsigned int m_prevQueueFamily = INVALID_QUEUE_FAMILY;
     };
 }

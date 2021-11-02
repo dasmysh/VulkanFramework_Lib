@@ -70,11 +70,6 @@ namespace vkfw_core::gfx {
         SetHandle(m_device->GetHandle(), m_device->GetHandle().allocateMemoryUnique(memAllocateInfo));
     }
 
-    void DeviceMemory::BindToBuffer(Buffer& buffer, std::size_t offset) const
-    {
-        m_device->GetHandle().bindBufferMemory(buffer.GetHandle(), GetHandle(), offset);
-    }
-
     void DeviceMemory::CopyToHostMemory(std::size_t offset, std::size_t size, const void* data) const
     {
         assert(GetHandle() && "Device memory must be valid.");
