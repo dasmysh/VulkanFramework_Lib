@@ -21,15 +21,15 @@ namespace vkfw_core::gfx {
 
     std::shared_ptr<Fence> ResourceReleaser::AddFence(std::string_view name)
     {
+        std::shared_ptr<Fence> fence;
         if (!m_availableFences.empty()) {
-            auto fence = m_availableFences.back();
+            fence = m_availableFences.back();
             fence->Reset(m_device, name);
             m_availableFences.pop_back();
-            return fence;
+        } else {
+            fence = std::make_shared<Fence>(m_device->GetHandle(), name,
+                                                 m_device->GetHandle().createFenceUnique(vk::FenceCreateInfo{}));
         }
-
-        auto fence = std::make_shared<Fence>(m_device->GetHandle(), name,
-                                                   m_device->GetHandle().createFenceUnique(vk::FenceCreateInfo{}));
         m_releasableResources[fence] = std::vector<std::shared_ptr<const ReleaseableResource>>{};
         return fence;
     }

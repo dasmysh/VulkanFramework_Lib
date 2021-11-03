@@ -154,6 +154,7 @@ namespace vkfw_core::gfx::rt {
     void AccelerationStructureGeometry::BuildAccelerationStructure()
     {
         PipelineBarrier barrier{m_device};
+        // TODO: make the queue family a parameter.
         auto cmdBuffer = vkfw_core::gfx::CommandBuffer::beginSingleTimeSubmit(m_device, "ASBuildCmdBuffer", "ASBuild",
                                                                               m_device->GetCommandPool(0));
 
