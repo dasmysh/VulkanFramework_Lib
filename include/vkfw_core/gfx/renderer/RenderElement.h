@@ -43,7 +43,8 @@ namespace vkfw_core::gfx {
             std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix,
             const math::AABB3<float>& boundingBox);
 
-        inline void AccessBarriers(std::vector<DescriptorSet*>& descriptorSets) const;
+        inline void AccessBarriers(std::vector<DescriptorSet*>& descriptorSets,
+                                   std::vector<VertexInputResources*>& vertexInputs) const;
         inline const RenderElement& DrawElement(CommandBuffer& cmdBuffer, const RenderElement* lastElement = nullptr) const;
 
         friend bool operator<(const RenderElement& l, const RenderElement& r)
@@ -146,10 +147,12 @@ namespace vkfw_core::gfx {
         return *this;
     }
 
-    inline void RenderElement::AccessBarriers(std::vector<DescriptorSet*>& descriptorSets) const
+    inline void RenderElement::AccessBarriers(std::vector<DescriptorSet*>& descriptorSets,
+                                              std::vector<VertexInputResources*>& vertexInputs) const
     {
         descriptorSets.push_back(std::get<0>(m_cameraMatricesUBO));
         descriptorSets.push_back(std::get<0>(m_worldMatricesUBO));
+        vertexInputs.emplace_back(m_vertexInput);
 
         for (const auto& ubo : m_generalUBOs) {
             descriptorSets.push_back(std::get<0>(ubo));

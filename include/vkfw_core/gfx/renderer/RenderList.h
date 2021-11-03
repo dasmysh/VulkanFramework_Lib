@@ -34,7 +34,8 @@ namespace vkfw_core::gfx {
             std::uint32_t vertexOffset, std::uint32_t firstInstance, const glm::mat4& viewMatrix,
             const math::AABB3<float>& boundingBox);
 
-        inline void AccessBarriers(std::vector<DescriptorSet*>& descriptorSets);
+        inline void AccessBarriers(std::vector<DescriptorSet*>& descriptorSets,
+                                   std::vector<VertexInputResources*>& vertexInputs);
         inline void Render(CommandBuffer& cmdBuffer);
 
     private:
@@ -101,10 +102,11 @@ namespace vkfw_core::gfx {
         return result;
     }
 
-    inline void RenderList::AccessBarriers(std::vector<DescriptorSet*>& descriptorSets)
+    inline void RenderList::AccessBarriers(std::vector<DescriptorSet*>& descriptorSets,
+                                           std::vector<VertexInputResources*>& vertexInputs)
     {
-        for (const auto& re : m_opaqueElements) { re.AccessBarriers(descriptorSets); }
-        for (const auto& re : m_transparentElements) { re.AccessBarriers(descriptorSets); }
+        for (const auto& re : m_opaqueElements) { re.AccessBarriers(descriptorSets, vertexInputs); }
+        for (const auto& re : m_transparentElements) { re.AccessBarriers(descriptorSets, vertexInputs); }
     }
 
     void RenderList::Render(CommandBuffer& cmdBuffer)

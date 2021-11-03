@@ -92,6 +92,9 @@ namespace vkfw_core::gfx {
         void GetDrawElementsSubMesh(const glm::mat4& worldMatrix, const CameraBase& camera,
             const SubMesh& subMesh, RenderList& renderList);
 
+        void CreateBufferUseBarriers(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStage,
+                                       PipelineBarrier& barrier);
+
     private:
         Mesh(const LogicalDevice* device, std::string_view name, const std::shared_ptr<const MeshInfo>& meshInfo,
              UniformBufferObject&& materialsUBO, std::size_t numBackbuffers, const vk::MemoryPropertyFlags& memoryFlags,

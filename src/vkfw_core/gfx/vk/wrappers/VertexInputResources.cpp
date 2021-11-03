@@ -19,7 +19,7 @@ namespace vkfw_core::gfx {
         : m_barrier{device}
         , m_vertexBuffers{vertexBuffers.size(), nullptr}
         , m_firstVertexBinding{firstVertexBinding}
-        , m_vertexBufferOffsets{vertexBuffers.size(), 0}
+        , m_vertexBufferOffsets(vertexBuffers.size(), 0)
         , m_indexBuffer{indexBuffer.m_buffer ? indexBuffer.m_buffer->GetBuffer(
                             vk::AccessFlagBits2KHR::eIndexRead, vk::PipelineStageFlagBits2KHR::eVertexInput, m_barrier)
                                              : nullptr}

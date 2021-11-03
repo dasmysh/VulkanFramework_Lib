@@ -17,6 +17,7 @@ namespace vkfw_core::gfx {
 
     class LogicalDevice;
     class DescriptorSet;
+    class VertexInputResources;
 
     class Framebuffer final : public VulkanObjectPrivateWrapper<vk::UniqueFramebuffer>
     {
@@ -48,8 +49,9 @@ namespace vkfw_core::gfx {
                              std::optional<std::reference_wrapper<CommandBuffer>> cmdBuffer = {}) const;
 
         void BeginRenderPass(CommandBuffer& cmdBuffer, const RenderPass& renderPass,
-                             std::span<DescriptorSet*> descriptorSets, const vk::Rect2D& renderArea,
-                             std::span<vk::ClearValue> clearColor, vk::SubpassContents subpassContents);
+                             std::span<DescriptorSet*> descriptorSets, std::span<VertexInputResources*> vertexInputs,
+                             const vk::Rect2D& renderArea, std::span<vk::ClearValue> clearColor,
+                             vk::SubpassContents subpassContents);
 
         static [[nodiscard]] bool IsAnyDepthOrStencilFormat(vk::Format format);
         static [[nodiscard]] bool IsDepthStencilFormat(vk::Format format);

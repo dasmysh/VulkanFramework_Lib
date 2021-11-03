@@ -11,6 +11,7 @@
 #include "gfx/vk/wrappers/CommandBuffer.h"
 #include "gfx/vk/wrappers/PipelineBarriers.h"
 #include "gfx/vk/wrappers/DescriptorSet.h"
+#include "gfx/vk/wrappers/VertexInputResources.h"
 
 namespace vkfw_core::gfx {
 
@@ -203,11 +204,13 @@ namespace vkfw_core::gfx {
     }
 
     void Framebuffer::BeginRenderPass(CommandBuffer& cmdBuffer, const RenderPass& renderPass,
-                                      std::span<DescriptorSet*> descriptorSets, const vk::Rect2D& renderArea,
+                                      std::span<DescriptorSet*> descriptorSets,
+                                      std::span<VertexInputResources*> vertexInputs, const vk::Rect2D& renderArea,
                                       std::span<vk::ClearValue> clearColor, vk::SubpassContents subpassContents)
     {
         m_barrier.Record(cmdBuffer);
         for (auto descriptorSet : descriptorSets) { descriptorSet->BindBarrier(cmdBuffer); }
+        for (auto vertexInput : vertexInputs) { vertexInput->BindBarrier(cmdBuffer); }
 
         vk::RenderPassBeginInfo renderPassBeginInfo{renderPass.GetHandle(), GetHandle(), renderArea,
                                                     static_cast<std::uint32_t>(clearColor.size()), clearColor.data()};

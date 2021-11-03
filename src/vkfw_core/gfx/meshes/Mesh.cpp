@@ -314,6 +314,12 @@ namespace vkfw_core::gfx {
         re->BindDescriptorSet(materialBinding);
     }
 
+    void Mesh::CreateBufferUseBarriers(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStage,
+                                       PipelineBarrier& barrier)
+    {
+        m_memoryGroup->GetBuffer(m_bufferIdx)->AccessBarrier(access, pipelineStage, barrier);
+    }
+
     void Mesh::SetVertexInput(DeviceBuffer* vtxBuffer, std::size_t vtxOffset, DeviceBuffer* idxBuffer,
                               std::size_t idxOffset)
     {
