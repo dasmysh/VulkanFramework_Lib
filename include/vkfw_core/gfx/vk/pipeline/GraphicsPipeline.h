@@ -32,6 +32,7 @@ namespace vkfw_core::gfx {
         ~GraphicsPipeline();
 
         void ResetShaders(std::vector<std::shared_ptr<Shader>>&& shaders);
+        void ResetVertexInput() const;
         template<class Vertex> void ResetVertexInput() const;
         void ResetFramebuffer(const glm::uvec2& size, unsigned int numViewports, unsigned int numScissors) const;
         void CreatePipeline(bool keepState, const RenderPass& renderPass, unsigned int subpass, const PipelineLayout& pipelineLayout);
@@ -125,8 +126,8 @@ namespace vkfw_core::gfx {
     template <class Vertex>
     void GraphicsPipeline::ResetVertexInput() const
     {
-        m_state->m_vertexInputCreateInfo = vk::PipelineVertexInputStateCreateInfo{ vk::PipelineVertexInputStateCreateFlags(), 1, &Vertex::m_bindingDescription,
-            static_cast<std::uint32_t>(Vertex::m_attributeDescriptions.size()), Vertex::m_attributeDescriptions.data() };
+        m_state->m_vertexInputCreateInfo = vk::PipelineVertexInputStateCreateInfo{
+            vk::PipelineVertexInputStateCreateFlags(), Vertex::m_bindingDescription, Vertex::m_attributeDescriptions};
     }
 }
 

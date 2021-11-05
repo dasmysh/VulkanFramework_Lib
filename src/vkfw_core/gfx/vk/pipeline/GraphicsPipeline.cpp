@@ -147,4 +147,10 @@ namespace vkfw_core::gfx {
 
         if (!keepState) { m_state.reset(); }
     }
+
+    void GraphicsPipeline::ResetVertexInput() const
+    {
+        m_state->m_vertexInputCreateInfo = vk::PipelineVertexInputStateCreateInfo{
+            vk::PipelineVertexInputStateCreateFlags(), nullptr, nullptr};
+    }
 }
