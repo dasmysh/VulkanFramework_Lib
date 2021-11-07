@@ -33,6 +33,7 @@ namespace vkfw_core::gfx::rt {
         virtual ~AccelerationStructure();
 
         virtual void BuildAccelerationStructure(CommandBuffer& cmdBuffer);
+        virtual void FinalizeBuild();
 
         void AccessBarrier(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
                            PipelineBarrier& barrier) const;
@@ -71,5 +72,7 @@ namespace vkfw_core::gfx::rt {
         std::vector<vk::AccelerationStructureBuildRangeInfoKHR> m_buildRanges;
         /** The barrier to build the acceleration structure. */
         PipelineBarrier m_buildBarrier;
+
+        std::unique_ptr<DeviceBuffer> m_scratchBuffer;
     };
 }

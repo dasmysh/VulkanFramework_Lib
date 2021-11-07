@@ -177,6 +177,9 @@ namespace vkfw_core::gfx::rt {
         m_TLAS.BuildAccelerationStructure(cmdBuffer);
         auto fence = vkfw_core::gfx::CommandBuffer::endSingleTimeSubmit(m_device->GetQueue(0, 0), cmdBuffer, {}, {});
         fence->Wait(m_device, defaultFenceTimeout);
+
+        for (auto& blas : m_BLAS) { blas.FinalizeBuild(); }
+        m_TLAS.FinalizeBuild();
     }
 
     std::size_t AccelerationStructureGeometry::AddBottomLevelAccelerationStructure(std::uint32_t bufferIndex,

@@ -33,17 +33,17 @@ namespace vkfw_core::gfx::rt {
 
     void TopLevelAccelerationStructure::BuildAccelerationStructure(CommandBuffer& cmdBuffer)
     {
-        vkfw_core::gfx::HostBuffer instancesBuffer{
-            GetDevice(), fmt::format("InstanceBuffer:{}", GetName()),
-            vk::BufferUsageFlagBits::eShaderDeviceAddress
-                | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR};
-        instancesBuffer.InitializeData(m_blasInstances);
+        m_instancesBuffer =
+            std::make_unique<HostBuffer>(GetDevice(), fmt::format("InstanceBuffer:{}", GetName()),
+                                         vk::BufferUsageFlagBits::eShaderDeviceAddress
+                                             | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR);
+        m_instancesBuffer->InitializeData(m_blasInstances);
 
         PipelineBarrier barrier{GetDevice()};
         vk::AccelerationStructureGeometryInstancesDataKHR asGeometryDataInstances{
-            VK_FALSE,
-            instancesBuffer.GetDeviceAddressConst(vk::AccessFlagBits2KHR::eAccelerationStructureRead,
-                                                  vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild, barrier)};
+            VK_FALSE, m_instancesBuffer->GetDeviceAddressConst(
+                          vk::AccessFlagBits2KHR::eAccelerationStructureRead,
+                          vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild, barrier)};
         vk::AccelerationStructureGeometryDataKHR asGeometryData{asGeometryDataInstances};
 
         vk::AccelerationStructureGeometryKHR asGeometry{vk::GeometryTypeKHR::eInstances, asGeometryData,
@@ -56,6 +56,12 @@ namespace vkfw_core::gfx::rt {
         barrier.Record(cmdBuffer);
 
         AccelerationStructure::BuildAccelerationStructure(cmdBuffer);
+    }
+
+    void TopLevelAccelerationStructure::FinalizeBuild()
+    {
+        m_instancesBuffer = nullptr;
+        AccelerationStructure::FinalizeBuild();
     }
 
     vk::AccelerationStructureKHR TopLevelAccelerationStructure::GetAccelerationStructure(

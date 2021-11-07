@@ -15,7 +15,7 @@ namespace vkfw_core::gfx {
                    const vk::MemoryPropertyFlags& memoryFlags, std::vector<std::uint32_t> queueFamilyIndices)
         : VulkanObjectPrivateWrapper{nullptr, name, vk::UniqueBuffer{}}
         , MemoryBoundResource{device}
-        , m_bufferDeviceMemory{device, fmt::format("ImgMem:{}", GetName()), memoryFlags}
+        , m_bufferDeviceMemory{device, fmt::format("BufferMem:{}", GetName()), memoryFlags}
         , m_size{0}
         , m_usage{usage}
         , m_queueFamilyIndices{std::move(queueFamilyIndices)}
