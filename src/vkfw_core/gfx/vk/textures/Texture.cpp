@@ -195,8 +195,8 @@ namespace vkfw_core::gfx {
     CommandBuffer Texture::CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, Texture& dstImage,
                                           std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset,
                                           const glm::u32vec4& size, const Queue& copyQueue,
-                                          std::span<vk::Semaphore> waitSemaphores,
-                                          std::span<vk::Semaphore> signalSemaphores,
+                                          std::span<vk::SemaphoreSubmitInfoKHR> waitSemaphores,
+                                          std::span<vk::SemaphoreSubmitInfoKHR> signalSemaphores,
                                           std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence)
     {
         auto transferCmdBuffer = CommandBuffer::beginSingleTimeSubmit(
@@ -211,8 +211,8 @@ namespace vkfw_core::gfx {
     }
 
     CommandBuffer Texture::CopyImageAsync(Texture& dstImage, const Queue& copyQueue,
-                                          std::span<vk::Semaphore> waitSemaphores,
-                                          std::span<vk::Semaphore> signalSemaphores,
+                                          std::span<vk::SemaphoreSubmitInfoKHR> waitSemaphores,
+                                          std::span<vk::SemaphoreSubmitInfoKHR> signalSemaphores,
                                           std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence)
     {
         return CopyImageAsync(0, glm::u32vec4(0), dstImage, 0, glm::u32vec4(0), m_size, copyQueue, waitSemaphores,

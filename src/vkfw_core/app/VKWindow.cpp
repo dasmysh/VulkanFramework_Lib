@@ -363,7 +363,8 @@ namespace vkfw_core {
 
             ImGui_ImplVulkan_CreateFontsTexture(m_imGuiCommandBuffers[0].GetHandle());
 
-            vk::SubmitInfo end_info{0, nullptr, nullptr, 1, m_imGuiCommandBuffers[0].GetHandlePtr()};
+            const vk::CommandBufferSubmitInfoKHR commandBufferSubmitInfo{m_imGuiCommandBuffers[0].GetHandle()};
+            vk::SubmitInfo2KHR end_info{vk::SubmitFlagsKHR{}, nullptr, commandBufferSubmitInfo};
             m_imGuiCommandBuffers[0].End();
 
             const auto& graphicsQueue = m_logicalDevice->GetQueue(m_graphicsQueue, 0);
@@ -708,10 +709,19 @@ namespace vkfw_core {
             m_imGuiCommandBuffers[m_currentlyRenderedImage].End();
         }
 
-        std::array<vk::PipelineStageFlags, 2> waitStages{ vk::PipelineStageFlagBits::eColorAttachmentOutput, vk::PipelineStageFlagBits::eTopOfPipe };
-        std::array<vk::Semaphore, 2> waitSemaphores{m_imageAvailableSemaphore.GetHandle(), m_dataAvailableSemaphore.GetHandle()};
-        std::array<vk::CommandBuffer, 2> submitCmdBuffers{ m_commandBuffers[m_currentlyRenderedImage].GetHandle(), m_imGuiCommandBuffers[m_currentlyRenderedImage].GetHandle() };
-        vk::SubmitInfo submitInfo{ 2, waitSemaphores.data(), waitStages.data(), 2, submitCmdBuffers.data(), 1, m_renderingFinishedSemaphore.GetHandlePtr() };
+        // We use binary semaphores there so value can be 0. Change this for timeline semaphores.
+        std::array<vk::SemaphoreSubmitInfoKHR, 2> waitSemaphores{
+            vk::SemaphoreSubmitInfoKHR{m_imageAvailableSemaphore.GetHandle(), 0,
+                                       vk::PipelineStageFlagBits2KHR::eColorAttachmentOutput},
+            vk::SemaphoreSubmitInfoKHR{m_dataAvailableSemaphore.GetHandle(), 0,
+                                       vk::PipelineStageFlagBits2KHR::eTopOfPipe}};
+        std::array<const vk::CommandBufferSubmitInfoKHR, 2> submitCmdBuffers{
+            m_commandBuffers[m_currentlyRenderedImage].GetHandle(),
+            m_imGuiCommandBuffers[m_currentlyRenderedImage].GetHandle()};
+        const vk::SemaphoreSubmitInfoKHR renderingFinishedSemaphoreSubmit{m_renderingFinishedSemaphore.GetHandle(), 0,
+                                                                          vk::PipelineStageFlagBits2KHR::eBottomOfPipe};
+        vk::SubmitInfo2KHR submitInfo{vk::SubmitFlagBitsKHR{}, waitSemaphores, submitCmdBuffers,
+                                      renderingFinishedSemaphoreSubmit};
 
         const auto& graphicsQueue = m_logicalDevice->GetQueue(m_graphicsQueue, 0);
         {

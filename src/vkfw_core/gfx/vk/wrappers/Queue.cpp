@@ -38,9 +38,9 @@ namespace vkfw_core::gfx {
     void Queue::EndLabel() const {}
 #endif
 
-    void Queue::Submit(const vk::SubmitInfo& submitInfo, const Fence* fence) const
+    void Queue::Submit(const vk::SubmitInfo2KHR& submitInfo, const Fence* fence) const
     {
-        GetHandle().submit(submitInfo, fence ? fence->GetHandle() : nullptr);
+        GetHandle().submit2KHR(submitInfo, fence ? fence->GetHandle() : nullptr);
     }
 
     vk::Result Queue::Present(const vk::PresentInfoKHR& presentInfo) const { return GetHandle().presentKHR(presentInfo); }

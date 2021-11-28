@@ -42,41 +42,37 @@ namespace vkfw_core::gfx {
 
     void CommandBuffer::End() const { GetHandle().end(); }
 
-    std::shared_ptr<Semaphore> CommandBuffer::AddWaitSemaphore()
+    std::shared_ptr<Semaphore> CommandBuffer::AddWaitSemaphore(vk::PipelineStageFlags2KHR waitStages)
     {
-        return m_waitSemaphores.emplace_back(std::make_shared<Semaphore>(m_device->GetHandle(),
-                                             fmt::format("{}:WaitSemaphore-{}", GetName(), m_waitSemaphores.size()),
-                                             m_device->GetHandle().createSemaphoreUnique(vk::SemaphoreCreateInfo{})));
+        auto& waitSemaphore = m_waitSemaphores.emplace_back(std::make_shared<Semaphore>(
+            m_device->GetHandle(), fmt::format("{}:WaitSemaphore-{}", GetName(), m_waitSemaphores.size()),
+            m_device->GetHandle().createSemaphoreUnique(vk::SemaphoreCreateInfo{})));
+        // TODO: At this point we only use binary semaphores, so value is ignored. Needs change for timeline semaphores.
+        m_waitSemaphoreSubmitInfos.emplace_back(waitSemaphore->GetHandle(), 0, waitStages);
+        return waitSemaphore;
     }
 
-    std::shared_ptr<Fence> CommandBuffer::SubmitToQueue(const Queue& queue, std::span<vk::Semaphore> waitSemaphores,
-                                                        std::span<vk::Semaphore> signalSemaphores)
+    std::shared_ptr<Fence> CommandBuffer::SubmitToQueue(const Queue& queue,
+                                                        std::span<vk::SemaphoreSubmitInfoKHR> waitSemaphores,
+                                                        std::span<vk::SemaphoreSubmitInfoKHR> signalSemaphores)
     {
         auto submitFence = m_device->GetResourceReleaser().AddFence(fmt::format("{}:DestroyFence", GetName()));
 
-        std::vector<vk::Semaphore> submitWaitSemaphoreVector;
-        std::span<vk::Semaphore> submitWaitSemaphores;
-        if (m_waitSemaphores.empty()) {
-            submitWaitSemaphores = waitSemaphores;
-        } else {
-            submitWaitSemaphoreVector.resize(m_waitSemaphores.size() + waitSemaphores.size());
-            for (std::size_t i = 0; i < m_waitSemaphores.size(); ++i) {
-                submitWaitSemaphoreVector[i] = m_waitSemaphores[i]->GetHandle();
-                m_device->GetResourceReleaser().AddResource(submitFence, m_waitSemaphores[i]);
-            }
-
-            for (std::size_t i = 0; i < waitSemaphores.size(); ++i) {
-                submitWaitSemaphoreVector[m_waitSemaphores.size() + i] = waitSemaphores[i];
-            }
-            m_waitSemaphores.clear();
-
-            submitWaitSemaphores = std::span{submitWaitSemaphoreVector};
+        m_waitSemaphoreSubmitInfos.resize(m_waitSemaphoreSubmitInfos.size() + waitSemaphores.size());
+        for (std::size_t i = 0; i < waitSemaphores.size(); ++i) {
+            m_waitSemaphoreSubmitInfos[i + m_waitSemaphores.size()] = waitSemaphores[i];
+        }
+        for (std::size_t i = 0; i < m_waitSemaphores.size(); ++i) {
+            m_device->GetResourceReleaser().AddResource(submitFence, m_waitSemaphores[i]);
         }
 
-        vk::SubmitInfo submitInfo{
-            static_cast<std::uint32_t>(waitSemaphores.size()),   waitSemaphores.data(),  nullptr, 1, GetHandlePtr(),
-            static_cast<std::uint32_t>(signalSemaphores.size()), signalSemaphores.data()};
+        const vk::CommandBufferSubmitInfoKHR commandBufferSubmitInfo{GetHandle()};
+        vk::SubmitInfo2KHR submitInfo{vk::SubmitFlagsKHR{}, m_waitSemaphoreSubmitInfos, commandBufferSubmitInfo,
+                                      signalSemaphores};
         queue.Submit(submitInfo, submitFence.get());
+
+        m_waitSemaphores.clear();
+        m_waitSemaphoreSubmitInfos.clear();
         return submitFence;
     }
 
@@ -94,8 +90,8 @@ namespace vkfw_core::gfx {
     }
 
     std::shared_ptr<Fence> CommandBuffer::endSingleTimeSubmit(const Queue& queue, CommandBuffer& cmdBuffer,
-                                                              std::span<vk::Semaphore> waitSemaphores,
-                                                              std::span<vk::Semaphore> signalSemaphores)
+                                                              std::span<vk::SemaphoreSubmitInfoKHR> waitSemaphores,
+                                                              std::span<vk::SemaphoreSubmitInfoKHR> signalSemaphores)
     {
         cmdBuffer.EndLabel();
         cmdBuffer.End();

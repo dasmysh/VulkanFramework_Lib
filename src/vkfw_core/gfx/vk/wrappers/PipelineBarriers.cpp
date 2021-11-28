@@ -163,8 +163,10 @@ namespace vkfw_core::gfx {
                     CommandBuffer::beginSingleTimeSubmit(m_device, "ReleaseBarrierCmdBuffer", "ReleaseBarrier",
                                                          m_device->GetCommandPool(static_cast<unsigned int>(i))));
                 releaseBarrier->RecordRelease(*releaseCmdBuffer, dstQueueFamily);
-                auto signalSemaphore = cmdBuffer.AddWaitSemaphore();
-                std::array<vk::Semaphore, 1> signalSemaphoreArray = {signalSemaphore->GetHandle()};
+                vk::PipelineStageFlags2KHR releaseStages = releaseBarrier->GetPipelineStageFlags();
+                auto signalSemaphore = cmdBuffer.AddWaitSemaphore(releaseStages);
+                std::array<vk::SemaphoreSubmitInfoKHR, 1> signalSemaphoreArray = {
+                    vk::SemaphoreSubmitInfoKHR{signalSemaphore->GetHandle(), 0, releaseStages}};
                 auto submitFence = CommandBuffer::endSingleTimeSubmit(
                     m_device->GetQueue(static_cast<unsigned int>(i), 0), *releaseCmdBuffer, {}, signalSemaphoreArray);
 
@@ -216,5 +218,11 @@ namespace vkfw_core::gfx {
                                         barrierEntryInfo.m_dstPipelineStages, dstQueueFamily, dynamicOffset);
             }
         }
+    }
+    vk::PipelineStageFlags2KHR vkfw_core::gfx::PipelineBarrier::GetPipelineStageFlags() const
+    {
+        vk::PipelineStageFlags2KHR result;
+        for (const auto& resource : m_resources) { result = result | resource.m_dstPipelineStages; }
+        return result;
     }
 }

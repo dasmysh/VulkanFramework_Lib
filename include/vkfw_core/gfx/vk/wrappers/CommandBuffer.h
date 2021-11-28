@@ -40,11 +40,12 @@ namespace vkfw_core::gfx {
         void Begin(const vk::CommandBufferBeginInfo& beginInfo) const;
         void End() const;
 
-        [[nodiscard]] std::shared_ptr<Semaphore> AddWaitSemaphore();
+        [[nodiscard]] std::shared_ptr<Semaphore> AddWaitSemaphore(vk::PipelineStageFlags2KHR waitStages);
 
         std::shared_ptr<Fence>
-        SubmitToQueue(const Queue& queue, std::span<vk::Semaphore> waitSemaphores = std::span<vk::Semaphore>{},
-                      std::span<vk::Semaphore> signalSemaphores = std::span<vk::Semaphore>{});
+        SubmitToQueue(const Queue& queue,
+                      std::span<vk::SemaphoreSubmitInfoKHR> waitSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
+                      std::span<vk::SemaphoreSubmitInfoKHR> signalSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{});
 
         void BeginLabel(std::string_view label_name, const glm::vec4& color) const;
         void InsertLabel(std::string_view label_name, const glm::vec4& color) const;
@@ -67,10 +68,10 @@ namespace vkfw_core::gfx {
                                                                  std::string_view cmdBufferName,
                                                                  std::string_view regionName,
                                                                  const CommandPool& commandPool);
-        [[nodiscard]] static std::shared_ptr<Fence>
-        endSingleTimeSubmit(const Queue& queue, CommandBuffer& cmdBuffer,
-                            std::span<vk::Semaphore> waitSemaphores = std::span<vk::Semaphore>{},
-                            std::span<vk::Semaphore> signalSemaphores = std::span<vk::Semaphore>{});
+        [[nodiscard]] static std::shared_ptr<Fence> endSingleTimeSubmit(
+            const Queue& queue, CommandBuffer& cmdBuffer,
+            std::span<vk::SemaphoreSubmitInfoKHR> waitSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
+            std::span<vk::SemaphoreSubmitInfoKHR> signalSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{});
         static void endSingleTimeSubmitAndWait(const LogicalDevice* device, const Queue& queue,
                                                CommandBuffer& cmdBuffer);
 
@@ -81,5 +82,7 @@ namespace vkfw_core::gfx {
         unsigned int m_queueFamily = static_cast<unsigned int>(-1);
         /** Holds the wait semaphores used on submit. */
         std::vector<std::shared_ptr<Semaphore>> m_waitSemaphores;
+        /** Holds the wait semaphore submit infos. */
+        std::vector<vk::SemaphoreSubmitInfoKHR> m_waitSemaphoreSubmitInfos;
     };
 }

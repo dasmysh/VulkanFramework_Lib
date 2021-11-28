@@ -95,8 +95,8 @@ namespace vkfw_core::gfx {
 
     CommandBuffer Buffer::CopyBufferAsync(std::size_t srcOffset, Buffer& dstBuffer, std::size_t dstOffset,
                                           std::size_t size, const Queue& copyQueue,
-                                          std::span<vk::Semaphore> waitSemaphores,
-                                          std::span<vk::Semaphore> signalSemaphores,
+                                          std::span<vk::SemaphoreSubmitInfoKHR> waitSemaphores,
+                                          std::span<vk::SemaphoreSubmitInfoKHR> signalSemaphores,
                                           std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence)
     {
         auto transferCmdBuffer = CommandBuffer::beginSingleTimeSubmit(
@@ -111,8 +111,8 @@ namespace vkfw_core::gfx {
     }
 
     CommandBuffer Buffer::CopyBufferAsync(Buffer& dstBuffer, const Queue& copyQueue,
-                                          std::span<vk::Semaphore> waitSemaphores,
-                                          std::span<vk::Semaphore> signalSemaphores,
+                                          std::span<vk::SemaphoreSubmitInfoKHR> waitSemaphores,
+                                          std::span<vk::SemaphoreSubmitInfoKHR> signalSemaphores,
                                           std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence)
     {
         return CopyBufferAsync(0, dstBuffer, 0, m_size, copyQueue, waitSemaphores, signalSemaphores, fence);

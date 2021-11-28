@@ -79,6 +79,8 @@ namespace vkfw_core::gfx {
                     const vk::ArrayProxy<const std::uint32_t>& dynamicOffsets = {});
 
     private:
+        vk::PipelineStageFlags2KHR GetPipelineStageFlags() const;
+
         const LogicalDevice* m_device;
 
         using ResourceType = std::variant<ImageBarrierInfo, BufferBarrierInfo>;

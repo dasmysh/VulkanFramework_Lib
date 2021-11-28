@@ -107,13 +107,14 @@ namespace vkfw_core::gfx {
         [[nodiscard]] CommandBuffer
         CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, Texture& dstImage,
                        std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset, const glm::u32vec4& size,
-                       const Queue& copyQueue, std::span<vk::Semaphore> waitSemaphores = std::span<vk::Semaphore>{},
-                       std::span<vk::Semaphore> signalSemaphores = std::span<vk::Semaphore>{},
+                       const Queue& copyQueue,
+                       std::span<vk::SemaphoreSubmitInfoKHR> waitSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
+                       std::span<vk::SemaphoreSubmitInfoKHR> signalSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
                        std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence = {});
         [[nodiscard]] CommandBuffer
         CopyImageAsync(Texture& dstImage, const Queue& transitionQueue,
-                       std::span<vk::Semaphore> waitSemaphores = std::span<vk::Semaphore>{},
-                       std::span<vk::Semaphore> signalSemaphores = std::span<vk::Semaphore>{},
+                       std::span<vk::SemaphoreSubmitInfoKHR> waitSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
+                       std::span<vk::SemaphoreSubmitInfoKHR> signalSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
                        std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence = {});
         void CopyImageSync(Texture& dstImage, const Queue& copyQueue);
 

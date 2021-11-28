@@ -62,16 +62,16 @@ namespace vkfw_core::gfx {
 
         void CopyBufferAsync(std::size_t srcOffset, Buffer& dstBuffer, std::size_t dstOffset, std::size_t size,
                              CommandBuffer& cmdBuffer);
-        [[nodiscard]] CommandBuffer
-        CopyBufferAsync(std::size_t srcOffset, Buffer& dstBuffer, std::size_t dstOffset, std::size_t size,
-                        const Queue& queue, std::span<vk::Semaphore> waitSemaphores = std::span<vk::Semaphore>{},
-                        std::span<vk::Semaphore> signalSemaphores = std::span<vk::Semaphore>{},
-                        std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence = {});
-        [[nodiscard]] CommandBuffer
-        CopyBufferAsync(Buffer& dstBuffer, const Queue& queue,
-                        std::span<vk::Semaphore> waitSemaphores = std::span<vk::Semaphore>{},
-                        std::span<vk::Semaphore> signalSemaphores = std::span<vk::Semaphore>{},
-                        std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence = {});
+        [[nodiscard]] CommandBuffer CopyBufferAsync(
+            std::size_t srcOffset, Buffer& dstBuffer, std::size_t dstOffset, std::size_t size, const Queue& queue,
+            std::span<vk::SemaphoreSubmitInfoKHR> waitSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
+            std::span<vk::SemaphoreSubmitInfoKHR> signalSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
+            std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence = {});
+        [[nodiscard]] CommandBuffer CopyBufferAsync(
+            Buffer& dstBuffer, const Queue& queue,
+            std::span<vk::SemaphoreSubmitInfoKHR> waitSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
+            std::span<vk::SemaphoreSubmitInfoKHR> signalSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
+            std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence = {});
         void CopyBufferSync(Buffer& dstBuffer, const Queue& copyQueue);
 
         void AccessBarrier(bool isDynamic, vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
