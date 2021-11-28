@@ -38,7 +38,7 @@ set(GLM_VERSION "0.9.9.8")
 include(${CMAKE_BINARY_DIR}/vkfw_core/conanbuildinfo_multi.cmake)
 conan_basic_setup(TARGETS)
 
-find_package(Vulkan 1.2.154.0 REQUIRED)
+find_package(Vulkan 1.2.198.0 REQUIRED)
 target_compile_definitions(vkfw_options INTERFACE VULKAN_HPP_TYPESAFE_CONVERSION)
 include(cmake/CompileSpirvShader.cmake)
 
