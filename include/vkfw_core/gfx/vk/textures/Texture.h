@@ -80,7 +80,7 @@ namespace vkfw_core::gfx {
                                                         vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1);
     };
 
-    class Texture : public VulkanObjectPrivateWrapper<vk::UniqueImage>, public MemoryBoundResource
+    class Texture : public VulkanObjectPrivateWrapper<vk::UniqueImage>, public MemoryBoundResourceBase
     {
     public:
         /** Create image. */

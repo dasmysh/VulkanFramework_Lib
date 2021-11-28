@@ -20,14 +20,14 @@ namespace vkfw_core::gfx {
         , m_vertexBuffers{vertexBuffers.size(), nullptr}
         , m_firstVertexBinding{firstVertexBinding}
         , m_vertexBufferOffsets(vertexBuffers.size(), 0)
-        , m_indexBuffer{indexBuffer.m_buffer ? indexBuffer.m_buffer->GetBuffer(
+        , m_indexBuffer{indexBuffer.m_buffer ? indexBuffer.m_buffer->GetBuffer(false,
                             vk::AccessFlagBits2KHR::eIndexRead, vk::PipelineStageFlagBits2KHR::eVertexInput, m_barrier)
                                              : nullptr}
         , m_indexBufferOffset{indexBuffer.m_offset}
         , m_indexType{indexType}
     {
         for (std::size_t i = 0; i < m_vertexBuffers.size(); ++i) {
-            m_vertexBuffers[i] = vertexBuffers[i].m_buffer->GetBuffer(
+            m_vertexBuffers[i] = vertexBuffers[i].m_buffer->GetBuffer(false,
                 vk::AccessFlagBits2KHR::eVertexAttributeRead, vk::PipelineStageFlagBits2KHR::eVertexInput, m_barrier);
             m_vertexBufferOffsets[i] = vertexBuffers[i].m_offset;
         }

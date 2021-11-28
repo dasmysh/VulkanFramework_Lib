@@ -79,6 +79,11 @@ namespace vkfw_core::gfx {
                || type == vk::DescriptorType::eUniformBuffer || type == vk::DescriptorType::eUniformBufferDynamic;
     }
 
+    bool DescriptorSetLayout::IsDynamicBindingType(vk::DescriptorType type)
+    {
+        return type == vk::DescriptorType::eStorageBufferDynamic || type == vk::DescriptorType::eUniformBufferDynamic;
+    }
+
     bool DescriptorSetLayout::IsTexelBufferBindingType(vk::DescriptorType type)
     {
         return type == vk::DescriptorType::eStorageTexelBuffer || type == vk::DescriptorType::eUniformTexelBuffer;

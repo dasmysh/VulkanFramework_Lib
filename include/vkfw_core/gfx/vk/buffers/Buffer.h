@@ -19,7 +19,34 @@ namespace vkfw_core::gfx {
 
     class Queue;
 
-    class Buffer : public VulkanObjectPrivateWrapper<vk::UniqueBuffer>, public MemoryBoundResource
+    struct BufferAccessRange : public MemoryBoundResource
+    {
+        BufferAccessRange SplitAt(std::size_t offset);
+
+        std::size_t m_offset = 0;
+        std::size_t m_range = 0;
+    };
+
+    class BufferAccessRangeList
+    {
+    public:
+        BufferAccessRangeList(std::size_t range)
+        {
+            auto& element = m_bufferRangeAccess.emplace_back();
+            element.m_offset = 0;
+            element.m_range = range;
+        }
+
+        [[nodiscard]] std::span<BufferAccessRange> GetOverlappingRanges(std::size_t offset, std::size_t range);
+        void SetAccess(std::size_t offset, std::size_t range, vk::AccessFlags2KHR access,
+                       vk::PipelineStageFlags2KHR pipelineStages, unsigned int queueFamily);
+        void ReduceRanges();
+
+    private:
+        std::vector<BufferAccessRange> m_bufferRangeAccess;
+    };
+
+    class Buffer : public VulkanObjectPrivateWrapper<vk::UniqueBuffer>
     {
     public:
         Buffer(const LogicalDevice* device, std::string_view name, const vk::BufferUsageFlags& usage,
@@ -47,13 +74,15 @@ namespace vkfw_core::gfx {
                         std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence = {});
         void CopyBufferSync(Buffer& dstBuffer, const Queue& copyQueue);
 
-        void AccessBarrier(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
+        void AccessBarrier(bool isDynamic, vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
                            PipelineBarrier& barrier);
-        [[nodiscard]] vk::Buffer GetBuffer(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
-                                           PipelineBarrier& barrier);
-        [[nodiscard]] const vk::Buffer*
-        GetBufferPtr(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages, PipelineBarrier& barrier);
-        // [[nodiscard]] vk::DeviceOrHostAddressConstKHR GetDeviceAddressConstNoBarrier() const;
+        void AccessBarrierRange(bool isDynamic, std::size_t offset, std::size_t range, vk::AccessFlags2KHR access,
+                                vk::PipelineStageFlags2KHR pipelineStages, PipelineBarrier& barrier);
+        [[nodiscard]] vk::Buffer GetBuffer(bool isDynamic, vk::AccessFlags2KHR access,
+                                           vk::PipelineStageFlags2KHR pipelineStages, PipelineBarrier& barrier);
+        [[nodiscard]] BufferRange GetBufferRange(bool isDynamic, std::size_t offset, std::size_t range,
+                                                 vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
+                                                 PipelineBarrier& barrier);
         [[nodiscard]] vk::DeviceOrHostAddressConstKHR GetDeviceAddressConst(vk::AccessFlags2KHR access,
                                                                             vk::PipelineStageFlags2KHR pipelineStages,
                                                                             PipelineBarrier& barrier);
@@ -71,6 +100,11 @@ namespace vkfw_core::gfx {
         }
         void BindMemory(vk::DeviceMemory deviceMemory, std::size_t offset);
 
+        [[nodiscard]] std::span<BufferAccessRange> GetOverlappingRanges(std::size_t offset, std::size_t range);
+        void SetAccess(std::size_t offset, std::size_t range, vk::AccessFlags2KHR access,
+                       vk::PipelineStageFlags2KHR pipelineStages, unsigned int queueFamily);
+        void ReduceRanges();
+
     protected:
         [[nodiscard]] Buffer CopyWithoutData(std::string_view name) const
         {
@@ -78,6 +112,8 @@ namespace vkfw_core::gfx {
         }
 
     private:
+        /** Holds the device. */
+        const LogicalDevice* m_device;
         /** Holds the Vulkan device memory for the buffer. */
         DeviceMemory m_bufferDeviceMemory;
         /** Holds the current size of the buffer in bytes. */
@@ -86,5 +122,8 @@ namespace vkfw_core::gfx {
         vk::BufferUsageFlags m_usage;
         /** Holds the queue family indices. */
         std::vector<std::uint32_t> m_queueFamilyIndices;
+
+        /** Holds a list of all buffer ranges and their access. */
+        BufferAccessRangeList m_bufferRangeAccess;
     };
 }

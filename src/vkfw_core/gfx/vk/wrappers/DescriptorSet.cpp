@@ -55,7 +55,8 @@ namespace vkfw_core::gfx {
         auto& bufferWrite = AddBufferWrite(buffers.size());
 
         for (std::size_t i = 0; i < buffers.size(); ++i) {
-            bufferWrite[i].buffer = buffers[i].m_buffer->GetBuffer(access, pipelineStage, m_barrier);
+            bufferWrite[i].buffer = buffers[i].m_buffer->GetBuffer(
+                DescriptorSetLayout::IsDynamicBindingType(writeSet.descriptorType), access, pipelineStage, m_barrier);
             bufferWrite[i].offset = buffers[i].m_offset;
             bufferWrite[i].range = buffers[i].m_range;
         }
@@ -74,7 +75,7 @@ namespace vkfw_core::gfx {
 
         bufferWrite.resize(buffers.size());
         for (std::size_t i = 0; i < buffers.size(); ++i) {
-            buffers[i].m_bufferRange.m_buffer->AccessBarrier(access, pipelineStage, m_barrier);
+            buffers[i].m_bufferRange.m_buffer->AccessBarrier(false, access, pipelineStage, m_barrier);
             bufferWrite[i] = buffers[i].m_bufferView->GetHandle();
         }
 
@@ -151,9 +152,9 @@ namespace vkfw_core::gfx {
         return bufferWrite;
     }
 
-    void DescriptorSet::BindBarrier(CommandBuffer& cmdBuffer)
+    void DescriptorSet::BindBarrier(CommandBuffer& cmdBuffer, const vk::ArrayProxy<const std::uint32_t>& dynamicOffsets)
     {
-        m_barrier.Record(cmdBuffer);
+        m_barrier.Record(cmdBuffer, dynamicOffsets);
         m_skipNextBindBarriers += 1;
     }
 

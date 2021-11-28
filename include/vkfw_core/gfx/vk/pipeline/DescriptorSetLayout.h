@@ -43,6 +43,7 @@ namespace vkfw_core::gfx {
 
         [[nodiscard]] const auto& GetBindings() const { return m_bindings; }
         [[nodiscard]] static bool IsBufferBindingType(vk::DescriptorType type);
+        [[nodiscard]] static bool IsDynamicBindingType(vk::DescriptorType type);
         [[nodiscard]] static bool IsTexelBufferBindingType(vk::DescriptorType type);
         [[nodiscard]] static bool IsImageBindingType(vk::DescriptorType type);
 

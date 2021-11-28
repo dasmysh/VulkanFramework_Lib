@@ -63,7 +63,7 @@ namespace vkfw_core::gfx {
             std::span<const rt::AccelerationStructureGeometry*> accelerationStructures);
         void FinalizeWrite(const LogicalDevice* device);
 
-        void BindBarrier(CommandBuffer& cmdBuffer);
+        void BindBarrier(CommandBuffer& cmdBuffer, const vk::ArrayProxy<const std::uint32_t>& dynamicOffsets = {});
         void Bind(CommandBuffer& cmdBuffer, vk::PipelineBindPoint bindingPoint,
                   const PipelineLayout& pipelineLayout, std::uint32_t firstSet,
                   const vk::ArrayProxy<const std::uint32_t>& dynamicOffsets = {});

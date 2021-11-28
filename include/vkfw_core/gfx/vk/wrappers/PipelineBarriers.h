@@ -46,17 +46,17 @@ namespace vkfw_core::gfx {
 
     struct BufferBarrierInfo
     {
-        BufferBarrierInfo(Buffer* buffer, vk::Buffer vkBuffer);
-        BufferBarrierInfo(BufferRange bufferRange, vk::Buffer buffer);
+        BufferBarrierInfo(Buffer* buffer, vk::Buffer vkBuffer, bool isDynamic);
+        BufferBarrierInfo(BufferRange bufferRange, vk::Buffer buffer, bool isDynamic);
 
-        vk::BufferMemoryBarrier2KHR CreateBarrier(const LogicalDevice* device,
-                                                  std::vector<std::unique_ptr<PipelineBarrier>>& releaseBarriers,
-                                                  vk::AccessFlags2KHR dstAccess,
-                                                  vk::PipelineStageFlags2KHR dstPipelineStages,
-                                                  unsigned int dstQueueFamily) const;
+        void AddBarriers(const LogicalDevice* device, std::vector<vk::BufferMemoryBarrier2KHR>& bufferBarriers,
+                         std::vector<std::unique_ptr<PipelineBarrier>>& releaseBarriers, vk::AccessFlags2KHR dstAccess,
+                         vk::PipelineStageFlags2KHR dstPipelineStages, unsigned int dstQueueFamily,
+                         std::uint32_t dynamicOffset) const;
 
         BufferRange m_bufferRange;
         vk::Buffer m_buffer;
+        bool m_isDynamic;
     };
 
     class PipelineBarrier
@@ -66,17 +66,17 @@ namespace vkfw_core::gfx {
 
         void AddSingleBarrier(Texture* texture, vk::Image image, vk::ImageLayout dstImageLayout,
                               vk::AccessFlags2KHR dstAccess, vk::PipelineStageFlags2KHR dstPipelineStages);
-        void AddSingleBarrier(Buffer* buffer, vk::Buffer vkBuffer, vk::AccessFlags2KHR dstAccess,
+        void AddSingleBarrier(Buffer* buffer, vk::Buffer vkBuffer, bool isDynamic, vk::AccessFlags2KHR dstAccess,
                               vk::PipelineStageFlags2KHR dstPipelineStages);
-        void AddSingleBarrier(BufferRange bufferRange, vk::Buffer buffer, vk::AccessFlags2KHR dstAccess,
+        void AddSingleBarrier(BufferRange bufferRange, vk::Buffer buffer, bool isDynamic, vk::AccessFlags2KHR dstAccess,
                               vk::PipelineStageFlags2KHR dstPipelineStages);
 
-        void Record(CommandBuffer& cmdBuffer);
+        void Record(CommandBuffer& cmdBuffer, const vk::ArrayProxy<const std::uint32_t>& dynamicOffsets = {});
         void RecordRelease(CommandBuffer& cmdBuffer, unsigned int dstQueueFamily);
         void Record(std::vector<vk::ImageMemoryBarrier2KHR>& imageBarriers,
                     std::vector<vk::BufferMemoryBarrier2KHR>& bufferBarriers,
-                    std::vector<std::unique_ptr<PipelineBarrier>>& releaseBarriers,
-                    unsigned int dstQueueFamily);
+                    std::vector<std::unique_ptr<PipelineBarrier>>& releaseBarriers, unsigned int dstQueueFamily,
+                    const vk::ArrayProxy<const std::uint32_t>& dynamicOffsets = {});
 
     private:
         const LogicalDevice* m_device;

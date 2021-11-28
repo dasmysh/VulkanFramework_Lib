@@ -58,7 +58,7 @@ namespace vkfw_core::gfx {
     Texture::Texture(const LogicalDevice* device, std::string_view name, const TextureDescriptor& desc,
         vk::ImageLayout initialLayout, std::vector<std::uint32_t> queueFamilyIndices)
         : VulkanObjectPrivateWrapper{device->GetHandle(), name, vk::UniqueImage{}}
-        , MemoryBoundResource{device}
+        , MemoryBoundResourceBase{device}
         , m_imageDeviceMemory{device, fmt::format("DeviceMemory:{}", name), desc.m_memoryProperties}
         , m_imageView{device->GetHandle(), fmt::format("View:{}", name), vk::UniqueImageView{}}
         , m_size{ 0 }
@@ -73,7 +73,7 @@ namespace vkfw_core::gfx {
 
     Texture::Texture(Texture&& rhs) noexcept
         : VulkanObjectPrivateWrapper{std::move(rhs)}
-        , MemoryBoundResource{std::move(rhs)}
+        , MemoryBoundResourceBase{std::move(rhs)}
         , m_image{std::move(rhs.m_image)}
         , m_imageView{std::move(rhs.m_imageView)}
         , m_imageDeviceMemory{std::move(rhs.m_imageDeviceMemory)}
@@ -94,7 +94,7 @@ namespace vkfw_core::gfx {
     {
         this->~Texture();
         VulkanObjectPrivateWrapper::operator=(std::move(rhs));
-        MemoryBoundResource::operator=(std::move(rhs));
+        MemoryBoundResourceBase::operator=(std::move(rhs));
         m_device = rhs.m_device;
         m_image = std::move(rhs.m_image);
         m_imageView = std::move(rhs.m_imageView);

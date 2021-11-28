@@ -89,6 +89,7 @@ namespace vkfw_core {
 
         [[nodiscard]] std::uint32_t GetCurrentlyRenderedImageIndex() const { return m_currentlyRenderedImage; }
         [[nodiscard]] const gfx::Semaphore& GetDataAvailableSemaphore() const { return m_dataAvailableSemaphore; }
+        [[nodiscard]] const gfx::Semaphore& GetRenderingFinishedSemaphore() const { return m_renderingFinishedSemaphore; }
 
     private:
         void WindowPosCallback(int xpos, int ypos) const;

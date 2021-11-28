@@ -74,7 +74,7 @@ namespace vkfw_core::gfx::rt {
                                                               vk::PipelineStageFlags2KHR pipelineStages,
                                                               PipelineBarrier& barrier) const
     {
-        m_buffer->AccessBarrier(access, pipelineStages, barrier);
+        m_buffer->AccessBarrier(false, access, pipelineStages, barrier);
         return m_handle;
     }
 
@@ -87,7 +87,7 @@ namespace vkfw_core::gfx::rt {
 
         vk::AccelerationStructureCreateInfoKHR asCreateInfo{
             {},
-            m_buffer->GetBuffer(vk::AccessFlagBits2KHR::eAccelerationStructureWrite,
+            m_buffer->GetBuffer(false, vk::AccessFlagBits2KHR::eAccelerationStructureWrite,
                                 vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild, barrier),
             0,
             m_memoryRequirements.accelerationStructureSize,
@@ -102,7 +102,7 @@ namespace vkfw_core::gfx::rt {
     void AccelerationStructure::AccessBarrier(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
                                               PipelineBarrier& barrier) const
     {
-        m_buffer->AccessBarrier(access, pipelineStages, barrier);
+        m_buffer->AccessBarrier(false, access, pipelineStages, barrier);
     }
 
     std::unique_ptr<vkfw_core::gfx::DeviceBuffer> AccelerationStructure::CreateAccelerationStructureScratchBuffer() const

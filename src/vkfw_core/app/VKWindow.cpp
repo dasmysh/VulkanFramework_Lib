@@ -724,9 +724,9 @@ namespace vkfw_core {
     {
         const auto& graphicsQueue = m_logicalDevice->GetQueue(m_graphicsQueue, 0);
         QUEUE_REGION(graphicsQueue, "Present");
+        std::array<vk::Semaphore, 1> semaphores = {m_renderingFinishedSemaphore.GetHandle()};
         std::array<vk::SwapchainKHR, 1> swapchains = {m_swapchain.GetHandle()};
-        vk::PresentInfoKHR presentInfo{1, m_renderingFinishedSemaphore.GetHandlePtr(), 1, m_swapchain.GetHandlePtr(),
-                                       &m_currentlyRenderedImage}; //<- wait on these semaphores
+        vk::PresentInfoKHR presentInfo{semaphores, swapchains, m_currentlyRenderedImage}; //<- wait on these semaphores
         auto result = m_logicalDevice->GetQueue(m_graphicsQueue, 0).Present(presentInfo);
 
         if (result == vk::Result::eErrorOutOfDateKHR || result == vk::Result::eSuboptimalKHR || m_frameBufferResize) {

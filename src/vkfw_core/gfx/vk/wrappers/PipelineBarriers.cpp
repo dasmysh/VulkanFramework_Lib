@@ -66,57 +66,56 @@ namespace vkfw_core::gfx {
         return imageBarrier;
     }
 
-    BufferBarrierInfo::BufferBarrierInfo(Buffer* buffer, vk::Buffer vkBuffer)
+    BufferBarrierInfo::BufferBarrierInfo(Buffer* buffer, vk::Buffer vkBuffer, bool isDynamic)
         : m_bufferRange{buffer, 0, buffer->GetSize()}
-        , m_buffer{vkBuffer}
+        , m_buffer{vkBuffer}, m_isDynamic{isDynamic}
     {
     }
 
-    BufferBarrierInfo::BufferBarrierInfo(BufferRange bufferRange, vk::Buffer buffer)
-        : m_bufferRange{bufferRange}
-        , m_buffer{buffer}
+    BufferBarrierInfo::BufferBarrierInfo(BufferRange bufferRange, vk::Buffer buffer, bool isDynamic)
+        : m_bufferRange{bufferRange}, m_buffer{buffer}, m_isDynamic{isDynamic}
     {
     }
 
-    vk::BufferMemoryBarrier2KHR BufferBarrierInfo::CreateBarrier(
-        const LogicalDevice* device, std::vector<std::unique_ptr<PipelineBarrier>>& releaseBarriers,
-        vk::AccessFlags2KHR dstAccess, vk::PipelineStageFlags2KHR dstPipelineStages, unsigned int dstQueueFamily) const
+    void BufferBarrierInfo::AddBarriers(
+        const LogicalDevice* device, std::vector<vk::BufferMemoryBarrier2KHR>& bufferBarriers,
+        std::vector<std::unique_ptr<PipelineBarrier>>& releaseBarriers,
+        vk::AccessFlags2KHR dstAccess, vk::PipelineStageFlags2KHR dstPipelineStages, unsigned int dstQueueFamily, std::uint32_t dynamicOffset) const
     {
-        auto [srcAccess, srcPipelineStages, srcQueueFamily] = m_bufferRange.m_buffer->GetPreviousAccess();
-        if (srcQueueFamily == MemoryBoundResource::INVALID_QUEUE_FAMILY) { srcQueueFamily = dstQueueFamily; }
-        const bool releaseBarrier = srcQueueFamily != dstQueueFamily && !releaseBarriers.empty();
-        const bool acquireBarrier = srcQueueFamily != dstQueueFamily && releaseBarriers.empty();
+        auto bufferRanges =
+            m_bufferRange.m_buffer->GetOverlappingRanges(m_bufferRange.m_offset + dynamicOffset, m_bufferRange.m_range);
+        for (const auto& bufferRange : bufferRanges) {
+            auto [srcAccess, srcPipelineStages, srcQueueFamily] = bufferRange.GetPreviousAccess();
+            std::size_t offset = bufferRange.m_offset, range = bufferRange.m_range;
 
-        if (releaseBarrier) {
-            dstAccess = vk::AccessFlagBits2KHR::eNone;
-            dstPipelineStages = vk::PipelineStageFlagBits2KHR::eNone;
-        } else if (acquireBarrier) {
-            srcAccess = vk::AccessFlagBits2KHR::eNone;
-            srcPipelineStages = vk::PipelineStageFlagBits2KHR::eNone;
-        }
+            if (srcQueueFamily == MemoryBoundResource::INVALID_QUEUE_FAMILY) { srcQueueFamily = dstQueueFamily; }
+            const bool releaseBarrier = srcQueueFamily != dstQueueFamily && !releaseBarriers.empty();
+            const bool acquireBarrier = srcQueueFamily != dstQueueFamily && releaseBarriers.empty();
 
-        auto srcDeviceQueueFamily = device->GetQueueInfo(srcQueueFamily).m_familyIndex;
-        auto dstDeviceQueueFamily = device->GetQueueInfo(dstQueueFamily).m_familyIndex;
-
-        vk::BufferMemoryBarrier2KHR bufferBarrier{srcPipelineStages,
-                                                  srcAccess,
-                                                  dstPipelineStages,
-                                                  dstAccess,
-                                                  srcDeviceQueueFamily,
-                                                  dstDeviceQueueFamily,
-                                                  m_buffer,
-                                                  m_bufferRange.m_offset,
-                                                  m_bufferRange.m_range};
-
-        if (releaseBarrier) {
-            if (!releaseBarriers[srcQueueFamily]) {
-                releaseBarriers[srcQueueFamily] = std::make_unique<PipelineBarrier>(device);
+            if (releaseBarrier) {
+                dstAccess = vk::AccessFlagBits2KHR::eNone;
+                dstPipelineStages = vk::PipelineStageFlagBits2KHR::eNone;
+            } else if (acquireBarrier) {
+                srcAccess = vk::AccessFlagBits2KHR::eNone;
+                srcPipelineStages = vk::PipelineStageFlagBits2KHR::eNone;
             }
-            releaseBarriers[srcQueueFamily]->AddSingleBarrier(m_bufferRange, m_buffer, dstAccess, dstPipelineStages);
-        } else {
-            m_bufferRange.m_buffer->SetAccess(dstAccess, dstPipelineStages, dstQueueFamily);
+
+            auto srcDeviceQueueFamily = device->GetQueueInfo(srcQueueFamily).m_familyIndex;
+            auto dstDeviceQueueFamily = device->GetQueueInfo(dstQueueFamily).m_familyIndex;
+
+            if (releaseBarrier) {
+                if (!releaseBarriers[srcQueueFamily]) {
+                    releaseBarriers[srcQueueFamily] = std::make_unique<PipelineBarrier>(device);
+                }
+                releaseBarriers[srcQueueFamily]->AddSingleBarrier(BufferRange{m_bufferRange.m_buffer, offset, range},
+                                                                  m_buffer, false, dstAccess, dstPipelineStages);
+            } else {
+                m_bufferRange.m_buffer->SetAccess(offset, range, dstAccess, dstPipelineStages, dstQueueFamily);
+            }
+            bufferBarriers.emplace_back(srcPipelineStages, srcAccess, dstPipelineStages, dstAccess,
+                                        srcDeviceQueueFamily, dstDeviceQueueFamily, m_buffer, offset, range);
         }
-        return bufferBarrier;
+        m_bufferRange.m_buffer->ReduceRanges();
     }
 
     PipelineBarrier::PipelineBarrier(const LogicalDevice* device)
@@ -130,19 +129,19 @@ namespace vkfw_core::gfx {
         m_resources.emplace_back(ImageBarrierInfo{texture, image, dstImageLayout}, dstAccess, dstPipelineStages);
     }
 
-    void PipelineBarrier::AddSingleBarrier(Buffer* buffer, vk::Buffer vkBuffer, vk::AccessFlags2KHR dstAccess,
+    void PipelineBarrier::AddSingleBarrier(Buffer* buffer, vk::Buffer vkBuffer, bool isDynamic, vk::AccessFlags2KHR dstAccess,
                                            vk::PipelineStageFlags2KHR dstPipelineStages)
     {
-        m_resources.emplace_back(BufferBarrierInfo{buffer, vkBuffer}, dstAccess, dstPipelineStages);
+        m_resources.emplace_back(BufferBarrierInfo{buffer, vkBuffer, isDynamic}, dstAccess, dstPipelineStages);
     }
 
-    void PipelineBarrier::AddSingleBarrier(BufferRange bufferRange, vk::Buffer buffer, vk::AccessFlags2KHR dstAccess,
-                                           vk::PipelineStageFlags2KHR dstPipelineStages)
+    void PipelineBarrier::AddSingleBarrier(BufferRange bufferRange, vk::Buffer buffer, bool isDynamic,
+                                           vk::AccessFlags2KHR dstAccess, vk::PipelineStageFlags2KHR dstPipelineStages)
     {
-        m_resources.emplace_back(BufferBarrierInfo{bufferRange, buffer}, dstAccess, dstPipelineStages);
+        m_resources.emplace_back(BufferBarrierInfo{bufferRange, buffer, isDynamic}, dstAccess, dstPipelineStages);
     }
 
-    void PipelineBarrier::Record(CommandBuffer& cmdBuffer)
+    void PipelineBarrier::Record(CommandBuffer& cmdBuffer, const vk::ArrayProxy<const std::uint32_t>& dynamicOffsets)
     {
         std::vector<vk::ImageMemoryBarrier2KHR> imageBarriers;
         std::vector<vk::BufferMemoryBarrier2KHR> bufferBarriers;
@@ -150,7 +149,7 @@ namespace vkfw_core::gfx {
 
         std::vector<std::unique_ptr<PipelineBarrier>> releaseBarriers;
         releaseBarriers.resize(m_device->GetWindowCfg().m_queues.size());
-        Record(imageBarriers, bufferBarriers, releaseBarriers, dstQueueFamily);
+        Record(imageBarriers, bufferBarriers, releaseBarriers, dstQueueFamily, dynamicOffsets);
 
         if (bufferBarriers.empty() && imageBarriers.empty()) {
             return;
@@ -197,8 +196,9 @@ namespace vkfw_core::gfx {
     void PipelineBarrier::Record(std::vector<vk::ImageMemoryBarrier2KHR>& imageBarriers,
                                  std::vector<vk::BufferMemoryBarrier2KHR>& bufferBarriers,
                                  std::vector<std::unique_ptr<PipelineBarrier>>& releaseBarriers,
-                                 unsigned int dstQueueFamily)
+                                 unsigned int dstQueueFamily, const vk::ArrayProxy<const std::uint32_t>& dynamicOffsets)
     {
+        std::size_t dynamicIndex = 0;
         for (const auto& barrierEntryInfo : m_resources) {
             if (std::holds_alternative<ImageBarrierInfo>(barrierEntryInfo.m_resource)) {
                 auto& barrierInfo = std::get<ImageBarrierInfo>(barrierEntryInfo.m_resource);
@@ -207,9 +207,13 @@ namespace vkfw_core::gfx {
                 imageBarriers.emplace_back(std::move(imageBarrier));
             } else if (std::holds_alternative<BufferBarrierInfo>(barrierEntryInfo.m_resource)) {
                 auto& barrierInfo = std::get<BufferBarrierInfo>(barrierEntryInfo.m_resource);
-                auto bufferBarrier = barrierInfo.CreateBarrier(m_device, releaseBarriers, barrierEntryInfo.m_dstAccess,
-                                                               barrierEntryInfo.m_dstPipelineStages, dstQueueFamily);
-                bufferBarriers.emplace_back(std::move(bufferBarrier));
+                std::uint32_t dynamicOffset = 0;
+                if (barrierInfo.m_isDynamic && dynamicOffsets.size() > dynamicIndex) {
+                    dynamicOffset = dynamicOffsets.data()[dynamicIndex];
+                    dynamicIndex += 1;
+                }
+                barrierInfo.AddBarriers(m_device, bufferBarriers, releaseBarriers, barrierEntryInfo.m_dstAccess,
+                                        barrierEntryInfo.m_dstPipelineStages, dstQueueFamily, dynamicOffset);
             }
         }
     }
