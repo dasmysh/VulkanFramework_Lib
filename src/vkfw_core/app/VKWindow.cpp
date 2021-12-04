@@ -281,8 +281,8 @@ namespace vkfw_core {
                                                      m_logicalDevice->GetHandle().createSemaphoreUnique(semaphoreInfo)};
         m_dataAvailableSemaphore = gfx::Semaphore{m_logicalDevice->GetHandle(), "Win-{} DataAvailSemaphore",
                                                   m_logicalDevice->GetHandle().createSemaphoreUnique(semaphoreInfo)};
-        m_renderingFinishedSemaphore =
-            gfx::Semaphore{m_logicalDevice->GetHandle(), "Win-{} RenderFinishedSemaphore",
+        m_renderingFinishedSemaphore = gfx::Semaphore{
+            m_logicalDevice->GetHandle(), fmt::format("Win-{} RenderFinishedSemaphore", m_config->m_windowTitle),
                            m_logicalDevice->GetHandle().createSemaphoreUnique(semaphoreInfo)};
 
         spdlog::info("Initializing Vulkan surface... done.");
