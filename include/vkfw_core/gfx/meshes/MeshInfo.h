@@ -84,8 +84,8 @@ namespace vkfw_core::gfx {
         /** Returns the global inverse matrix of the mesh. */
         [[nodiscard]] glm::mat4 GetGlobalInverse() const { return m_globalInverse; }
 
-        [[nodiscard]] const std::vector<MaterialInfo>& GetMaterials() const { return m_materials; }
-        [[nodiscard]] const MaterialInfo* GetMaterial(unsigned int id) const { return &m_materials[id]; }
+        [[nodiscard]] const std::vector<MaterialInfo*>& GetMaterials() const { return m_materials; }
+        [[nodiscard]] const MaterialInfo* GetMaterial(unsigned int id) const { return m_materials[id]; }
 
         template<class VertexType>
         void GetVertices(std::vector<VertexType>& vertices) const;
@@ -110,7 +110,7 @@ namespace vkfw_core::gfx {
 
         void ReserveMesh(unsigned int maxUVChannels, unsigned int maxColorChannels, bool hasTangentSpace,
             unsigned int numVertices, unsigned int numIndices, unsigned int numMaterials);
-        MaterialInfo* GetMaterial(std::size_t id) { return &m_materials[id]; }
+        MaterialInfo* GetMaterial(std::size_t id) { return m_materials[id]; }
         void AddSubMesh(const std::string& name, unsigned int idxOffset, unsigned int numIndices, unsigned int materialID);
         // void CreateIndexBuffer();
 
@@ -198,7 +198,7 @@ namespace vkfw_core::gfx {
         std::vector<std::uint32_t> m_indices;
 
         /** The meshes materials. */
-        std::vector<MaterialInfo> m_materials;
+        std::vector<MaterialInfo*> m_materials;
         /** Holds all the meshes sub-meshes. */
         std::vector<SubMesh> m_subMeshes;
         /** Holds all the meshes nodes. */

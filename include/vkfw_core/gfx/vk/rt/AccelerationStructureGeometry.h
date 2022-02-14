@@ -48,7 +48,19 @@ namespace vkfw_core::gfx::rt {
                                  std::size_t iboOffset = 0);
 
         void AddMeshGeometry(const MeshInfo& mesh, const glm::mat4& transform);
-        template<Vertex VertexType> void FinalizeGeometry();
+
+        struct AccelerationStructureBufferInfo
+        {
+            std::size_t geometryBufferSize = 0;
+            std::vector<std::vector<std::uint32_t>> indices;
+            std::vector<std::vector<std::uint8_t>> vertices;
+            std::vector<std::vector<std::uint8_t>> materials;
+            std::vector<std::size_t> materialBufferOffsets;
+        };
+
+        template<Vertex VertexType> void FinalizeGeometry(AccelerationStructureBufferInfo& bufferInfo);
+        template<vkfw_core::Material MaterialType> void FinalizeMaterial(AccelerationStructureBufferInfo& bufferInfo);
+        void FinalizeBuffer(const AccelerationStructureBufferInfo& bufferInfo);
 
         void BuildAccelerationStructure();
 
@@ -57,14 +69,14 @@ namespace vkfw_core::gfx::rt {
         void AddDescriptorLayoutBindingBuffers(DescriptorSetLayout& layout, vk::ShaderStageFlags shaderFlags,
                                                std::uint32_t bindingVBO, std::uint32_t bindingIBO,
                                                std::uint32_t bindingInstanceBuffer, std::uint32_t bindingMaterialBuffer,
-                                               std::uint32_t bindingDiffuseTexture, std::uint32_t bindingBumpTexture);
+                                               std::uint32_t bindingTextures);
         [[nodiscard]] vk::AccelerationStructureKHR
         GetTopLevelAccelerationStructure(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
                                          PipelineBarrier& barrier) const;
         void FillGeometryInfo(std::vector<BufferRange>& vbos, std::vector<BufferRange>& ibos,
                               BufferRange& instanceBuffer);
-        void FillMaterialInfo(BufferRange& materialBuffer, std::vector<Texture*>& diffuseTextures,
-                              std::vector<Texture*>& bumpMaps);
+        template<vkfw_core::Material MaterialType> void FillMaterialInfo(BufferRange& materialBuffer);
+        void FillTextureInfo(std::vector<Texture*>& textures);
         void CreateResourceUseBarriers(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStage,
                                        vk::ImageLayout newLayout, PipelineBarrier& barrier);
 
@@ -92,15 +104,17 @@ namespace vkfw_core::gfx::rt {
             std::size_t iboRange = 0;
         };
 
-        void AddInstanceBufferAndTransferMemGroup();
+        void TransferMemGroup();
         [[nodiscard]] std::size_t AddBottomLevelAccelerationStructure(std::uint32_t bufferIndex,
                                                                       const glm::mat3x4& transform);
-        void AddInstanceInfo(std::uint32_t vertexSize, std::uint32_t bufferIndex, std::uint32_t materialIndex,
-                             const glm::mat4& transform, std::uint32_t indexOffset = 0);
+        void AddInstanceInfo(std::uint32_t vertexSize, std::uint32_t bufferIndex, std::uint32_t materialType,
+                             std::uint32_t materialIndex, const glm::mat4& transform, std::uint32_t indexOffset = 0);
         void AddMeshNodeInstance(const MeshGeometryInfo& mesh, const SceneMeshNode* node, const glm::mat4& transform,
-                                 std::uint32_t materialOffset);
+                                 const std::vector<std::pair<std::uint32_t, std::uint32_t>>& materialMapping);
         void AddMeshNodeGeometry(const MeshGeometryInfo& mesh, const SceneMeshNode* node, const glm::mat4& transform);
         void AddSubMeshGeometry(const MeshGeometryInfo& mesh, const SubMesh& subMesh, const glm::mat4& transform);
+
+        std::pair<std::uint32_t, std::uint32_t> AddMaterial(const MaterialInfo& materialInfo);
 
         /** The device to create the acceleration structures in. */
         LogicalDevice* m_device;
@@ -137,89 +151,92 @@ namespace vkfw_core::gfx::rt {
         std::size_t m_instanceBufferOffset = 0;
         std::size_t m_instanceBufferRange = 0;
         /** Holds the materials. */
-        std::vector<Material> m_materials;
-        std::vector<MaterialDesc> m_materialInfos;
-        std::vector<Texture*> m_diffuseTextures;
-        std::vector<Texture*> m_bumpMaps;
+        std::vector<std::vector<Material>> m_materials;
+        // std::vector<std::vector<std::uint8_t>> m_materialInfos;
+        std::vector<Texture*> m_textures;
         /** The offset and range of the material buffer. */
-        std::size_t m_materialBufferOffset = 0;
-        std::size_t m_materialBufferRange = 0;
+        std::vector<std::size_t> m_materialBuffersOffset;
+        std::vector<std::size_t> m_materialBuffersRange;
     };
 
     template<Vertex VertexType>
-    void AccelerationStructureGeometry::FinalizeGeometry()
+    void AccelerationStructureGeometry::FinalizeGeometry(AccelerationStructureBufferInfo& bufferInfo)
     {
-        std::vector<std::vector<VertexType>> vertices{m_meshGeometryInfos.size()};
-        std::vector<std::vector<std::uint32_t>> indices{m_meshGeometryInfos.size()};
-        std::size_t totalBufferSize = 0;
+        bufferInfo.indices.resize(m_meshGeometryInfos.size());
+        bufferInfo.vertices.resize(m_meshGeometryInfos.size());
+
         for (std::size_t i_mesh = 0; i_mesh < m_meshGeometryInfos.size(); ++i_mesh) {
+            std::vector<VertexType> vertices;
             auto& meshInfo = m_meshGeometryInfos[i_mesh];
-            meshInfo.mesh->GetVertices(vertices[i_mesh]);
-            indices[i_mesh] = meshInfo.mesh->GetIndices();
+
+            meshInfo.mesh->GetVertices<VertexType>(vertices);
+            bufferInfo.indices[i_mesh] = meshInfo.mesh->GetIndices();
+            bufferInfo.vertices[i_mesh].resize(byteSizeOf(vertices));
+            memcpy(bufferInfo.vertices[i_mesh].data(), vertices.data(), bufferInfo.vertices[i_mesh].size());
 
             meshInfo.vertexSize = sizeof(VertexType);
-            meshInfo.vboRange = byteSizeOf(vertices[i_mesh]);
-            meshInfo.vboOffset = m_device->CalculateStorageBufferAlignment(totalBufferSize);
-            meshInfo.iboRange = byteSizeOf(indices[i_mesh]);
+            meshInfo.vboRange = byteSizeOf(vertices);
+            meshInfo.vboOffset = m_device->CalculateStorageBufferAlignment(bufferInfo.geometryBufferSize);
+            meshInfo.iboRange = byteSizeOf(bufferInfo.indices[i_mesh]);
             meshInfo.iboOffset = m_device->CalculateStorageBufferAlignment(meshInfo.vboOffset + meshInfo.vboRange);
-            totalBufferSize = meshInfo.iboOffset + meshInfo.iboRange;
+            bufferInfo.geometryBufferSize = meshInfo.iboOffset + meshInfo.iboRange;
 
-            auto materialOffset = m_materials.size();
-            for (const auto& mat : meshInfo.mesh->GetMaterials()) {
-                m_materials.emplace_back(&mat, m_device, m_textureMemGroup, m_queueFamilyIndices);
-            }
-            AddMeshNodeInstance(meshInfo, meshInfo.mesh->GetRootNode(), meshInfo.transform,
-                                static_cast<std::uint32_t>(materialOffset));
+            std::vector<std::pair<std::uint32_t, std::uint32_t>> materialMapping;
+            for (const auto mat : meshInfo.mesh->GetMaterials()) { materialMapping.emplace_back(AddMaterial(*mat)); }
+            AddMeshNodeInstance(meshInfo, meshInfo.mesh->GetRootNode(), meshInfo.transform, materialMapping);
         }
         m_instanceBufferRange = byteSizeOf(m_instanceInfos);
-        m_instanceBufferOffset = m_device->CalculateStorageBufferAlignment(totalBufferSize);
-        totalBufferSize = m_instanceBufferOffset + m_instanceBufferRange;
+        m_instanceBufferOffset = m_device->CalculateStorageBufferAlignment(bufferInfo.geometryBufferSize);
+        bufferInfo.geometryBufferSize = m_instanceBufferOffset + m_instanceBufferRange;
+    }
 
-        m_materialInfos.resize(m_materials.size(),
-                               MaterialDesc{INVALID_TEXTURE_INDEX, INVALID_TEXTURE_INDEX, glm::vec4{1.0f}});
-        for (std::size_t i = 0; i < m_materials.size(); ++i) {
-            if (m_materials[i].m_diffuseTexture) {
-                m_materialInfos[i].diffuseTextureIndex = static_cast<std::uint32_t>(m_diffuseTextures.size());
-                m_diffuseTextures.emplace_back(nullptr);
-            }
-            if (m_materials[i].m_bumpMap) {
-                m_materialInfos[i].bumpTextureIndex = static_cast<std::uint32_t>(m_bumpMaps.size());
-                m_bumpMaps.emplace_back(nullptr);
-            }
-            m_materialInfos[i].diffuseColor = glm::vec4{m_materials[i].m_materialInfo->m_diffuse, 1.0f};
-        }
-        m_materialBufferRange = byteSizeOf(m_materialInfos);
-        m_materialBufferOffset = m_device->CalculateStorageBufferAlignment(totalBufferSize);
-        totalBufferSize = m_materialBufferOffset + m_materialBufferRange;
-
-        m_bufferIndex =
-            m_bufferMemGroup.AddBufferToGroup(fmt::format("ASShaderBuffer:{}", m_name),
-                                              vk::BufferUsageFlagBits::eShaderDeviceAddress
-                                                  | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR
-                                                  | vk::BufferUsageFlagBits::eStorageBuffer,
-                                              totalBufferSize, m_queueFamilyIndices);
-
-
-        for (std::size_t i_mesh = 0; i_mesh < m_meshGeometryInfos.size(); ++i_mesh) {
-            const auto& meshInfo = m_meshGeometryInfos[i_mesh];
-            m_bufferMemGroup.AddDataToBufferInGroup(m_bufferIndex, meshInfo.vboOffset, vertices[i_mesh]);
-            m_bufferMemGroup.AddDataToBufferInGroup(m_bufferIndex, meshInfo.iboOffset, indices[i_mesh]);
+    template<vkfw_core::Material MaterialType>
+    void AccelerationStructureGeometry::FinalizeMaterial(AccelerationStructureBufferInfo& bufferInfo)
+    {
+        if (bufferInfo.materials.size() <= MaterialType::MATERIAL_ID) {
+            bufferInfo.materials.resize(MaterialType::MATERIAL_ID + 1);
+            m_materialBuffersRange.resize(MaterialType::MATERIAL_ID + 1, 0);
+            m_materialBuffersOffset.resize(MaterialType::MATERIAL_ID + 1, 0);
         }
 
-        AddInstanceBufferAndTransferMemGroup();
-        for (std::size_t i = 0; i < m_materials.size(); ++i) {
-            if (m_materials[i].m_diffuseTexture) {
-                m_diffuseTextures[m_materialInfos[i].diffuseTextureIndex] =
-                    &m_materials[i].m_diffuseTexture->GetTexture();
+        constexpr std::size_t iType = MaterialType::MATERIAL_ID;
+        const std::size_t materialGPUSize = MaterialType::GetGPUSize();
+        bufferInfo.materials[iType].resize(m_materials[iType].size() * materialGPUSize);
+        std::size_t materialStart = 0;
+        for (std::size_t i = 0; i < m_materials[iType].size(); ++i) {
+            auto texturesOffset = m_textures.size();
+            auto materialBuffer = std::span{&bufferInfo.materials[iType][materialStart], materialGPUSize};
+            MaterialType::FillGPUInfo(*static_cast<const MaterialType*>(m_materials[iType][i].m_materialInfo),
+                                      materialBuffer, static_cast<std::uint32_t>(texturesOffset));
+
+
+            m_textures.resize(texturesOffset + m_materials[iType][i].m_materialInfo->GetTextureCount());
+            for (std::size_t iTex = 0; iTex < m_materials[iType][i].m_materialInfo->GetTextureCount(); ++iTex) {
+                m_textures[texturesOffset + iTex] = &m_materials[iType][i].m_textures[iTex]->GetTexture();
             }
-            if (m_materials[i].m_bumpMap) {
-                m_bumpMaps[m_materialInfos[i].bumpTextureIndex] = &m_materials[i].m_bumpMap->GetTexture();
-            }
+
+            //
+            //     if (m_materials[iType][i].m_diffuseTexture) {
+            //         m_materialInfos[iType][i].diffuseTextureIndex =
+            //             static_cast<std::uint32_t>(m_diffuseTextures.size());
+            //         m_diffuseTextures.emplace_back(nullptr);
+            //     }
+            //     if (m_materials[iType][i].m_bumpMap) {
+            //         m_materialInfos[iType][i].bumpTextureIndex = static_cast<std::uint32_t>(m_bumpMaps.size());
+            //         m_bumpMaps.emplace_back(nullptr);
+            //     }
+            //     m_materialInfos[iType][i].diffuseColor =
+            //         glm::vec4{m_materials[iType][i].m_materialInfo->m_diffuse, 1.0f};
         }
 
-        for (std::size_t i_mesh = 0; i_mesh < m_meshGeometryInfos.size(); ++i_mesh) {
-            const auto& meshInfo = m_meshGeometryInfos[i_mesh];
-            AddMeshNodeGeometry(meshInfo, meshInfo.mesh->GetRootNode(), meshInfo.transform);
-        }
+        m_materialBuffersRange[iType] = byteSizeOf(bufferInfo.materials[iType]);
+    }
+
+    template<vkfw_core::Material MaterialType>
+    void AccelerationStructureGeometry::FillMaterialInfo(BufferRange& materialBuffer)
+    {
+        materialBuffer.m_buffer = m_bufferMemGroup.GetBuffer(m_bufferIndex);
+        materialBuffer.m_offset = m_materialBuffersOffset[MaterialType::MATERIAL_ID];
+        materialBuffer.m_range = m_materialBuffersRange[MaterialType::MATERIAL_ID];
     }
 }

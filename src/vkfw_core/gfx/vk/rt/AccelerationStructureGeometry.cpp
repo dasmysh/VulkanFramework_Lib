@@ -34,10 +34,8 @@ namespace vkfw_core::gfx::rt {
         m_meshGeometryInfos.emplace_back(m_geometryIndex++, &mesh, transform);
     }
 
-    void AccelerationStructureGeometry::AddInstanceBufferAndTransferMemGroup()
+    void AccelerationStructureGeometry::TransferMemGroup()
     {
-        m_bufferMemGroup.AddDataToBufferInGroup(m_bufferIndex, m_instanceBufferOffset, m_instanceInfos);
-        m_bufferMemGroup.AddDataToBufferInGroup(m_bufferIndex, m_materialBufferOffset, m_materialInfos);
         vkfw_core::gfx::QueuedDeviceTransfer transfer{m_device, m_device->GetQueue(0, 0)};
         m_bufferMemGroup.FinalizeDeviceGroup();
         m_bufferMemGroup.TransferData(transfer);
@@ -46,21 +44,22 @@ namespace vkfw_core::gfx::rt {
         transfer.FinishTransfer();
     }
 
-    void AccelerationStructureGeometry::AddMeshNodeInstance(const MeshGeometryInfo& mesh, const SceneMeshNode* node,
-                                                            const glm::mat4& transform, std::uint32_t materialOffset)
+    void AccelerationStructureGeometry::AddMeshNodeInstance(
+        const MeshGeometryInfo& mesh, const SceneMeshNode* node, const glm::mat4& transform,
+        const std::vector<std::pair<std::uint32_t, std::uint32_t>>& materialMapping)
     {
         if (!node->HasMeshes()) { return; }
 
         auto localTransform = transform * node->GetLocalTransform();
         for (unsigned int i = 0; i < node->GetNumberOfSubMeshes(); ++i) {
             auto meshMaterialId = mesh.mesh->GetSubMeshes()[node->GetSubMeshID(i)].GetMaterialID();
-            auto materialIndex = meshMaterialId + materialOffset;
+            auto [materialType, materialIndex] = materialMapping[meshMaterialId];
             AddInstanceInfo(static_cast<std::uint32_t>(mesh.vertexSize), static_cast<std::uint32_t>(mesh.index),
-                            materialIndex, transform,
+                            materialType, materialIndex, transform,
                             mesh.mesh->GetSubMeshes()[node->GetSubMeshID(i)].GetIndexOffset());
         }
         for (unsigned int i = 0; i < node->GetNumberOfNodes(); ++i) {
-            AddMeshNodeInstance(mesh, node->GetChild(i), localTransform, materialOffset);
+            AddMeshNodeInstance(mesh, node->GetChild(i), localTransform, materialMapping);
         }
     }
 
@@ -100,12 +99,22 @@ namespace vkfw_core::gfx::rt {
             mesh.mesh->GetMaterial(subMesh.GetMaterialID())->m_hasAlpha, vboDeviceAddress, indexBufferAddress);
     }
 
+    std::pair<std::uint32_t, std::uint32_t> AccelerationStructureGeometry::AddMaterial(const MaterialInfo& materialInfo)
+    {
+        std::uint32_t materialType = materialInfo.m_materialIdentifier;
+        if (m_materials.size() <= materialType) { m_materials.resize(materialType + 1); }
+
+        std::uint32_t materialIndex = static_cast<std::uint32_t>(m_materials[materialType].size());
+        m_materials[materialType].emplace_back(&materialInfo, m_device, m_textureMemGroup, m_queueFamilyIndices);
+        return { materialType, materialIndex };
+    }
+
     void AccelerationStructureGeometry::AddInstanceInfo(std::uint32_t vertexSize, std::uint32_t bufferIndex,
-                                                        std::uint32_t materialIndex, const glm::mat4& transform,
-                                                        std::uint32_t indexOffset /*= 0*/)
+                                                        std::uint32_t materialType, std::uint32_t materialIndex,
+                                                        const glm::mat4& transform, std::uint32_t indexOffset /*= 0*/)
     {
         auto& instanceInfo =
-            m_instanceInfos.emplace_back(vertexSize, bufferIndex, materialIndex, indexOffset);
+            m_instanceInfos.emplace_back(vertexSize, bufferIndex, materialType, materialIndex, indexOffset);
         instanceInfo.transform = transform;
         instanceInfo.transformInverseTranspose =
             glm::mat4(glm::mat3(glm::transpose(glm::inverse(instanceInfo.transform))));
@@ -140,15 +149,62 @@ namespace vkfw_core::gfx::rt {
             indexBufferDeviceAddress = vertexBufferDeviceAddress.deviceAddress + iboOffset;
         }
 
-
-        std::uint32_t materialIndex = static_cast<std::uint32_t>(m_materials.size());
-        m_materials.emplace_back(&materialInfo, m_device, m_textureMemGroup, m_queueFamilyIndices);
+        auto [materialType, materialIndex] = AddMaterial(materialInfo);
         AddInstanceInfo(static_cast<std::uint32_t>(vertexSize), static_cast<std::uint32_t>(m_geometryIndex),
-                        materialIndex, transform);
+                        materialType, materialIndex, transform);
         m_BLAS[blasIndex].AddTriangleGeometry(primitiveCount, vertexCount, vertexSize, false, vertexBufferDeviceAddress,
                                               indexBufferDeviceAddress);
         m_triangleGeometryInfos.emplace_back(m_geometryIndex++, vbo, vboOffset, vertexCount * vertexSize,
                                              ibo ? ibo : vbo, iboOffset, primitiveCount * 3 * sizeof(std::uint32_t));
+    }
+
+    void AccelerationStructureGeometry::FinalizeBuffer(const AccelerationStructureBufferInfo& bufferInfo)
+    {
+        std::size_t totalBufferSize = bufferInfo.geometryBufferSize;
+        for (std::size_t i = 0; i < m_materials.size(); ++i) {
+            m_materialBuffersOffset[i] = m_device->CalculateStorageBufferAlignment(totalBufferSize);
+            totalBufferSize = m_materialBuffersOffset[i] + m_materialBuffersRange[i];
+        }
+
+        m_bufferIndex =
+            m_bufferMemGroup.AddBufferToGroup(fmt::format("ASShaderBuffer:{}", m_name),
+                                              vk::BufferUsageFlagBits::eShaderDeviceAddress
+                                                  | vk::BufferUsageFlagBits::eAccelerationStructureBuildInputReadOnlyKHR
+                                                  | vk::BufferUsageFlagBits::eStorageBuffer,
+                                              totalBufferSize, m_queueFamilyIndices);
+
+        for (std::size_t i_mesh = 0; i_mesh < m_meshGeometryInfos.size(); ++i_mesh) {
+            const auto& meshInfo = m_meshGeometryInfos[i_mesh];
+            m_bufferMemGroup.AddDataToBufferInGroup(m_bufferIndex, meshInfo.vboOffset, bufferInfo.vertices[i_mesh]);
+            m_bufferMemGroup.AddDataToBufferInGroup(m_bufferIndex, meshInfo.iboOffset, bufferInfo.indices[i_mesh]);
+        }
+
+        m_bufferMemGroup.AddDataToBufferInGroup(m_bufferIndex, m_instanceBufferOffset, m_instanceInfos);
+        for (std::size_t i = 0; i < m_materials.size(); ++i) {
+            if (bufferInfo.materials[i].size() == 0) { continue; }
+            m_bufferMemGroup.AddDataToBufferInGroup(m_bufferIndex, m_materialBuffersOffset[i], bufferInfo.materials[i]);
+        }
+
+        TransferMemGroup();
+        // for (std::size_t iType = 0; iType < m_materials.size(); ++iType) {
+        //     for (std::size_t i = 0; i < m_materials[iType].size(); ++i) {
+        //         for (std::size_t iTex = 0; iTex < m_materials[iType][i].m_materialInfo; ++iTex) {
+        //             m_textures[] = &m_materials[iType][i].m_textures[iTex]->GetTexture();
+        //         }
+        //     }
+        //     // if (m_materials[i].m_diffuseTexture) {
+        //     //     m_diffuseTextures[m_materialInfos[i].diffuseTextureIndex] =
+        //     //         &m_materials[i].m_diffuseTexture->GetTexture();
+        //     // }
+        //     // if (m_materials[i].m_bumpMap) {
+        //     //     m_bumpMaps[m_materialInfos[i].bumpTextureIndex] = &m_materials[i].m_bumpMap->GetTexture();
+        //     // }
+        // }
+
+        for (std::size_t i_mesh = 0; i_mesh < m_meshGeometryInfos.size(); ++i_mesh) {
+            const auto& meshInfo = m_meshGeometryInfos[i_mesh];
+            AddMeshNodeGeometry(meshInfo, meshInfo.mesh->GetRootNode(), meshInfo.transform);
+        }
     }
 
     void AccelerationStructureGeometry::BuildAccelerationStructure()
@@ -203,8 +259,7 @@ namespace vkfw_core::gfx::rt {
     void AccelerationStructureGeometry::AddDescriptorLayoutBindingBuffers(
         DescriptorSetLayout& layout, vk::ShaderStageFlags shaderFlags, std::uint32_t bindingVBO,
         std::uint32_t bindingIBO, std::uint32_t bindingInstanceBuffer, std::uint32_t bindingMaterialBuffer,
-        std::uint32_t bindingDiffuseTexture,
-        std::uint32_t bindingBumpTexture)
+        std::uint32_t bindingTextures)
     {
         layout.AddBinding(bindingVBO, vk::DescriptorType::eStorageBuffer,
                           static_cast<std::uint32_t>(m_triangleGeometryInfos.size() + m_meshGeometryInfos.size()),
@@ -214,10 +269,8 @@ namespace vkfw_core::gfx::rt {
                           shaderFlags);
         layout.AddBinding(bindingInstanceBuffer, vk::DescriptorType::eStorageBuffer, 1, shaderFlags);
         layout.AddBinding(bindingMaterialBuffer, vk::DescriptorType::eStorageBuffer, 1, shaderFlags);
-        layout.AddBinding(bindingDiffuseTexture, vk::DescriptorType::eCombinedImageSampler,
-                          static_cast<std::uint32_t>(m_diffuseTextures.size()), shaderFlags);
-        layout.AddBinding(bindingBumpTexture, vk::DescriptorType::eCombinedImageSampler,
-                          static_cast<std::uint32_t>(m_bumpMaps.size()), shaderFlags);
+        layout.AddBinding(bindingTextures, vk::DescriptorType::eCombinedImageSampler,
+                          static_cast<std::uint32_t>(m_textures.size()), shaderFlags);
     }
 
     vk::AccelerationStructureKHR AccelerationStructureGeometry::GetTopLevelAccelerationStructure(
@@ -254,31 +307,19 @@ namespace vkfw_core::gfx::rt {
         instanceBuffer.m_range = m_instanceBufferRange;
     }
 
-    void AccelerationStructureGeometry::FillMaterialInfo(BufferRange& materialBuffer,
-                                                         std::vector<Texture*>& diffuseTextures,
-                                                         std::vector<Texture*>& bumpMaps)
+    void AccelerationStructureGeometry::FillTextureInfo(std::vector<Texture*>& textures)
     {
-        materialBuffer.m_buffer = m_bufferMemGroup.GetBuffer(m_bufferIndex);
-        materialBuffer.m_offset = m_materialBufferOffset;
-        materialBuffer.m_range = m_materialBufferRange;
-
-        for (auto tex : m_diffuseTextures) { diffuseTextures.emplace_back(tex); }
-
-        for (auto tex : m_bumpMaps) { bumpMaps.emplace_back(tex); }
+        for (auto tex : m_textures) { textures.emplace_back(tex); }
     }
 
-    void AccelerationStructureGeometry::CreateResourceUseBarriers(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStage, vk::ImageLayout newLayout, PipelineBarrier& barrier)
+    void AccelerationStructureGeometry::CreateResourceUseBarriers(vk::AccessFlags2KHR access,
+                                                                  vk::PipelineStageFlags2KHR pipelineStage,
+                                                                  vk::ImageLayout newLayout, PipelineBarrier& barrier)
     {
         // TODO: buffer barriers.
 
-        for (auto& mat : m_materials) {
-            if (mat.m_diffuseTexture) {
-                mat.m_diffuseTexture->GetTexture().AccessBarrier(access, pipelineStage, newLayout, barrier);
-            }
-
-            if (mat.m_bumpMap) {
-                mat.m_bumpMap->GetTexture().AccessBarrier(access, pipelineStage, newLayout, barrier);
-            }
+        for (auto& matType : m_materials) {
+            for (auto& mat : matType) { mat.CreateResourceUseBarriers(access, pipelineStage, newLayout, barrier); }
         }
     }
 

@@ -11,17 +11,11 @@ struct InstanceDesc
 {
     uint vertexSize;
     uint bufferIndex;
-    uint materialIndex;
+    uint materialType;
+    uint materialIndexx;
     uint indexOffset;
     mat4 transform;
     mat4 transformInverseTranspose;
-};
-
-struct MaterialDesc
-{
-    uint diffuseTextureIndex;
-    uint bumpTextureIndex;
-    vec4 diffuseColor;
 };
 
 END_INTERFACE()

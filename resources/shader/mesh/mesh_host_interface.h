@@ -1,7 +1,7 @@
 #ifndef MESH_HOST_INTERFACE
 #define MESH_HOST_INTERFACE
 
-#include "shader_interface.h"
+#include "../shader_interface.h"
 
 BEGIN_INTERFACE(mesh)
 

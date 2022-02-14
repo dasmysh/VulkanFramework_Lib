@@ -27,6 +27,16 @@ namespace vkfw_core {
     };
 
     template<typename T>
+    concept Material = requires(const T a, std::span<std::uint8_t>& b, std::uint32_t c)
+    {
+        T::MATERIAL_ID;
+        { T::MATERIAL_ID } -> std::convertible_to<std::uint32_t>;
+        T::GetGPUSize();
+        { T::GetGPUSize() } -> std::convertible_to<std::size_t>;
+        T::FillGPUInfo(a, b, c);
+    };
+
+    template<typename T>
     concept VulkanObject = requires
     {
         T::CType;
