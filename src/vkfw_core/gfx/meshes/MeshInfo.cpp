@@ -34,12 +34,12 @@ namespace vkfw_core::gfx {
         m_inverseBindPoseMatrices(rhs.m_inverseBindPoseMatrices),
         m_boneParent(rhs.m_boneParent),
         m_indices(rhs.m_indices),
-        m_materials(rhs.m_materials),
         m_animations(rhs.m_animations),
         m_rootNode(std::make_unique<SceneMeshNode>(*rhs.m_rootNode)),
         m_globalInverse(rhs.m_globalInverse),
         m_boneBoundingBoxes(rhs.m_boneBoundingBoxes)
     {
+        for (const auto& material : rhs.m_materials) { m_materials.emplace_back(material->copy()); }
         for (const auto& submesh : rhs.m_subMeshes) {
             m_subMeshes.emplace_back(submesh);
         }
@@ -108,30 +108,6 @@ namespace vkfw_core::gfx {
 
     /** Default destructor. */
     MeshInfo::~MeshInfo() = default;
-
-    /**
-     *  Reserves memory to create the mesh.
-     *  @param maxUVChannels the maximum number of texture coordinates in a single sub-mesh vertex.
-     *  @param maxColorChannels the maximum number of colors in a single sub-mesh vertex.
-     *  @param numVertices the number of vertices in the mesh.
-     *  @param numIndices the number of indices in the mesh.
-     */
-    void MeshInfo::ReserveMesh(unsigned int maxUVChannels, unsigned int maxColorChannels, bool hasTangentSpace,
-        unsigned int numVertices, unsigned int numIndices, unsigned int numMaterials)
-    {
-        m_vertices.resize(numVertices);
-        m_normals.resize(numVertices);
-        m_texCoords.resize(maxUVChannels);
-        for (auto& texCoords : m_texCoords) { texCoords.resize(numVertices); }
-        if (hasTangentSpace) {
-            m_tangents.resize(numVertices);
-            m_binormals.resize(numVertices);
-        }
-        m_colors.resize(maxColorChannels);
-        for (auto& colors : m_colors) { colors.resize(numVertices); }
-        m_indices.resize(numIndices);
-        m_materials.resize(numMaterials);
-    }
 
     void MeshInfo::AddSubMesh(const std::string& name, unsigned int idxOffset, unsigned int numIndices, unsigned int materialID)
     {

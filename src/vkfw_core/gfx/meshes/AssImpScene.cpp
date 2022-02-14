@@ -42,6 +42,8 @@ namespace vkfw_core::gfx {
         if (!loadBinary(filename)) {
             createNewMesh(filename, flags);
             saveBinary(filename);
+        } else {
+            saveBinary(filename);
         }
 
         FlattenHierarchies();
@@ -124,17 +126,16 @@ namespace vkfw_core::gfx {
 
         std::filesystem::path sceneFilePath{ m_meshFilename };
 
-        ReserveMesh(maxUVChannels, maxColorChannels, hasTangentSpace, numVertices, numIndices, scene->mNumMaterials);
+        ReserveMesh<PhongBumpMaterialInfo>(maxUVChannels, maxColorChannels, hasTangentSpace, numVertices, numIndices, scene->mNumMaterials);
         auto numMaterials = static_cast<std::size_t>(scene->mNumMaterials);
         for (std::size_t i = 0; i < numMaterials; ++i) {
             auto material = scene->mMaterials[i]; // NOLINT
-            auto mat = GetMaterial(i);
+            auto mat = static_cast<PhongBumpMaterialInfo*>(GetMaterial(i));
             mat->m_ambient = GetMaterialColor(material, AI_MATKEY_COLOR_AMBIENT);
             mat->m_diffuse = GetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE);
             mat->m_specular = GetMaterialColor(material, AI_MATKEY_COLOR_SPECULAR);
             material->Get(AI_MATKEY_OPACITY, mat->m_alpha);
             material->Get(AI_MATKEY_SHININESS, mat->m_specularExponent);
-            material->Get(AI_MATKEY_REFRACTI, mat->m_refraction);
             aiString materialName;
             aiString diffuseTexPath;
             aiString bumpTexPath;
@@ -143,18 +144,20 @@ namespace vkfw_core::gfx {
             }
 
             if (AI_SUCCESS == material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), diffuseTexPath)) {
-                mat->m_diffuseTextureFilename = sceneFilePath.parent_path().string() + "/" + diffuseTexPath.C_Str();
+                mat->m_textureFilenames.emplace_back(sceneFilePath.parent_path().string() + "/" + diffuseTexPath.C_Str());
             }
 
             if (AI_SUCCESS == material->Get(AI_MATKEY_TEXTURE(aiTextureType_HEIGHT, 0), bumpTexPath)) {
-                mat->m_bumpMapFilename = sceneFilePath.parent_path().string() + "/" + bumpTexPath.C_Str();
+                mat->m_textureFilenames.resize(1);
+                mat->m_textureFilenames.emplace_back(sceneFilePath.parent_path().string() + "/" + bumpTexPath.C_Str());
                 material->Get(AI_MATKEY_TEXBLEND(aiTextureType_HEIGHT, 0), mat->m_bumpMultiplier);
             } else if (AI_SUCCESS == material->Get(AI_MATKEY_TEXTURE(aiTextureType_NORMALS, 0), bumpTexPath)) {
-                mat->m_bumpMapFilename = sceneFilePath.parent_path().string() + "/" + bumpTexPath.C_Str();
+                mat->m_textureFilenames.resize(1);
+                mat->m_textureFilenames.emplace_back(sceneFilePath.parent_path().string() + "/" + bumpTexPath.C_Str());
                 material->Get(AI_MATKEY_TEXBLEND(aiTextureType_NORMALS, 0), mat->m_bumpMultiplier);
             }
 
-            if (material->GetTextureCount(aiTextureType_OPACITY) > 0) {
+            if (material->GetTextureCount(aiTextureType_OPACITY) > 0 || mat->m_alpha < 1.0f) {
                 mat->m_hasAlpha = true;
             }
         }

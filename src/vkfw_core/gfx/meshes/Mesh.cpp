@@ -103,7 +103,7 @@ namespace vkfw_core::gfx {
 
         m_materials.reserve(m_meshInfo->GetMaterials().size());
         for (const auto& mat : m_meshInfo->GetMaterials()) {
-            m_materials.emplace_back(&mat, m_device, *m_memoryGroup, queueFamilyIndices);
+            m_materials.emplace_back(mat.get(), m_device, *m_memoryGroup, queueFamilyIndices);
         }
     }
 
@@ -137,8 +137,8 @@ namespace vkfw_core::gfx {
                 m_materialDescriptorSets[i].InitializeWrites(m_device, m_materialDescriptorSetLayout);
 
                 std::array<Texture*, 1> diffuseTexture = {nullptr};
-                if (m_materials[i].m_diffuseTexture) {
-                    diffuseTexture[0] = &m_materials[i].m_diffuseTexture->GetTexture();
+                if (m_materials[i].m_textures.size() >= 1 && m_materials[i].m_textures[0]) {
+                    diffuseTexture[0] = &m_materials[i].m_textures[0]->GetTexture();
                 } else {
                     diffuseTexture[0] = &m_device->GetDummyTexture()->GetTexture();
                 }
@@ -147,8 +147,8 @@ namespace vkfw_core::gfx {
                                                                  vk::ImageLayout::eShaderReadOnlyOptimal);
 
                 std::array<Texture*, 1> bumpMap = {nullptr};
-                if (m_materials[i].m_bumpMap) {
-                    bumpMap[0] = &m_materials[i].m_bumpMap->GetTexture();
+                if (m_materials[i].m_textures.size() >= 2 && m_materials[i].m_textures[1]) {
+                    bumpMap[0] = &m_materials[i].m_textures[1]->GetTexture();
                 } else {
                     bumpMap[0] = &m_device->GetDummyTexture()->GetTexture();
                 }
@@ -295,7 +295,7 @@ namespace vkfw_core::gfx {
 
         // bind material.
         const auto mat = m_meshInfo->GetMaterial(subMesh.GetMaterialID());
-        auto hasTransparency = (mat->m_alpha < 1.0f) || mat->m_hasAlpha;
+        auto hasTransparency = mat->m_hasAlpha;
 
         auto& matDescSet = m_materialDescriptorSets[subMesh.GetMaterialID()];
         RenderElement::DescSetBinding materialBinding{&matDescSet, 1};

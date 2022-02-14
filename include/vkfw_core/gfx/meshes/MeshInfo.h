@@ -14,7 +14,8 @@
 #include "SubMesh.h"
 #include "SceneMeshNode.h"
 #include "gfx/Material.h"
-#include <core/serialization_helper.h>
+#include "core/serialization_helper.h"
+#include "core/concepts.h"
 #include <cereal/cereal.hpp>
 
 struct aiNode;
@@ -84,8 +85,8 @@ namespace vkfw_core::gfx {
         /** Returns the global inverse matrix of the mesh. */
         [[nodiscard]] glm::mat4 GetGlobalInverse() const { return m_globalInverse; }
 
-        [[nodiscard]] const std::vector<MaterialInfo*>& GetMaterials() const { return m_materials; }
-        [[nodiscard]] const MaterialInfo* GetMaterial(unsigned int id) const { return m_materials[id]; }
+        [[nodiscard]] const std::vector<std::unique_ptr<MaterialInfo>>& GetMaterials() const { return m_materials; }
+        [[nodiscard]] const MaterialInfo* GetMaterial(unsigned int id) const { return m_materials[id].get(); }
 
         template<class VertexType>
         void GetVertices(std::vector<VertexType>& vertices) const;
@@ -108,9 +109,11 @@ namespace vkfw_core::gfx {
         /** Returns the AABB for all bones. */
         std::vector<math::AABB3<float>>& GetBoneBoundingBoxes() noexcept { return m_boneBoundingBoxes; }
 
+        template<vkfw_core::Material MaterialType>
         void ReserveMesh(unsigned int maxUVChannels, unsigned int maxColorChannels, bool hasTangentSpace,
-            unsigned int numVertices, unsigned int numIndices, unsigned int numMaterials);
-        MaterialInfo* GetMaterial(std::size_t id) { return m_materials[id]; }
+                         unsigned int numVertices, unsigned int numIndices, unsigned int numMaterials);
+
+        MaterialInfo* GetMaterial(std::size_t id) { return m_materials[id].get(); }
         void AddSubMesh(const std::string& name, unsigned int idxOffset, unsigned int numIndices, unsigned int materialID);
         // void CreateIndexBuffer();
 
@@ -147,26 +150,19 @@ namespace vkfw_core::gfx {
                 cereal::make_nvp("boneBoundingBoxes", m_boneBoundingBoxes));
         }
 
-        template<class Archive> void load(Archive& ar, const std::uint32_t) // NOLINT
+        template<class Archive> void load(Archive& ar, [[maybe_unused]] const std::uint32_t version) // NOLINT
         {
-            ar(cereal::make_nvp("vertices", m_vertices),
-                cereal::make_nvp("normals", m_normals),
-                cereal::make_nvp("texCoords", m_texCoords),
-                cereal::make_nvp("tangents", m_tangents),
-                cereal::make_nvp("binormals", m_binormals),
-                cereal::make_nvp("colors", m_colors),
-                cereal::make_nvp("boneOffsetMatrixIndices", m_boneOffsetMatrixIndices),
-                cereal::make_nvp("boneWeigths", m_boneWeights),
-                cereal::make_nvp("indexVectors", m_indexVectors),
-                cereal::make_nvp("inverseBindPoseMatrices", m_inverseBindPoseMatrices),
-                cereal::make_nvp("boneParents", m_boneParent),
-                cereal::make_nvp("indices", m_indices),
-                cereal::make_nvp("materials", m_materials),
-                cereal::make_nvp("subMeshes", m_subMeshes),
-                cereal::make_nvp("animations", m_animations),
-                cereal::make_nvp("rootNode", m_rootNode),
-                cereal::make_nvp("globalInverse", m_globalInverse),
-                cereal::make_nvp("boneBoundingBoxes", m_boneBoundingBoxes));
+            ar(cereal::make_nvp("vertices", m_vertices), cereal::make_nvp("normals", m_normals),
+               cereal::make_nvp("texCoords", m_texCoords), cereal::make_nvp("tangents", m_tangents),
+               cereal::make_nvp("binormals", m_binormals), cereal::make_nvp("colors", m_colors),
+               cereal::make_nvp("boneOffsetMatrixIndices", m_boneOffsetMatrixIndices),
+               cereal::make_nvp("boneWeigths", m_boneWeights), cereal::make_nvp("indexVectors", m_indexVectors),
+               cereal::make_nvp("inverseBindPoseMatrices", m_inverseBindPoseMatrices),
+               cereal::make_nvp("boneParents", m_boneParent), cereal::make_nvp("indices", m_indices),
+               cereal::make_nvp("materials", m_materials), cereal::make_nvp("subMeshes", m_subMeshes),
+               cereal::make_nvp("animations", m_animations), cereal::make_nvp("rootNode", m_rootNode),
+               cereal::make_nvp("globalInverse", m_globalInverse),
+               cereal::make_nvp("boneBoundingBoxes", m_boneBoundingBoxes));
             m_rootNode->FlattenNodeTree(m_nodes);
         }
 
@@ -198,7 +194,7 @@ namespace vkfw_core::gfx {
         std::vector<std::uint32_t> m_indices;
 
         /** The meshes materials. */
-        std::vector<MaterialInfo*> m_materials;
+        std::vector<std::unique_ptr<MaterialInfo>> m_materials;
         /** Holds all the meshes sub-meshes. */
         std::vector<SubMesh> m_subMeshes;
         /** Holds all the meshes nodes. */
@@ -221,7 +217,33 @@ namespace vkfw_core::gfx {
         vertices.reserve(m_vertices.size());
         for (std::size_t i = 0; i < m_vertices.size(); ++i) vertices.emplace_back(this, i);
     }
+
+    /**
+     *  Reserves memory to create the mesh.
+     *  @param maxUVChannels the maximum number of texture coordinates in a single sub-mesh vertex.
+     *  @param maxColorChannels the maximum number of colors in a single sub-mesh vertex.
+     *  @param numVertices the number of vertices in the mesh.
+     *  @param numIndices the number of indices in the mesh.
+     */
+    template<vkfw_core::Material MaterialType>
+    inline void MeshInfo::ReserveMesh(unsigned int maxUVChannels, unsigned int maxColorChannels, bool hasTangentSpace,
+                                      unsigned int numVertices, unsigned int numIndices, unsigned int numMaterials)
+    {
+        m_vertices.resize(numVertices);
+        m_normals.resize(numVertices);
+        m_texCoords.resize(maxUVChannels);
+        for (auto& texCoords : m_texCoords) { texCoords.resize(numVertices); }
+        if (hasTangentSpace) {
+            m_tangents.resize(numVertices);
+            m_binormals.resize(numVertices);
+        }
+        m_colors.resize(maxColorChannels);
+        for (auto& colors : m_colors) { colors.resize(numVertices); }
+        m_indices.resize(numIndices);
+        m_materials.resize(numMaterials);
+        for (auto& material : m_materials) { material = std::make_unique<MaterialType>(); }
+    }
 }
 
 // NOLINTNEXTLINE
-CEREAL_CLASS_VERSION(vkfw_core::gfx::MeshInfo, 3)
+CEREAL_CLASS_VERSION(vkfw_core::gfx::MeshInfo, 4)

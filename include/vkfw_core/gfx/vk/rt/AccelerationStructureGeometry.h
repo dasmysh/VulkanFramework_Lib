@@ -182,7 +182,7 @@ namespace vkfw_core::gfx::rt {
             bufferInfo.geometryBufferSize = meshInfo.iboOffset + meshInfo.iboRange;
 
             std::vector<std::pair<std::uint32_t, std::uint32_t>> materialMapping;
-            for (const auto mat : meshInfo.mesh->GetMaterials()) { materialMapping.emplace_back(AddMaterial(*mat)); }
+            for (const auto& mat : meshInfo.mesh->GetMaterials()) { materialMapping.emplace_back(AddMaterial(*mat)); }
             AddMeshNodeInstance(meshInfo, meshInfo.mesh->GetRootNode(), meshInfo.transform, materialMapping);
         }
         m_instanceBufferRange = byteSizeOf(m_instanceInfos);

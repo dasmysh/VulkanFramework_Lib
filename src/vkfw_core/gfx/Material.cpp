@@ -10,7 +10,6 @@
 #include "gfx/Texture2D.h"
 #include "gfx/vk/LogicalDevice.h"
 #include "gfx/vk/textures/DeviceTexture.h"
-#include "materials/material_host_interface.h"
 
 namespace vkfw_core::gfx {
 

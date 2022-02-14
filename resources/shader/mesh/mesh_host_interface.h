@@ -8,7 +8,7 @@ BEGIN_INTERFACE(mesh)
 BEGIN_UNIFORM_BLOCK(set = 0, binding = 0, WorldUniformBufferObject)
 mat4 model;
 mat4 normalMatrix;
-END_UNIFORM_BLOCK(world_ubo)
+END_UNIFORM_NAMED_BLOCK(world_ubo)
 
 END_INTERFACE()
 

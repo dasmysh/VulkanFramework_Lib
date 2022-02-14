@@ -29,7 +29,8 @@ namespace shader_types {
 #define END_CONSTANTS() };
 
 #define BEGIN_UNIFORM_BLOCK(set_id, binding_id, block_name) struct block_name {
-#define END_UNIFORM_BLOCK(var_name) };
+#define END_UNIFORM_NAMED_BLOCK(var_name) };
+#define END_UNIFORM_BLOCK() };
 
 #define BEGIN_INPUT_BLOCK(struct_name) struct struct_name {
 #define INPUT_ELEMENT(location_id)
@@ -46,7 +47,8 @@ namespace shader_types {
 #define END_CONSTANTS() ;
 
 #define BEGIN_UNIFORM_BLOCK(set, binding, block_name) layout(set, binding) uniform block_name {
-#define END_UNIFORM_BLOCK(var_name) } var_name;
+#define END_UNIFORM_NAMED_BLOCK(var_name) } var_name;
+#define END_UNIFORM_BLOCK() };
 
 #define BEGIN_INPUT_BLOCK(struct_name)
 #define INPUT_ELEMENT(location_id) layout(location = location_id) in

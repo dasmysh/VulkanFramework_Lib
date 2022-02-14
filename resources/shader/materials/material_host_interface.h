@@ -5,6 +5,18 @@
 
 BEGIN_INTERFACE(materials)
 
+BEGIN_CONSTANTS(MaterialIdentifierCore)
+    NoMaterialType = 0,
+    PhongMaterialType = 1,
+    PhongBumpMaterialType = 2,
+    ApplicationMaterialsStart = 3
+END_CONSTANTS()
+
+struct NoMaterial
+{
+    int dummy;
+};
+
 struct PhongMaterial
 {
     vec3 ambient;
