@@ -57,7 +57,7 @@ namespace vkfw_core::gfx {
 
         NoMaterialInfo() : MaterialInfo("NoMaterial", MATERIAL_ID) {}
 
-        static std::size_t GetGPUSize() { return 0; }
+        static std::size_t GetGPUSize();
         static void FillGPUInfo(const NoMaterialInfo& info, std::span<std::uint8_t>& gpuInfo,
                                 std::uint32_t firstTextureIndex);
         std::unique_ptr<MaterialInfo> copy() override;

@@ -13,6 +13,17 @@
 
 namespace vkfw_core::gfx {
 
+    inline std::size_t NoMaterialInfo::GetGPUSize() { return sizeof(materials::NoMaterial); }
+
+    void NoMaterialInfo::FillGPUInfo([[maybe_unused]] const NoMaterialInfo& info, std::span<std::uint8_t>& gpuInfo,
+                                     [[maybe_unused]] std::uint32_t firstTextureIndex)
+    {
+        auto mat = reinterpret_cast<materials::NoMaterial*>(gpuInfo.data());
+        mat->dummy = 0xDEADBEEF;
+    }
+
+    std::unique_ptr<MaterialInfo> NoMaterialInfo::copy() { return std::make_unique<NoMaterialInfo>(*this); }
+
     std::size_t PhongMaterialInfo::GetGPUSize() { return sizeof(materials::PhongMaterial); }
 
     void PhongMaterialInfo::FillGPUInfo(const PhongMaterialInfo& info, std::span<std::uint8_t>& gpuInfo,
@@ -26,6 +37,8 @@ namespace vkfw_core::gfx {
         mat->specularExponent = info.m_specularExponent;
         mat->diffuseTextureIndex = firstTextureIndex;
     }
+
+    std::unique_ptr<MaterialInfo> PhongMaterialInfo::copy() { return std::make_unique<PhongMaterialInfo>(*this); }
 
     std::size_t PhongBumpMaterialInfo::GetGPUSize() { return sizeof(materials::PhongBumpMaterial); }
 
@@ -41,6 +54,11 @@ namespace vkfw_core::gfx {
         mat->bumpMultiplier = info.m_bumpMultiplier;
         mat->diffuseTextureIndex = firstTextureIndex;
         mat->bumpTextureIndex = firstTextureIndex + 1;
+    }
+
+    std::unique_ptr<MaterialInfo> PhongBumpMaterialInfo::copy()
+    {
+        return std::make_unique<PhongBumpMaterialInfo>(*this);
     }
 
     Material::Material() :
