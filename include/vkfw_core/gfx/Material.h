@@ -10,7 +10,9 @@
 
 #include "main.h"
 #include "materials/material_host_interface.h"
+#include "core/serialization_helper.h"
 
+#include <cereal/types/polymorphic.hpp>
 #include <glm/vec3.hpp>
 
 namespace vkfw_core::gfx {
@@ -42,7 +44,7 @@ namespace vkfw_core::gfx {
         const std::string& GetTextureFilename(std::size_t textureIndex) const { return m_textureFilenames[textureIndex]; }
         virtual std::unique_ptr<MaterialInfo> copy() = 0;
 
-        template<class Archive> void serialize(Archive& ar, const std::uint32_t version) // NOLINT
+        template<class Archive> void serialize(Archive& ar, [[maybe_unused]] const std::uint32_t version) // NOLINT
         {
             ar(cereal::make_nvp("materialName", m_materialName), cereal::make_nvp("hasAlpha", m_hasAlpha),
                cereal::make_nvp("materialIdentifier", m_materialIdentifier),
@@ -151,6 +153,10 @@ namespace vkfw_core::gfx {
 
 // NOLINTNEXTLINE
 CEREAL_CLASS_VERSION(vkfw_core::gfx::MaterialInfo, 3)
+CEREAL_REGISTER_TYPE_WITH_NAME(vkfw_core::gfx::MaterialInfo, "MaterialInfo")
 CEREAL_CLASS_VERSION(vkfw_core::gfx::NoMaterialInfo, 1)
+CEREAL_REGISTER_TYPE_WITH_NAME(vkfw_core::gfx::NoMaterialInfo, "NoMaterialInfo")
 CEREAL_CLASS_VERSION(vkfw_core::gfx::PhongMaterialInfo, 1)
+CEREAL_REGISTER_TYPE_WITH_NAME(vkfw_core::gfx::PhongMaterialInfo, "PhongMaterialInfo")
 CEREAL_CLASS_VERSION(vkfw_core::gfx::PhongBumpMaterialInfo, 1)
+CEREAL_REGISTER_TYPE_WITH_NAME(vkfw_core::gfx::PhongBumpMaterialInfo, "PhongBumpMaterialInfo")

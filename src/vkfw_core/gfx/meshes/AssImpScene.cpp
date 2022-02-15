@@ -42,8 +42,6 @@ namespace vkfw_core::gfx {
         if (!loadBinary(filename)) {
             createNewMesh(filename, flags);
             saveBinary(filename);
-        } else {
-            saveBinary(filename);
         }
 
         FlattenHierarchies();
