@@ -258,7 +258,7 @@ namespace vkfw_core::gfx::rt {
 
     void AccelerationStructureGeometry::AddDescriptorLayoutBindingBuffers(
         DescriptorSetLayout& layout, vk::ShaderStageFlags shaderFlags, std::uint32_t bindingVBO,
-        std::uint32_t bindingIBO, std::uint32_t bindingInstanceBuffer, std::uint32_t bindingMaterialBuffer,
+        std::uint32_t bindingIBO, std::uint32_t bindingInstanceBuffer,
         std::uint32_t bindingTextures)
     {
         layout.AddBinding(bindingVBO, vk::DescriptorType::eStorageBuffer,
@@ -268,7 +268,6 @@ namespace vkfw_core::gfx::rt {
                           static_cast<std::uint32_t>(m_triangleGeometryInfos.size() + m_meshGeometryInfos.size()),
                           shaderFlags);
         layout.AddBinding(bindingInstanceBuffer, vk::DescriptorType::eStorageBuffer, 1, shaderFlags);
-        layout.AddBinding(bindingMaterialBuffer, vk::DescriptorType::eStorageBuffer, 1, shaderFlags);
         layout.AddBinding(bindingTextures, vk::DescriptorType::eCombinedImageSampler,
                           static_cast<std::uint32_t>(m_textures.size()), shaderFlags);
     }

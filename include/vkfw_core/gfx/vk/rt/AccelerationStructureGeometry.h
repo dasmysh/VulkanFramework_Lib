@@ -68,8 +68,7 @@ namespace vkfw_core::gfx::rt {
                                           std::uint32_t bindingAS);
         void AddDescriptorLayoutBindingBuffers(DescriptorSetLayout& layout, vk::ShaderStageFlags shaderFlags,
                                                std::uint32_t bindingVBO, std::uint32_t bindingIBO,
-                                               std::uint32_t bindingInstanceBuffer, std::uint32_t bindingMaterialBuffer,
-                                               std::uint32_t bindingTextures);
+                                               std::uint32_t bindingInstanceBuffer, std::uint32_t bindingTextures);
         [[nodiscard]] vk::AccelerationStructureKHR
         GetTopLevelAccelerationStructure(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
                                          PipelineBarrier& barrier) const;

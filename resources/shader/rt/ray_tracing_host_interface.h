@@ -12,7 +12,7 @@ struct InstanceDesc
     uint vertexSize;
     uint bufferIndex;
     uint materialType;
-    uint materialIndexx;
+    uint materialIndex;
     uint indexOffset;
     mat4 transform;
     mat4 transformInverseTranspose;
