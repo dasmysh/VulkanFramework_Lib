@@ -64,24 +64,29 @@ namespace vkfw_core::gfx::rt {
     }
 
     void AccelerationStructureGeometry::AddMeshNodeGeometry(const MeshGeometryInfo& mesh, const SceneMeshNode* node,
-                                                            const glm::mat4& transform)
+                                                            const glm::mat4& transform,
+                                                            const std::vector<std::uint32_t>& materialSBTMapping)
     {
         if (!node->HasMeshes()) { return; }
 
         auto localTransform = transform * node->GetLocalTransform();
         for (unsigned int i = 0; i < node->GetNumberOfSubMeshes(); ++i) {
-            AddSubMeshGeometry(mesh, mesh.mesh->GetSubMeshes()[node->GetSubMeshID(i)], localTransform);
+            AddSubMeshGeometry(mesh, mesh.mesh->GetSubMeshes()[node->GetSubMeshID(i)], localTransform,
+                               materialSBTMapping);
         }
         for (unsigned int i = 0; i < node->GetNumberOfNodes(); ++i) {
-            AddMeshNodeGeometry(mesh, node->GetChild(i), localTransform);
+            AddMeshNodeGeometry(mesh, node->GetChild(i), localTransform, materialSBTMapping);
         }
     }
 
     void AccelerationStructureGeometry::AddSubMeshGeometry(const MeshGeometryInfo& mesh, const SubMesh& subMesh,
-                                                           const glm::mat4& transform)
+                                                           const glm::mat4& transform,
+                                                           const std::vector<std::uint32_t>& materialSBTMapping)
     {
-        auto blasIndex =
-            AddBottomLevelAccelerationStructure(static_cast<std::uint32_t>(mesh.index), glm::transpose(transform));
+        auto sbtInstanceOffset =
+            materialSBTMapping[mesh.mesh->GetMaterial(subMesh.GetMaterialID())->m_materialIdentifier];
+        auto blasIndex = AddBottomLevelAccelerationStructure(static_cast<std::uint32_t>(mesh.index), sbtInstanceOffset,
+                                                             glm::transpose(transform));
 
         vk::DeviceOrHostAddressConstKHR bufferDeviceAddress =
             m_bufferMemGroup.GetBuffer(m_bufferIndex)
@@ -121,12 +126,14 @@ namespace vkfw_core::gfx::rt {
     }
 
     void AccelerationStructureGeometry::AddTriangleGeometry(
-        const glm::mat4& transform, const MaterialInfo& materialInfo, std::size_t primitiveCount,
+        const glm::mat4& transform, const MaterialInfo& materialInfo,
+        const std::vector<std::uint32_t>& materialSBTMapping, std::size_t primitiveCount,
         std::size_t vertexCount, std::size_t vertexSize, DeviceBuffer* vbo, std::size_t vboOffset /* = 0*/,
         DeviceBuffer* ibo /*= nullptr*/, std::size_t iboOffset /*= 0*/)
     {
+        auto sbtInstanceOffset = materialSBTMapping[materialInfo.m_materialIdentifier];
         auto blasIndex =
-            AddBottomLevelAccelerationStructure(static_cast<std::uint32_t>(m_geometryIndex), glm::transpose(transform));
+            AddBottomLevelAccelerationStructure(static_cast<std::uint32_t>(m_geometryIndex), sbtInstanceOffset, glm::transpose(transform));
 
         vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress =
             vbo->GetDeviceAddressConst(vk::AccessFlagBits2KHR::eAccelerationStructureRead,
@@ -158,7 +165,8 @@ namespace vkfw_core::gfx::rt {
                                              ibo ? ibo : vbo, iboOffset, primitiveCount * 3 * sizeof(std::uint32_t));
     }
 
-    void AccelerationStructureGeometry::FinalizeBuffer(const AccelerationStructureBufferInfo& bufferInfo)
+    void AccelerationStructureGeometry::FinalizeBuffer(const AccelerationStructureBufferInfo& bufferInfo,
+                                                       const std::vector<std::uint32_t>& materialSBTMapping)
     {
         std::size_t totalBufferSize = bufferInfo.geometryBufferSize;
         for (std::size_t i = 0; i < m_materials.size(); ++i) {
@@ -203,7 +211,7 @@ namespace vkfw_core::gfx::rt {
 
         for (std::size_t i_mesh = 0; i_mesh < m_meshGeometryInfos.size(); ++i_mesh) {
             const auto& meshInfo = m_meshGeometryInfos[i_mesh];
-            AddMeshNodeGeometry(meshInfo, meshInfo.mesh->GetRootNode(), meshInfo.transform);
+            AddMeshNodeGeometry(meshInfo, meshInfo.mesh->GetRootNode(), meshInfo.transform, materialSBTMapping);
         }
     }
 
@@ -221,7 +229,7 @@ namespace vkfw_core::gfx::rt {
                 vk::TransformMatrixKHR{},
                 m_bufferIndices[i],
                 0xFF,
-                0,
+                m_sbtInstanceOffsets[i],
                 vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable,
                 m_BLAS[i].GetAddressHandle(vk::AccessFlagBits2KHR::eAccelerationStructureRead,
                                            vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild, barrier)};
@@ -239,6 +247,7 @@ namespace vkfw_core::gfx::rt {
     }
 
     std::size_t AccelerationStructureGeometry::AddBottomLevelAccelerationStructure(std::uint32_t bufferIndex,
+                                                                                   std::uint32_t sbtInstanceOffset,
                                                                                    const glm::mat3x4& transform)
     {
         auto blasIndex = m_BLAS.size();
@@ -246,6 +255,7 @@ namespace vkfw_core::gfx::rt {
                             vk::BuildAccelerationStructureFlagBitsKHR::ePreferFastTrace);
         m_BLASTransforms.emplace_back(transform);
         m_bufferIndices.push_back(bufferIndex);
+        m_sbtInstanceOffsets.push_back(sbtInstanceOffset);
         return blasIndex;
     }
 

@@ -43,9 +43,9 @@ namespace vkfw_core::gfx::rt {
         ~AccelerationStructureGeometry();
 
         void AddTriangleGeometry(const glm::mat4& transform, const MaterialInfo& materialInfo,
-                                 std::size_t primitiveCount, std::size_t vertexCount, std::size_t vertexSize,
-                                 DeviceBuffer* vbo, std::size_t vboOffset = 0, DeviceBuffer* ibo = nullptr,
-                                 std::size_t iboOffset = 0);
+                                 const std::vector<std::uint32_t>& materialSBTMapping, std::size_t primitiveCount,
+                                 std::size_t vertexCount, std::size_t vertexSize, DeviceBuffer* vbo,
+                                 std::size_t vboOffset = 0, DeviceBuffer* ibo = nullptr, std::size_t iboOffset = 0);
 
         void AddMeshGeometry(const MeshInfo& mesh, const glm::mat4& transform);
 
@@ -60,7 +60,8 @@ namespace vkfw_core::gfx::rt {
 
         template<Vertex VertexType> void FinalizeGeometry(AccelerationStructureBufferInfo& bufferInfo);
         template<vkfw_core::Material MaterialType> void FinalizeMaterial(AccelerationStructureBufferInfo& bufferInfo);
-        void FinalizeBuffer(const AccelerationStructureBufferInfo& bufferInfo);
+        void FinalizeBuffer(const AccelerationStructureBufferInfo& bufferInfo,
+                            const std::vector<std::uint32_t>& materialSBTMapping);
 
         void BuildAccelerationStructure();
 
@@ -105,13 +106,16 @@ namespace vkfw_core::gfx::rt {
 
         void TransferMemGroup();
         [[nodiscard]] std::size_t AddBottomLevelAccelerationStructure(std::uint32_t bufferIndex,
+                                                                      std::uint32_t sbtInstanceOffset,
                                                                       const glm::mat3x4& transform);
         void AddInstanceInfo(std::uint32_t vertexSize, std::uint32_t bufferIndex, std::uint32_t materialType,
                              std::uint32_t materialIndex, const glm::mat4& transform, std::uint32_t indexOffset = 0);
         void AddMeshNodeInstance(const MeshGeometryInfo& mesh, const SceneMeshNode* node, const glm::mat4& transform,
                                  const std::vector<std::pair<std::uint32_t, std::uint32_t>>& materialMapping);
-        void AddMeshNodeGeometry(const MeshGeometryInfo& mesh, const SceneMeshNode* node, const glm::mat4& transform);
-        void AddSubMeshGeometry(const MeshGeometryInfo& mesh, const SubMesh& subMesh, const glm::mat4& transform);
+        void AddMeshNodeGeometry(const MeshGeometryInfo& mesh, const SceneMeshNode* node, const glm::mat4& transform,
+                                 const std::vector<std::uint32_t>& materialSBTMapping);
+        void AddSubMeshGeometry(const MeshGeometryInfo& mesh, const SubMesh& subMesh, const glm::mat4& transform,
+                                const std::vector<std::uint32_t>& materialSBTMapping);
 
         std::pair<std::uint32_t, std::uint32_t> AddMaterial(const MaterialInfo& materialInfo);
 
@@ -144,6 +148,8 @@ namespace vkfw_core::gfx::rt {
         /** Contains for each geometry index an index to a vbo/ibo pair. */
         std::vector<std::uint32_t> m_bufferIndices;
         std::uint32_t m_bufferIndex = MemoryGroup::INVALID_INDEX;
+        /** Contains for each geometry index a SBT offset */
+        std::vector<std::uint32_t> m_sbtInstanceOffsets;
         /** Contains further information about each instance like material indices. */
         std::vector<InstanceDesc> m_instanceInfos;
         /** The offset and range of the instances buffer. */

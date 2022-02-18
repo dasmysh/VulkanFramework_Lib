@@ -29,7 +29,7 @@ namespace vkfw_core::gfx {
     }
 
     RayTracingPipeline::RayTracingPipeline(const LogicalDevice* device, std::string_view name,
-                                           std::vector<std::shared_ptr<Shader>>&& shaders)
+                                           std::vector<RTShaderInfo>&& shaders)
         : VulkanObjectPrivateWrapper{device->GetHandle(), name, vk::UniquePipeline{}}
         , m_device{device}
         , m_shaders{shaders}
@@ -65,52 +65,107 @@ namespace vkfw_core::gfx {
         cmdBuffer.GetHandle().bindPipeline(vk::PipelineBindPoint::eRayTracingKHR, GetHandle());
     }
 
-    void RayTracingPipeline::ResetShaders(std::vector<std::shared_ptr<Shader>>&& shaders)
+    void RayTracingPipeline::ResetShaders(std::vector<RTShaderInfo>&& shaders)
     {
         m_shaders = std::move(shaders);
         m_shaderStages.resize(m_shaders.size());
-        for (std::size_t i = 0; i < m_shaders.size(); ++i) {
-            m_shaders[i]->FillShaderStageInfo(m_shaderStages[i]);
-            if (m_shaderStages[i].stage == vk::ShaderStageFlagBits::eRaygenKHR
-                || m_shaderStages[i].stage == vk::ShaderStageFlagBits::eMissKHR
-                || m_shaderStages[i].stage == vk::ShaderStageFlagBits::eCallableKHR)
-            {
-                m_shaderGroupIndexesByType[ShaderTypeToTypeGroupIndex(m_shaderStages[i].stage)].push_back(
-                    static_cast<std::uint32_t>(m_shaderGroups.size()));
-                AddShaderGroup(vk::RayTracingShaderGroupTypeKHR::eGeneral, static_cast<std::uint32_t>(i),
-                                            VK_SHADER_UNUSED_KHR, VK_SHADER_UNUSED_KHR, VK_SHADER_UNUSED_KHR);
-            } else if (m_shaderStages[i].stage == vk::ShaderStageFlagBits::eClosestHitKHR) {
-                if (!m_shaderGroups.empty() && m_shaderGroups.back().type != vk::RayTracingShaderGroupTypeKHR::eGeneral
-                    && m_shaderGroups.back().closestHitShader == VK_SHADER_UNUSED_KHR) {
-                    m_shaderGroups.back().closestHitShader = static_cast<std::uint32_t>(i);
-                } else {
-                    m_shaderGroupIndexesByType[ShaderTypeToTypeGroupIndex(m_shaderStages[i].stage)].push_back(
-                        static_cast<std::uint32_t>(m_shaderGroups.size()));
-                    AddShaderGroup(vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup, VK_SHADER_UNUSED_KHR,
-                                   static_cast<std::uint32_t>(i), VK_SHADER_UNUSED_KHR, VK_SHADER_UNUSED_KHR);
-                }
-            } else if (m_shaderStages[i].stage == vk::ShaderStageFlagBits::eAnyHitKHR) {
-                if (!m_shaderGroups.empty() && m_shaderGroups.back().type != vk::RayTracingShaderGroupTypeKHR::eGeneral
-                    && m_shaderGroups.back().anyHitShader == VK_SHADER_UNUSED_KHR) {
-                    m_shaderGroups.back().anyHitShader = static_cast<std::uint32_t>(i);
-                } else {
-                    m_shaderGroupIndexesByType[ShaderTypeToTypeGroupIndex(m_shaderStages[i].stage)].push_back(
-                        static_cast<std::uint32_t>(m_shaderGroups.size()));
-                    AddShaderGroup(vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup, VK_SHADER_UNUSED_KHR, VK_SHADER_UNUSED_KHR,
-                                   static_cast<std::uint32_t>(i), VK_SHADER_UNUSED_KHR);
-                }
-            } else if (m_shaderStages[i].stage == vk::ShaderStageFlagBits::eIntersectionKHR) {
-                if (!m_shaderGroups.empty() && m_shaderGroups.back().type != vk::RayTracingShaderGroupTypeKHR::eGeneral
-                    && m_shaderGroups.back().intersectionShader == VK_SHADER_UNUSED_KHR) {
-                    m_shaderGroups.back().intersectionShader = static_cast<std::uint32_t>(i);
-                    m_shaderGroups.back().type = vk::RayTracingShaderGroupTypeKHR::eProceduralHitGroup;
-                } else {
-                    m_shaderGroupIndexesByType[ShaderTypeToTypeGroupIndex(m_shaderStages[i].stage)].push_back(
-                        static_cast<std::uint32_t>(m_shaderGroups.size()));
-                    AddShaderGroup(vk::RayTracingShaderGroupTypeKHR::eProceduralHitGroup, VK_SHADER_UNUSED_KHR, VK_SHADER_UNUSED_KHR,
-                                   static_cast<std::uint32_t>(i), VK_SHADER_UNUSED_KHR);
-                }
+        m_shaderGroups.clear();
+
+        vk::RayTracingShaderGroupCreateInfoKHR rayGenShaderGroup{vk::RayTracingShaderGroupTypeKHR::eGeneral,
+                                                                 VK_SHADER_UNUSED_KHR, VK_SHADER_UNUSED_KHR,
+                                                                 VK_SHADER_UNUSED_KHR, VK_SHADER_UNUSED_KHR};
+        std::vector<vk::RayTracingShaderGroupCreateInfoKHR> missShaderGroups;
+        std::vector<vk::RayTracingShaderGroupCreateInfoKHR> hitShaderGroups;
+        std::vector<vk::RayTracingShaderGroupCreateInfoKHR> callableShaderGroups;
+
+        auto ensureGroupsSize = [](std::vector<vk::RayTracingShaderGroupCreateInfoKHR>& groups,
+                                   std::uint32_t shaderGroup, vk::RayTracingShaderGroupTypeKHR groupType) {
+            if (groups.size() <= shaderGroup) {
+                groups.resize(shaderGroup + 1, vk::RayTracingShaderGroupCreateInfoKHR{
+                                                   groupType, VK_SHADER_UNUSED_KHR, VK_SHADER_UNUSED_KHR,
+                                                   VK_SHADER_UNUSED_KHR, VK_SHADER_UNUSED_KHR});
             }
+        };
+
+        auto setGeneralShader = [](vk::RayTracingShaderGroupCreateInfoKHR& group, std::uint32_t groupShader,
+                                   std::string_view errorMessage) {
+            if (group.generalShader != VK_SHADER_UNUSED_KHR) {
+                spdlog::error(errorMessage);
+                throw std::runtime_error(errorMessage.data());
+            }
+            group.generalShader = groupShader;
+        };
+
+        for (std::size_t i = 0; i < m_shaders.size(); ++i) {
+            m_shaders[i].shader->FillShaderStageInfo(m_shaderStages[i]);
+            auto shaderStage = static_cast<std::uint32_t>(i);
+
+            if (m_shaderStages[i].stage == vk::ShaderStageFlagBits::eRaygenKHR) {
+                setGeneralShader(rayGenShaderGroup, shaderStage, "There can only be a single ray generation shader.");
+            }
+
+            if (m_shaderStages[i].stage == vk::ShaderStageFlagBits::eMissKHR) {
+                ensureGroupsSize(missShaderGroups, m_shaders[i].shaderGroup,
+                                 vk::RayTracingShaderGroupTypeKHR::eGeneral);
+                setGeneralShader(missShaderGroups[m_shaders[i].shaderGroup], shaderStage,
+                                 "Miss shader groups can not have more than one miss shader.");
+            }
+
+            if (m_shaderStages[i].stage == vk::ShaderStageFlagBits::eClosestHitKHR) {
+                ensureGroupsSize(hitShaderGroups, m_shaders[i].shaderGroup,
+                                 vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup);
+                if (hitShaderGroups[m_shaders[i].shaderGroup].closestHitShader != VK_SHADER_UNUSED_KHR) {
+                    std::string_view errorMessage = "There can only be a single closest hit shader per group.";
+                    spdlog::error(errorMessage);
+                    throw std::runtime_error(errorMessage.data());
+                }
+                hitShaderGroups[m_shaders[i].shaderGroup].closestHitShader = shaderStage;
+            }
+
+            if (m_shaderStages[i].stage == vk::ShaderStageFlagBits::eAnyHitKHR) {
+                ensureGroupsSize(hitShaderGroups, m_shaders[i].shaderGroup,
+                                 vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup);
+                if (hitShaderGroups[m_shaders[i].shaderGroup].anyHitShader != VK_SHADER_UNUSED_KHR) {
+                    std::string_view errorMessage = "There can only be a single any hit shader per group.";
+                    spdlog::error(errorMessage);
+                    throw std::runtime_error(errorMessage.data());
+                }
+                hitShaderGroups[m_shaders[i].shaderGroup].anyHitShader = shaderStage;
+            }
+
+            if (m_shaderStages[i].stage == vk::ShaderStageFlagBits::eIntersectionKHR) {
+                ensureGroupsSize(hitShaderGroups, m_shaders[i].shaderGroup,
+                                 vk::RayTracingShaderGroupTypeKHR::eTrianglesHitGroup);
+                if (hitShaderGroups[m_shaders[i].shaderGroup].intersectionShader != VK_SHADER_UNUSED_KHR) {
+                    std::string_view errorMessage = "There can only be a single intersection shader per group.";
+                    spdlog::error(errorMessage);
+                    throw std::runtime_error(errorMessage.data());
+                }
+                hitShaderGroups[m_shaders[i].shaderGroup].intersectionShader = shaderStage;
+                hitShaderGroups[m_shaders[i].shaderGroup].type = vk::RayTracingShaderGroupTypeKHR::eProceduralHitGroup;
+            }
+
+            if (m_shaderStages[i].stage == vk::ShaderStageFlagBits::eCallableKHR) {
+                ensureGroupsSize(callableShaderGroups, m_shaders[i].shaderGroup,
+                                 vk::RayTracingShaderGroupTypeKHR::eGeneral);
+                setGeneralShader(callableShaderGroups[m_shaders[i].shaderGroup], shaderStage,
+                                 "Callable shader groups can not have more than one miss shader.");
+            }
+        }
+
+        auto addShaderGroup = [this](const vk::RayTracingShaderGroupCreateInfoKHR& shaderGroup,
+                                 vk::ShaderStageFlagBits stage) {
+            m_shaderGroupIndexesByType[ShaderTypeToTypeGroupIndex(stage)].clear();
+            m_shaderGroupIndexesByType[ShaderTypeToTypeGroupIndex(stage)].push_back(static_cast<std::uint32_t>(m_shaderGroups.size()));
+            ValidateShaderGroup(shaderGroup);
+            m_shaderGroups.emplace_back(shaderGroup);
+        };
+
+        addShaderGroup(rayGenShaderGroup, vk::ShaderStageFlagBits::eRaygenKHR);
+        for (const auto& missGroup : missShaderGroups) { addShaderGroup(missGroup, vk::ShaderStageFlagBits::eMissKHR); }
+        for (const auto& hitGroup : hitShaderGroups) { addShaderGroup(hitGroup, vk::ShaderStageFlagBits::eClosestHitKHR); }
+        for (const auto& callableGroup : callableShaderGroups) {
+            addShaderGroup(callableGroup, vk::ShaderStageFlagBits::eCallableKHR);
         }
     }
 
@@ -190,12 +245,6 @@ namespace vkfw_core::gfx {
             m_sbtDeviceAddressRegions[i_type] = vk::StridedDeviceAddressRegionKHR{
                 deviceAddress, elementStride, m_shaderGroupIndexesByType[i_type].size() * elementStride};
         }
-    }
-
-    template<typename... Args> void RayTracingPipeline::AddShaderGroup(Args&&... args)
-    {
-        if (!m_shaderGroups.empty()) { ValidateShaderGroup(m_shaderGroups.back()); }
-        m_shaderGroups.emplace_back(std::forward<Args>(args)...);
     }
 
     void RayTracingPipeline::ValidateShaderGroup(const vk::RayTracingShaderGroupCreateInfoKHR& shaderGroup)

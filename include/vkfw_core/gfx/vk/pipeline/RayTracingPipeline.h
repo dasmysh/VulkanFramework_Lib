@@ -21,29 +21,33 @@ namespace vkfw_core::gfx {
     class RayTracingPipeline : public VulkanObjectPrivateWrapper<vk::UniquePipeline>
     {
     public:
-        RayTracingPipeline(const LogicalDevice* device, std::string_view name,
-                           std::vector<std::shared_ptr<Shader>>&& shaders);
+        struct RTShaderInfo
+        {
+            std::shared_ptr<Shader> shader;
+            std::uint32_t shaderGroup;
+        };
+
+        RayTracingPipeline(const LogicalDevice* device, std::string_view name, std::vector<RTShaderInfo>&& shaders);
         ~RayTracingPipeline();
 
-        void ResetShaders(std::vector<std::shared_ptr<Shader>>&& shaders);
+        void ResetShaders(std::vector<RTShaderInfo>&& shaders);
         void CreatePipeline(std::uint32_t maxRecursionDepth, const PipelineLayout& pipelineLayout);
         const std::array<vk::StridedDeviceAddressRegionKHR, 4>& GetSBTDeviceAddresses() const { return m_sbtDeviceAddressRegions; }
         void BindPipeline(CommandBuffer& cmdBuffer);
 
     private:
         void InitializeShaderBindingTable();
-        template<typename... Args> void AddShaderGroup(Args&&... args);
         static void ValidateShaderGroup(const vk::RayTracingShaderGroupCreateInfoKHR& shaderGroup);
 
         /** Holds the device. */
         const LogicalDevice* m_device;
         /** Holds the shaders used in this pipeline. */
-        std::vector<std::shared_ptr<Shader>> m_shaders;
+        std::vector<RTShaderInfo> m_shaders;
         /** Holds the shader stages for pipeline creation. */
         std::vector<vk::PipelineShaderStageCreateInfo> m_shaderStages;
         /** Holds the shader groups used for raytracing. */
         std::vector<vk::RayTracingShaderGroupCreateInfoKHR> m_shaderGroups;
-        /** Holds contents of the 4 shader groups. */
+        // /** Holds contents of the 4 shader groups. */
         std::array<std::vector<std::uint32_t>, 4> m_shaderGroupIndexesByType;
         /** Offsets into the shader binding table for each group type. */
         std::array<vk::DeviceSize, 4> m_shaderGroupTypeOffset;
