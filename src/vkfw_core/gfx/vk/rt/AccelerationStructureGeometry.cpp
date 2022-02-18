@@ -194,20 +194,6 @@ namespace vkfw_core::gfx::rt {
         }
 
         TransferMemGroup();
-        // for (std::size_t iType = 0; iType < m_materials.size(); ++iType) {
-        //     for (std::size_t i = 0; i < m_materials[iType].size(); ++i) {
-        //         for (std::size_t iTex = 0; iTex < m_materials[iType][i].m_materialInfo; ++iTex) {
-        //             m_textures[] = &m_materials[iType][i].m_textures[iTex]->GetTexture();
-        //         }
-        //     }
-        //     // if (m_materials[i].m_diffuseTexture) {
-        //     //     m_diffuseTextures[m_materialInfos[i].diffuseTextureIndex] =
-        //     //         &m_materials[i].m_diffuseTexture->GetTexture();
-        //     // }
-        //     // if (m_materials[i].m_bumpMap) {
-        //     //     m_bumpMaps[m_materialInfos[i].bumpTextureIndex] = &m_materials[i].m_bumpMap->GetTexture();
-        //     // }
-        // }
 
         for (std::size_t i_mesh = 0; i_mesh < m_meshGeometryInfos.size(); ++i_mesh) {
             const auto& meshInfo = m_meshGeometryInfos[i_mesh];

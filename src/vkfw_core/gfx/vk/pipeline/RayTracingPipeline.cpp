@@ -71,6 +71,10 @@ namespace vkfw_core::gfx {
         m_shaderStages.resize(m_shaders.size());
         m_shaderGroups.clear();
 
+        if (m_shaders.empty()) {
+            return;
+        }
+
         vk::RayTracingShaderGroupCreateInfoKHR rayGenShaderGroup{vk::RayTracingShaderGroupTypeKHR::eGeneral,
                                                                  VK_SHADER_UNUSED_KHR, VK_SHADER_UNUSED_KHR,
                                                                  VK_SHADER_UNUSED_KHR, VK_SHADER_UNUSED_KHR};
@@ -153,9 +157,10 @@ namespace vkfw_core::gfx {
             }
         }
 
+        for (auto& shaderGroupIndices : m_shaderGroupIndexesByType) { shaderGroupIndices.clear(); }
+
         auto addShaderGroup = [this](const vk::RayTracingShaderGroupCreateInfoKHR& shaderGroup,
                                  vk::ShaderStageFlagBits stage) {
-            m_shaderGroupIndexesByType[ShaderTypeToTypeGroupIndex(stage)].clear();
             m_shaderGroupIndexesByType[ShaderTypeToTypeGroupIndex(stage)].push_back(static_cast<std::uint32_t>(m_shaderGroups.size()));
             ValidateShaderGroup(shaderGroup);
             m_shaderGroups.emplace_back(shaderGroup);
