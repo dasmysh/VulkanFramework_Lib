@@ -68,11 +68,11 @@ namespace vkfw_core::math {
      *  @param b the box.
      */
     template<typename real> bool AABBInFrustumTest(const Frustum<real>& f, const AABB3<real>& b) {
-        auto& bmax = b.minmax_[1];
-        for (const auto& plane : f.planes_) {
+        auto& bmax = b.m_minmax[1];
+        for (const auto& plane : f.m_planes) {
         // for (unsigned int i = 0; i < 6; ++i) {
-            // auto& plane = f.planes_[i];
-            glm::vec3 p{ b.minmax_[0] };
+            // auto& plane = f.m_planes[i];
+            glm::vec3 p{ b.m_minmax[0] };
             if (plane.x >= 0) { p.x = bmax.x; }
             if (plane.y >= 0) { p.y = bmax.y; }
             if (plane.z >= 0) { p.z = bmax.z; }

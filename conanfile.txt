@@ -1,0 +1,13 @@
+[requires]
+catch2/2.13.7
+docopt.cpp/0.6.3
+spdlog/1.9.2
+cereal/1.3.0
+glm/0.9.9.8
+glfw/3.3.4
+imgui/1.84.2
+stb/cci.20210713
+assimp/5.0.1
+
+[generators]
+cmake_multi

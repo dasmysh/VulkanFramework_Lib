@@ -8,52 +8,68 @@
 
 #pragma once
 
-#include "main.h"
 #include "gfx/vk/LogicalDevice.h"
 #include "gfx/vk/memory/DeviceMemory.h"
+#include "gfx/vk/wrappers/CommandBuffer.h"
+#include "gfx/vk/wrappers/ResourceViews.h"
+#include "gfx/vk/wrappers/MemoryBoundResource.h"
+#include "gfx/vk/wrappers/Sampler.h"
+#include "main.h"
 
 #include <glm/gtc/type_precision.hpp>
 
 namespace vkfw_core::gfx {
 
+    class DescriptorSetLayout;
+    class Queue;
+    class Texture;
+
     struct TextureDescriptor final
     {
         /** Holds the bytes per pixel of the format. */
-        std::size_t bytesPP_;
+        std::size_t m_bytesPP;
         /** Holds the image create flags. */
-        vk::ImageCreateFlags createFlags_ = vk::ImageCreateFlags();
+        vk::ImageCreateFlags m_createFlags = vk::ImageCreateFlags();
         /** Holds the textures format. */
-        vk::Format format_ = vk::Format();
+        vk::Format m_format = vk::Format();
         /** Holds the number of samples. */
-        vk::SampleCountFlagBits samples_ = vk::SampleCountFlagBits::e1;
+        vk::SampleCountFlagBits m_samples = vk::SampleCountFlagBits::e1;
         /** Holds the image tiling. */
-        vk::ImageTiling imageTiling_ = vk::ImageTiling();
+        vk::ImageTiling m_imageTiling = vk::ImageTiling();
         /** Holds the images usage flags. */
-        vk::ImageUsageFlags imageUsage_ = vk::ImageUsageFlags();
+        vk::ImageUsageFlags m_imageUsage = vk::ImageUsageFlags();
         /** Holds the images sharing mode. */
-        vk::SharingMode sharingMode_ = vk::SharingMode();
-        /** Holds the images layout. */
-        vk::ImageLayout imageLayout_ = vk::ImageLayout();
+        vk::SharingMode m_sharingMode = vk::SharingMode();
         /** Holds the memory properties. */
-        vk::MemoryPropertyFlags memoryProperties_ = vk::MemoryPropertyFlags();
+        vk::MemoryPropertyFlags m_memoryProperties = vk::MemoryPropertyFlags();
 
-        TextureDescriptor(const TextureDescriptor& desc, const vk::MemoryPropertyFlags& memProperties) :
-            bytesPP_{ desc.bytesPP_ }, createFlags_{ desc.createFlags_ },
-            format_{ desc.format_ }, samples_{ desc.samples_ },
-            imageTiling_{ desc.imageTiling_ }, imageUsage_{ desc.imageUsage_ },
-            sharingMode_{ desc.sharingMode_ }, imageLayout_{ desc.imageLayout_ },
-            memoryProperties_{ desc.memoryProperties_ | memProperties } {}
-        TextureDescriptor(const TextureDescriptor& desc, const vk::ImageUsageFlags& imageUsage) :
-            bytesPP_{ desc.bytesPP_ }, createFlags_{ desc.createFlags_ },
-            format_{ desc.format_ }, samples_{ desc.samples_ },
-            imageTiling_{ desc.imageTiling_ },
-            imageUsage_{ desc.imageUsage_ | imageUsage },
-            sharingMode_{ desc.sharingMode_ }, imageLayout_{ desc.imageLayout_ },
-            memoryProperties_{ desc.memoryProperties_ } {}
+        TextureDescriptor(const TextureDescriptor& desc, const vk::MemoryPropertyFlags& memProperties)
+            : m_bytesPP{desc.m_bytesPP}
+            , m_createFlags{desc.m_createFlags}
+            , m_format{desc.m_format}
+            , m_samples{desc.m_samples}
+            , m_imageTiling{desc.m_imageTiling}
+            , m_imageUsage{desc.m_imageUsage}
+            , m_sharingMode{desc.m_sharingMode}
+            , m_memoryProperties{desc.m_memoryProperties | memProperties}
+        {
+        }
+        TextureDescriptor(const TextureDescriptor& desc, const vk::ImageUsageFlags& imageUsage)
+            : m_bytesPP{desc.m_bytesPP}
+            , m_createFlags{desc.m_createFlags}
+            , m_format{desc.m_format}
+            , m_samples{desc.m_samples}
+            , m_imageTiling{desc.m_imageTiling}
+            , m_imageUsage{desc.m_imageUsage | imageUsage}
+            , m_sharingMode{desc.m_sharingMode}
+            , m_memoryProperties{desc.m_memoryProperties}
+        {
+        }
         TextureDescriptor(std::size_t bytesPP, vk::Format format,
                           vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1)
-            :
-            bytesPP_{ bytesPP }, format_{ format }, samples_{ samples } {}
+            : m_bytesPP{bytesPP}, m_format{format}, m_samples{samples}
+        {
+        }
 
         static TextureDescriptor StagingTextureDesc(std::size_t bytesPP, vk::Format format,
                                                     vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1);
@@ -62,78 +78,98 @@ namespace vkfw_core::gfx {
                                                        vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1);
         static TextureDescriptor DepthBufferTextureDesc(std::size_t bytesPP, vk::Format format,
                                                         vk::SampleCountFlagBits samples = vk::SampleCountFlagBits::e1);
-        // static TextureDescriptor RenderTargetTextureDesc();
     };
 
-    class Texture
+    class Texture : public VulkanObjectPrivateWrapper<vk::UniqueImage>, public MemoryBoundResourceBase
     {
     public:
-        Texture(const LogicalDevice* device, const TextureDescriptor& desc,
-            std::vector<std::uint32_t> queueFamilyIndices = std::vector<std::uint32_t>{});
+        /** Create image. */
+        Texture(const LogicalDevice* device, std::string_view name, const TextureDescriptor& desc,
+                vk::ImageLayout initialLayout,
+                std::vector<std::uint32_t> queueFamilyIndices = std::vector<std::uint32_t>{});
         Texture(const Texture&) = delete;
         Texture(Texture&&) noexcept;
         Texture& operator=(const Texture&) = delete;
         Texture& operator=(Texture&&) noexcept;
         virtual ~Texture();
 
-        void InitializeImage(const glm::u32vec4& size, std::uint32_t mipLevels, bool initMemory = true);
-        void InitializeImageView();
-        void TransitionLayout(vk::ImageLayout newLayout, vk::CommandBuffer cmdBuffer);
-        vk::UniqueCommandBuffer TransitionLayout(vk::ImageLayout newLayout,
-            std::pair<std::uint32_t, std::uint32_t> transitionQueueIdx,
-            const std::vector<vk::Semaphore>& waitSemaphores,
-            const std::vector<vk::Semaphore>& signalSemaphores, vk::Fence fence);
-        void CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset,
-            const Texture& dstImage, std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset, const glm::u32vec4& size,
-                            vk::CommandBuffer cmdBuffer) const;
-        [[nodiscard]] vk::UniqueCommandBuffer
-        CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, const Texture& dstImage,
-                       std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset, const glm::u32vec4& size,
-                       std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
-                       const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
-                       const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
-                       vk::Fence fence = vk::Fence()) const;
-        [[nodiscard]] vk::UniqueCommandBuffer
-        CopyImageAsync(const Texture& dstImage, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
-                       const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
-                       const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
-                       vk::Fence fence = vk::Fence()) const;
-        void CopyImageSync(const Texture& dstImage, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx) const;
+        static void AddDescriptorLayoutBinding(DescriptorSetLayout& layout, vk::DescriptorType type,
+                                               vk::ShaderStageFlags shaderFlags, std::uint32_t binding = 0);
 
-        [[nodiscard]] const glm::u32vec4& GetSize() const { return size_; }
-        [[nodiscard]] std::uint32_t GetMipLevels() const { return mipLevels_; }
-        [[nodiscard]] vk::Image GetImage() const { return *vkImage_; }
-        [[nodiscard]] vk::ImageView GetImageView() const { return *vkImageView_; }
-        [[nodiscard]] const DeviceMemory& GetDeviceMemory() const { return imageDeviceMemory_; }
-        [[nodiscard]] const TextureDescriptor& GetDescriptor() const { return desc_; }
+        void InitializeImage(const glm::u32vec4& size, std::uint32_t mipLevels, bool initMemory = true);
+        void InitializeExternalImage(vk::Image externalImage, const glm::u32vec4& size, std::uint32_t mipLevels,
+                                     bool initView = true);
+        void InitializeImageView();
+
+        void CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, Texture& dstImage,
+                            std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset, const glm::u32vec4& size,
+                            CommandBuffer& cmdBuffer);
+        [[nodiscard]] CommandBuffer
+        CopyImageAsync(std::uint32_t srcMipLevel, const glm::u32vec4& srcOffset, Texture& dstImage,
+                       std::uint32_t dstMipLevel, const glm::u32vec4& dstOffset, const glm::u32vec4& size,
+                       const Queue& copyQueue,
+                       std::span<vk::SemaphoreSubmitInfoKHR> waitSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
+                       std::span<vk::SemaphoreSubmitInfoKHR> signalSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
+                       std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence = {});
+        [[nodiscard]] CommandBuffer
+        CopyImageAsync(Texture& dstImage, const Queue& transitionQueue,
+                       std::span<vk::SemaphoreSubmitInfoKHR> waitSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
+                       std::span<vk::SemaphoreSubmitInfoKHR> signalSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
+                       std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence = {});
+        void CopyImageSync(Texture& dstImage, const Queue& copyQueue);
+
+        void AccessBarrier(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
+                           vk::ImageLayout imageLayout, PipelineBarrier& barrier);
+        [[nodiscard]] vk::Image GetImage(vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
+                                         vk::ImageLayout imageLayout, PipelineBarrier& barrier);
+        [[nodiscard]] const ImageView& GetImageView(vk::AccessFlags2KHR access,
+                                                    vk::PipelineStageFlags2KHR pipelineStages,
+                                                    vk::ImageLayout imageLayout, PipelineBarrier& barrier);
+
+        [[nodiscard]] const glm::u32vec4& GetSize() const { return m_size; }
+        [[nodiscard]] const glm::u32vec4& GetPixelSize() const { return m_pixelSize; }
+        [[nodiscard]] std::uint32_t GetMipLevels() const { return m_mipLevels; }
+        [[nodiscard]] const DeviceMemory& GetDeviceMemory() const { return m_imageDeviceMemory; }
+        [[nodiscard]] const TextureDescriptor& GetDescriptor() const { return m_desc; }
+        [[nodiscard]] vk::ImageAspectFlags GetValidAspects() const;
+        [[nodiscard]] vk::Image GetAccessNoBarrier() const;
+        [[nodiscard]] vk::ImageLayout GetImageLayout() const { return m_imageLayout; }
+        [[nodiscard]] vk::MemoryRequirements GetMemoryRequirements() const;
+        [[nodiscard]] vk::SubresourceLayout GetSubresourceLayout(const vk::ImageSubresource& subresource) const;
+        void SetImageLayout(vk::ImageLayout layout) { m_imageLayout = layout; }
+        void BindMemory(vk::DeviceMemory deviceMemory, std::size_t offset);
 
     protected:
-        [[nodiscard]] Texture CopyWithoutData() const { return Texture{device_, desc_, queueFamilyIndices_}; }
-        [[nodiscard]] vk::ImageAspectFlags GetValidAspects() const;
-        [[nodiscard]] const vk::Device& GetDevice() const { return device_->GetDevice(); }
-        static vk::AccessFlags GetAccessFlagsForLayout(vk::ImageLayout layout);
-        static vk::PipelineStageFlags GetStageFlagsForLayout(vk::ImageLayout layout);
+        [[nodiscard]] Texture CopyWithoutData(std::string_view name) const
+        {
+            return Texture{m_device, name, m_desc, GetImageLayout(), m_queueFamilyIndices};
+        }
+        [[nodiscard]] vk::Device GetDevice() const { return m_device->GetHandle(); }
 
     private:
-        /** Holds the device. */
-        const LogicalDevice* device_;
-        /** Holds the Vulkan image object. */
-        vk::UniqueImage vkImage_;
+        void InitSize(const glm::u32vec4& size, std::uint32_t mipLevels);
+
+        /** Holds the Vulkan image object for external and internal images. */
+        vk::Image m_image = nullptr;
         /** Holds the Vulkan image view. */
-        vk::UniqueImageView vkImageView_;
+        ImageView m_imageView;
         /** Holds the Vulkan device memory for the image. */
-        DeviceMemory imageDeviceMemory_;
+        DeviceMemory m_imageDeviceMemory;
         /** Holds the current size of the texture (x: bytes of line, y: #lines, z: #depth slices, w: #array slices). */
-        glm::u32vec4 size_;
+        glm::u32vec4 m_size;
+        /** Holds the current size of the texture in pixels. */
+        glm::u32vec4 m_pixelSize;
         /** Holds the number of MIP levels. */
-        std::uint32_t mipLevels_;
+        std::uint32_t m_mipLevels;
         /** Holds the texture description. */
-        TextureDescriptor desc_;
+        TextureDescriptor m_desc;
+        /** Holds the images layout. */
+        vk::ImageLayout m_imageLayout = vk::ImageLayout();
         /** Holds the queue family indices. */
-        std::vector<std::uint32_t> queueFamilyIndices_;
+        std::vector<std::uint32_t> m_queueFamilyIndices;
         /** Holds the image type. */
-        vk::ImageType type_ = vk::ImageType::e3D;
+        vk::ImageType m_type = vk::ImageType::e3D;
         /** Holds the image view type. */
-        vk::ImageViewType viewType_ = vk::ImageViewType::e3D;
+        vk::ImageViewType m_viewType = vk::ImageViewType::e3D;
     };
 }

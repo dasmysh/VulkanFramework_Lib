@@ -32,10 +32,10 @@ namespace vkfw_core::gfx {
      *  @param aiAnimation Assimp animation
      */
     Animation::Animation(aiAnimation* aiAnimation)
-        : name_{aiAnimation->mName.C_Str()},
-          framesPerSecond_{aiAnimation->mTicksPerSecond > 0.0 ? static_cast<float>(aiAnimation->mTicksPerSecond)
+        : m_name{aiAnimation->mName.C_Str()},
+          m_framesPerSecond{aiAnimation->mTicksPerSecond > 0.0 ? static_cast<float>(aiAnimation->mTicksPerSecond)
                                                               : STANDARD_ANIMATION_FPS},
-          duration_{static_cast<float>(aiAnimation->mDuration)}
+          m_duration{static_cast<float>(aiAnimation->mDuration)}
     {
         for (auto c = 0U; c < aiAnimation->mNumChannels; ++c) {
             const auto aiChannel = aiAnimation->mChannels[c]; // NOLINT
@@ -44,7 +44,7 @@ namespace vkfw_core::gfx {
 
             // Copy position data for this channel
             for (auto p = 0U; p < aiChannel->mNumPositionKeys; ++p) {
-                channel.positionFrames_.emplace_back(
+                channel.m_positionFrames.emplace_back(
                     static_cast<Time>(aiChannel->mPositionKeys[p].mTime),                // NOLINT
                     *reinterpret_cast<glm::vec3*>(&aiChannel->mPositionKeys[p].mValue)); // NOLINT
             }
@@ -53,18 +53,18 @@ namespace vkfw_core::gfx {
             for (auto r = 0U; r < aiChannel->mNumRotationKeys; ++r) {
                 const auto& aiQuat = aiChannel->mRotationKeys[r].mValue; // NOLINT
 
-                channel.rotationFrames_.emplace_back(static_cast<Time>(aiChannel->mRotationKeys[r].mTime), // NOLINT
+                channel.m_rotationFrames.emplace_back(static_cast<Time>(aiChannel->mRotationKeys[r].mTime), // NOLINT
                                                                  glm::quat(aiQuat.w, aiQuat.x, aiQuat.y, aiQuat.z));
             }
 
             // Copy scaling data for this channel
             for (auto s = 0U; s < aiChannel->mNumScalingKeys; ++s) {
-                channel.scalingFrames_.emplace_back(
+                channel.m_scalingFrames.emplace_back(
                     static_cast<Time>(aiChannel->mScalingKeys[s].mTime),                // NOLINT
                                    *reinterpret_cast<glm::vec3*>(&aiChannel->mScalingKeys[s].mValue)); // NOLINT
             }
 
-            channelMap_[aiChannel->mNodeName.C_Str()] = channel;
+            m_channelMap[aiChannel->mNodeName.C_Str()] = channel;
         }
     }
 
@@ -75,14 +75,14 @@ namespace vkfw_core::gfx {
      */
     void Animation::FlattenHierarchy(std::size_t numNodes, const std::map<std::string, std::size_t>& nodeNamesMap)
     {
-        channels_.resize(numNodes);
+        m_channels.resize(numNodes);
 
         for (const auto& node : nodeNamesMap) {
-            auto nodeChannelIndex = channelMap_.find(node.first);
-            if (nodeChannelIndex != channelMap_.end()) { channels_[node.second] = channelMap_[node.first]; }
+            auto nodeChannelIndex = m_channelMap.find(node.first);
+            if (nodeChannelIndex != m_channelMap.end()) { m_channels[node.second] = m_channelMap[node.first]; }
         }
 
-        channelMap_.clear();
+        m_channelMap.clear();
     }
 
     /**
@@ -116,25 +116,25 @@ namespace vkfw_core::gfx {
         assert(start < end && "Start time must be less then stop time");
 
         Animation subSequence;
-        subSequence.name_ = name;
-        subSequence.framesPerSecond_ = framesPerSecond_;
-        subSequence.duration_ = end - start;
+        subSequence.m_name = name;
+        subSequence.m_framesPerSecond = m_framesPerSecond;
+        subSequence.m_duration = end - start;
 
         // Copy data from the sequence and ensure there is a keyframe at start and
         // end timestamp
-        for (const auto& channel : channels_) {
+        for (const auto& channel : m_channels) {
 
             auto newChannel = Channel();
             // copy positions
-            newChannel.positionFrames_ = CopyFrameData(channel.positionFrames_, start, end);
+            newChannel.m_positionFrames = CopyFrameData(channel.m_positionFrames, start, end);
             // copy rotations
-            newChannel.rotationFrames_ = CopyFrameData(channel.rotationFrames_, start, end);
+            newChannel.m_rotationFrames = CopyFrameData(channel.m_rotationFrames, start, end);
             // copy scaling
-            newChannel.scalingFrames_ = CopyFrameData(channel.scalingFrames_, start, end);
+            newChannel.m_scalingFrames = CopyFrameData(channel.m_scalingFrames, start, end);
 
             // insert the channel into the new animation
             // subSequence.channels_[keyId] = newChannel;
-            subSequence.channels_.emplace_back(newChannel);
+            subSequence.m_channels.emplace_back(newChannel);
         }
 
         return subSequence;
@@ -151,13 +151,13 @@ namespace vkfw_core::gfx {
      */
     bool Animation::ComputePoseAtTime(std::size_t id, Time time, glm::mat4& pose) const
     {
-        time = glm::clamp(time, 0.0f, duration_);
+        time = glm::clamp(time, 0.0f, m_duration);
 
-        const auto& channel = channels_.at(id);
+        const auto& channel = m_channels.at(id);
 
-        const auto& positionFrames = channel.positionFrames_;
-        const auto& rotationFrames = channel.rotationFrames_;
-        const auto& scalingFrames = channel.scalingFrames_;
+        const auto& positionFrames = channel.m_positionFrames;
+        const auto& rotationFrames = channel.m_rotationFrames;
+        const auto& scalingFrames = channel.m_scalingFrames;
 
         glm::quat rotation = {0.0f, 0.0f, 0.0f, 1.0f};
         glm::vec3 translation{0.0f};

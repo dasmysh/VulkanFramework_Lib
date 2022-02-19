@@ -5,6 +5,7 @@ project(VKFWLib CXX)
 include(cmake/StandardProjectSettings.cmake)
 
 add_library(vkfw_options INTERFACE)
+set_project_options(vkfw_options)
 target_compile_features(vkfw_options INTERFACE cxx_std_20)
 
 add_library(vkfw_warnings INTERFACE)
@@ -31,28 +32,13 @@ if (ENABLE_PCH)
   target_precompile_headers(vkfw_options INTERFACE <vector> <string> <map> <utility>)
 endif()
 
-set(IMGUI_VERSION "1.75")
-set(GLM_VERSION "0.9.9.7")
+set(IMGUI_VERSION "1.84.2")
+set(GLM_VERSION "0.9.9.8")
 
-set(CONAN_EXTRA_REQUIRES "")
-set(CONAN_EXTRA_OPTIONS "")
+include(${CMAKE_BINARY_DIR}/vkfw_core/conanbuildinfo_multi.cmake)
+conan_basic_setup(TARGETS)
 
-set(CONAN_EXTRA_REQUIRES ${CONAN_EXTRA_REQUIRES}
-                         catch2/2.11.3
-                         docopt.cpp/0.6.2
-                         fmt/6.1.2
-                         spdlog/1.5.0
-                         cereal/1.3.0
-                         glm/${GLM_VERSION}
-                         glfw/3.3.2@bincrafters/stable
-                         imgui/${IMGUI_VERSION}
-                         stb/20200203
-                         assimp/5.0.1)
-
-include(cmake/Conan.cmake)
-run_conan()
-
-find_package(Vulkan 1.1.126.0 REQUIRED)
+find_package(Vulkan 1.2.198.0 REQUIRED)
 target_compile_definitions(vkfw_options INTERFACE VULKAN_HPP_TYPESAFE_CONVERSION)
 include(cmake/CompileSpirvShader.cmake)
 
@@ -68,8 +54,24 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/imgui.natvis")
   message(
     STATUS
       "Downloading imgui.natvis from https://github.com/ocornut/imgui")
-  file(DOWNLOAD "https://github.com/ocornut/imgui/raw/v${IMGUI_VERSION}/misc/natvis/imgui.natvis"
+  file(DOWNLOAD "https://github.com/ocornut/imgui/raw/v${IMGUI_VERSION}/misc/debuggers/imgui.natvis"
        "${CMAKE_BINARY_DIR}/imgui.natvis")
+endif()
+
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/imgui.gdb")
+  message(
+    STATUS
+      "Downloading imgui.gdb from https://github.com/ocornut/imgui")
+  file(DOWNLOAD "https://github.com/ocornut/imgui/raw/v${IMGUI_VERSION}/misc/debuggers/imgui.gdb"
+       "${CMAKE_BINARY_DIR}/imgui.gdb")
+endif()
+
+if(NOT EXISTS "${CMAKE_BINARY_DIR}/imgui.natstepfilter")
+  message(
+    STATUS
+      "Downloading imgui.natstepfilter from https://github.com/ocornut/imgui")
+  file(DOWNLOAD "https://github.com/ocornut/imgui/raw/v${IMGUI_VERSION}/misc/debuggers/imgui.natstepfilter"
+       "${CMAKE_BINARY_DIR}/imgui.natstepfilter")
 endif()
 
 if(NOT EXISTS "${CMAKE_BINARY_DIR}/extern/imgui/cpp/imgui_stdlib.cpp")

@@ -32,13 +32,13 @@ namespace vkfw_core::gfx {
         SubMesh& operator=(SubMesh&&) noexcept;
         virtual ~SubMesh();
 
-        [[nodiscard]] const std::string& GetName() const { return objectName_; }
-        [[nodiscard]] std::uint64_t GetSerializationID() const { return serializationID_; }
-        [[nodiscard]] unsigned int GetIndexOffset() const { return indexOffset_; }
-        [[nodiscard]] unsigned int GetNumberOfIndices() const { return numIndices_; }
-        [[nodiscard]] unsigned int GetNumberOfTriangles() const { return numIndices_ / 3; }
-        [[nodiscard]] const math::AABB3<float>& GetLocalAABB() const { return aabb_; }
-        [[nodiscard]] unsigned int GetMaterialID() const { return materialID_; }
+        [[nodiscard]] const std::string& GetName() const { return m_objectName; }
+        [[nodiscard]] std::uint64_t GetSerializationID() const { return m_serializationID; }
+        [[nodiscard]] unsigned int GetIndexOffset() const { return m_indexOffset; }
+        [[nodiscard]] unsigned int GetNumberOfIndices() const { return m_numIndices; }
+        [[nodiscard]] unsigned int GetNumberOfTriangles() const { return m_numIndices / 3; }
+        [[nodiscard]] const math::AABB3<float>& GetLocalAABB() const { return m_aabb; }
+        [[nodiscard]] unsigned int GetMaterialID() const { return m_materialID; }
 
     private:
         /** Needed for serialization */
@@ -46,27 +46,27 @@ namespace vkfw_core::gfx {
 
         template<class Archive> void serialize(Archive& ar, const std::uint32_t) // NOLINT
         {
-            serializationID_ = reinterpret_cast<std::uint64_t>(this); // NOLINT
-            ar(cereal::make_nvp("objectName", objectName_),
-                cereal::make_nvp("serializationID", serializationID_),
-                cereal::make_nvp("indexOffset", indexOffset_),
-                cereal::make_nvp("numIndices", numIndices_),
-                cereal::make_nvp("AABB", aabb_),
-                cereal::make_nvp("material", materialID_));
+            m_serializationID = reinterpret_cast<std::uint64_t>(this); // NOLINT
+            ar(cereal::make_nvp("objectName", m_objectName),
+                cereal::make_nvp("serializationID", m_serializationID),
+                cereal::make_nvp("indexOffset", m_indexOffset),
+                cereal::make_nvp("numIndices", m_numIndices),
+                cereal::make_nvp("AABB", m_aabb),
+                cereal::make_nvp("material", m_materialID));
         }
 
         /** Holds the sub-meshes object name. */
-        std::string objectName_;
+        std::string m_objectName;
         /** Holds a serialization id. */
-        std::uint64_t serializationID_ = 0;
+        std::uint64_t m_serializationID = 0;
         /** The index offset the sub-mesh starts. */
-        unsigned int indexOffset_ = 0;
+        unsigned int m_indexOffset = 0;
         /** The number of indices in the sub-mesh. */
-        unsigned int numIndices_ = 0;
+        unsigned int m_numIndices = 0;
         /** The sub-meshes local AABB. */
-        math::AABB3<float> aabb_;
+        math::AABB3<float> m_aabb;
         /** The sub-meshes material id. */
-        unsigned int materialID_ = std::numeric_limits<unsigned int>::max();
+        unsigned int m_materialID = std::numeric_limits<unsigned int>::max();
     };
 }
 

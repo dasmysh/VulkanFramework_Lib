@@ -22,7 +22,7 @@ namespace vkfw_core::gfx {
     class DeviceMemoryGroup
     {
     public:
-        explicit DeviceMemoryGroup(const LogicalDevice* device, const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags());
+        explicit DeviceMemoryGroup(const LogicalDevice* device, std::string_view name, const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags());
         virtual ~DeviceMemoryGroup();
         DeviceMemoryGroup(const DeviceMemoryGroup&) = delete;
         DeviceMemoryGroup& operator=(const DeviceMemoryGroup&) = delete;
@@ -30,18 +30,25 @@ namespace vkfw_core::gfx {
         DeviceMemoryGroup& operator=(DeviceMemoryGroup&&) noexcept;
 
         static constexpr unsigned int INVALID_INDEX = std::numeric_limits<unsigned int>::max();
-        virtual unsigned int AddBufferToGroup(const vk::BufferUsageFlags& usage, std::size_t size,
-            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
-        virtual unsigned int AddTextureToGroup(const TextureDescriptor& desc,
-            const glm::u32vec4& size, std::uint32_t mipLevels,
-            const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
+        virtual unsigned int
+        AddBufferToGroup(std::string_view name, const vk::BufferUsageFlags& usage,
+                         const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
+        virtual unsigned int
+        AddBufferToGroup(std::string_view name, const vk::BufferUsageFlags& usage, std::size_t size,
+                         const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
+        virtual unsigned int
+        AddTextureToGroup(std::string_view name, const TextureDescriptor& desc, vk::ImageLayout initialLayout,
+                          const glm::u32vec4& size, std::uint32_t mipLevels,
+                          const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
 
         virtual void FinalizeDeviceGroup();
 
-        DeviceBuffer* GetBuffer(unsigned int bufferIdx) { return &deviceBuffers_[bufferIdx]; }
-        DeviceTexture* GetTexture(unsigned int textureIdx) { return &deviceImages_[textureIdx]; }
-        [[nodiscard]] std::size_t GetBuffersInGroup() const { return deviceBuffers_.size(); }
-        [[nodiscard]] std::size_t GetImagesInGroup() const { return deviceImages_.size(); }
+        [[nodiscard]] DeviceBuffer* GetBuffer(unsigned int bufferIdx) { return &m_deviceBuffers[bufferIdx]; }
+        [[nodiscard]] const DeviceBuffer* GetBuffer(unsigned int bufferIdx) const { return &m_deviceBuffers[bufferIdx]; }
+        [[nodiscard]] DeviceTexture* GetTexture(unsigned int textureIdx) { return &m_deviceImages[textureIdx]; }
+        [[nodiscard]] const DeviceTexture* GetTexture(unsigned int textureIdx) const { return &m_deviceImages[textureIdx]; }
+        [[nodiscard]] std::size_t GetBuffersInGroup() const { return m_deviceBuffers.size(); }
+        [[nodiscard]] std::size_t GetImagesInGroup() const { return m_deviceImages.size(); }
 
     protected:
         static void InitializeDeviceMemory(const LogicalDevice* device, std::vector<std::size_t>& deviceOffsets,
@@ -55,13 +62,13 @@ namespace vkfw_core::gfx {
         static void BindHostObjects(const std::vector<std::size_t>& hostOffsets, std::vector<HostBuffer>& hostBuffers,
             std::vector<HostTexture>& hostImages, DeviceMemory& hostMemory);
 
-        static std::size_t FillBufferAllocationInfo(const LogicalDevice* device, const Buffer& buffer, vk::MemoryAllocateInfo& allocInfo);
+        static std::size_t FillBufferAllocationInfo(const LogicalDevice* device, const Buffer& buffer, vk::MemoryAllocateInfo& allocInfo, bool& shaderDeviceAddress);
         static std::size_t FillImageAllocationInfo(const LogicalDevice* device, const Texture* lastImage,
             const Texture& image, std::size_t& imageOffset, vk::MemoryAllocateInfo& allocInfo);
         static std::size_t FillAllocationInfo(const LogicalDevice* device, const vk::MemoryRequirements& memRequirements,
             const vk::MemoryPropertyFlags& memProperties, vk::MemoryAllocateInfo& allocInfo);
 
-        [[nodiscard]] const LogicalDevice* GetDevice() const { return device_; }
+        [[nodiscard]] const LogicalDevice* GetDevice() const { return m_device; }
 
     private:
         template<class B, class T> static void InitializeMemory(const LogicalDevice* device,
@@ -71,14 +78,14 @@ namespace vkfw_core::gfx {
             std::vector<B>& buffers, std::vector<T>& images, DeviceMemory& memory);
 
         /** Holds the device. */
-        const LogicalDevice* device_;
+        const LogicalDevice* m_device;
         /** Holds the Vulkan device memory for the device objects. */
-        DeviceMemory deviceMemory_;
+        DeviceMemory m_deviceMemory;
         /** Holds the device buffers. */
-        std::vector<DeviceBuffer> deviceBuffers_;
+        std::vector<DeviceBuffer> m_deviceBuffers;
         /** Holds the device images. */
-        std::vector<DeviceTexture> deviceImages_;
+        std::vector<DeviceTexture> m_deviceImages;
         /** Holds the offsets for the device memory objects. */
-        std::vector<std::size_t> deviceOffsets_;
+        std::vector<std::size_t> m_deviceOffsets;
     };
 }

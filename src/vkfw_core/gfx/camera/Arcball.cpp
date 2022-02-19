@@ -22,10 +22,10 @@ namespace vkfw_core::gfx {
      *  @param theButton the mouse button to use.
      */
     Arcball::Arcball(int theButton) noexcept :
-        button_{ theButton },
-        arcballOn_{ false },
-        currentScreen_{ 0.0f },
-        lastScreen_{ 0.0f }
+        m_button{ theButton },
+        m_arcballOn{ false },
+        m_currentScreen{ 0.0f },
+        m_lastScreen{ 0.0f }
     {
     }
 
@@ -38,16 +38,16 @@ namespace vkfw_core::gfx {
     bool Arcball::HandleMouse(int theButton, int action, const vkfw_core::VKWindow* sender) noexcept
     {
         bool handled = false;
-        if (button_ == theButton && action == GLFW_PRESS) {
-            arcballOn_ = true;
-            lastScreen_ = currentScreen_ = MousePositionToArcball(sender->GetMousePositionNormalized());
+        if (m_button == theButton && action == GLFW_PRESS) {
+            m_arcballOn = true;
+            m_lastScreen = m_currentScreen = MousePositionToArcball(sender->GetMousePositionNormalized());
             handled = true;
-        } else if (arcballOn_ && sender->IsMouseButtonPressed(button_)) {
-            currentScreen_ = MousePositionToArcball(sender->GetMousePositionNormalized());
+        } else if (m_arcballOn && sender->IsMouseButtonPressed(m_button)) {
+            m_currentScreen = MousePositionToArcball(sender->GetMousePositionNormalized());
             handled = true;
-        } else if (!sender->IsMouseButtonPressed(button_)) {
-            handled = arcballOn_;
-            arcballOn_ = false;
+        } else if (!sender->IsMouseButtonPressed(m_button)) {
+            handled = m_arcballOn;
+            m_arcballOn = false;
         }
 
         return handled;
@@ -63,12 +63,13 @@ namespace vkfw_core::gfx {
         const double speed = 60.0;
 
         glm::quat result(1.0f, 0.0f, 0.0f, 0.0f);
-        if (currentScreen_ != lastScreen_) {
-            auto angle = static_cast<float>(speed * elapsedTime * acos(glm::min(1.0f, glm::dot(lastScreen_, currentScreen_))));
-            auto camAxis = glm::cross(lastScreen_, currentScreen_);
+        if (m_currentScreen != m_lastScreen) {
+            auto angle =
+                static_cast<float>(speed * elapsedTime * acos(glm::min(1.0f, glm::dot(m_lastScreen, m_currentScreen))));
+            auto camAxis = glm::cross(m_lastScreen, m_currentScreen);
             auto worldAxis = glm::normalize(glm::rotate(camPosOrientation, camAxis));
             result = glm::angleAxis(-2.0f * angle, worldAxis);
-            lastScreen_ = currentScreen_;
+            m_lastScreen = m_currentScreen;
         }
         return result;
     }

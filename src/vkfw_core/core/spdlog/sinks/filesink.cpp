@@ -16,10 +16,10 @@ namespace vkfw_core::spdlog::sinks {
     template<typename Mutex>
     inline rotating_open_file_sink<Mutex>::rotating_open_file_sink(::spdlog::filename_t base_filename,
                                                                    std::size_t max_files)
-        : base_filename_(std::move(base_filename)), max_files_(max_files)
+        : m_base_filename(std::move(base_filename)), m_max_files(max_files)
     {
-        file_helper_.open(calc_filename(base_filename_, 0));
-        auto current_size = file_helper_.size(); // expensive. called only once
+        m_file_helper.open(calc_filename(m_base_filename, 0));
+        auto current_size = m_file_helper.size(); // expensive. called only once
         if (current_size > 0) { rotate_(); }
     }
 
@@ -35,27 +35,27 @@ namespace vkfw_core::spdlog::sinks {
     template<typename Mutex>::spdlog::filename_t rotating_open_file_sink<Mutex>::filename()
     {
         std::lock_guard<Mutex> lock(::spdlog::sinks::base_sink<Mutex>::mutex_);
-        return file_helper_.filename();
+        return m_file_helper.filename();
     }
 
     template<typename Mutex> void rotating_open_file_sink<Mutex>::sink_it_(const ::spdlog::details::log_msg& msg)
     {
         ::spdlog::memory_buf_t formatted;
         ::spdlog::sinks::base_sink<Mutex>::formatter_->format(msg, formatted);
-        file_helper_.write(formatted);
+        m_file_helper.write(formatted);
     }
 
-    template<typename Mutex> void rotating_open_file_sink<Mutex>::flush_() { file_helper_.flush(); }
+    template<typename Mutex> void rotating_open_file_sink<Mutex>::flush_() { m_file_helper.flush(); }
 
     template<typename Mutex> void rotating_open_file_sink<Mutex>::rotate_()
     {
         using ::spdlog::details::os::filename_to_str;
         using ::spdlog::details::os::path_exists;
-        file_helper_.close();
-        for (auto i = max_files_; i > 0; --i) {
-            ::spdlog::filename_t src = calc_filename(base_filename_, i - 1);
+        m_file_helper.close();
+        for (auto i = m_max_files; i > 0; --i) {
+            ::spdlog::filename_t src = calc_filename(m_base_filename, i - 1);
             if (!path_exists(src)) { continue; }
-            ::spdlog::filename_t target = calc_filename(base_filename_, i);
+            ::spdlog::filename_t target = calc_filename(m_base_filename, i);
 
             if (!rename_file_(src, target)) {
                 // if failed try again after a small delay.
@@ -63,14 +63,14 @@ namespace vkfw_core::spdlog::sinks {
                 // rates can cause the rename to fail with permission denied (because of antivirus?).
                 ::spdlog::details::os::sleep_for_millis(100);
                 if (!rename_file_(src, target)) {
-                    file_helper_.reopen(true); // truncate the log file anyway to prevent it to grow beyond its limit!
+                    m_file_helper.reopen(true); // truncate the log file anyway to prevent it to grow beyond its limit!
                     SPDLOG_THROW(::spdlog::spdlog_ex("rotating_file_sink: failed renaming " + filename_to_str(src)
                                                          + " to " + filename_to_str(target),
                                                      errno));
                 }
             }
         }
-        file_helper_.reopen(true);
+        m_file_helper.reopen(true);
     }
 
     template<typename Mutex>

@@ -12,6 +12,8 @@
 
 #include <glm/gtc/type_precision.hpp>
 
+#include <core/function_view.h>
+
 namespace vkfw_core::gfx {
 
     class QueuedDeviceTransfer;
@@ -23,16 +25,13 @@ namespace vkfw_core::gfx {
         stbi_error() : std::exception{ "STBI Error." } {}
     };
     struct invalid_texture_channels final : public std::exception {
-        explicit invalid_texture_channels(int imgChannels) : std::exception{ "Invalid number of image channels." }, imgChannels_{ imgChannels } {}
-        int imgChannels_;
+        explicit invalid_texture_channels(int imgChannels) : std::exception{ "Invalid number of image channels." }, m_imgChannels{ imgChannels } {}
+        int m_imgChannels;
     };
 
     class Texture2D final : public Resource
     {
     public:
-        Texture2D(const std::string& textureFilename, const LogicalDevice* device, bool useSRGB, bool flipTexture,
-                  QueuedDeviceTransfer& transfer,
-                  const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         Texture2D(const std::string& textureFilename, const LogicalDevice* device,
                   bool useSRGB, bool flipTexture, MemoryGroup& memGroup,
                   const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
@@ -42,7 +41,8 @@ namespace vkfw_core::gfx {
         Texture2D& operator=(Texture2D&&) = delete;
         ~Texture2D() override;
 
-        [[nodiscard]] const DeviceTexture& GetTexture() const { return *texture_; }
+        [[nodiscard]] const DeviceTexture& GetTexture() const;
+        [[nodiscard]] DeviceTexture& GetTexture();
 
     private:
         enum class FormatProperties {
@@ -51,22 +51,18 @@ namespace vkfw_core::gfx {
             USE_HDR
         };
 
-        Texture2D(const std::string& textureFilename, bool flipTexture, const LogicalDevice* device_);
+        Texture2D(const std::string& textureFilename, bool flipTexture, const LogicalDevice* device);
         void LoadTextureLDR(const std::string& filename, bool useSRGB,
-            const std::function<void(const glm::u32vec4& size, const TextureDescriptor& desc, void* data)>& loadFn);
+            const function_view<void(const glm::u32vec4& size, const TextureDescriptor& desc, void* data)>& loadFn);
         void LoadTextureHDR(const std::string& filename,
-            const std::function<void(const glm::u32vec4& size, const TextureDescriptor& desc, void* data)>& loadFn);
+            const function_view<void(const glm::u32vec4& size, const TextureDescriptor& desc, void* data)>& loadFn);
         std::pair<unsigned int, vk::Format> FindFormat(const std::string& filename, int& imgChannels, FormatProperties fmtProps) const;
 
         /** Holds the texture file name. */
-        std::string textureFilename_;
-        /** Holds the unique pointer to the texture used. */
-        std::unique_ptr<DeviceTexture> texturePtr_;
+        std::string m_textureFilename;
         /** Holds the index in the memory group to the texture used. */
-        unsigned int textureIdx_;
+        unsigned int m_textureIdx;
         /** Holds the memory group containing the texture. */
-        MemoryGroup* memoryGroup_;
-        /** Holds the pointer to the texture used. */
-        DeviceTexture* texture_;
+        MemoryGroup* m_memoryGroup;
     };
 }

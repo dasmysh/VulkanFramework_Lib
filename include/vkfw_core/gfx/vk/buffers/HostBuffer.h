@@ -19,7 +19,7 @@ namespace vkfw_core::gfx {
     class HostBuffer final : public Buffer
     {
     public:
-        HostBuffer(const LogicalDevice* device, const vk::BufferUsageFlags& usage, const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags(),
+        HostBuffer(const LogicalDevice* device, std::string_view name, const vk::BufferUsageFlags& usage, const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags(),
             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{});
         ~HostBuffer() override;
         HostBuffer(const HostBuffer&);
@@ -32,31 +32,31 @@ namespace vkfw_core::gfx {
         void UploadData(std::size_t offset, std::size_t size, const void* data);
         void DownloadData(std::size_t size, void* data) const;
 
-        template<class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value> InitializeData(std::size_t bufferSize, const T& data);
-        template<class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value> InitializeData(const T& data);
-        template<class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value> UploadData(std::size_t offset, const T& data);
-        template<class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value>  DownloadData(T& data) const;
+        template<contiguous_memory T> void InitializeData(std::size_t bufferSize, const T& data);
+        template<contiguous_memory T> void InitializeData(const T& data);
+        template<contiguous_memory T> void UploadData(std::size_t offset, const T& data);
+        template<contiguous_memory T> void DownloadData(T& data) const;
 
     private:
         void UploadDataInternal(std::size_t offset, std::size_t size, const void* data) const;
     };
 
-    template <class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value> HostBuffer::InitializeData(std::size_t bufferSize, const T& data)
+    template<contiguous_memory T> void HostBuffer::InitializeData(std::size_t bufferSize, const T& data)
     {
         InitializeData(bufferSize, byteSizeOf(data), data.data());
     }
 
-    template <class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value> HostBuffer::InitializeData(const T& data)
+    template<contiguous_memory T> void HostBuffer::InitializeData(const T& data)
     {
-        InitializeData(byteSizeOf(data), data.data());
+        InitializeData(byteSizeOf(data), byteSizeOf(data), data.data());
     }
 
-    template <class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value> HostBuffer::UploadData(std::size_t offset, const T& data)
+    template<contiguous_memory T> void HostBuffer::UploadData(std::size_t offset, const T& data)
     {
         UploadData(offset, byteSizeOf(data), data.data());
     }
 
-    template <class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value> HostBuffer::DownloadData(T& data) const
+    template<contiguous_memory T> void HostBuffer::DownloadData(T& data) const
     {
         DownloadData(byteSizeOf(data), data.data());
     }

@@ -34,9 +34,9 @@ namespace vkfw_core::spdlog::sinks {
         void rotate_();
         bool rename_file_(const ::spdlog::filename_t& src_filename, const ::spdlog::filename_t& target_filename);
 
-        ::spdlog::filename_t base_filename_;
-        std::size_t max_files_;
-        ::spdlog::details::file_helper file_helper_;
+        ::spdlog::filename_t m_base_filename;
+        std::size_t m_max_files;
+        ::spdlog::details::file_helper m_file_helper;
     };
 
     using rotating_open_file_sink_mt = rotating_open_file_sink<std::mutex>;

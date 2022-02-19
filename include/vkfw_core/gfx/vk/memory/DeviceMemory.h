@@ -8,20 +8,23 @@
 
 #pragma once
 
+#include "gfx/vk/wrappers/VulkanObjectWrapper.h"
 #include "main.h"
 
 #include <glm/gtc/type_precision.hpp>
+
+#include <core/function_view.h>
 
 namespace vkfw_core::gfx {
 
     class Buffer;
     class Texture;
 
-    class DeviceMemory final
+    class DeviceMemory final : public VulkanObjectWrapper<vk::UniqueDeviceMemory>
     {
     public:
-        DeviceMemory(const LogicalDevice* device, const vk::MemoryPropertyFlags& properties);
-        DeviceMemory(const LogicalDevice* device, vk::MemoryRequirements memRequirements,
+        DeviceMemory(const LogicalDevice* device, std::string_view name, const vk::MemoryPropertyFlags& properties);
+        DeviceMemory(const LogicalDevice* device, std::string_view name, vk::MemoryRequirements memRequirements,
                      const vk::MemoryPropertyFlags& properties);
         DeviceMemory(const DeviceMemory&) = delete;
         DeviceMemory& operator=(const DeviceMemory&) = delete;
@@ -29,11 +32,8 @@ namespace vkfw_core::gfx {
         DeviceMemory& operator=(DeviceMemory&&) noexcept;
         ~DeviceMemory();
 
-        void InitializeMemory(const vk::MemoryRequirements& memRequirements);
+        void InitializeMemory(const vk::MemoryRequirements& memRequirements, bool shaderDeviceAddress = false);
         void InitializeMemory(const vk::MemoryAllocateInfo& memAllocateInfo);
-
-        void BindToBuffer(Buffer& buffer, std::size_t offset) const;
-        void BindToTexture(Texture& texture, std::size_t offset) const;
 
         void CopyToHostMemory(std::size_t offset, std::size_t size, const void* data) const;
         void CopyToHostMemory(std::size_t offsetToTexture, const glm::u32vec3& offset,
@@ -43,7 +43,7 @@ namespace vkfw_core::gfx {
         void CopyFromHostMemory(std::size_t offsetToTexture, const glm::u32vec3& offset,
             const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize, void* data) const;
 
-        [[nodiscard]] vk::MemoryPropertyFlags GetMemoryProperties() const { return memoryProperties_; }
+        [[nodiscard]] vk::MemoryPropertyFlags GetMemoryProperties() const { return m_memoryProperties; }
 
         static std::uint32_t FindMemoryType(const LogicalDevice* device, std::uint32_t typeFilter,
                                             const vk::MemoryPropertyFlags& properties);
@@ -53,18 +53,17 @@ namespace vkfw_core::gfx {
     private:
         static bool CheckMemoryType(const vk::PhysicalDeviceMemoryProperties& memProperties, std::uint32_t typeToCheck,
                                     std::uint32_t typeFilter, const vk::MemoryPropertyFlags& properties);
-        void MapAndProcess(std::size_t offset, std::size_t size, const std::function<void(void* deviceMem, std::size_t size)>& processFunc) const;
+        void MapAndProcess(std::size_t offset, std::size_t size,
+                           const function_view<void(void* deviceMem, std::size_t size)>& processFunc) const;
         void MapAndProcess(std::size_t offsetToTexture, const glm::u32vec3& offset,
             const vk::SubresourceLayout& layout, const glm::u32vec3& dataSize,
-            const std::function<void(void* deviceMem, std::size_t offset, std::size_t size)>& processFunc) const;
+            const function_view<void(void* deviceMem, std::size_t offset, std::size_t size)>& processFunc) const;
 
         /** Holds the device. */
-        const LogicalDevice* device_;
-        /** Holds the Vulkan device memory. */
-        vk::UniqueDeviceMemory vkDeviceMemory_;
+        const LogicalDevice* m_device;
         /** Holds the current size of the memory in bytes. */
-        std::size_t size_;
+        std::size_t m_size;
         /** Holds the memory properties. */
-        vk::MemoryPropertyFlags memoryProperties_;
+        vk::MemoryPropertyFlags m_memoryProperties;
     };
 }

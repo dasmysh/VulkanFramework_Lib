@@ -35,9 +35,9 @@ namespace vkfw_core::gfx {
     }
 
     AssImpScene::AssImpScene(std::string resourceId, const LogicalDevice* device, MeshCreateFlags flags)
-        : Resource{std::move(resourceId), device}, meshFilename_{getId()}
+        : Resource{std::move(resourceId), device}, m_meshFilename{GetId()}
     {
-        auto filename = FindResourceLocation(meshFilename_);
+        auto filename = FindResourceLocation(m_meshFilename);
 
         if (!loadBinary(filename)) {
             createNewMesh(filename, flags);
@@ -62,7 +62,7 @@ namespace vkfw_core::gfx {
 
     /** Default move constructor. */
     AssImpScene::AssImpScene(AssImpScene&& rhs) noexcept
-        : Resource(std::move(rhs)), MeshInfo(std::move(rhs)), meshFilename_{std::move(rhs.meshFilename_)}
+        : Resource(std::move(rhs)), MeshInfo(std::move(rhs)), m_meshFilename{std::move(rhs.m_meshFilename)}
     {
     }
 
@@ -122,40 +122,41 @@ namespace vkfw_core::gfx {
             }
         }
 
-        std::filesystem::path sceneFilePath{ meshFilename_ };
+        std::filesystem::path sceneFilePath{ m_meshFilename };
 
-        ReserveMesh(maxUVChannels, maxColorChannels, hasTangentSpace, numVertices, numIndices, scene->mNumMaterials);
+        ReserveMesh<PhongBumpMaterialInfo>(maxUVChannels, maxColorChannels, hasTangentSpace, numVertices, numIndices, scene->mNumMaterials);
         auto numMaterials = static_cast<std::size_t>(scene->mNumMaterials);
         for (std::size_t i = 0; i < numMaterials; ++i) {
             auto material = scene->mMaterials[i]; // NOLINT
-            auto mat = GetMaterial(i);
-            mat->ambient_ = GetMaterialColor(material, AI_MATKEY_COLOR_AMBIENT);
-            mat->diffuse_ = GetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE);
-            mat->specular_ = GetMaterialColor(material, AI_MATKEY_COLOR_SPECULAR);
-            material->Get(AI_MATKEY_OPACITY, mat->alpha_);
-            material->Get(AI_MATKEY_SHININESS, mat->specularExponent_);
-            material->Get(AI_MATKEY_REFRACTI, mat->refraction_);
+            auto mat = static_cast<PhongBumpMaterialInfo*>(GetMaterial(i));
+            mat->m_ambient = GetMaterialColor(material, AI_MATKEY_COLOR_AMBIENT);
+            mat->m_diffuse = GetMaterialColor(material, AI_MATKEY_COLOR_DIFFUSE);
+            mat->m_specular = GetMaterialColor(material, AI_MATKEY_COLOR_SPECULAR);
+            material->Get(AI_MATKEY_OPACITY, mat->m_alpha);
+            material->Get(AI_MATKEY_SHININESS, mat->m_specularExponent);
             aiString materialName;
             aiString diffuseTexPath;
             aiString bumpTexPath;
             if (AI_SUCCESS == material->Get(AI_MATKEY_NAME, materialName)) {
-                mat->materialName_ = materialName.C_Str();
+                mat->m_materialName = materialName.C_Str();
             }
 
             if (AI_SUCCESS == material->Get(AI_MATKEY_TEXTURE(aiTextureType_DIFFUSE, 0), diffuseTexPath)) {
-                mat->diffuseTextureFilename_ = sceneFilePath.parent_path().string() + "/" + diffuseTexPath.C_Str();
+                mat->m_textureFilenames.emplace_back(sceneFilePath.parent_path().string() + "/" + diffuseTexPath.C_Str());
             }
 
             if (AI_SUCCESS == material->Get(AI_MATKEY_TEXTURE(aiTextureType_HEIGHT, 0), bumpTexPath)) {
-                mat->bumpMapFilename_ = sceneFilePath.parent_path().string() + "/" + bumpTexPath.C_Str();
-                material->Get(AI_MATKEY_TEXBLEND(aiTextureType_HEIGHT, 0), mat->bumpMultiplier_);
+                mat->m_textureFilenames.resize(1);
+                mat->m_textureFilenames.emplace_back(sceneFilePath.parent_path().string() + "/" + bumpTexPath.C_Str());
+                material->Get(AI_MATKEY_TEXBLEND(aiTextureType_HEIGHT, 0), mat->m_bumpMultiplier);
             } else if (AI_SUCCESS == material->Get(AI_MATKEY_TEXTURE(aiTextureType_NORMALS, 0), bumpTexPath)) {
-                mat->bumpMapFilename_ = sceneFilePath.parent_path().string() + "/" + bumpTexPath.C_Str();
-                material->Get(AI_MATKEY_TEXBLEND(aiTextureType_NORMALS, 0), mat->bumpMultiplier_);
+                mat->m_textureFilenames.resize(1);
+                mat->m_textureFilenames.emplace_back(sceneFilePath.parent_path().string() + "/" + bumpTexPath.C_Str());
+                material->Get(AI_MATKEY_TEXBLEND(aiTextureType_NORMALS, 0), mat->m_bumpMultiplier);
             }
 
-            if (material->GetTextureCount(aiTextureType_OPACITY) > 0) {
-                mat->hasAlpha_ = true;
+            if (material->GetTextureCount(aiTextureType_OPACITY) > 0 || mat->m_alpha < 1.0f) {
+                mat->m_hasAlpha = true;
             }
         }
 
@@ -276,7 +277,7 @@ namespace vkfw_core::gfx {
     void AssImpScene::saveBinary(const std::string& filename) const
     {
         BinaryOAWrapper oa{ filename };
-        oa(cereal::make_nvp("meshInfo", *static_cast<const MeshInfo*>(this)), cereal::make_nvp("meshFilename", meshFilename_));
+        oa(cereal::make_nvp("meshInfo", *static_cast<const MeshInfo*>(this)), cereal::make_nvp("meshFilename", m_meshFilename));
     }
 
     bool AssImpScene::loadBinary(const std::string& filename)
@@ -285,18 +286,18 @@ namespace vkfw_core::gfx {
             BinaryIAWrapper ia{ filename };
             if (ia.IsValid()) {
                 ia(cereal::make_nvp("meshInfo", *static_cast<MeshInfo*>(this)),
-                   cereal::make_nvp("meshFilename", meshFilename_));
+                   cereal::make_nvp("meshFilename", m_meshFilename));
                 return true;
             }
         } catch (cereal::Exception& e) {
             spdlog::error("Could not load binary file. Falling back to Assimp.\nResourceID: {}\nFilename: "
                           "{}\nDescription: Cereal Error.\nError Message: {}",
-                          getId(), BinaryIAWrapper::GetBinFilename(filename), e.what());
+                          GetId(), BinaryIAWrapper::GetBinFilename(filename), e.what());
             return false;
         } catch (...) {
             spdlog::error("Could not load binary file. Falling back to Assimp.\nResourceID: {}\nFilename: "
                           "{}\nDescription: Reason unknown",
-                          getId(), BinaryIAWrapper::GetBinFilename(filename));
+                          GetId(), BinaryIAWrapper::GetBinFilename(filename));
             return false;
         }
         return false;

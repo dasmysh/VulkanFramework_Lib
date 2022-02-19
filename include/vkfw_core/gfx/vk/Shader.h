@@ -9,10 +9,11 @@
 #pragma once
 
 #include "main.h"
+#include "gfx/vk/wrappers/VulkanObjectWrapper.h"
 
 namespace vkfw_core::gfx {
 
-    class Shader final : public Resource
+    class Shader final : public Resource, public VulkanObjectWrapper<vk::UniqueShaderModule>
     {
     public:
         Shader(const std::string& shaderFilename, const LogicalDevice* device);
@@ -29,12 +30,10 @@ namespace vkfw_core::gfx {
         void LoadCompiledShaderFromFile();
 
         /** Holds the shader filename. */
-        std::string shaderFilename_;
-        /** Holds the compiled shader. */
-        vk::UniqueShaderModule shaderModule_;
+        std::string m_shaderFilename;
         /** Holds the shaders type. */
-        vk::ShaderStageFlagBits type_;
+        vk::ShaderStageFlagBits m_type;
         /** Holds the shaders type as a string. */
-        std::string strType_;
+        std::string m_strType;
     };
 }

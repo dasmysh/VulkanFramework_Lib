@@ -11,14 +11,47 @@
 #include "main.h"
 #include "gfx/vk/LogicalDevice.h"
 #include "gfx/vk/memory/DeviceMemory.h"
+#include "gfx/vk/wrappers/CommandBuffer.h"
+#include "gfx/vk/wrappers/ResourceViews.h"
+#include "gfx/vk/wrappers/MemoryBoundResource.h"
 
 namespace vkfw_core::gfx {
 
-    class Buffer
+    class Queue;
+
+    struct BufferAccessRange : public MemoryBoundResource
+    {
+        BufferAccessRange SplitAt(std::size_t offset);
+
+        std::size_t m_offset = 0;
+        std::size_t m_range = 0;
+    };
+
+    class BufferAccessRangeList
     {
     public:
-        Buffer(const LogicalDevice* device, const vk::BufferUsageFlags& usage, const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags(),
-            std::vector<std::uint32_t> queueFamilyIndices = std::vector<std::uint32_t>{});
+        BufferAccessRangeList(std::size_t range)
+        {
+            auto& element = m_bufferRangeAccess.emplace_back();
+            element.m_offset = 0;
+            element.m_range = range;
+        }
+
+        [[nodiscard]] std::span<BufferAccessRange> GetOverlappingRanges(std::size_t offset, std::size_t range);
+        void SetAccess(std::size_t offset, std::size_t range, vk::AccessFlags2KHR access,
+                       vk::PipelineStageFlags2KHR pipelineStages, unsigned int queueFamily);
+        void ReduceRanges();
+
+    private:
+        std::vector<BufferAccessRange> m_bufferRangeAccess;
+    };
+
+    class Buffer : public VulkanObjectPrivateWrapper<vk::UniqueBuffer>
+    {
+    public:
+        Buffer(const LogicalDevice* device, std::string_view name, const vk::BufferUsageFlags& usage,
+               const vk::MemoryPropertyFlags& memoryFlags = vk::MemoryPropertyFlags(),
+               std::vector<std::uint32_t> queueFamilyIndices = std::vector<std::uint32_t>{});
         virtual ~Buffer();
         Buffer(const Buffer&) = delete;
         Buffer& operator=(const Buffer&) = delete;
@@ -27,44 +60,70 @@ namespace vkfw_core::gfx {
 
         void InitializeBuffer(std::size_t size, bool initMemory = true);
 
-        void CopyBufferAsync(std::size_t srcOffset, const Buffer& dstBuffer, std::size_t dstOffset, std::size_t size,
-                             vk::CommandBuffer cmdBuffer) const;
-        [[nodiscard]] vk::UniqueCommandBuffer
-        CopyBufferAsync(std::size_t srcOffset, const Buffer& dstBuffer, std::size_t dstOffset, std::size_t size,
-                        std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
-                        const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
-                        const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
-                        vk::Fence fence = vk::Fence()) const;
-        [[nodiscard]] vk::UniqueCommandBuffer
-        CopyBufferAsync(const Buffer& dstBuffer, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx,
-                        const std::vector<vk::Semaphore>& waitSemaphores = std::vector<vk::Semaphore>{},
-                        const std::vector<vk::Semaphore>& signalSemaphores = std::vector<vk::Semaphore>{},
-                        vk::Fence fence = vk::Fence()) const;
-        void CopyBufferSync(const Buffer& dstBuffer, std::pair<std::uint32_t, std::uint32_t> copyQueueIdx) const;
+        void CopyBufferAsync(std::size_t srcOffset, Buffer& dstBuffer, std::size_t dstOffset, std::size_t size,
+                             CommandBuffer& cmdBuffer);
+        [[nodiscard]] CommandBuffer CopyBufferAsync(
+            std::size_t srcOffset, Buffer& dstBuffer, std::size_t dstOffset, std::size_t size, const Queue& queue,
+            std::span<vk::SemaphoreSubmitInfoKHR> waitSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
+            std::span<vk::SemaphoreSubmitInfoKHR> signalSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
+            std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence = {});
+        [[nodiscard]] CommandBuffer CopyBufferAsync(
+            Buffer& dstBuffer, const Queue& queue,
+            std::span<vk::SemaphoreSubmitInfoKHR> waitSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
+            std::span<vk::SemaphoreSubmitInfoKHR> signalSemaphores = std::span<vk::SemaphoreSubmitInfoKHR>{},
+            std::optional<std::reference_wrapper<std::shared_ptr<Fence>>> fence = {});
+        void CopyBufferSync(Buffer& dstBuffer, const Queue& copyQueue);
 
-        [[nodiscard]] std::size_t GetSize() const { return size_; }
-        [[nodiscard]] vk::Buffer GetBuffer() const { return *buffer_; }
-        [[nodiscard]] const vk::Buffer* GetBufferPtr() const { return &(*buffer_); }
-        [[nodiscard]] const DeviceMemory& GetDeviceMemory() const { return bufferDeviceMemory_; }
+        void AccessBarrier(bool isDynamic, vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
+                           PipelineBarrier& barrier);
+        void AccessBarrierRange(bool isDynamic, std::size_t offset, std::size_t range, vk::AccessFlags2KHR access,
+                                vk::PipelineStageFlags2KHR pipelineStages, PipelineBarrier& barrier);
+        [[nodiscard]] vk::Buffer GetBuffer(bool isDynamic, vk::AccessFlags2KHR access,
+                                           vk::PipelineStageFlags2KHR pipelineStages, PipelineBarrier& barrier);
+        [[nodiscard]] BufferRange GetBufferRange(bool isDynamic, std::size_t offset, std::size_t range,
+                                                 vk::AccessFlags2KHR access, vk::PipelineStageFlags2KHR pipelineStages,
+                                                 PipelineBarrier& barrier);
+        [[nodiscard]] vk::DeviceOrHostAddressConstKHR GetDeviceAddressConst(vk::AccessFlags2KHR access,
+                                                                            vk::PipelineStageFlags2KHR pipelineStages,
+                                                                            PipelineBarrier& barrier);
+        [[nodiscard]] vk::DeviceOrHostAddressKHR GetDeviceAddress(vk::AccessFlags2KHR access,
+                                                                  vk::PipelineStageFlags2KHR pipelineStages,
+                                                                  PipelineBarrier& barrier);
+
+        [[nodiscard]] std::size_t GetSize() const { return m_size; }
+        [[nodiscard]] const DeviceMemory& GetDeviceMemory() const { return m_bufferDeviceMemory; }
+        [[nodiscard]] vk::MemoryRequirements GetMemoryRequirements() const;
+        [[nodiscard]] bool IsShaderDeviceAddress() const
+        {
+            return (m_usage & vk::BufferUsageFlagBits::eShaderDeviceAddress)
+                   == vk::BufferUsageFlagBits::eShaderDeviceAddress;
+        }
+        void BindMemory(vk::DeviceMemory deviceMemory, std::size_t offset);
+
+        [[nodiscard]] std::span<BufferAccessRange> GetOverlappingRanges(std::size_t offset, std::size_t range);
+        void SetAccess(std::size_t offset, std::size_t range, vk::AccessFlags2KHR access,
+                       vk::PipelineStageFlags2KHR pipelineStages, unsigned int queueFamily);
+        void ReduceRanges();
 
     protected:
-        [[nodiscard]] Buffer CopyWithoutData() const
+        [[nodiscard]] Buffer CopyWithoutData(std::string_view name) const
         {
-            return Buffer{device_, usage_, bufferDeviceMemory_.GetMemoryProperties(), queueFamilyIndices_};
+            return Buffer{m_device, name, m_usage, m_bufferDeviceMemory.GetMemoryProperties(), m_queueFamilyIndices};
         }
 
     private:
         /** Holds the device. */
-        const LogicalDevice* device_;
-        /** Holds the Vulkan buffer object. */
-        vk::UniqueBuffer buffer_;
+        const LogicalDevice* m_device;
         /** Holds the Vulkan device memory for the buffer. */
-        DeviceMemory bufferDeviceMemory_;
+        DeviceMemory m_bufferDeviceMemory;
         /** Holds the current size of the buffer in bytes. */
-        std::size_t size_;
+        std::size_t m_size;
         /** Holds the buffer usage. */
-        vk::BufferUsageFlags usage_;
+        vk::BufferUsageFlags m_usage;
         /** Holds the queue family indices. */
-        std::vector<std::uint32_t> queueFamilyIndices_;
+        std::vector<std::uint32_t> m_queueFamilyIndices;
+
+        /** Holds a list of all buffer ranges and their access. */
+        BufferAccessRangeList m_bufferRangeAccess;
     };
 }

@@ -27,18 +27,20 @@ namespace vkfw_core::gfx {
         ~ArcballCamera() override;
 
         bool HandleMouse(int button, int action, float mouseWheelDelta, const VKWindow* sender) override;
-        void UpdateCamera(double elapsedTime, const VKWindow* sender) override;
+        bool UpdateCamera(double elapsedTime, const VKWindow* sender) override;
 
     private:
         /** The initial camera position. */
-        glm::vec3 initialCameraPosition_;
+        glm::vec3 m_initialCameraPosition;
         /** Holds the arc-ball used for camera rotation. */
-        Arcball camArcball_;
+        Arcball m_camArcball;
         /** The cameras field of view (y-direction). */
-        float fovY_;
+        float m_fovY;
         /** Near clipping plane. */
-        float zNear_;
+        float m_zNear;
         /** Far clipping plane. */
-        float zFar_;
+        float m_zFar;
+        /** Has the camera changed this frame. */
+        bool m_hasCameraChangedThisFrame = true;
     };
 }

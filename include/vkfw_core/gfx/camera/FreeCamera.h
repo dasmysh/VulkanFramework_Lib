@@ -24,24 +24,24 @@ namespace vkfw_core::gfx {
                    float zFar, double speed = DEFAULT_CAMERA_SPEED) noexcept;
 
         bool HandleMouse(int button, int action, float mouseWheelDelta, const VKWindow* sender) override;
-        void UpdateCamera(double elapsedTime, const VKWindow* sender) override;
+        bool UpdateCamera(double elapsedTime, const VKWindow* sender) override;
         void SetMoveSpeed(double speed);
         double GetMoveSpeed();
 
     private:
         /** Holds the current pitch and yaw state. */
-        glm::vec2 currentPY_;
+        glm::vec2 m_currentPY;
         /** Holds the current mouse position. */
-        glm::vec2 currentMousePosition_;
+        glm::vec2 m_currentMousePosition;
         /** Holds the current movement speed */
-        double moveSpeed_;
+        double m_moveSpeed;
         /** Holds the flag for setting the previous mouse position. */
-        bool firstRun_;
+        bool m_firstRun;
         /** The cameras field of view (y-direction). */
-        float fovY_;
+        float m_fovY;
         /** Near clipping plane. */
-        float zNear_;
+        float m_zNear;
         /** Far clipping plane. */
-        float zFar_;
+        float m_zFar;
     };
 }

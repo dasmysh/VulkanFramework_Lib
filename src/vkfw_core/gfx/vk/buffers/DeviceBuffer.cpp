@@ -11,9 +11,9 @@
 
 namespace vkfw_core::gfx {
 
-    DeviceBuffer::DeviceBuffer(const LogicalDevice* device, const vk::BufferUsageFlags& usage,
-        const vk::MemoryPropertyFlags& memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices) :
-        Buffer{ device, usage, memoryFlags | vk::MemoryPropertyFlagBits::eDeviceLocal, queueFamilyIndices }
+    DeviceBuffer::DeviceBuffer(const LogicalDevice* device, std::string_view name, const vk::BufferUsageFlags& usage,
+        const vk::MemoryPropertyFlags& memoryFlags, const std::vector<std::uint32_t>& queueFamilyIndices)
+        : Buffer{ device, name, usage, memoryFlags | vk::MemoryPropertyFlagBits::eDeviceLocal, queueFamilyIndices }
     {
     }
 

@@ -11,16 +11,18 @@
 
 namespace vkfw_core::gfx {
 
-    HostTexture::HostTexture(const LogicalDevice* device, const TextureDescriptor& desc,
-        const std::vector<std::uint32_t>& queueFamilyIndices) :
-        Texture{ device, TextureDescriptor(desc, vk::MemoryPropertyFlagBits::eHostVisible | vk::MemoryPropertyFlagBits::eHostCoherent), queueFamilyIndices }
+    HostTexture::HostTexture(const LogicalDevice* device, std::string_view name, const TextureDescriptor& desc,
+                             vk::ImageLayout initialLayout, const std::vector<std::uint32_t>& queueFamilyIndices)
+        : Texture{device, name,
+                  TextureDescriptor(desc, vk::MemoryPropertyFlagBits::eHostVisible
+                                              | vk::MemoryPropertyFlagBits::eHostCoherent),
+                  initialLayout, queueFamilyIndices}
     {
     }
 
     HostTexture::~HostTexture() = default;
 
-    HostTexture::HostTexture(const HostTexture& rhs) :
-        Texture{ rhs.CopyWithoutData() }
+    HostTexture::HostTexture(const HostTexture& rhs) : Texture{rhs.CopyWithoutData(fmt::format("{}-Copy", rhs.GetName()))}
     {
         auto texSize = rhs.GetSize();
         auto mipLevels = rhs.GetMipLevels();
@@ -67,7 +69,7 @@ namespace vkfw_core::gfx {
 
     void HostTexture::InitializeData(const glm::u32vec4& size, std::uint32_t mipLevels, const void* data)
     {
-        InitializeData(size, mipLevels, glm::u32vec4(size.x * GetDescriptor().bytesPP_, size.y, size.z, size.w), data);
+        InitializeData(size, mipLevels, glm::u32vec4(size.x * GetDescriptor().m_bytesPP, size.y, size.z, size.w), data);
     }
 
     void HostTexture::UploadData(std::uint32_t mipLevel, std::uint32_t arrayLayer,
@@ -80,14 +82,14 @@ namespace vkfw_core::gfx {
         assert(mipLevel < GetMipLevels());
 
         vk::ImageSubresource subresource{ GetValidAspects(), mipLevel, arrayLayer };
-        auto layout = GetDevice().getImageSubresourceLayout(GetImage(), subresource);
+        auto layout = GetSubresourceLayout(subresource);
         GetDeviceMemory().CopyToHostMemory(0, offset, layout, size, data);
     }
 
     void HostTexture::DownloadData(std::uint32_t mipLevel, std::uint32_t arrayLayer, const glm::u32vec3& size, void* data) const
     {
         vk::ImageSubresource subresource{ GetValidAspects(), mipLevel, arrayLayer };
-        auto layout = GetDevice().getImageSubresourceLayout(GetImage(), subresource);
+        auto layout = GetSubresourceLayout(subresource);
 
         GetDeviceMemory().CopyFromHostMemory(0, glm::u32vec3(0), layout, size, data);
     }

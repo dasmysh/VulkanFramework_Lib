@@ -38,7 +38,7 @@ if(NOT "${GEN_SHADER_FILES}" STREQUAL "")
 endif()
 set(COMPILED_SHADERS "")
 foreach(SHADER ${SHADER_FILES})
-    compile_spirv_shader("${SHADER}" "${VKFWCORE_RESOURCE_BASE_PATH}")
+    compile_spirv_shader("${SHADER}" "${VKFWCORE_RESOURCE_BASE_PATH}/shader")
     list(APPEND COMPILED_SHADERS ${COMPILE_SPIRV_SHADER_RETURN})
 endforeach()
 if(NOT "${COMPILED_SHADERS}" STREQUAL "")
@@ -73,7 +73,9 @@ file(GLOB TOP_FILES CONFIGURE_DEPENDS
     ${PROJECT_SOURCE_DIR}/.clang-tidy
     ${PROJECT_SOURCE_DIR}/.clang-format
     ${CMAKE_BINARY_DIR}/glm.natvis
-    ${CMAKE_BINARY_DIR}/imgui.natvis)
+    ${CMAKE_BINARY_DIR}/imgui.natvis
+    ${CMAKE_BINARY_DIR}/imgui.gdb
+    ${CMAKE_BINARY_DIR}/imgui.natstepfilter)
 source_group(" " FILES ${TOP_FILES})
 
 
@@ -90,22 +92,7 @@ target_link_libraries(vk_framework_core PRIVATE CONAN_PKG::glfw CONAN_PKG::stb C
 add_dependencies(vk_framework_core compile_shaders_core)
 target_include_directories(vk_framework_core PUBLIC
     ${PROJECT_SOURCE_DIR}/include/${PROJECT_REL_PATH}
+    ${PROJECT_SOURCE_DIR}/resources/shader
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_BINARY_DIR}/extern/imgui/cpp)
-#    extern/glfw/include
-#    extern/glm
-#    extern/g3log/src
-#    ${CMAKE_CURRENT_BINARY_DIR}/extern/g3log/include
-#    extern/stb
-#    extern/cereal/include
-#    extern/assimp/include
-#    ${CMAKE_CURRENT_BINARY_DIR}/extern/assimp/include
-#    extern/imgui
-#    extern/imgui/misc/cpp)
-# target_compile_definitions(vk_framework_core PRIVATE VKUFW_EXPORT)
-# set_property(TARGET vk_framework_core PROPERTY CXX_STANDARD 17)
 target_compile_definitions(vk_framework_core PUBLIC STBI_MSC_SECURE_CRT CEREAL_THREAD_SAFE=1)
-
-
-# target_link_libraries(${FWLIB_LIBNAME} ${VULKAN_LIBRARY} glfw ${GLFW_LIBRARIES} g3logger assimp)
-# set_property(TARGET ${FWLIB_LIBNAME} APPEND PROPERTY COMPILE_DEFINITIONS $<$<CONFIG:DebugOpenGLCalls>:_OGL_DEBUG_MSGS>)

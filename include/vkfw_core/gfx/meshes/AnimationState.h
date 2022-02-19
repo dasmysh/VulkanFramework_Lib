@@ -31,93 +31,96 @@ namespace vkfw_core::gfx {
          *  Pauses the animation.
          *  @param currentTime the current timestamp.
          */
-        void Pause(double currentTime) { isPlaying_ = false; pauseTime_ = static_cast<float>(currentTime); }
+        void Pause(double currentTime) { m_isPlaying = false; m_pauseTime = static_cast<float>(currentTime); }
         /** Stops the animation. */
-        void Stop() { isPlaying_ = false; currentPlayTime_ = 0.0f; pauseTime_ = 0.0f; }
+        void Stop() { m_isPlaying = false; m_currentPlayTime = 0.0f; m_pauseTime = 0.0f; }
 
         /** Accessor for animation speed. */
-        [[nodiscard]] float GetSpeed() const { return animationPlaybackSpeed_.at(animationIndex_); }
+        [[nodiscard]] float GetSpeed() const { return m_animationPlaybackSpeed.at(m_animationIndex); }
         /** Accessor for animation frames per second. */
-        [[nodiscard]] float GetFramesPerSecond() const { return animations_.at(animationIndex_).GetFramesPerSecond(); }
+        [[nodiscard]] float GetFramesPerSecond() const
+        {
+            return m_animations.at(m_animationIndex).GetFramesPerSecond();
+        }
         /** Accessor for animation duration. */
-        [[nodiscard]] float GetDuration() const { return animations_.at(animationIndex_).GetDuration(); }
+        [[nodiscard]] float GetDuration() const { return m_animations.at(m_animationIndex).GetDuration(); }
         /** Accessor for animation time. */
-        [[nodiscard]] float GetTime() const { return currentPlayTime_; }
+        [[nodiscard]] float GetTime() const { return m_currentPlayTime; }
 
         /** Checks whether the animation is playing. */
-        [[nodiscard]] bool IsPlaying() const { return isPlaying_; }
+        [[nodiscard]] bool IsPlaying() const { return m_isPlaying; }
         /** Checks whether the animation is repeating. */
-        [[nodiscard]] bool IsRepeating() const { return isRepeating_; }
+        [[nodiscard]] bool IsRepeating() const { return m_isRepeating; }
 
         /** Updates the current time. */
         bool UpdateTime(double currentTime);
         /** Sets the current play time (internal animation time). */
-        void SetCurrentPlayTime(float currentPlayTime) { currentPlayTime_ = currentPlayTime; }
+        void SetCurrentPlayTime(float currentPlayTime) { m_currentPlayTime = currentPlayTime; }
         /** Sets the current relative frame (internal animation time relative to the duration). */
-        void SetCurrentFrameRelative(float relativeFrame) { currentPlayTime_ = relativeFrame * GetDuration(); }
+        void SetCurrentFrameRelative(float relativeFrame) { m_currentPlayTime = relativeFrame * GetDuration(); }
         void ComputeAnimationsFinalBonePoses();
 
         /**
          *  Sets the current animation speed.
          *  @param speed the new animation speed.
          */
-        void SetSpeed(float speed) { animationPlaybackSpeed_[animationIndex_] = speed; }
+        void SetSpeed(float speed) { m_animationPlaybackSpeed[m_animationIndex] = speed; }
         /**
          *  Sets whether the animation should be repeated.
          *  @param repeat whether the animation should be repeated.
          */
-        void SetRepeat(bool repeat) { isRepeating_ = repeat; }
+        void SetRepeat(bool repeat) { m_isRepeating = repeat; }
 
         /**
          *  Returns the current animation index.
          *  @return the current animation index.
          */
-        [[nodiscard]] std::size_t GetCurrentAnimationIndex() const { return animationIndex_; }
+        [[nodiscard]] std::size_t GetCurrentAnimationIndex() const { return m_animationIndex; }
         /**
          *  Sets the current animation index.
          *  @param animationIndex the new current animation index.
          */
-        void SetCurrentAnimationIndex(std::size_t animationIndex) { animationIndex_ = animationIndex; }
+        void SetCurrentAnimationIndex(std::size_t animationIndex) { m_animationIndex = animationIndex; }
 
         /** Returns the global bone pose for a node. */
-        [[nodiscard]] const glm::mat4& GetGlobalBonePose(std::size_t index) const { return globalBonePoses_[index]; }
+        [[nodiscard]] const glm::mat4& GetGlobalBonePose(std::size_t index) const { return m_globalBonePoses[index]; }
         /** Returns the local bone pose for a node. */
-        [[nodiscard]] const glm::mat4& GetLocalBonePose(std::size_t index) const { return localBonePoses_[index]; }
+        [[nodiscard]] const glm::mat4& GetLocalBonePose(std::size_t index) const { return m_localBonePoses[index]; }
         /** Returns the skinning matrices. */
-        [[nodiscard]] const std::vector<glm::mat4>& GetSkinningMatrices() const { return skinned_; }
+        [[nodiscard]] const std::vector<glm::mat4>& GetSkinningMatrices() const { return m_skinned; }
 
     private:
         void ComputeGlobalBonePose(const SceneMeshNode* node);
 
         /** Holds the mesh to render. */
-        const MeshInfo* mesh_;
+        const MeshInfo* m_mesh;
         /** The current animation id. **/
-        std::size_t animationIndex_;
+        std::size_t m_animationIndex;
 
         /** Holds the playback speed for each AnimationState. */
-        std::vector<float> animationPlaybackSpeed_;
+        std::vector<float> m_animationPlaybackSpeed;
         /** Holds the actual animation for each AnimationState. */
-        std::vector<Animation> animations_;
+        std::vector<Animation> m_animations;
 
 
         /** Is the animation playing. */
-        bool isPlaying_ = false;
+        bool m_isPlaying = false;
         /** Is the animation repeating. */
-        bool isRepeating_ = true;
+        bool m_isRepeating = true;
 
         /** The starting time of the animation. */
-        float startTime_ = 0.0f;
+        float m_startTime = 0.0f;
         /** The starting time of the current pause of the animation. */
-        float pauseTime_ = 0.0f;
+        float m_pauseTime = 0.0f;
         /** The starting playback time of the animation. */
-        float currentPlayTime_ = 0.0f;
+        float m_currentPlayTime = 0.0f;
 
         /** The local bone poses. */
-        std::vector<glm::mat4> localBonePoses_;
+        std::vector<glm::mat4> m_localBonePoses;
         /** The global bone poses. */
-        std::vector<glm::mat4> globalBonePoses_;
+        std::vector<glm::mat4> m_globalBonePoses;
         /** The skinning matrices used for rendering. */
-        std::vector<glm::mat4> skinned_;
+        std::vector<glm::mat4> m_skinned;
     };
 
 }

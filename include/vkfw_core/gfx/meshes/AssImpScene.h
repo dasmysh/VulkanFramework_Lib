@@ -57,6 +57,6 @@ namespace vkfw_core::gfx {
         bool loadBinary(const std::string& filename);
 
         /** Holds the meshes filename */
-        std::string meshFilename_;
+        std::string m_meshFilename;
     };
 }

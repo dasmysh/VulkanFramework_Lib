@@ -9,6 +9,11 @@
 #pragma once
 
 #include "main.h"
+#include "core/concepts.h"
+#include "gfx/vk/wrappers/Queue.h"
+#include "gfx/vk/wrappers/CommandPool.h"
+#include "gfx/vk/wrappers/Swapchain.h"
+#include "gfx/vk/wrappers/ResourceReleaser.h"
 
 #include <glm/vec2.hpp>
 
@@ -35,19 +40,21 @@ namespace vkfw_core::gfx {
     struct DeviceQueueDesc
     {
         DeviceQueueDesc() = default;
-        DeviceQueueDesc(std::uint32_t familyIndex, std::vector<float> priorities) : familyIndex_(familyIndex), priorities_(std::move(priorities)) {}
+        DeviceQueueDesc(std::uint32_t familyIndex, std::vector<float> priorities) : m_familyIndex(familyIndex), m_priorities(std::move(priorities)) {}
 
         /** Holds the family index. */
-        std::uint32_t familyIndex_ = 0;
+        std::uint32_t m_familyIndex = 0;
         /** Holds the queues priorities. */
-        std::vector<float> priorities_;
+        std::vector<float> m_priorities;
     };
 
-    class LogicalDevice final
+    class LogicalDevice final : public VulkanObjectWrapper<vk::UniqueDevice>
     {
     public:
-        LogicalDevice(const cfg::WindowCfg& windowCfg, const vk::PhysicalDevice& phDevice,
-            std::vector<DeviceQueueDesc> queueDescs, const vk::SurfaceKHR& surface = vk::SurfaceKHR());
+        LogicalDevice(const cfg::WindowCfg& windowCfg, vk::PhysicalDevice phDevice,
+                      std::vector<DeviceQueueDesc> queueDescs,
+                      const std::vector<std::string>& requiredDeviceExtensions,
+                      void* featuresNextChain, const Surface& surface = Surface{});
         LogicalDevice(const LogicalDevice&); // TODO: implement [10/30/2016 Sebastian Maisch]
         LogicalDevice(LogicalDevice&&) noexcept;
         LogicalDevice& operator=(const LogicalDevice&);
@@ -55,39 +62,45 @@ namespace vkfw_core::gfx {
         ~LogicalDevice();
 
 
-        [[nodiscard]] const vk::PhysicalDevice& GetPhysicalDevice() const { return vkPhysicalDevice_; }
-        [[nodiscard]] const vk::Device& GetDevice() const { return *vkDevice_; }
-        [[nodiscard]] const vk::Queue& GetQueue(unsigned int familyIndex, unsigned int queueIndex) const
+        [[nodiscard]] vk::PhysicalDevice GetPhysicalDevice() const { return m_vkPhysicalDevice; }
+        [[nodiscard]] const Queue& GetQueue(unsigned int familyIndex, unsigned int queueIndex) const
         {
-            return vkQueuesByRequestedFamily_[familyIndex][queueIndex];
+            return m_queuesByRequestedFamily[familyIndex][queueIndex];
         }
         [[nodiscard]] const DeviceQueueDesc& GetQueueInfo(unsigned int familyIndex) const
         {
-            return queueDescriptions_[familyIndex];
+            return m_queueDescriptions[familyIndex];
         }
-        [[nodiscard]] const vk::CommandPool& GetCommandPool(unsigned int familyIndex) const
+        [[nodiscard]] const CommandPool& GetCommandPool(unsigned int familyIndex) const
         {
-            return vkCmdPoolsByRequestedQFamily_[familyIndex];
+            return *m_cmdPoolsByRequestedQFamily[familyIndex];
         }
 
-        [[nodiscard]] vk::UniqueCommandPool
-        CreateCommandPoolForQueue(unsigned int familyIndex,
+        [[nodiscard]] CommandPool
+        CreateCommandPoolForQueue(std::string_view name, unsigned int familyIndex,
                                   const vk::CommandPoolCreateFlags& flags = vk::CommandPoolCreateFlags()) const;
         std::unique_ptr<GraphicsPipeline> CreateGraphicsPipeline(const std::vector<std::string>& shaderNames,
             const glm::uvec2& size, unsigned int numBlendAttachments);
 
-        VkResult DebugMarkerSetObjectTagEXT(VkDevice device, VkDebugMarkerObjectTagInfoEXT* tagInfo) const;
-        VkResult DebugMarkerSetObjectNameEXT(VkDevice device, VkDebugMarkerObjectNameInfoEXT* nameInfo) const;
-        void CmdDebugMarkerBeginEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const;
-        void CmdDebugMarkerEndEXT(VkCommandBuffer cmdBuffer) const;
-        void CmdDebugMarkerInsertEXT(VkCommandBuffer cmdBuffer, VkDebugMarkerMarkerInfoEXT* markerInfo) const;
-
-        [[nodiscard]] const cfg::WindowCfg& GetWindowCfg() const { return windowCfg_; }
-        [[nodiscard]] ShaderManager* GetShaderManager() const { return shaderManager_.get(); }
-        [[nodiscard]] TextureManager* GetTextureManager() const { return textureManager_.get(); }
-        [[nodiscard]] Texture2D* GetDummyTexture() const { return dummyTexture_.get(); }
+        [[nodiscard]] const cfg::WindowCfg& GetWindowCfg() const { return m_windowCfg; }
+        [[nodiscard]] const vk::PhysicalDeviceProperties& GetDeviceProperties() const { return m_deviceProperties; }
+        [[nodiscard]] const vk::PhysicalDeviceRayTracingPipelinePropertiesKHR&
+        GetDeviceRayTracingPipelineProperties() const { assert(m_windowCfg.m_useRayTracing); return m_raytracingPipelineProperties; }
+        [[nodiscard]] const vk::PhysicalDeviceAccelerationStructurePropertiesKHR&
+        GetDeviceAccelerationStructureProperties() const { assert(m_windowCfg.m_useRayTracing); return m_accelerationStructureProperties; }
+        [[nodiscard]] const vk::PhysicalDeviceFeatures& GetDeviceFeatures() const { return m_deviceFeatures; }
+        [[nodiscard]] const vk::PhysicalDeviceRayTracingPipelineFeaturesKHR& GetDeviceRayTracingPipelineFeatures() const { assert(m_windowCfg.m_useRayTracing); return m_raytracingPipelineFeatures; }
+        [[nodiscard]] const vk::PhysicalDeviceAccelerationStructureFeaturesKHR& GetDeviceAccelerationStructureFeatures() const { assert(m_windowCfg.m_useRayTracing); return m_accelerationStructureFeatures; }
+        [[nodiscard]] ShaderManager* GetShaderManager() const { return m_shaderManager.get(); }
+        [[nodiscard]] TextureManager* GetTextureManager() const { return m_textureManager.get(); }
+        [[nodiscard]] Texture2D* GetDummyTexture() const { return m_dummyTexture.get(); }
+        [[nodiscard]] ResourceReleaser& GetResourceReleaser() const { return *m_resourceReleaser; }
 
         [[nodiscard]] std::size_t CalculateUniformBufferAlignment(std::size_t size) const;
+        [[nodiscard]] std::size_t CalculateStorageBufferAlignment(std::size_t size) const;
+        [[nodiscard]] std::size_t CalculateASScratchBufferBufferAlignment(std::size_t size) const;
+        [[nodiscard]] std::size_t CalculateSBTBufferAlignment(std::size_t size) const;
+        [[nodiscard]] std::size_t CalculateSBTHandleAlignment(std::size_t size) const;
         [[nodiscard]] std::size_t CalculateBufferImageOffset(const Texture& second, std::size_t currentOffset) const;
         [[nodiscard]] std::size_t CalculateImageImageOffset(const Texture& first, const Texture& second,
                                                             std::size_t currentOffset) const;
@@ -97,50 +110,50 @@ namespace vkfw_core::gfx {
                             const vk::FormatFeatureFlags& features) const;
 
     private:
-        [[nodiscard]] PFN_vkVoidFunction LoadVKDeviceFunction(const std::string& functionName,
-                                                              const std::string& extensionName,
-                                                              bool mandatory = false) const;
-
         /** Holds the configuration of the window associated with this device. */
-        const cfg::WindowCfg& windowCfg_;
+        const cfg::WindowCfg& m_windowCfg;
         /** Holds the physical device. */
-        vk::PhysicalDevice vkPhysicalDevice_;
+        vk::PhysicalDevice m_vkPhysicalDevice;
         /** Holds the physical device limits. */
-        vk::PhysicalDeviceLimits vkPhysicalDeviceLimits_;
-        /** Holds the actual device. */
-        vk::UniqueDevice vkDevice_;
+        vk::PhysicalDeviceLimits m_vkPhysicalDeviceLimits;
         /** Holds the queues by device queue family. */
-        std::map<std::uint32_t, std::vector<vk::Queue>> vkQueuesByDeviceFamily_;
+        std::map<std::uint32_t, std::vector<vk::Queue>> m_vkQueuesByDeviceFamily;
         /** Holds a command pool for each device queue family. */
-        std::map<std::uint32_t, vk::UniqueCommandPool> vkCmdPoolsByDeviceQFamily_;
+        std::map<std::uint32_t, CommandPool> m_vkCmdPoolsByDeviceQFamily;
+
+        /** The properties of the device. */
+        vk::PhysicalDeviceProperties m_deviceProperties;
+        /** The ray tracing pipeline properties for the device. */
+        vk::PhysicalDeviceRayTracingPipelinePropertiesKHR m_raytracingPipelineProperties;
+        /** The acceleration structure properties for the device. */
+        vk::PhysicalDeviceAccelerationStructurePropertiesKHR m_accelerationStructureProperties;
+        /** The features of the device. */
+        vk::PhysicalDeviceFeatures m_deviceFeatures;
+        /** The ray tracing pipeline features of the device. */
+        vk::PhysicalDeviceRayTracingPipelineFeaturesKHR m_raytracingPipelineFeatures;
+        /** The acceleration structure features of the device. */
+        vk::PhysicalDeviceAccelerationStructureFeaturesKHR m_accelerationStructureFeatures;
 
         /** Holds the queue descriptions. */
-        std::vector<DeviceQueueDesc> queueDescriptions_;
+        std::vector<DeviceQueueDesc> m_queueDescriptions;
         /** Holds the queues by requested queue family. */
-        std::vector<std::vector<vk::Queue>> vkQueuesByRequestedFamily_;
+        std::vector<std::vector<Queue>> m_queuesByRequestedFamily;
         /** Holds a command pool for each requested queue family. */
-        std::vector<vk::CommandPool> vkCmdPoolsByRequestedQFamily_;
-
-        /** Holds whether debug markers are enabled. */
-        bool enableDebugMarkers_ = false;
-
-        // VK_EXT_debug_marker
-        PFN_vkDebugMarkerSetObjectTagEXT fpDebugMarkerSetObjectTagEXT = nullptr;
-        PFN_vkDebugMarkerSetObjectNameEXT fpDebugMarkerSetObjectNameEXT = nullptr;
-        PFN_vkCmdDebugMarkerBeginEXT fpCmdDebugMarkerBeginEXT = nullptr;
-        PFN_vkCmdDebugMarkerEndEXT fpCmdDebugMarkerEndEXT = nullptr;
-        PFN_vkCmdDebugMarkerInsertEXT fpCmdDebugMarkerInsertEXT = nullptr;
+        std::vector<CommandPool*> m_cmdPoolsByRequestedQFamily;
 
         /** Holds the shader manager. */
-        std::unique_ptr<ShaderManager> shaderManager_;
+        std::unique_ptr<ShaderManager> m_shaderManager;
         /** Holds the texture manager. */
-        std::unique_ptr<TextureManager> textureManager_;
+        std::unique_ptr<TextureManager> m_textureManager;
 
         /** The memory group holding all dummy objects. */
-        std::unique_ptr<MemoryGroup> dummyMemGroup_;
+        std::unique_ptr<MemoryGroup> m_dummyMemGroup;
         /** Holds the dummy texture. */
-        std::shared_ptr<Texture2D> dummyTexture_;
+        std::shared_ptr<Texture2D> m_dummyTexture;
 
-        bool singleQueueOnly_ = false;
+        /** The resource releaser. */
+        std::unique_ptr<ResourceReleaser> m_resourceReleaser;
+
+        bool m_singleQueueOnly = false;
     };
 }

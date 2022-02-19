@@ -30,15 +30,15 @@ namespace vkfw_core::gfx {
         virtual ~CameraBase();
 
         /** Returns the cameras view matrix. */
-        [[nodiscard]] const glm::mat4& GetViewMatrix() const noexcept { return viewMatrix_; }
+        [[nodiscard]] const glm::mat4& GetViewMatrix() const noexcept { return m_viewMatrix; }
         /** Returns the cameras projection matrix. */
-        [[nodiscard]] const glm::mat4& GetProjMatrix() const noexcept { return projMatrix_; }
+        [[nodiscard]] const glm::mat4& GetProjMatrix() const noexcept { return m_projMatrix; }
         /** Returns the cameras position. */
-        [[nodiscard]] const glm::vec3& GetPosition() const noexcept { return position_; }
+        [[nodiscard]] const glm::vec3& GetPosition() const noexcept { return m_position; }
         /** Returns the cameras orientation. */
-        [[nodiscard]] const glm::quat& GetOrientation() const noexcept { return orientation_; }
+        [[nodiscard]] const glm::quat& GetOrientation() const noexcept { return m_orientation; }
         /** Returns the camera view frustum. */
-        [[nodiscard]] const math::Frustum<float>& GetViewFrustum() const noexcept { return viewFrustum_; }
+        [[nodiscard]] const math::Frustum<float>& GetViewFrustum() const noexcept { return m_viewFrustum; }
 
     protected:
         /**
@@ -80,14 +80,14 @@ namespace vkfw_core::gfx {
         void UpdatePositionOrientation();
 
         /** Holds the camera position. */
-        glm::vec3 position_;
+        glm::vec3 m_position;
         /** Holds the camera orientation. */
-        glm::quat orientation_;
+        glm::quat m_orientation;
         /** Holds the camera view matrix. */
-        glm::mat4 viewMatrix_;
+        glm::mat4 m_viewMatrix;
         /** Holds the camera projection matrix. */
-        glm::mat4 projMatrix_;
+        glm::mat4 m_projMatrix;
         /** The camera view frustum. */
-        math::Frustum<float> viewFrustum_;
+        math::Frustum<float> m_viewFrustum;
     };
 }

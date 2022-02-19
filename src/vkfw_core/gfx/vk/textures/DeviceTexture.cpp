@@ -10,9 +10,10 @@
 
 namespace vkfw_core::gfx {
 
-    DeviceTexture::DeviceTexture(const LogicalDevice* device, const TextureDescriptor& desc,
-        const std::vector<std::uint32_t>& queueFamilyIndices) :
-        Texture{ device, TextureDescriptor(desc, vk::MemoryPropertyFlagBits::eDeviceLocal), queueFamilyIndices }
+    DeviceTexture::DeviceTexture(const LogicalDevice* device, std::string_view name, const TextureDescriptor& desc,
+                                 vk::ImageLayout initialLayout, const std::vector<std::uint32_t>& queueFamilyIndices)
+        : Texture{device, name, TextureDescriptor(desc, vk::MemoryPropertyFlagBits::eDeviceLocal), initialLayout,
+                  queueFamilyIndices}
     {
     }
 

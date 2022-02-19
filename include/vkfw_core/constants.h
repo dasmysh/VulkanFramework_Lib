@@ -9,10 +9,11 @@
 #pragma once
 
 #include <cstdint>
+#include <string_view>
 
 namespace vkfw_core {
     /** The engine name. */
-    constexpr const char* engineName = "VKFW";
+    constexpr std::string_view engineName = "VKFW";
     /** The engine version. */
     constexpr std::uint32_t engineVersionMajor = 0;
     constexpr std::uint32_t engineVersionMinor = 1;
@@ -31,5 +32,11 @@ namespace vkfw_core {
     constexpr bool use_debug_pipeline = true;
 #else
     constexpr bool use_debug_pipeline = false;
+#endif
+
+#ifdef VKFW_DEBUG_VERBOSE_FEATURE_LOGGING
+    constexpr bool verbose_feature_logging = true;
+#else
+    constexpr bool verbose_feature_logging = false;
 #endif
 }

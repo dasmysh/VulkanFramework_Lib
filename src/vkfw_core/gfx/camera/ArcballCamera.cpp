@@ -25,11 +25,11 @@ namespace vkfw_core::gfx {
      */
     ArcballCamera::ArcballCamera(const glm::vec3& position, float fovY, float aspectRatio, float zNear, float zFar) noexcept :
         UserControlledCamera{ glm::lookAt(position, glm::vec3{ 0.0f }, glm::vec3{ 0.0f, 1.0f, 0.0f }), glm::perspective(fovY, aspectRatio, zNear, zFar) },
-        initialCameraPosition_{ glm::normalize(position) },
-        camArcball_{ GLFW_MOUSE_BUTTON_1 },
-        fovY_{ fovY },
-        zNear_{ zNear },
-        zFar_{ zFar }
+        m_initialCameraPosition{ glm::normalize(position) },
+        m_camArcball{ GLFW_MOUSE_BUTTON_1 },
+        m_fovY{ fovY },
+        m_zNear{ zNear },
+        m_zFar{ zFar }
     {
     }
 
@@ -38,23 +38,34 @@ namespace vkfw_core::gfx {
     /**
      *  Updates the camera parameters using the internal arc-ball.
      */
-    void ArcballCamera::UpdateCamera(double elapsedTime, const VKWindow* sender)
+    bool ArcballCamera::UpdateCamera(double elapsedTime, const VKWindow* sender)
     {
+        bool result = m_hasCameraChangedThisFrame;
+        m_hasCameraChangedThisFrame = false;
         const double mouseWheelSpeed = 8.0;
         float radius = glm::length(GetPosition());
-        if (sender->IsKeyPressed(GLFW_KEY_W)) { radius -= static_cast<float>(mouseWheelSpeed * elapsedTime); }
-        if (sender->IsKeyPressed(GLFW_KEY_S)) { radius += static_cast<float>(mouseWheelSpeed * elapsedTime); }
+        if (sender->IsKeyPressed(GLFW_KEY_W)) {
+            radius -= static_cast<float>(mouseWheelSpeed * elapsedTime);
+            result = true;
+        }
+        if (sender->IsKeyPressed(GLFW_KEY_S)) {
+            radius += static_cast<float>(mouseWheelSpeed * elapsedTime);
+            result = true;
+        }
 
         radius = glm::max(radius, 0.0f);
 
-        auto camOrient = glm::inverse(GetOrientation());
-        glm::quat camOrientStep = camArcball_.GetWorldRotation(elapsedTime, camOrient);
+        auto camOrient = GetOrientation();
+        glm::quat camOrientStep = m_camArcball.GetWorldRotation(elapsedTime, camOrient);
         camOrient = camOrientStep * camOrient;
         glm::mat3 matOrient{ glm::mat3_cast(camOrient) };
         auto camPos = radius * (matOrient * glm::vec3(0.0f, 0.0f, 1.0f));
 
         auto aspectRatio = static_cast<float>(sender->GetClientSize().x) / static_cast<float>(sender->GetClientSize().y);
-        SetPositionOrientationProj(camPos, glm::inverse(camOrient), glm::perspective(fovY_, aspectRatio, zNear_, zFar_));
+        SetPositionOrientationProj(camPos, camOrient,
+                                   glm::perspective(m_fovY, aspectRatio, m_zNear, m_zFar));
+
+        return result;
     }
 
     /**
@@ -66,7 +77,8 @@ namespace vkfw_core::gfx {
      */
     bool ArcballCamera::HandleMouse(int button, int action, float mouseWheelDelta, const VKWindow* sender)
     {
-        bool handled = camArcball_.HandleMouse(button, action, sender);
+        bool handled = m_camArcball.HandleMouse(button, action, sender);
+        m_hasCameraChangedThisFrame = m_hasCameraChangedThisFrame || handled;
 
         if (mouseWheelDelta != 0) {
             if (sender->IsKeyPressed(GLFW_KEY_LEFT_CONTROL)) {
@@ -74,10 +86,11 @@ namespace vkfw_core::gfx {
             } else {
                 constexpr float ARCBALL_ANGLE_SCALE = 0.03f;
                 constexpr float ARCBALL_MAX_ANGLE = 80.0f;
-                auto fov = fovY_ - mouseWheelDelta * glm::radians(ARCBALL_ANGLE_SCALE);
-                fovY_ = glm::clamp(fov, glm::radians(1.0f), glm::radians(ARCBALL_MAX_ANGLE));
+                auto fov = m_fovY - mouseWheelDelta * glm::radians(ARCBALL_ANGLE_SCALE);
+                m_fovY = glm::clamp(fov, glm::radians(1.0f), glm::radians(ARCBALL_MAX_ANGLE));
             }
             handled = true;
+            m_hasCameraChangedThisFrame = true;
         }
 
         return handled;

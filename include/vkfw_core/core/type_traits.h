@@ -8,9 +8,12 @@
 
 #pragma  once
 
+#include "core/aligned_vector.h"
+
 #include <vector>
 #include <array>
-#include "core/aligned_vector.h"
+#include <concepts>
+#include <type_traits>
 
 namespace vkfw_core {
 
@@ -38,7 +41,15 @@ namespace vkfw_core {
     template<typename T>
     struct has_contiguous_memory<aligned_vector<T>> : std::true_type {};
 
-    template<class T> std::enable_if_t<vkfw_core::has_contiguous_memory<T>::value, std::size_t> byteSizeOf(const T& data) {
+
+    template<typename T> concept contiguous_memory = requires
+    {
+        std::derived_from<has_contiguous_memory<T>, std::true_type>;
+    };
+
+
+    template<contiguous_memory T> std::size_t byteSizeOf(const T& data)
+    {
         return static_cast<std::size_t>(sizeof(typename T::value_type) * data.size());
     }
 

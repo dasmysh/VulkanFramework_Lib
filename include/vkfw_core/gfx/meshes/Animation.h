@@ -33,24 +33,24 @@ namespace vkfw_core::gfx {
      */
     struct Channel
     {
-        std::vector<std::pair<Time, glm::vec3>> positionFrames_;
-        std::vector<std::pair<Time, glm::quat>> rotationFrames_;
-        std::vector<std::pair<Time, glm::vec3>> scalingFrames_;
+        std::vector<std::pair<Time, glm::vec3>> m_positionFrames;
+        std::vector<std::pair<Time, glm::quat>> m_rotationFrames;
+        std::vector<std::pair<Time, glm::vec3>> m_scalingFrames;
 
         template <class Archive>
         void save(Archive& ar, const std::uint32_t) const  // NOLINT
         {
-            ar(cereal::make_nvp("positionFrames", positionFrames_),
-                cereal::make_nvp("rotationFrames", rotationFrames_),
-                cereal::make_nvp("scalingFrames_", scalingFrames_));
+            ar(cereal::make_nvp("positionFrames", m_positionFrames),
+                cereal::make_nvp("rotationFrames", m_rotationFrames),
+                cereal::make_nvp("scalingFrames_", m_scalingFrames));
         }
 
         template <class Archive>
         void load(Archive& ar, const std::uint32_t)  // NOLINT
         {
-            ar(cereal::make_nvp("positionFrames", positionFrames_),
-                cereal::make_nvp("rotationFrames", rotationFrames_),
-                cereal::make_nvp("scalingFrames_", scalingFrames_));
+            ar(cereal::make_nvp("positionFrames", m_positionFrames),
+                cereal::make_nvp("rotationFrames", m_rotationFrames),
+                cereal::make_nvp("scalingFrames_", m_scalingFrames));
         }
     };
 
@@ -70,7 +70,7 @@ namespace vkfw_core::gfx {
          *  @param playback the playback time (speed) of the animation.
          */
         AnimationInfo(std::string name, std::size_t animationIndex, float start, float end, float playback = 1.0f)
-            : name_{ std::move(name) }, animationIndex_ { animationIndex }, startTime_{ start }, endTime_{ end }, playbackSpeed_{ playback }
+            : m_name{ std::move(name) }, m_animationIndex { animationIndex }, m_startTime{ start }, m_endTime{ end }, m_playbackSpeed{ playback }
         {
         }
 
@@ -110,15 +110,15 @@ namespace vkfw_core::gfx {
         }
 
         /** Holds the animations name. */
-        std::string name_;
+        std::string m_name;
         /** Index of the animation. */
-        std::size_t animationIndex_ = 0;
+        std::size_t m_animationIndex = 0;
         /** Start time of the animation. */
-        float startTime_ = 0.0f;
+        float m_startTime = 0.0f;
         /** End time of the animation. */
-        float endTime_ = 1.0f;
+        float m_endTime = 1.0f;
         /** Playback speed of the animation. */
-        float playbackSpeed_ = 1.0f;
+        float m_playbackSpeed = 1.0f;
     };
 
     /**
@@ -140,7 +140,7 @@ namespace vkfw_core::gfx {
         /** Returns the duration of the animation in seconds. */
         [[nodiscard]] float GetDuration() const;
         /** Returns the animations name. */
-        [[nodiscard]] const std::string& GetName() const { return name_; }
+        [[nodiscard]] const std::string& GetName() const { return m_name; }
         /**
          *  Returns the channel of one bone.
          *  @param id id of the bone.
@@ -158,34 +158,34 @@ namespace vkfw_core::gfx {
         template <class Archive>
         void save(Archive& ar, const std::uint32_t) const  // NOLINT
         {
-            ar(cereal::make_nvp("name", name_), cereal::make_nvp("channels", channelMap_),
-               cereal::make_nvp("framesPerSecond", framesPerSecond_),
-                cereal::make_nvp("duration", duration_));
+            ar(cereal::make_nvp("name", m_name), cereal::make_nvp("channels", m_channelMap),
+               cereal::make_nvp("framesPerSecond", m_framesPerSecond),
+                cereal::make_nvp("duration", m_duration));
         }
 
         template <class Archive>
         void load(Archive& ar, const std::uint32_t)  // NOLINT
         {
-            ar(cereal::make_nvp("name", name_), cereal::make_nvp("channels", channelMap_),
-               cereal::make_nvp("framesPerSecond", framesPerSecond_),
-                cereal::make_nvp("duration", duration_));
+            ar(cereal::make_nvp("name", m_name), cereal::make_nvp("channels", m_channelMap),
+               cereal::make_nvp("framesPerSecond", m_framesPerSecond),
+                cereal::make_nvp("duration", m_duration));
         }
 
         /** Holds the animations name. */
-        std::string name_;
+        std::string m_name;
         /** Holds the channels during loading. */
-        std::map<std::string, Channel> channelMap_;
+        std::map<std::string, Channel> m_channelMap;
         /** Holds the channels (position, rotation, scaling) for each node. */
-        std::vector<Channel> channels_;
+        std::vector<Channel> m_channels;
         /** Ticks per second. */
-        float framesPerSecond_ = 0.f;
+        float m_framesPerSecond = 0.f;
         /** Duration of this animation. */
-        float duration_ = 0.f;
+        float m_duration = 0.f;
     };
 
-    inline float Animation::GetFramesPerSecond() const { return framesPerSecond_; }
+    inline float Animation::GetFramesPerSecond() const { return m_framesPerSecond; }
 
-    inline float Animation::GetDuration() const { return duration_; }
+    inline float Animation::GetDuration() const { return m_duration; }
 
     // inline const std::vector<Channel>& Animation::GetChannels() const { return channels_; }
     //

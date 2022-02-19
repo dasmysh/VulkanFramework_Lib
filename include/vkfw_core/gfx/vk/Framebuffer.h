@@ -11,61 +11,77 @@
 #include "main.h"
 #include "gfx/vk/textures/DeviceTexture.h"
 #include "memory/DeviceMemoryGroup.h"
+#include "gfx/vk/wrappers/RenderPass.h"
 
 namespace vkfw_core::gfx {
 
     class LogicalDevice;
+    class DescriptorSet;
+    class VertexInputResources;
 
-    struct FramebufferDescriptor final
-    {
-        /** Holds the texture descriptors. */
-        std::vector<TextureDescriptor> tex_;
-        /** Holds the textures image type. */
-        vk::ImageViewType type_ = vk::ImageViewType::e2D;
-    };
-
-    class Framebuffer final
+    class Framebuffer final : public VulkanObjectPrivateWrapper<vk::UniqueFramebuffer>
     {
     public:
-        Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size, std::vector<vk::Image> images,
-            const vk::RenderPass& renderPass, const FramebufferDescriptor& desc,
-            std::vector<std::uint32_t> queueFamilyIndices = std::vector<std::uint32_t>{},
-            vk::CommandBuffer cmdBuffer = vk::CommandBuffer());
-        Framebuffer(const LogicalDevice* logicalDevice, const glm::uvec2& size, const vk::RenderPass& renderPass,
-            const FramebufferDescriptor& desc, const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{},
-            vk::CommandBuffer cmdBuffer = vk::CommandBuffer());
+        Framebuffer(const LogicalDevice* logicalDevice, std::string_view name, const glm::uvec2& size,
+                    const std::vector<vk::Image>& images, const RenderPass& renderPass,
+                    const FramebufferDescriptor& desc,
+                    const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{},
+                    std::optional<std::reference_wrapper<CommandBuffer>> cmdBuffer = {});
+        Framebuffer(const LogicalDevice* logicalDevice, std::string_view name, const glm::uvec2& size,
+                    const RenderPass& renderPass, const FramebufferDescriptor& desc,
+                    const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{},
+                    std::optional<std::reference_wrapper<CommandBuffer>> cmdBuffer = {});
         Framebuffer(const Framebuffer&);
         Framebuffer(Framebuffer&&) noexcept;
         Framebuffer& operator=(const Framebuffer&);
         Framebuffer& operator=(Framebuffer&&) noexcept;
         ~Framebuffer();
 
-        [[nodiscard]] glm::uvec2 GetSize() const { return size_; }
-        [[nodiscard]] unsigned int GetWidth() const { return size_.x; }
-        [[nodiscard]] unsigned int GetHeight() const { return size_.y; }
-        [[nodiscard]] const vk::Framebuffer& GetFramebuffer() const { return *vkFramebuffer_; }
+        [[nodiscard]] glm::uvec2 GetSize() const { return m_size; }
+        [[nodiscard]] unsigned int GetWidth() const { return m_size.x; }
+        [[nodiscard]] unsigned int GetHeight() const { return m_size.y; }
+        [[nodiscard]] const FramebufferDescriptor& GetDescriptor() const { return m_desc; }
+        [[nodiscard]] Texture& GetTexture(std::size_t index);
+
+        [[nodiscard]] Framebuffer
+        CreateWithSameImages(std::string_view name, const FramebufferDescriptor& desc,
+                             const std::vector<std::uint32_t>& queueFamilyIndices = std::vector<std::uint32_t>{},
+                             std::optional<std::reference_wrapper<CommandBuffer>> cmdBuffer = {}) const;
+
+        void BeginRenderPass(CommandBuffer& cmdBuffer, const RenderPass& renderPass,
+                             std::span<DescriptorSet*> descriptorSets, std::span<VertexInputResources*> vertexInputs,
+                             const vk::Rect2D& renderArea, std::span<vk::ClearValue> clearColor,
+                             vk::SubpassContents subpassContents);
+
+        static [[nodiscard]] bool IsAnyDepthOrStencilFormat(vk::Format format);
+        static [[nodiscard]] bool IsDepthStencilFormat(vk::Format format);
+        static [[nodiscard]] bool IsStencilFormat(vk::Format format);
+        static [[nodiscard]] bool IsDepthFormat(vk::Format format);
+
+        static [[nodiscard]] vk::ImageLayout GetFittingAttachmentLayout(vk::Format format);
+        static [[nodiscard]] vk::AccessFlags2KHR GetFittingAttachmentAccessFlags(vk::Format format);
+        static [[nodiscard]] vk::PipelineStageFlags2KHR GetFittingAttachmentPipelineStage(vk::Format format);
 
     private:
-        void CreateImages(vk::CommandBuffer cmdBuffer);
+        void CreateImages(std::optional<std::reference_wrapper<CommandBuffer>> cmdBuffer);
         void CreateFB();
 
         /** Holds the logical device. */
-        const LogicalDevice* device_;
+        const LogicalDevice* m_device;
         /** Holds the framebuffer size. */
-        glm::uvec2 size_;
+        glm::uvec2 m_size;
         /** Holds the render pass. */
-        vk::RenderPass renderPass_;
+        const RenderPass* m_renderPass;
         /** Holds the framebuffer descriptor. */
-        FramebufferDescriptor desc_;
+        FramebufferDescriptor m_desc;
         /** Holds the device memory group for the owned images. */
-        DeviceMemoryGroup memoryGroup_;
+        DeviceMemoryGroup m_memoryGroup;
         /** Holds the externally owned images in this framebuffer. */
-        std::vector<vk::Image> extImages_;
-        /** Holds the image view for the external attachments. */
-        std::vector<vk::UniqueImageView> vkExternalAttachmentsImageView_;
-        /** Holds the Vulkan framebuffer object. */
-        vk::UniqueFramebuffer vkFramebuffer_;
+        std::vector<Texture> m_extTextures;
+        std::vector<vk::Image> m_extImages;
         /** Holds the queue family indices. */
-        std::vector<std::uint32_t> queueFamilyIndices_;
+        std::vector<std::uint32_t> m_queueFamilyIndices;
+        /** Pipeline barrier for using this framebuffer. */
+        gfx::PipelineBarrier m_barrier;
     };
 }
