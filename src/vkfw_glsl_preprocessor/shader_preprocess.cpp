@@ -136,10 +136,10 @@ namespace vkfw_glsl {
                     throw std::runtime_error(fmt::format("{}({}): fatal error: cannot open include file \"{}\".",
                                                          shader_file.string(), lineCount, include_file.string()));
                 }
-                content.append(fmt::format("#line {} \"{}\"\n", 1, include_file.string()));
+                content.append(fmt::format("#line {} \"{}\"\n", 1, include_file.lexically_normal().generic_string()));
                 content.append(process_shader_recursive(include_file, next_file_id, recursion_depth + 1));
                 content.append(
-                    fmt::format("#line {} \"{}\"\n", lineCount + 1, shader_file.string()));
+                    fmt::format("#line {} \"{}\"\n", lineCount + 1, shader_file.lexically_normal().generic_string()));
             } else {
                 content.append(line).append("\n");
             }
@@ -151,7 +151,7 @@ namespace vkfw_glsl {
                 }
                 content.append("#extension GL_GOOGLE_cpp_style_line_directive : require\n");
                 content.append(
-                    fmt::format("#line {} \"{}\"\n", lineCount + 1, shader_file.string()));
+                    fmt::format("#line {} \"{}\"\n", lineCount + 1, shader_file.lexically_normal().generic_string()));
             }
             ++lineCount;
         }
