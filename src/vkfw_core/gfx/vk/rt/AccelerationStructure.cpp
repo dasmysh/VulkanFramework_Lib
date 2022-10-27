@@ -59,9 +59,9 @@ namespace vkfw_core::gfx::rt {
         asBuildInfo.dstAccelerationStructure = GetHandle();
         asBuildInfo.scratchData = m_device->CalculateASScratchBufferBufferAlignment(
             m_scratchBuffer
-                ->GetDeviceAddress(vk::AccessFlagBits2KHR::eAccelerationStructureRead
-                                       | vk::AccessFlagBits2KHR::eAccelerationStructureWrite,
-                                   vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild, m_buildBarrier)
+                ->GetDeviceAddress(vk::AccessFlagBits2KHR::eAccelerationStructureReadKHR
+                                       | vk::AccessFlagBits2KHR::eAccelerationStructureWriteKHR,
+                                   vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuildKHR, m_buildBarrier)
                 .deviceAddress);
         m_buildBarrier.Record(cmdBuffer);
 
@@ -87,8 +87,8 @@ namespace vkfw_core::gfx::rt {
 
         vk::AccelerationStructureCreateInfoKHR asCreateInfo{
             {},
-            m_buffer->GetBuffer(false, vk::AccessFlagBits2KHR::eAccelerationStructureWrite,
-                                vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild, barrier),
+            m_buffer->GetBuffer(false, vk::AccessFlagBits2KHR::eAccelerationStructureWriteKHR,
+                                vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuildKHR, barrier),
             0,
             m_memoryRequirements.accelerationStructureSize,
             m_type};

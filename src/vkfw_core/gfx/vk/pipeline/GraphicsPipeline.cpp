@@ -143,7 +143,7 @@ namespace vkfw_core::gfx {
             &m_state->m_colorBlending, &dynamicState, pipelineLayout.GetHandle(), renderPass.GetHandle(), subpass };
 
         SetHandle(m_device->GetHandle(),
-                  m_device->GetHandle().createGraphicsPipelineUnique(vk::PipelineCache(), pipelineInfo));
+                  m_device->GetHandle().createGraphicsPipelineUnique(vk::PipelineCache(), pipelineInfo).value);
 
         if (!keepState) { m_state.reset(); }
     }

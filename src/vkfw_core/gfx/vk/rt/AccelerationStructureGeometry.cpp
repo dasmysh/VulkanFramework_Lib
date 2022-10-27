@@ -90,8 +90,8 @@ namespace vkfw_core::gfx::rt {
 
         vk::DeviceOrHostAddressConstKHR bufferDeviceAddress =
             m_bufferMemGroup.GetBuffer(m_bufferIndex)
-                ->GetDeviceAddressConst(vk::AccessFlagBits2KHR::eAccelerationStructureRead,
-                                        vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+                ->GetDeviceAddressConst(vk::AccessFlagBits2KHR::eAccelerationStructureReadKHR,
+                                        vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuildKHR,
                                         m_BLAS[blasIndex].GetBuildBarrier());
         vk::DeviceOrHostAddressConstKHR vboDeviceAddress = bufferDeviceAddress.deviceAddress + mesh.vboOffset;
         vk::DeviceOrHostAddressConstKHR iboDeviceAddress = bufferDeviceAddress.deviceAddress + mesh.iboOffset;
@@ -136,16 +136,16 @@ namespace vkfw_core::gfx::rt {
             AddBottomLevelAccelerationStructure(static_cast<std::uint32_t>(m_geometryIndex), sbtInstanceOffset, glm::transpose(transform));
 
         vk::DeviceOrHostAddressConstKHR vertexBufferDeviceAddress =
-            vbo->GetDeviceAddressConst(vk::AccessFlagBits2KHR::eAccelerationStructureRead,
-                                       vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+            vbo->GetDeviceAddressConst(vk::AccessFlagBits2KHR::eAccelerationStructureReadKHR,
+                                       vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuildKHR,
                                        m_BLAS[blasIndex].GetBuildBarrier())
                 .deviceAddress
             + vboOffset;
         vk::DeviceOrHostAddressConstKHR indexBufferDeviceAddress = vertexBufferDeviceAddress;
         if (ibo != nullptr) {
             indexBufferDeviceAddress =
-                ibo->GetDeviceAddressConst(vk::AccessFlagBits2KHR::eAccelerationStructureRead,
-                                           vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild,
+                ibo->GetDeviceAddressConst(vk::AccessFlagBits2KHR::eAccelerationStructureReadKHR,
+                                           vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuildKHR,
                                            m_BLAS[blasIndex].GetBuildBarrier())
                     .deviceAddress
                 + iboOffset;
@@ -217,8 +217,8 @@ namespace vkfw_core::gfx::rt {
                 0xFF,
                 m_sbtInstanceOffsets[i],
                 vk::GeometryInstanceFlagBitsKHR::eTriangleFacingCullDisable,
-                m_BLAS[i].GetAddressHandle(vk::AccessFlagBits2KHR::eAccelerationStructureRead,
-                                           vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild, barrier)};
+                m_BLAS[i].GetAddressHandle(vk::AccessFlagBits2KHR::eAccelerationStructureReadKHR,
+                                           vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuildKHR, barrier)};
             memcpy(&blasInstance.transform, &m_BLASTransforms[i], sizeof(glm::mat3x4));
             m_TLAS.AddBottomLevelAccelerationStructureInstance(blasInstance);
         }

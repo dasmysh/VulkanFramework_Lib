@@ -42,8 +42,8 @@ namespace vkfw_core::gfx::rt {
         PipelineBarrier barrier{GetDevice()};
         vk::AccelerationStructureGeometryInstancesDataKHR asGeometryDataInstances{
             VK_FALSE, m_instancesBuffer->GetDeviceAddressConst(
-                          vk::AccessFlagBits2KHR::eAccelerationStructureRead,
-                          vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuild, barrier)};
+                          vk::AccessFlagBits2KHR::eAccelerationStructureReadKHR,
+                          vk::PipelineStageFlagBits2KHR::eAccelerationStructureBuildKHR, barrier)};
         vk::AccelerationStructureGeometryDataKHR asGeometryData{asGeometryDataInstances};
 
         vk::AccelerationStructureGeometryKHR asGeometry{vk::GeometryTypeKHR::eInstances, asGeometryData,

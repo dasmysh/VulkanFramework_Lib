@@ -473,7 +473,7 @@ namespace vkfw_core {
             m_windowData->Height = m_vkSurfaceExtent.height;
             m_windowData->Swapchain = m_swapchain.GetHandle();
             m_windowData->PresentMode = static_cast<VkPresentModeKHR>(presentMode);
-            m_windowData->SurfaceFormat = surfaceFormat;
+            m_windowData->SurfaceFormat = static_cast<VkSurfaceFormatKHR>(surfaceFormat);
 
             auto swapchainImages = m_logicalDevice->GetHandle().getSwapchainImagesKHR(m_swapchain.GetHandle());
 

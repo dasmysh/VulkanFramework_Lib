@@ -237,7 +237,7 @@ namespace vkfw_core::gfx {
 
         auto sbtDeviceAddress = m_shaderBindingTable
                                     ->GetDeviceAddress(vk::AccessFlagBits2KHR::eShaderRead,
-                                                       vk::PipelineStageFlagBits2KHR::eRayTracingShader, m_barrier)
+                                                       vk::PipelineStageFlagBits2KHR::eRayTracingShaderKHR, m_barrier)
                                     .deviceAddress;
         if (m_shaderGroupIndexesByType[0].size() != 1) {
             spdlog::error("Only a single ray generation shader is allowed per pipeline.");

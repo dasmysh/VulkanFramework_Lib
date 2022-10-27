@@ -110,7 +110,7 @@ namespace vkfw_core::gfx {
         asWrite.second.resize(accelerationStructures.size());
         for (std::size_t i = 0; i < accelerationStructures.size(); ++i) {
             asWrite.second[i] = accelerationStructures[i]->GetTopLevelAccelerationStructure(
-                vk::AccessFlagBits2KHR::eAccelerationStructureRead, pipelineStage, m_barrier);
+                vk::AccessFlagBits2KHR::eAccelerationStructureReadKHR, pipelineStage, m_barrier);
         }
         asWrite.first = std::make_unique<vk::WriteDescriptorSetAccelerationStructureKHR>(asWrite.second);
 
@@ -208,22 +208,22 @@ namespace vkfw_core::gfx {
             pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eAllCommands;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eRaygenKHR) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShader;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShaderKHR;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eAnyHitKHR) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShader;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShaderKHR;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eClosestHitKHR) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShader;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShaderKHR;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eMissKHR) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShader;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShaderKHR;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eIntersectionKHR) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShader;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShaderKHR;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eCallableKHR) {
-            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShader;
+            pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eRayTracingShaderKHR;
         }
         if (shaderStage & vk::ShaderStageFlagBits::eTaskNV) {
             pipelineStages = pipelineStages | vk::PipelineStageFlagBits2KHR::eTaskShaderNV;
