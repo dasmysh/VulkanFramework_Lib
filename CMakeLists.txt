@@ -32,7 +32,7 @@ if (ENABLE_PCH)
   target_precompile_headers(vkfw_options INTERFACE <vector> <string> <map> <utility>)
 endif()
 
-set(IMGUI_VERSION "1.84.2")
+set(IMGUI_VERSION "1.88")
 set(GLM_VERSION "0.9.9.8")
 
 include(${CMAKE_BINARY_DIR}/vkfw_core/conanbuildinfo_multi.cmake)

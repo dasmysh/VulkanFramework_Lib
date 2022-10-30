@@ -201,7 +201,7 @@ namespace vkfw_core::gfx {
             auto fence = CommandBuffer::endSingleTimeSubmit(GetQueue(0, 0), cmdBuffer, {}, {});
             if (auto r = GetHandle().waitForFences({fence->GetHandle()}, VK_TRUE, vkfw_core::defaultFenceTimeout);
                 r != vk::Result::eSuccess) {
-                spdlog::error("Could not wait for fence while transitioning layout: {}.", r);
+                spdlog::error("Could not wait for fence while transitioning layout: {}.", vk::to_string(r));
                 throw std::runtime_error("Could not wait for fence while transitioning layout.");
             }
         }

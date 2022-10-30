@@ -14,7 +14,7 @@ namespace vkfw_core::gfx {
     void Fence::Wait(const LogicalDevice* device, std::uint64_t timeout) const
     {
         if (auto r = device->GetHandle().waitForFences(GetHandle(), VK_TRUE, timeout); r != vk::Result::eSuccess) {
-            spdlog::error("Error while waiting for fence: {}.", r);
+            spdlog::error("Error while waiting for fence: {}.", vk::to_string(r));
             throw std::runtime_error("Error while waiting for fence.");
         }
     }

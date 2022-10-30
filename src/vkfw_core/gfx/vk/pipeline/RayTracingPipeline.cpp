@@ -188,17 +188,14 @@ namespace vkfw_core::gfx {
 
             auto shaderHandleStorageSize = shaderGroupHandleSizeAligned * m_shaderGroups.size();
 
-            std::vector<std::uint8_t> shaderHandleStorage;
-            shaderHandleStorage.resize(shaderHandleStorageSize, 0);
-
             m_shaderBindingTable = std::make_unique<vkfw_core::gfx::HostBuffer>(
                 m_device, fmt::format("{}:ShaderBindingTable", GetName()),
                 vk::BufferUsageFlagBits::eShaderBindingTableKHR | vk::BufferUsageFlagBits::eShaderDeviceAddress,
                 vk::MemoryPropertyFlagBits::eHostVisible);
 
-            m_device->GetHandle().getRayTracingShaderGroupHandlesKHR(GetHandle(), 0,
-                                                                     static_cast<std::uint32_t>(m_shaderGroups.size()),
-                                                                     vk::ArrayProxy<std::uint8_t>(shaderHandleStorage));
+            std::vector<std::uint8_t> shaderHandleStorage;
+            shaderHandleStorage = m_device->GetHandle().getRayTracingShaderGroupHandlesKHR<std::uint8_t>(
+                GetHandle(), 0, static_cast<std::uint32_t>(m_shaderGroups.size()), shaderHandleStorageSize);
 
             {
                 std::size_t shaderBindingTableTotalSize = 0;

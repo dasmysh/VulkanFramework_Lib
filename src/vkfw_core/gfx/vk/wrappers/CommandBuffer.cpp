@@ -23,7 +23,7 @@ namespace vkfw_core::gfx {
         spdlog::warn("Command buffers are not fully implemented at the moment.");
         vk::CommandBufferAllocateInfo cmdBufferallocInfo{device->GetCommandPool(queueFamily).GetHandle(), level,
                                                          numBuffers};
-        device->GetHandle().allocateCommandBuffersUnique(cmdBufferallocInfo);
+        [[maybe_unused]] auto unused = device->GetHandle().allocateCommandBuffersUnique(cmdBufferallocInfo);
     }
 
     CommandBuffer::CommandBuffer(const LogicalDevice* device, std::string_view name, unsigned int queueFamily,
@@ -104,7 +104,7 @@ namespace vkfw_core::gfx {
         auto fence = endSingleTimeSubmit(queue, cmdBuffer, {}, {});
         if (auto r = device->GetHandle().waitForFences(fence->GetHandle(), VK_TRUE, vkfw_core::defaultFenceTimeout);
             r != vk::Result::eSuccess) {
-            spdlog::error("Error while waiting for fence: {}.", r);
+            spdlog::error("Error while waiting for fence: {}.", vk::to_string(r));
             throw std::runtime_error("Error while waiting for fence.");
         }
     }
