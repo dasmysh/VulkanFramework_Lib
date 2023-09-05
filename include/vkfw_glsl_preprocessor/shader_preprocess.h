@@ -19,13 +19,13 @@ namespace vkfw_glsl {
     public:
         explicit shader_processor(std::vector<std::filesystem::path> t_file_paths, std::vector<std::string> t_defines = {});
 
-        [[nodiscard]] std::string process_shader(const std::filesystem::path& shader_file);
+        [[nodiscard]] std::pair<std::string, std::string> process_shader(const std::filesystem::path& shader_file);
     private:
         [[nodiscard]] std::filesystem::path find_file_location(const std::filesystem::path& parent_path,
                                                                const std::filesystem::path& relative_path);
-        [[nodiscard]] std::string process_shader_recursive(const std::filesystem::path& shader_file,
-                                                           std::size_t& file_id,
-                                             std::size_t recursion_depth);
+        [[nodiscard]] std::pair<std::string, std::string>
+        process_shader_recursive(const std::filesystem::path& shader_file, std::size_t& file_id,
+                                 std::size_t recursion_depth);
 
         std::vector<std::filesystem::path> m_file_paths;
         std::vector<std::string> m_defines;

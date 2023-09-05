@@ -49,7 +49,7 @@ namespace vkfw_glsl {
     {
     }
 
-    std::string shader_processor::process_shader(const std::filesystem::path& shader_file)
+    std::pair<std::string, std::string> shader_processor::process_shader(const std::filesystem::path& shader_file)
     {
         std::size_t file_id = 0;
         return process_shader_recursive(shader_file, file_id, 0);
@@ -71,7 +71,8 @@ namespace vkfw_glsl {
         throw std::runtime_error(fmt::format("Cannot find local resource file ({}).", relative_path.string()));
     }
 
-    std::string shader_processor::process_shader_recursive(const std::filesystem::path& shader_file,
+    std::pair<std::string, std::string>
+    shader_processor::process_shader_recursive(const std::filesystem::path& shader_file,
                                                            std::size_t& file_id, std::size_t recursion_depth)
     {
         if (recursion_depth > max_shader_recursion_depth) {
@@ -85,6 +86,7 @@ namespace vkfw_glsl {
         std::ifstream file(shader_file, std::ifstream::in);
         std::string line;
         std::string content;
+        std::string depfile_content = shader_file.generic_string();
         std::size_t lineCount = 1;
         auto next_file_id = file_id + 1;
 
@@ -137,9 +139,13 @@ namespace vkfw_glsl {
                                                          shader_file.string(), lineCount, include_file.string()));
                 }
                 content.append(fmt::format("#line {} \"{}\"\n", 1, include_file.lexically_normal().generic_string()));
-                content.append(process_shader_recursive(include_file, next_file_id, recursion_depth + 1));
+                auto [include_content, include_depfile_content] =
+                    process_shader_recursive(include_file, next_file_id, recursion_depth + 1);
+                content.append(include_content);
                 content.append(
                     fmt::format("#line {} \"{}\"\n", lineCount + 1, shader_file.lexically_normal().generic_string()));
+
+                depfile_content.append(include_depfile_content);
             } else {
                 content.append(line).append("\n");
             }
@@ -158,6 +164,6 @@ namespace vkfw_glsl {
 
         file.close();
         file_id = next_file_id;
-        return content;
+        return std::make_pair(content, depfile_content);
     }
 }

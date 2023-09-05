@@ -98,10 +98,13 @@ int main(int argc, const char** argv)
 
         for (const auto& input_file : input_files) {
             spdlog::info("Processing {}.", input_file.string());
-            auto output_file_content = processor.process_shader(input_file);
+            auto [output_file_content, output_dependency_file_content] = processor.process_shader(input_file);
             std::ofstream output_file(output_filename);
             output_file << output_file_content;
             spdlog::info("Written {}.", output_filename);
+
+            std::ofstream output_dependency_file(output_filename + ".dep");
+            output_file << output_dependency_file_content;
         }
     } catch (...) {
         spdlog::critical("Could not process given files. Unknown exception.");
