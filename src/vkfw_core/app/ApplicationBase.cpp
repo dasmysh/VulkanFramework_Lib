@@ -438,7 +438,7 @@ namespace vkfw_core {
         if constexpr (verbose_feature_logging) {
             spdlog::info("VK Instance Extensions:");
             for (const auto& extension : extensions) {
-                spdlog::info("- {}[SpecVersion: {}]", extension.extensionName, extension.specVersion);
+                spdlog::info("- {}[SpecVersion: {}]", extension.extensionName.data(), extension.specVersion);
             }
         }
 
@@ -458,7 +458,7 @@ namespace vkfw_core {
         if constexpr (verbose_feature_logging) {
             spdlog::info("VK Instance Layers:");
             for (const auto& layer : layers) {
-                spdlog::info("- {}[SpecVersion: {}, ImplVersion: {}]", layer.layerName, layer.specVersion,
+                spdlog::info("- {}[SpecVersion: {}, ImplVersion: {}]", layer.layerName.data(), layer.specVersion,
                              layer.implementationVersion);
             }
         }
@@ -678,7 +678,7 @@ namespace vkfw_core {
         auto deviceFeatures = device.getFeatures();
         auto deviceQueueFamilyProperties = device.getQueueFamilyProperties();
 
-        spdlog::info("Found physical device '{}' [DriverVersion: {}].", deviceProperties.deviceName, deviceProperties.driverVersion);
+        spdlog::info("Found physical device '{}' [DriverVersion: {}].", deviceProperties.deviceName.data(), deviceProperties.driverVersion);
         auto score = 0U;
 
         if (deviceProperties.deviceType == vk::PhysicalDeviceType::eDiscreteGpu) { score += 1000; }

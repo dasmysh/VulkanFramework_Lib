@@ -39,10 +39,12 @@ function(set_project_warnings project_name)
               # conversion has been implicitly applied
       /permissive-
       /MP
+      /WX
   )
 
   set(CLANG_WARNINGS
       -Wall
+      -Werror
       -Wextra # reasonable and standard
       -Wshadow # warn the user if a variable declaration shadows one from a
                # parent context

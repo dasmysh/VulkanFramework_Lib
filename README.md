@@ -2,12 +2,14 @@
 Port of my OpenGL Framework to Vulkan.
 
 ## Build (Windows)
-- Use [conan](https://conan.io/)
-- From the projects build folder run:
+- Use [vcpkg](https://vcpkg.io/en/)
+- Clone repository with submodules recursive:
 
-  ```conan install --build=missing --install-folder=./vkfw_core ../extern/vkfw_core/```
+  ```git clone --recurse-submodules -j8 https://github.com/dasmysh/VulkanFramework_Lib ```
+  ```cd VulkanFramework_Lib```
 
-  ```conan install --build=missing --install-folder=./vkfw_core -s build_type=Debug ../extern/vkfw_core/```
+- Start CMake from this folder with:
 
-  This does not generate debug symbols for Visual Studio and some warnings will be generated. To avoid use the `--build` parameter without `=missing`.
+  ```cmake -S . --preset=default```
 
+- CMake GUI can be used after the first configure step is done with the correct toolchain file.
