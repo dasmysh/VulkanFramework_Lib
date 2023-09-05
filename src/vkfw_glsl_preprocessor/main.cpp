@@ -23,18 +23,19 @@
 
 constexpr const char* program_usage = R"(Vulkan framework GLSL shader preprocessor.
 Usage:
-    vkfw_glsl_preprocessor <input_files> ... [-i <include_directory>]... -o <output_file>
+    vkfw_glsl_preprocessor <input_files> ... [-i <include_directory>]... -o <output_file> [-d <output_dependency_file>]
     vkfw_glsl_preprocessor (-h | --help)
     vkfw_glsl_preprocessor --version
 
 Arguments:
-    <input_file>            the GLSL file(s) to preprocess
+    <input_file>                 the GLSL file(s) to preprocess
 
 Options:
-    -h --help               show this
-    --version               show version
-    -i <include_directory>  (base) directories to search for include files
-    -o <output_file>        the output file
+    -h --help                    show this
+    --version                    show version
+    -i <include_directory>       (base) directories to search for include files
+    -o <output_file>             the output file
+    -d <output_dependency_file>  the output dependency file
 )";
 
 
@@ -83,6 +84,8 @@ int main(int argc, const char** argv)
         std::vector<std::string> input_filenames = args["<input_files>"].asStringList();
         std::string output_filename = args["-o"].asString();
         std::vector<std::string> include_directory_names = args["-i"].asStringList();
+        std::string output_dependency_filename;
+        if (args.contains("-d")) { output_dependency_filename = args["-d"].asString(); }
 
         std::vector<std::filesystem::path> input_files;
         input_files.reserve(input_filenames.size());
@@ -103,9 +106,15 @@ int main(int argc, const char** argv)
             output_file << output_file_content;
             spdlog::info("Written {}.", output_filename);
 
-            std::ofstream output_dependency_file(output_filename + ".dep");
-            output_file << output_dependency_file_content;
+            if (!output_dependency_filename.empty()) {
+                std::ofstream output_dependency_file(output_dependency_filename);
+                output_dependency_file << std::format("{}: {}", input_file.lexically_normal().generic_string(),
+                                                      output_dependency_file_content);
+            }
         }
+    } catch (std::runtime_error& e) {
+        spdlog::critical("Could not process given files: {}", e.what());
+        return 1;
     } catch (...) {
         spdlog::critical("Could not process given files. Unknown exception.");
         return 1;

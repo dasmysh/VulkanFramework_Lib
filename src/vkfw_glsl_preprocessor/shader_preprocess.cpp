@@ -86,7 +86,7 @@ namespace vkfw_glsl {
         std::ifstream file(shader_file, std::ifstream::in);
         std::string line;
         std::string content;
-        std::string depfile_content = shader_file.generic_string();
+        std::string depfile_content = file_id == 0 ? "" : shader_file.generic_string();
         std::size_t lineCount = 1;
         auto next_file_id = file_id + 1;
 
@@ -128,8 +128,7 @@ namespace vkfw_glsl {
 
 
             static const std::regex include_regex(R"(^[ ]*#[ ]*include[ ]+["<](.*)[">].*)");
-            std::smatch include_matches;
-            if (!inCppCode && std::regex_search(line, include_matches, include_regex)) {
+            if (std::smatch include_matches; !inCppCode && std::regex_search(line, include_matches, include_regex)) {
                 // filesystem::path relative_filename{shader_file.parent_path() / include_matches[1].str()};
                 auto include_file = find_file_location(shader_file.parent_path(), include_matches[1].str());
                 if (!filesystem::exists(include_file)) {
@@ -145,7 +144,7 @@ namespace vkfw_glsl {
                 content.append(
                     fmt::format("#line {} \"{}\"\n", lineCount + 1, shader_file.lexically_normal().generic_string()));
 
-                depfile_content.append(include_depfile_content);
+                depfile_content.append(" ").append(include_depfile_content);
             } else {
                 content.append(line).append("\n");
             }

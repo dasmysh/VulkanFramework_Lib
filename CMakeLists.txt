@@ -91,6 +91,7 @@ endif()
 set(VKFWCORE_RESOURCE_BASE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/resources)
 set(VKFWCORE_RESOURCE_BASE_PATH ${VKFWCORE_RESOURCE_BASE_PATH} PARENT_SCOPE)
 
+include(cmake/ResourceFileList.cmake)
 
 if(ENABLE_TESTING)
   enable_testing()
