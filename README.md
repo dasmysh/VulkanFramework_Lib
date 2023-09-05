@@ -3,12 +3,13 @@ Port of my OpenGL Framework to Vulkan.
 
 ## Build (Windows)
 - Use [vcpkg](https://vcpkg.io/en/)
-- Clone repository with submodules.
-- From the projects build folder run:
+- Clone repository with submodules recursive:
 
-  ```.extern\vkfw_core\vcpkg\vcpkg install catch2 docopt fmt spdlog cereal glm glfw3 imgui stb assimp --triplet x64-windows```
+  ```git clone --recurse-submodules -j8 https://github.com/dasmysh/VulkanFramework_Lib ```
+  ```cd VulkanFramework_Lib```
 
-- Start CMake with:
+- Start CMake from this folder with:
 
-  ```cmake -B ./build -S . -DCMAKE_TOOLCHAIN_FILE=.\extern\vkfw_core\vcpkg\scripts\buildsystems\vcpkg.cmake```
+  ```cmake -S . --preset=default```
 
+- CMake GUI can be used after the first configure step is done with the correct toolchain file.
