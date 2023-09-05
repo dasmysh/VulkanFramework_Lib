@@ -1,7 +1,10 @@
-add_library(catch_main STATIC catch_main.cpp)
+file(GLOB TOP_FILES CONFIGURE_DEPENDS
+    ${PROJECT_SOURCE_DIR}/.runsettings)
+source_group(" " FILES ${TOP_FILES})
+add_library(catch_main STATIC catch_main.cpp ${TOP_FILES})
 target_link_libraries(catch_main PUBLIC Catch2::Catch2 Catch2::Catch2WithMain)
 
-add_executable(tests_core tests.cpp)
+add_executable(tests_core tests.cpp ${TOP_FILES})
 target_link_libraries(tests_core PRIVATE vkfw_warnings vkfw_options catch_main)
 
 include(CTest)
