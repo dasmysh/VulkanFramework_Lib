@@ -39,13 +39,13 @@ namespace vkfw_core {
     template<typename T>
     concept VulkanObject = requires
     {
-        T::CType;
+        typename T::CType;
     };
 
     template<typename T>
     concept UniqueVulkanObject = requires
     {
-        T::element_type;
-        T::element_type::CType;
+        typename T::element_type;
+        typename T::element_type::CType;
     };
 }

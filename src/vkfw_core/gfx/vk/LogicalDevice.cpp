@@ -91,7 +91,7 @@ namespace vkfw_core::gfx {
             if constexpr (verbose_feature_logging) {
                 spdlog::info("VK Device Extensions:");
                 for (const auto& extension : extensions) {
-                    spdlog::info("- {}[SpecVersion: {}]", extension.extensionName, extension.specVersion);
+                    spdlog::info("- {}[SpecVersion: {}]", extension.extensionName.data(), extension.specVersion);
                 }
             }
 

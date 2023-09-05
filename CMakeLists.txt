@@ -6,7 +6,7 @@ include(cmake/StandardProjectSettings.cmake)
 
 add_library(vkfw_options INTERFACE)
 set_project_options(vkfw_options)
-target_compile_features(vkfw_options INTERFACE cxx_std_20)
+target_compile_features(vkfw_options INTERFACE cxx_std_23)
 
 add_library(vkfw_warnings INTERFACE)
 
@@ -35,7 +35,7 @@ endif()
 set(IMGUI_VERSION "1.89.7")
 set(GLM_VERSION "0.9.9.8")
 
-find_package(Vulkan 1.3.204 REQUIRED)
+find_package(Vulkan 1.3.231 REQUIRED)
 target_compile_definitions(vkfw_options INTERFACE VULKAN_HPP_TYPESAFE_CONVERSION)
 include(cmake/CompileSpirvShader.cmake)
 
