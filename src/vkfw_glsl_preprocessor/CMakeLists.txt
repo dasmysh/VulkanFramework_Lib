@@ -24,7 +24,7 @@ file(GLOB TOP_FILES
 source_group(" " FILES ${TOP_FILES})
 
 add_executable(vkfw_glsl_preprocessor ${SRC_FILES} ${INCLUDE_FILES} ${EXTERN_SOURCES} ${TOP_FILES} ${RES_FILES} ${COMPILED_SHADERS})
-target_link_libraries(vkfw_glsl_preprocessor PRIVATE vkfw_options vkfw_warnings CONAN_PKG::docopt.cpp CONAN_PKG::fmt CONAN_PKG::spdlog)
+target_link_libraries(vkfw_glsl_preprocessor PRIVATE vkfw_options vkfw_warnings docopt fmt::fmt spdlog::spdlog)
 target_include_directories(vkfw_glsl_preprocessor PUBLIC
     ${PROJECT_SOURCE_DIR}/include/${PROJECT_REL_PATH}
     ${CMAKE_CURRENT_SOURCE_DIR})

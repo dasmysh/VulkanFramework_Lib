@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.15)
+cmake_minimum_required(VERSION 3.27.1)
 
 project(VKFWLib CXX)
 
@@ -32,15 +32,24 @@ if (ENABLE_PCH)
   target_precompile_headers(vkfw_options INTERFACE <vector> <string> <map> <utility>)
 endif()
 
-set(IMGUI_VERSION "1.88")
+set(IMGUI_VERSION "1.89.7")
 set(GLM_VERSION "0.9.9.8")
-
-include(${CMAKE_BINARY_DIR}/vkfw_core/conanbuildinfo_multi.cmake)
-conan_basic_setup(TARGETS)
 
 find_package(Vulkan 1.3.204 REQUIRED)
 target_compile_definitions(vkfw_options INTERFACE VULKAN_HPP_TYPESAFE_CONVERSION)
 include(cmake/CompileSpirvShader.cmake)
+
+find_package(Stb REQUIRED)
+find_package(assimp CONFIG REQUIRED)
+find_package(Catch2 CONFIG REQUIRED)
+find_package(cereal CONFIG REQUIRED)
+find_package(docopt CONFIG REQUIRED)
+find_package(glfw3 CONFIG REQUIRED)
+find_package(glm CONFIG REQUIRED)
+find_package(imgui CONFIG REQUIRED)
+find_package(fmt CONFIG REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
+find_package(spdlog CONFIG REQUIRED)
 
 if(NOT EXISTS "${CMAKE_BINARY_DIR}/glm.natvis")
   message(
@@ -73,24 +82,6 @@ if(NOT EXISTS "${CMAKE_BINARY_DIR}/imgui.natstepfilter")
   file(DOWNLOAD "https://github.com/ocornut/imgui/raw/v${IMGUI_VERSION}/misc/debuggers/imgui.natstepfilter"
        "${CMAKE_BINARY_DIR}/imgui.natstepfilter")
 endif()
-
-if(NOT EXISTS "${CMAKE_BINARY_DIR}/extern/imgui/cpp/imgui_stdlib.cpp")
-  message(
-    STATUS
-      "Downloading imgui_stdlib.cpp from https://github.com/ocornut/imgui")
-  file(DOWNLOAD "https://github.com/ocornut/imgui/raw/v${IMGUI_VERSION}/misc/cpp/imgui_stdlib.cpp"
-       "${CMAKE_BINARY_DIR}/extern/imgui/cpp/imgui_stdlib.cpp")
-endif()
-
-if(NOT EXISTS "${CMAKE_BINARY_DIR}/extern/imgui/cpp/imgui_stdlib.h")
-  message(
-    STATUS
-      "Downloading imgui.natvis from https://github.com/ocornut/imgui")
-  file(DOWNLOAD "https://github.com/ocornut/imgui/raw/v${IMGUI_VERSION}/misc/cpp/imgui_stdlib.h"
-       "${CMAKE_BINARY_DIR}/extern/imgui/cpp/imgui_stdlib.h")
-endif()
-
-
 
 set(VKFW_DEBUG_PIPELINE ON CACHE BOOL "Checks if application is started from RenderDoc and uses only a single queue then.")
 if (${VKFW_DEBUG_PIPELINE})

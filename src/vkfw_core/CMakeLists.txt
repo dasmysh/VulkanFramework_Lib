@@ -63,9 +63,9 @@ file(GLOB_RECURSE INCLUDE_FILES CONFIGURE_DEPENDS
 source_group(TREE ${PROJECT_SOURCE_DIR}/include/${PROJECT_REL_PATH} FILES ${INCLUDE_FILES})
 
 
-file(GLOB EXTERN_SOURCES CONFIGURE_DEPENDS
-    ${CMAKE_BINARY_DIR}/extern/imgui/cpp/imgui_stdlib.cpp)
-source_group("extern" FILES ${EXTERN_SOURCES})
+# file(GLOB EXTERN_SOURCES CONFIGURE_DEPENDS
+#     ${CMAKE_BINARY_DIR}/extern/imgui/cpp/imgui_stdlib.cpp)
+# source_group("extern" FILES ${EXTERN_SOURCES})
 
 
 file(GLOB TOP_FILES CONFIGURE_DEPENDS
@@ -87,12 +87,12 @@ endforeach()
 add_custom_target(compile_shaders_core DEPENDS ${COMPILED_SHADERS})
 
 add_library(vk_framework_core ${SRC_FILES} ${INCLUDE_FILES} ${EXTERN_SOURCES} ${TOP_FILES} ${RES_FILES})
-target_link_libraries(vk_framework_core PUBLIC vkfw_options vkfw_warnings Vulkan::Vulkan CONAN_PKG::fmt CONAN_PKG::spdlog CONAN_PKG::cereal CONAN_PKG::glm CONAN_PKG::imgui)
-target_link_libraries(vk_framework_core PRIVATE CONAN_PKG::glfw CONAN_PKG::stb CONAN_PKG::assimp)
+target_link_libraries(vk_framework_core PUBLIC vkfw_options vkfw_warnings Vulkan::Vulkan fmt::fmt spdlog::spdlog cereal::cereal glm::glm imgui::imgui)
+target_link_libraries(vk_framework_core PRIVATE glfw assimp::assimp)
 add_dependencies(vk_framework_core compile_shaders_core)
 target_include_directories(vk_framework_core PUBLIC
     ${PROJECT_SOURCE_DIR}/include/${PROJECT_REL_PATH}
+    ${Stb_INCLUDE_DIR}
     ${PROJECT_SOURCE_DIR}/resources/shader
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_BINARY_DIR}/extern/imgui/cpp)
+    ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_definitions(vk_framework_core PUBLIC STBI_MSC_SECURE_CRT CEREAL_THREAD_SAFE=1)
