@@ -49,7 +49,6 @@ find_package(glm CONFIG REQUIRED)
 find_package(imgui CONFIG REQUIRED)
 find_package(fmt CONFIG REQUIRED)
 find_package(spdlog CONFIG REQUIRED)
-find_package(spdlog CONFIG REQUIRED)
 
 if(NOT EXISTS "${CMAKE_BINARY_DIR}/glm.natvis")
   message(

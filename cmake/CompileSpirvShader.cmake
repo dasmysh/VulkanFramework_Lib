@@ -20,7 +20,6 @@ function(COMPILE_SPIRV_SHADER SHADER_FILE SHADER_INCLUDE_DIRS)
     list(TRANSFORM SHADER_INCLUDE_DIRS PREPEND "-i;" OUTPUT_VARIABLE  SHADER_INCLUDE_DIRS_PARAMETER)
     string (REPLACE ";" " " SHADER_INCLUDE_DIRS_STRING "${SHADER_INCLUDE_DIRS_PARAMETER}")
 
-    # TODO: use depfile format??? https://cmake.org/cmake/help/v3.25/command/add_custom_command.html
     add_custom_command(
         OUTPUT ${PREPROCESSOR_OUTPUT} 
         COMMAND vkfw_glsl_preprocessor ${SHADER_FILE} ${SHADER_INCLUDE_DIRS_PARAMETER} -o ${PREPROCESSOR_OUTPUT} -d ${PREPROCESSOR_DEPFILE}
